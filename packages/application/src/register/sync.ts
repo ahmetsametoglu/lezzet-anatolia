@@ -7,7 +7,6 @@ import {
   RegisterStoreService,
   RegisterTicketLineService,
   RegisterTicketService,
-  SettingsService,
   WarehouseService,
   type Db,
 } from '@lezzet/database';
@@ -43,9 +42,6 @@ import { ensureItemProducts, ensureShippingProduct } from './products';
  * aynaya geçer. Her kasa çağrısından önce ayna "yazılıyor" satırını taşır; yarıda kalan yazım sonraki turda aynı satıştan tamamlanır.
  */
 
-/** Canlıya geçiş anı; öncesinde açılan sipariş ve yazılan hareket kasaya gitmez, ayar yoksa eşitleme hiç koşmaz. */
-export const REGISTER_LIVE_FROM_KEY = 'register_live_from';
-
 const BATCH = 20;
 
 /** İşleyenin kilidi en uzun yazımdan uzun tutulur; ölen sürecin satırı bu sürenin sonunda boşa çıkar. */
@@ -58,44 +54,14 @@ type SyncOutcome = { status: 'written' } | { status: 'skipped' } | { status: 'bl
 export type RegisterQueueOutcome = 'written' | 'skipped' | 'blocked' | 'failed' | 'busy';
 
 interface SyncContext {
-  liveFrom: string;
   now: Date;
 }
 
-/** Canlıya geçiş anı; ayar yoksa ya da okunamıyorsa `null` ve kasaya hiçbir şey yazılmaz. */
-export async function registerLiveFrom(db: Db): Promise<string | null> {
-  const liveFrom = await new SettingsService(db).get<string | null>(REGISTER_LIVE_FROM_KEY, null);
-  if (!liveFrom) return null;
-  // Okunamayan tarih bütün geçmişi kasaya açardı; ayar düzeltilene kadar kasaya yazılmaz.
-  if (Number.isNaN(Date.parse(liveFrom))) {
-    logger.warn({ setting: REGISTER_LIVE_FROM_KEY }, 'kasa: canlıya geçiş anı okunamadı');
-    return null;
-  }
-  return liveFrom;
-}
-
-/** Canlıya geçiş anını yazar, `null` kasayı kapatır; ayarın değeri boş olamadığı için kapalı kasa satırın yokluğudur. */
-export async function setRegisterLiveFrom(db: Db, at: string | null): Promise<void> {
-  const settings = new SettingsService(db);
-  if (at) {
-    await settings.set(REGISTER_LIVE_FROM_KEY, at, {
-      scopeType: 'global',
-      description: 'Sertifikalı kasaya yazımın başladığı an; bu andan sonra para görmeyen sipariş kasaya gitmez.',
-    });
-    for (const store of await new RegisterStoreService(db).list()) await requeueRegisterStore(db, store, at);
-    return;
-  }
-  for (const row of await settings.listByKey(REGISTER_LIVE_FROM_KEY)) await settings.delete(row.id);
-  SettingsService.invalidate(REGISTER_LIVE_FROM_KEY);
-}
-
 export async function syncRegisterQueue(db: Db, register: CashRegister, opts: { now?: Date } = {}): Promise<Record<string, unknown>> {
-  const liveFrom = await registerLiveFrom(db);
-  if (!liveFrom) return { skipped: 'not_live' };
   const now = opts.now ?? new Date();
   const rows = await new RegisterQueueService(db).listDue(now.toISOString(), BATCH);
   const counts: Record<RegisterQueueOutcome, number> = { written: 0, skipped: 0, blocked: 0, failed: 0, busy: 0 };
-  for (const row of rows) counts[await processQueueRow(db, register, row, { liveFrom, now })] += 1;
+  for (const row of rows) counts[await processQueueRow(db, register, row, { now })] += 1;
   return counts;
 }
 
@@ -111,13 +77,11 @@ export function kickOrderRegister(db: Db, orderId: string, register: CashRegiste
   });
 }
 
-/** Siparişin kuyruk satırını şimdi işler; kasa canlı değilse ya da satır yoksa yapacak bir şey yoktur (`null`). */
+/** Siparişin kuyruk satırını şimdi işler; satır yoksa yapacak bir şey yoktur (`null`). */
 export async function syncOrderNow(db: Db, register: CashRegister, orderId: string, now = new Date()): Promise<RegisterQueueOutcome | null> {
-  const liveFrom = await registerLiveFrom(db);
-  if (!liveFrom) return null;
   const row = await new RegisterQueueService(db).findByOrder(orderId);
   if (!row) return null;
-  return processQueueRow(db, register, row, { liveFrom, now });
+  return processQueueRow(db, register, row, { now });
 }
 
 /** Kuyruğun tek satırı: yazılırsa ya da yazılacak bir şey yoksa satır tamamlanır, plan durduysa ya da hata çıktıysa ertelenir. */
@@ -208,10 +172,7 @@ async function syncOrderRegister(db: Db, register: CashRegister, orderId: string
   if (!found) return { status: 'skipped' };
   const money = (await new MoneyMovementService(db).listByOrder(orderId)).filter(isOrderMoney);
   const before = await mirrorOf(db, orderId);
-  // Kapsamı paranın anı belirler, siparişin açılışı değil: geçişten önce açılıp sonra ödenen sipariş de kasaya gider (1. karar).
-  if (before.tickets.length === 0 && !money.some((movement) => Date.parse(movement.createdAt) >= Date.parse(ctx.liveFrom))) {
-    return { status: 'skipped' };
-  }
+  if (before.tickets.length === 0 && money.length === 0) return { status: 'skipped' };
   const scope: OrderScope = { db, register, order: found.order, items: found.items, now: ctx.now };
 
   await recoverOrder(scope, before);
@@ -291,14 +252,13 @@ async function recoverOrder(scope: OrderScope, mirror: Mirror): Promise<void> {
 }
 
 /**
- * Çekmece eşlenince ya da canlıya geçiş günü girilince: tetikleyici yalnız yazım anında eşlenmiş çekmecenin hareketini kuyruğa koyar,
- * öncesinde yazılan hareket kasaya hiç gitmezdi. Eşlemesi olmadığı için duran sipariş de beklemeden yeniden denenir.
+ * Çekmece eşlenince: tetikleyici yalnız yazım anında eşlenmiş çekmecenin hareketini kuyruğa koyar, öncesinde yazılan hareket kasaya hiç
+ * gitmezdi ve kasadaki nakit defterdekini tutmazdı. Eşlemesi olmadığı için duran sipariş de beklemeden yeniden denenir.
  */
-export async function requeueRegisterStore(db: Db, store: RegisterStore, liveFrom: string | null): Promise<void> {
+export async function requeueRegisterStore(db: Db, store: RegisterStore): Promise<void> {
   const queue = new RegisterQueueService(db);
   await queue.retryBlocked('no_store', new Date().toISOString());
-  if (!liveFrom) return;
-  const movements = await new MoneyMovementService(db).listTouchingAccountSince(store.cashAccountId, liveFrom);
+  const movements = await new MoneyMovementService(db).listTouchingAccount(store.cashAccountId);
   await queue.markMovements(movements.map((movement) => movement.id));
 }
 
@@ -498,8 +458,6 @@ async function syncCashMovement(db: Db, register: CashRegister, movementId: stri
   const reversed = new Set(written.map((op) => op.reversalOf).filter((id): id is string => id !== null));
   const active = written.find((op) => op.reversalOf === null && !reversed.has(op.id)) ?? null;
   const [movement] = await new MoneyMovementService(db).listByIds([movementId]);
-  if (written.length === 0 && movement && Date.parse(movement.createdAt) < Date.parse(ctx.liveFrom)) return { status: 'skipped' };
-
   const effect = movement ? await cashEffectOf(db, movement) : null;
   const unchanged =
     active !== null &&

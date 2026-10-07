@@ -131,7 +131,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Yazım yolu: `money_movement` tetikleyicisi siparişi ya da eşlenmiş kasanın hareketini, kalem ve durum tetikleyicisi fişi olan
   siparişi kuyruğa işaretler, backend cron'u
   (`register_sync`, dakikada bir) sipariş başına durum farkını fiş ve ödeme satırı olarak, fiş dışı nakdi kasa giriş/çıkışı
-  olarak yazar. Ayna `register_*` tablolarında (`data-model/kasa.md`). Canlıya geçiş anı ayardır (`register_live_from`).
+  olarak yazar. Ayna `register_*` tablolarında (`data-model/kasa.md`). Tarih ayarı yoktur: tesis mağazaya eşlenince kuyrukta
+  bekleyen satışı ve çekmecenin önceki hareketleri de yazılır.
 - Gün sonu `register_close_day` (gece yarısından sonra, önceki gün): kapanmamış günleri defter ↔ ayna ve ayna ↔ kasa olarak
   karşılaştırır; hepsi tutuyor ve mağazanın kuyruğu boşsa günü kasada kapatır (yalnız `HIBOUTIK_MODE=live`). Tutmayan gün
   kapanmaz, `error_log`a uyarı ve yönetime bildirim gider.
@@ -141,7 +142,7 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Pennylane QUALITE'nin iç defteridir, Lezzet ile toptan operasyonunun buluştuğu yer; akış `docs/feature/kasa-muhasebe.md`de.
   B2C satış Pennylane'e yalnız Hiboutik'ten, banka hareketi bankadan doğrudan girer; bizden giden yalnız alış faturası ve
   eşleşmedir. Muhasebeci kendi yazılımını kullanır; ona giden dosya Pennylane'den üretilir.
-- Alış belgesi (ödeyeceğimiz fatura ve fiş) canlıya geçiş gününden sonra girildiyse kuyrukla Pennylane'e yüklenir (`pennylane_sync`):
+- Alış belgesi (ödeyeceğimiz fatura ve fiş) kuyrukla Pennylane'e yüklenir (`pennylane_sync`):
   karşı tarafın tedarikçisi dış referansla bulunur ya da açılır, belge değişince fark güncellenir, nakitle kapanan belge ödendi
   işaretini alır. Belge dosyası PDF, JPEG ya da PNG'dir; Pennylane başka türü almıyor.
 - Pennylane'den gelen banka satırının yüklenmiş belgeye bağı Pennylane'e eşleşme olarak yazılır. Pennylane'de bizim belgemize kurulan
@@ -157,8 +158,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 ## Banka import
 
 - Pennylane'e eşlenen hesabın hareketleri Pennylane'den okunur (`pennylane_sync`, beş dakikada bir); eşlenmemiş hesapta bankanın
-  Excel/CSV dosyası içe alınır. Eşlenen hesaba canlıya geçiş gününden sonrası için dosya yüklenmez; dosya satırı o güne ya da
-  sonrasına düşen hesap da eşlenmez. Hareketler sipariş/alımlarla eşleştirilir.
+  Excel/CSV dosyası içe alınır. Hareketler hesabın eşlendiği günden okunur; eşlenen hesaba o günden sonrası için dosya yüklenmez,
+  dosya satırı o güne ya da sonrasına düşen hesap da eşlenmez. Hareketler sipariş/alımlarla eşleştirilir.
 - Pennylane anahtarı yalnız backend'dedir (`PENNYLANE_API_TOKEN`, `PENNYLANE_MODE`); kurulum kartı eşlemeyi eşitleme turunun yazdığı
   hesap listesinden kurar, bağlantıyı ve kipi turun izinden okur.
 - Eşleştirme: **öneri + elle onay.** Tam otomatik değil (toplu ödeme, kısmi ödeme, iade eşleşmeyi bozar).

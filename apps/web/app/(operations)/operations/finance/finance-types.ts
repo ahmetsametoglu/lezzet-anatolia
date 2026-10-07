@@ -170,7 +170,7 @@ export type DocumentRowView = Pick<
   hasFile: boolean;
   /** "FA-2026-0912 · Cabinet Muller · açık 360,00 €" — ödeme formunun üstünde okunan künye. */
   label: string;
-  /** Pennylane durumu, satırın alt satırının sonunda; Pennylane canlıya geçmemişse ya da belge kapsam dışıysa `null`. */
+  /** Pennylane durumu, satırın alt satırının sonunda; eşitleme Pennylane'e bağlanamadıysa ya da belge kapsam dışıysa `null`. */
   pennylane: { text: string; tone: OpsTone } | null;
 };
 

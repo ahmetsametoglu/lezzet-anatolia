@@ -149,8 +149,9 @@ export const PennylaneBankAccountMirrorSchema = z.object({
   /** Son okunan listede görüldüğü an. */
   seenAt: z.string(),
   accountId: z.string().uuid().nullable(),
+  /** Hareketler bu anın gününden (Paris) okunur; eşleme başka Pennylane hesabına taşınınca korunur. */
   mappedAt: z.string().nullable(),
-  /** Boşsa sonraki tur canlıya geçiş gününden listeyi okur. */
+  /** Boşsa sonraki tur listeyi eşleme gününden okur. */
   listedAt: z.string().nullable(),
 });
 export type PennylaneBankAccountMirror = z.infer<typeof PennylaneBankAccountMirrorSchema>;

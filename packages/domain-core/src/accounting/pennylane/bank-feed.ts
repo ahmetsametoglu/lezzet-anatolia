@@ -21,16 +21,16 @@ export type BankFeedAction =
   | { kind: 'remove' }
   | { kind: 'alert'; change: 'changed' | 'removed' }
   | { kind: 'mirror' }
-  | { kind: 'skip'; reason: 'before_live' | 'zero_amount' | 'unchanged' };
+  | { kind: 'skip'; reason: 'before_feed' | 'zero_amount' | 'unchanged' };
 
 /**
- * Hareketin planı; `transaction` boşsa Pennylane'de silinmiştir, arşivlenen hareket de muhasebede yoktur. Canlıya geçiş günü yalnız
- * yeni satırı süzer, çünkü bizde duran satırın Pennylane'deki değişikliği her zaman bizi ilgilendirir.
+ * Hareketin planı; `transaction` boşsa Pennylane'de silinmiştir, arşivlenen hareket de muhasebede yoktur. Okumanın ilk günü (hesabın
+ * eşlendiği gün) yalnız yeni satırı süzer, çünkü bizde duran satırın Pennylane'deki değişikliği her zaman bizi ilgilendirir.
  */
 export function planBankFeed(input: {
   transaction: PennylaneTransaction | null;
   mirror: BankFeedMirror | null;
-  liveFrom: string;
+  feedFrom: string;
 }): BankFeedAction {
   const { transaction, mirror } = input;
   if (transaction === null || transaction.archived) {
@@ -39,11 +39,11 @@ export function planBankFeed(input: {
     return mirror.movement.explained ? { kind: 'alert', change: 'removed' } : { kind: 'remove' };
   }
 
-  const writable = transaction.amountCents > 0 && transaction.date >= input.liveFrom;
+  const writable = transaction.amountCents > 0 && transaction.date >= input.feedFrom;
   if (!mirror || !mirror.movement) {
     if (writable) return { kind: 'insert' };
     if (mirror) return { kind: 'mirror' };
-    return { kind: 'skip', reason: transaction.amountCents > 0 ? 'before_live' : 'zero_amount' };
+    return { kind: 'skip', reason: transaction.amountCents > 0 ? 'before_feed' : 'zero_amount' };
   }
 
   const moneyChanged =

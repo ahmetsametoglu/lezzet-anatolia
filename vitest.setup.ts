@@ -22,5 +22,9 @@ globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) =>
     ? Promise.reject(new Error('testte cihaz bildirimi gönderilmez'))
     : realFetch(input, init)) as typeof fetch;
 
+// Kasa yazımı ödemenin arkasından kendiliğinden koşar; anahtar kalsaydı testin siparişi gerçek Hiboutik deneme hesabına gidebilirdi.
+// Kasayı sınayan testler bellek içi kasayı verir.
+delete process.env.HIBOUTIK_API_KEY;
+
 // Log sessiz, çünkü tekrarlanan uyarılar testin sonucunu gizler; `??=` sayesinde `LOG_LEVEL=debug pnpm test` ayıklamayı açar.
 process.env.LOG_LEVEL ??= 'silent';

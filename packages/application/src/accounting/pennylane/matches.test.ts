@@ -13,22 +13,20 @@ import {
   SupplierService,
   serviceDb,
 } from '@lezzet/database';
-import { mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { mustDelete, purgeTestData } from '@lezzet/database/testing';
 import type { MoneyDocumentInsert, PennylaneCursor } from '@lezzet/types';
 import { allocateToDocument } from '../document';
-import { PENNYLANE_LIVE_FROM_KEY, mapPennylaneBankAccount, syncBankFeed } from './bank-feed';
+import { mapPennylaneBankAccount, syncBankFeed } from './bank-feed';
 import { memoryPennylane } from './memory-pennylane.testkit';
 import { processPennylaneQueueRow } from './queue';
 
 /*
-  Banka satırının Pennylane eşleşmesi gerçek tablolar, bellek içi Pennylane ve banka akışıyla sınanır. Ayar ve akış imleci küreseldir,
-  test sonunda geri konur; kuyruk küresel olduğu için testler yalnız kendi satırlarını işler.
+  Banka satırının Pennylane eşleşmesi gerçek tablolar, bellek içi Pennylane ve banka akışıyla sınanır. Akış imleci küreseldir, test
+  sonunda geri konur; kuyruk küresel olduğu için testler yalnız kendi satırlarını işler.
 */
 
 const db = serviceDb();
 const stamp = Date.now();
-const LIVE_FROM = '2026-10-01';
-const settings = settingsSnapshot(db);
 const cursors = new PennylaneCursorService(db);
 const queue = new PennylaneQueueService(db);
 const mirrors = new PennylaneDocumentService(db);
@@ -40,7 +38,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await settings.restore();
   if (originalCursor) await cursors.save('transactions', originalCursor.processedAt);
   else await mustDelete(db, 'pennylane_cursor', (q) => q.eq('stream', 'transactions'));
 });
@@ -56,7 +53,6 @@ const reader = { read: async (key: string) => files.get(key) ?? Promise.reject(n
 
 beforeEach(async () => {
   await cursors.save('transactions', '2000-01-01T00:00:00Z');
-  await settings.override(PENNYLANE_LIVE_FROM_KEY, LIVE_FROM);
   created = { documentIds: [], supplierIds: [], accountIds: [] };
   twin = memoryPennylane();
   bank = twin.addBankAccount('Banque');
@@ -64,7 +60,7 @@ beforeEach(async () => {
   accountId = (await new AccountService(db).insert({ name: `Pennylane eşleşme ${stamp}-${Math.random()}`, type: 'bank' })).id;
   created.accountIds.push(accountId);
   await new PennylaneBankAccountService(db).saveSeen(await twin.port.listBankAccounts(), twin.now());
-  expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: bank })).toEqual({ status: 'ok' });
+  expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: bank }, { now: new Date(twin.now()) })).toEqual({ status: 'ok' });
   supplierId = (await new SupplierService(db).insert({ name: `Fournisseur ${stamp}-${Math.random()}`, country: 'FR' })).id;
   created.supplierIds.push(supplierId);
 });
@@ -74,7 +70,7 @@ afterEach(async () => {
   await purgeTestData(db, created);
 });
 
-const ctx = () => ({ liveFrom: LIVE_FROM, now: new Date(), files: reader });
+const ctx = () => ({ now: new Date(), files: reader });
 const processDocument = async (documentId: string) =>
   processPennylaneQueueRow(db, twin.port, (await queue.findByDocument(documentId))!, ctx());
 const processMovement = async (movementId: string) => {

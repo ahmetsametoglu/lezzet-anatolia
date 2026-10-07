@@ -1,4 +1,3 @@
-import { parisDateOf } from '@lezzet/helper';
 import type {
   Business,
   DocumentVatRate,
@@ -61,27 +60,24 @@ type DocumentFields = Pick<
   | 'vatLines'
   | 'vatRegime'
   | 'fileKey'
-  | 'createdAt'
 >;
 
 export type PennylaneDocumentScope =
   { kind: 'skip' } | { kind: 'blocked'; reason: PennylaneDocumentBlock } | { kind: 'write'; lines: PennylaneInvoiceLine[] };
 
 /**
- * Belge Pennylane'e gider mi: canlıya geçiş gününden sonra girilmiş, ödeyeceğimiz fatura ya da fiş. Yüklenmiş belge kapsamdan çıksa
- * da izlenir, çünkü Pennylane'deki faturası kalır.
+ * Belge Pennylane'e gider mi: ödeyeceğimiz fatura ya da fiş. Yüklenmiş belge kapsamdan çıksa da izlenir, çünkü Pennylane'deki faturası
+ * kalır.
  */
 export function pennylaneDocumentScope(input: {
   document: DocumentFields;
   partyCountry: string | null;
-  liveFrom: string;
   uploaded: boolean;
 }): PennylaneDocumentScope {
   const { document } = input;
   if (!((document.kind === 'invoice' || document.kind === 'receipt') && document.direction === 'out')) {
     return input.uploaded ? { kind: 'blocked', reason: 'kind_changed' } : { kind: 'skip' };
   }
-  if (!input.uploaded && parisDateOf(new Date(document.createdAt)) < input.liveFrom) return { kind: 'skip' };
   if (!document.supplierId && !document.counterpartyId) return { kind: 'blocked', reason: 'no_party' };
   if (!document.fileKey) return { kind: 'blocked', reason: 'no_file' };
   if (!checkDocumentFile(document.fileKey).ok) return { kind: 'blocked', reason: 'file_type' };
@@ -177,14 +173,14 @@ export function pennylaneOpenDifference(openAmountCents: number, mirror: Pennyla
   return pennylaneOpen;
 }
 
-/** Belgenin Pennylane durumu; Pennylane canlıya geçmemişse ya da belge kapsam dışıysa `null`, kuyruktaki belge kuyruğun hâlini söyler. */
+/** Belgenin Pennylane durumu; Pennylane'e bağlanılmadıysa ya da belge kapsam dışıysa `null`, kuyruktaki belge kuyruğun hâlini söyler. */
 export function pennylaneDocumentStatus(input: {
-  live: boolean;
+  connected: boolean;
   openAmountCents: number;
   mirror: PennylaneOpenMirror | null;
   queue: { attempts: number; blockReason: string | null } | null;
 }): PennylaneDocumentStatus | null {
-  if (!input.live) return null;
+  if (!input.connected) return null;
   if (input.queue) {
     if (input.queue.blockReason) return { kind: 'blocked', reason: input.queue.blockReason };
     return input.queue.attempts > 0 ? { kind: 'failing' } : { kind: 'pending' };

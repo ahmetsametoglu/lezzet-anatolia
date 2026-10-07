@@ -13,7 +13,7 @@ import { mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/te
 import { PENNYLANE_CATEGORY_KEYS } from '@lezzet/domain-core';
 import type { PennylaneCursor } from '@lezzet/types';
 import { allocateToDocument } from '../document';
-import { PENNYLANE_LIVE_FROM_KEY, mapPennylaneBankAccount, syncBankFeed } from './bank-feed';
+import { mapPennylaneBankAccount, syncBankFeed } from './bank-feed';
 import { categoryResolver, writeTransactionCategory } from './category';
 import { memoryPennylane } from './memory-pennylane.testkit';
 
@@ -24,7 +24,6 @@ import { memoryPennylane } from './memory-pennylane.testkit';
 
 const db = serviceDb();
 const stamp = Date.now();
-const LIVE_FROM = '2026-10-01';
 const settings = settingsSnapshot(db);
 const cursors = new PennylaneCursorService(db);
 const transactions = new PennylaneTransactionService(db);
@@ -48,7 +47,6 @@ let created: { documentIds: string[]; supplierIds: string[]; accountIds: string[
 
 beforeEach(async () => {
   await cursors.save('transactions', '2000-01-01T00:00:00Z');
-  await settings.override(PENNYLANE_LIVE_FROM_KEY, LIVE_FROM);
   await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, 'Lezzet');
   await settings.override(PENNYLANE_CATEGORY_KEYS.qualite, 'QUALITE');
   created = { documentIds: [], supplierIds: [], accountIds: [] };
@@ -57,7 +55,7 @@ beforeEach(async () => {
   accountId = (await new AccountService(db).insert({ name: `Pennylane kategori ${stamp}-${Math.random()}`, type: 'bank' })).id;
   created.accountIds.push(accountId);
   await new PennylaneBankAccountService(db).saveSeen(await twin.port.listBankAccounts(), twin.now());
-  expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: bank })).toEqual({ status: 'ok' });
+  expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: bank }, { now: new Date(twin.now()) })).toEqual({ status: 'ok' });
 });
 
 afterEach(async () => {

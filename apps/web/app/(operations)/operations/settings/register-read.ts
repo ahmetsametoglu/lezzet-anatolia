@@ -1,8 +1,6 @@
 import 'server-only';
 
 import { AccountService, JobRunService, RegisterQueueService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { registerLiveFrom } from '@lezzet/application';
-import { parisDateOf } from '@lezzet/helper';
 import { registerBlockReasonLabel } from '@lezzet/i18n';
 import { jobView, readQueueView, type SetupJobView, type SetupQueueView } from './setup-trace';
 
@@ -16,8 +14,6 @@ export interface RegisterStoreRowView {
 }
 
 export interface RegisterPanelData {
-  /** Canlıya geçiş günü (Paris); `null` = kasaya hiçbir şey yazılmıyor. */
-  liveFrom: string | null;
   stores: RegisterStoreRowView[];
   cashAccounts: { value: string; label: string }[];
   queue: SetupQueueView;
@@ -39,15 +35,13 @@ export interface RegisterDayEndView {
 
 /** Turun kendini atlama sebebi, operatörün diliyle. */
 const JOB_SKIP_LABEL: Record<string, string> = {
-  not_live: 'kasa kapalı',
   not_configured: 'Hiboutik anahtarları tanımlı değil',
 };
 
 export async function readRegisterPanel(): Promise<RegisterPanelData> {
   const db = serviceDb();
   const jobs = new JobRunService(db);
-  const [liveFrom, facilities, accounts, stores, queue, sync, dayEnd] = await Promise.all([
-    registerLiveFrom(db),
+  const [facilities, accounts, stores, queue, sync, dayEnd] = await Promise.all([
     new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
     new AccountService(db).list({ activeOnly: true }),
     new RegisterStoreService(db).list(),
@@ -64,7 +58,6 @@ export async function readRegisterPanel(): Promise<RegisterPanelData> {
     : [];
 
   return {
-    liveFrom: liveFrom ? parisDateOf(new Date(liveFrom)) : null,
     stores: facilities.map((facility) => {
       const store = storeOf.get(facility.id);
       return {

@@ -87,7 +87,7 @@ export async function importBankRows(input: {
 }): Promise<ImportOutcome> {
   const db = serviceDb();
   const { rows, failures } = parseBankRows(input.rows, input.profile);
-  // Eşlenen hesabın canlıya geçiş gününden sonrası Pennylane'den gelir; dosya aynı banka satırını ikinci kez yazardı.
+  // Eşlenen hesabın eşlendiği günden sonrası Pennylane'den gelir; dosya aynı banka satırını ikinci kez yazardı.
   const feedFrom = await pennylaneFeedFrom(db, input.accountId);
   if (feedFrom && rows.some((row) => row.valueDate >= feedFrom)) return { status: 'pennylane_feed', from: feedFrom };
   const fingerprinted = fingerprintRows(input.accountId, rows);

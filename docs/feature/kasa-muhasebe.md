@@ -72,6 +72,7 @@
 | 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. Kategorinin adı ayardır (iş başına: `pennylane_category_lezzet` · `pennylane_category_qualite`, varsayılanı işin adı, boşsa kategori yazılmaz; QUALITE'nin belgesi `iki-is.md` ile eklendi); Pennylane'de adla bulunur, yoksa "Activité" grubunda açılır. Faturanın öteki eksenlerdeki kategorisi korunur, Pennylane'de elle değiştirilen kategori ezilmez. |
 | 17 | **Kapıda kart Revolut Tap to Pay on iPhone ile alınır** (06.10) | Ödemeyi kuryenin uygulaması başlatır, ayrı cihazda tutar yazılmaz. Kurye iPhone taşır (XS ve üstü, iOS 16.4+); Android'de bu yol yok. |
 | 18 | **Kasa yazımı ödemenin hemen arkasından, kimseyi bekletmeden** (06.10) | Ödeme kaydı ve kasa kuyruğu satırı aynı işlemde yazılır; işlem biter bitmez o siparişin satışı Hiboutik'te açılıp kapanır, müşteri ve kurye beklemez. Yazılamazsa satır bekler, dakikalık iş ilk fırsatta yazar (yeniden deneme tavanı 5 dk). Bekleme süresince ödemenin kaydını bizim yazılım tutar: B2C tahsilat hareketinin tutarı, yöntemi, hesabı ve siparişi değişmez, hareket silinmez, düzeltme ters harekettir (SSS 22, BOFiP §90). Satırı işleyen onu kilitler; satış Hiboutik'e iki kez yazılmaz. Kasa ve Revolut Merchant sabit hesaplardır: migration açar, pasifleşmez; kapı nakdi Kasa'ya, kapıda kart ve online ödeme Revolut Merchant'a yazılır. Ödemenin yazılacağı hesap yoksa ödeme başlamaz. Ödemeden önce Hiboutik'te taslak satış açılmaz: açık satış mali kayıt değildir (silinir, Z'ye girmez) ve yalnız beklemeyi uzatır. |
+| 19 | **Kasa ve muhasebede canlıya geçiş günü yok; eşleme yeter** (07.10) | Tarih ayarı yalnız bir kez kullanılacak bir tetikti, testte de kasayı ve muhasebeyi kapalı tutuyordu. Bağlantıyı backend'deki anahtarlar kurar. Tesis kurulum kartında kasa mağazasına eşlendiği an kuyrukta bekleyen satışı ve çekmecenin önceki hareketleri kasaya yazılır; satış hiçbir tarihe göre atlanmaz, gün sonu eşleme gününden başlar. Banka hesabının hareketleri Pennylane'deki hesaba eşlendiği günden okunur, öncesi Excel'le girilir; eşleme başka Pennylane hesabına taşınınca ilk gün korunur. Alış belgesi girildiği güne bakılmadan yüklenir; Pennylane'de aynı tedarikçide aynı numara varsa belge bekler. |
 
 ## 3. Veri akışı
 
@@ -298,7 +299,7 @@ düzeltilen hareket kendiliğinden doğru sonuca iner.
 
 **Kapsam:** B2C siparişlerin bütün tahsilat ve iadeleri (çevrim içi, kapıda nakit ve kart, gel-al, kapı
 önü ve araç satışı) ve eşlenmiş kasaların öteki nakit hareketleri. B2B siparişi fiş olmaz (10. karar);
-hediye sipariş hiç para görmez (11. karar). Canlıya geçiş anı ayardır; kapsamı paranın anı belirler.
+hediye sipariş hiç para görmez (11. karar). Tarih ayarı yoktur (19. karar): satış, tesis eşlenmeden önce ödenmiş olsa da yazılır.
 
 **Akış:**
 1. `money_movement`ta sipariş parası yazılınca, değişince ya da silinince tetikleyici siparişi kasa
@@ -370,18 +371,13 @@ muhasebeye bildirim gider. Plan
 durursa (yöntemi bilinmeyen hareket, iadeyle başlayan sipariş, eşlenmemiş depo) satır sebebiyle bekler ve ilk turda
 bildirim gider, eşlenmemiş depoda depo ve gün başına bir kez; gece kapanışını beklemek düzeltmeyi ertesi güne,
 kaydı da o günün Z'sine kaydırırdı. Çözüm bir para değişikliğiyle gelir ve satırı yeniden işaretler. Mağaza
-eşlemesi ve canlıya geçiş günü kaydedilince eşlemesiz duran satırlar hemen yeniden denenir, eşlenen çekmecenin
-canlıya geçişten sonra yazılmış hareketleri de kuyruğa alınır (tetikleyici yalnız yazım anındaki eşlemeyi görür).
+eşlemesi kaydedilince eşlemesiz duran satırlar hemen yeniden denenir, eşlenen çekmecenin önceki hareketleri de
+kuyruğa alınır (tetikleyici yalnız yazım anındaki eşlemeyi görür), kasadaki nakit defterdekini tutsun diye.
 Satış tarihini API almıyor: geciken fiş yazıldığı günün Z'sine düşer.
 
-**Canlıya geçiş:** `register_live_from` ayarı (an). Ayar yoksa ya da okunamıyorsa eşitleme hiç koşmaz.
-Bu andan sonra para görmüş siparişin bütün tahsilat ve iadeleri yazılır, açılışı önce olsa da; yalnız
-önceden para görmüş sipariş ve önceden yazılmış kasa hareketi kasaya gitmez.
-
-**Canlıya geçiş adımları:** Hiboutik'te mağaza açılır ve kurulum kartında tesise eşlenir. Ödeme
-türlerinden ESP ve CB hazır gelir; WEB (online) ve VIR (havale) kasada açılır, yoksa o yöntemle yazılan
-ödeme reddedilir. Backend ortamına anahtarlar ve `HIBOUTIK_MODE=live` girilir; en son kartta canlıya
-geçiş günü girilir.
+**Canlıya geçiş adımları:** Hiboutik'te mağaza açılır. Ödeme türlerinden ESP ve CB hazır gelir; WEB (online)
+ve VIR (havale) kasada açılır, yoksa o yöntemle yazılan ödeme reddedilir. Backend ortamına anahtarlar ve
+`HIBOUTIK_MODE=live` girilir; en son kurulum kartında tesis mağazaya eşlenir, yazım o anda başlar.
 
 **Kasa hareketleri:** eşlenmiş nakit hesabının fiş olmayan hareketleri Hiboutik'e açıklamasıyla `cash_out`
 / `cash_in` olarak yazılır, kasa sayımı fiziksel kasayla tutsun diye: bankaya yatırma, kasadan ödenen gider,
@@ -405,7 +401,7 @@ durur ve uyarır.
 
 **Gün sonu** (`register_close_day`, her gece `REGISTER_CLOSE_AT` saatinde, varsayılan 00:15 Paris; mağaza başına):
 önceki gün bittikten sonra bakılır ki gece yarısına sarkan yazım da onun mutabakatına girsin. Kapanmamış
-günler (en çok 7 gün geriye, canlıya geçişten önceye değil) sırayla karşılaştırılır:
+günler (en çok 7 gün geriye, mağazanın eşlendiği günden önceye değil) sırayla karşılaştırılır:
 1. **Defter ↔ ayna** (`register_day_movements`): gün içinde açılmış her hareketin kasada beklenen etkisi
    (B2C sipariş parası yöntemiyle ödeme satırı; çekmece hesabının kart dışı öteki nakdi, defterin karşı yaka
    kuralıyla kasa kaydı) aynada yazılanla tutmalı. Yanlış plan ayna ↔ kasada fark çıkarmaz, burada çıkarır.
@@ -420,9 +416,9 @@ kapanışı önceki günleri de kapattığı için tutmayan gün düzelene kadar
 gerisinde kapanmamış gün kalmışsa da gün kapatılmaz ve bildirim gider, o gün elle incelenir. Fark `error_log`a
 uyarı olarak, özet `job_run`a yazılır.
 
-**Ekranlar:** yeni ekran yok. Ayarlar › Kurulum: Hiboutik kartı (tesis ↔ mağaza ↔ çekmece eşlemesi, canlıya
-geçiş günü, kuyruk özeti, son eşitleme ve gün sonu turu); kuyruk özeti sistem ekranında değil kasanın yanında,
-çünkü çözümü (eşleme, canlıya geçiş) orada. Sipariş detayı: hareketin yöntemi, kasa fişinin günlük numarası,
+**Ekranlar:** yeni ekran yok. Ayarlar › Kurulum: Hiboutik kartı (tesis ↔ mağaza ↔ çekmece eşlemesi, kuyruk
+özeti, son eşitleme ve gün sonu turu); kuyruk özeti sistem ekranında değil kasanın yanında, çünkü çözümü (eşleme)
+orada. Sipariş detayı: hareketin yöntemi, kasa fişinin günlük numarası,
 dijital fiş bağlantısı ve kasaya yazılmayı bekliyorsa sebebi. Sistem ekranı: gün sonu farkı ve beşinci
 denemede düşen yazım hata kaydı olarak.
 
@@ -497,26 +493,26 @@ gösterir.
 
 **Akışlar:**
 1. **Banka hareketi okuma.** Ayarlar › Kurulum'daki Pennylane kartında banka hesabımız Pennylane'deki hesabına
-   eşlenir ve canlıya geçiş günü girilir. Anahtar yalnız backend'dedir: eşitleme turu şirketi ve banka hesaplarını
-   okuma kapalıyken de okuyup yazar, kart seçenekleri oradan alır. Pennylane'deki listeden düşen eşli hesap okunmaz,
+   eşlenir; hareketler eşlendiği günden okunur, öncesi Excel'le girilir (19. karar). Anahtar yalnız backend'dedir:
+   eşitleme turu şirketi ve banka hesaplarını eşli hesap yokken de okuyup yazar, kart seçenekleri oradan alır. Pennylane'deki listeden düşen eşli hesap okunmaz,
    çünkü boş gelen hareket listesi bütün satırlarını silinmiş saydırırdı; kart onu işaretler. İlk okumada eşlenen hesabın o günden sonraki hareketleri listeden bir kez
    okunur (`GET /transactions`, hesap ve tarih süzgeciyle). Sonra değişiklik akışı (`/changelogs/transactions`)
-   birkaç dakikada bir okunur. Akış son 4 haftayı tuttuğu için daha uzun bir kesintiden sonra liste canlıya geçiş
+   birkaç dakikada bir okunur. Akış son 4 haftayı tuttuğu için daha uzun bir kesintiden sonra liste eşleme
    gününden yeniden okunur; listede olmayan ama aynada duran hareket Pennylane'de silinmiştir. Hareket bizde eşleşmemiş banka satırı olarak yazılır (`source = bank_import`, tip
    `misc`); mükerrer kimliği `pennylane:<kimlik>`, Pennylane kimliği aynada durur. Pennylane'de tutarı, günü ya
    da açıklaması değişen satır bizde henüz izah edilmemişse güncellenir. İzahlı satıra dokunulmaz: parası (tutar, gün,
-   yön) değişirse ya da hareket Pennylane'de silinirse muhasebeye ve yönetime bildirim gider. Eşlenmiş hesaba canlıya geçiş gününden sonrası için Excel yüklemesi
+   yön) değişirse ya da hareket Pennylane'de silinirse muhasebeye ve yönetime bildirim gider. Eşlenmiş hesaba eşleme gününden sonrası için Excel yüklemesi
    reddedilir, çünkü iki kaynak aynı satırı iki kez yazardı; eşlenmemiş hesapta Excel yüklemesi bugünkü gibi kalır.
-   Aynı kural öbür yönden de işler: dosyadan yüklenen son satırı canlıya geçiş gününe ya da sonrasına düşen hesap
-   eşlenmez, gün de eşli hesabın son dosya satırına ya da öncesine alınmaz.
+   Aynı kural öbür yönden de işler: dosyadan yüklenen son satırı eşleme gününe ya da sonrasına düşen hesap eşlenmez.
+   Eşleme başka Pennylane hesabına taşınınca ilk gün korunur ve liste o günden yeniden okunur: önceki hesaptan gelen
+   izahsız satırlar silinir, izahlı olanlar için muhasebe uyarılır.
 2. **Tedarikçi eşleme.** Pennylane'deki tedarikçi bizim tedarikçimize ya da carimize ayna tablosuyla bağlanır.
    Yüklenecek belgenin karşı tarafı Pennylane'de yoksa önce dış referansla (`sup:<kimlik>`, `cp:<kimlik>`), o da yoksa
    aynı firmanın elle açılmış kaydı aranır: KDV numarası tutan, tutan yoksa adı aynı olup KDV numarası çelişmeyen kayıt.
    Bulunan kayıt bağlanır, hiçbiri yoksa tedarikçi açılır (ad, KDV numarası, vade günü; ülke yalnız tam posta adresiyle
    gidiyor, bizde adres yapılandırılmış değil). Uyan birden çok kayıt ya da bizde başka karşı tarafa bağlı kayıt seçilmez,
    belge bekler. Dış referans tekil olduğu için tekrarlanan açılış çift kayıt doğurmaz.
-3. **Alış belgesi yükleme.** Yönü çıkış olan, dosyası ve KDV kırılımı bulunan fatura ya da fiş, canlıya geçiş
-   anından sonra girildiyse kuyruğa düşer. Pennylane iki şeyi yakalamıyor: KDV'nin orana uymadığı kırılımı ve
+3. **Alış belgesi yükleme.** Yönü çıkış olan, dosyası ve KDV kırılımı bulunan fatura ya da fiş kuyruğa düşer. Pennylane iki şeyi yakalamıyor: KDV'nin orana uymadığı kırılımı ve
    aynı tedarikçide aynı numarayı. Birincisi belge girişinde denetlenir (`documentVatProblem`: oran başına pay en
    az 2 cent ya da beklenen KDV'nin binde beşi, çünkü fatura KDV'yi kalem kalem yuvarlayabilir). İkincisi yazımdan
    önce sorulur (`supplier_id` + `invoice_number` süzgeci).
@@ -581,7 +577,7 @@ Log'a kimlik yazılır, tutar ve açıklama yazılmaz.
 - `money_movement.matched_elsewhere`: hareket Pennylane'de bizde olmayan bir faturaya eşli; izah sayılmaz.
 
   Pennylane kimlikleri `bigint`tir (ölçüldü: 14 hane).
-- Ayarlar: `pennylane_live_from`, `pennylane_quiet_days`, `pennylane_category_lezzet` · `pennylane_category_qualite` (16. karar).
+- Ayarlar: `pennylane_quiet_days`, `pennylane_category_lezzet` · `pennylane_category_qualite` (16. karar).
 - Personel bildirimleri: e-fatura geldi, belge ya da eşleşme Pennylane'e yazılamıyor, eşleşme Pennylane'de çözüldü,
   izahlı hareket Pennylane'de değişti, hareket gelmiyor, Pennylane'de farklı.
 
@@ -591,11 +587,11 @@ kodu muhasebeciyle doğrulanır: AB içi %20 için listede `intracom_*` kodu yok
 var.
 
 **Ekranlar:**
-- Ayarlar › Kurulum: Pennylane kartı (bağlantı ve kip, hesap eşlemesi, canlıya geçiş günü, kuyruk özeti, son
-  eşitleme, hareket gelmeyen hesap); Hiboutik kartının deseni.
+- Ayarlar › Kurulum: Pennylane kartı (bağlantı ve kip, hesap eşlemesi, kuyruk özeti, son eşitleme, hareket gelmeyen
+  hesap); Hiboutik kartının deseni.
 - Belge formu: tek KDV alanı yerine oran başına satırlar.
 - Belge satırı: Pennylane durumu alt satırın sonunda (yüklendi ✓ · sırada · gitmedi ve sebebi · yazılamadı · Pennylane'de farklı
-  ve oradaki açık kalan); Pennylane canlıya geçmeden yazılmaz. E-fatura durumu ve itiraz 7. adımla.
+  ve oradaki açık kalan); eşitleme Pennylane'e bağlanamadıysa yazılmaz. E-fatura durumu ve itiraz 7. adımla.
 - Banka kuyruğu değişmez; satırın kaynağı "Pennylane" yazar, bizde olmayan faturaya eşli satırın hapı önerisi yoksa "Belgeyi
   bizde girin" der.
 
@@ -618,8 +614,8 @@ ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, b
 1. Belgenin KDV kırılımı: şema, belge formu, asistan ve mal kabul önerileri, döküm.
 2. Bağ kuralının kesinleşmesi (elle tutar seçeneğinin kaldırılması).
 3. Pennylane istemcisi, port, sözleşme şemaları; sonraki her adım kendi okuma ve yazımını porta ekler.
-4. Banka hareketi okuma (bellek içi ikiz ilk tüketicisiyle burada), Pennylane kartı (hesap eşlemesi, canlıya
-   geçiş), hareket gelmiyor uyarısı.
+4. Banka hareketi okuma (bellek içi ikiz ilk tüketicisiyle burada), Pennylane kartı (hesap eşlemesi), hareket
+   gelmiyor uyarısı.
 5. Tedarikçi eşleme ve alış belgesi yükleme (denetimler, kuyruk, nakit ödemede ödeme durumu).
 6. Eşleşme yazma ve Pennylane'deki eşleşmeleri okuma.
 7. Ertelendi, e-fatura Pennylane'e gelmeye başlayınca: e-fatura okuma, mal kabule bağlama, itiraz; o faturaların bizden

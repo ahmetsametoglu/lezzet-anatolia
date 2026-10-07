@@ -33,7 +33,7 @@ const document = (over: Partial<MoneyDocument> = {}): MoneyDocument =>
     ...over,
   }) as MoneyDocument;
 const scope = (doc: MoneyDocument, opts: { country?: string | null; uploaded?: boolean } = {}) =>
-  pennylaneDocumentScope({ document: doc, partyCountry: opts.country ?? 'FR', liveFrom: '2026-10-01', uploaded: opts.uploaded ?? false });
+  pennylaneDocumentScope({ document: doc, partyCountry: opts.country ?? 'FR', uploaded: opts.uploaded ?? false });
 
 describe('Pennylane oran kodu', () => {
   it('standart oranlar Fransız koduna, muaf belge exempt koduna gider', () => {
@@ -57,7 +57,7 @@ describe('Pennylane oran kodu', () => {
 });
 
 describe('belgenin Pennylane kapsamı', () => {
-  it('canlıya geçiş gününden sonra girilmiş, ödeyeceğimiz fatura ve fiş yazılır; satır KDV dahil tutar ve oran kodu taşır', () => {
+  it('ödeyeceğimiz fatura ve fiş yazılır; satır KDV dahil tutar ve oran kodu taşır', () => {
     expect(scope(document())).toEqual({
       kind: 'write',
       lines: [
@@ -68,17 +68,13 @@ describe('belgenin Pennylane kapsamı', () => {
     expect(scope(document({ kind: 'receipt' })).kind).toBe('write');
   });
 
-  it('alacak belgesi, sözleşme ve canlıya geçişten önce girilen belge kapsam dışıdır', () => {
+  it('alacak belgesi ve sözleşme kapsam dışıdır', () => {
     expect(scope(document({ direction: 'in' }))).toEqual({ kind: 'skip' });
     expect(scope(document({ kind: 'contract' }))).toEqual({ kind: 'skip' });
-    // Gün Paris'indir: 30 Eylül 23:30 önce, 1 Ekim 00:30 canlıya geçiş günü.
-    expect(scope(document({ createdAt: '2026-09-30T21:30:00Z' }))).toEqual({ kind: 'skip' });
-    expect(scope(document({ createdAt: '2026-09-30T22:30:00Z' })).kind).toBe('write');
   });
 
   it('yüklenmiş belge kapsamdan çıksa da izlenir: Pennylane faturası sahipsiz kalır', () => {
     expect(scope(document({ kind: 'contract' }), { uploaded: true })).toEqual({ kind: 'blocked', reason: 'kind_changed' });
-    expect(scope(document({ createdAt: '2026-09-30T08:00:00Z' }), { uploaded: true }).kind).toBe('write');
   });
 
   it('karşı tarafsız, dosyasız, Pennylane almayan dosyalı, KDV kırılımı tutmayan ve oran kodu bulunmayan belge sebebiyle durur', () => {
@@ -218,10 +214,10 @@ describe('kaydın analitik kategorisi', () => {
 describe('belge satırındaki Pennylane durumu', () => {
   const uploaded = { paymentStatus: null, pennylaneOpenCents: 0 };
   const status = (over: Partial<Parameters<typeof pennylaneDocumentStatus>[0]> = {}) =>
-    pennylaneDocumentStatus({ live: true, openAmountCents: 0, mirror: uploaded, queue: null, ...over });
+    pennylaneDocumentStatus({ connected: true, openAmountCents: 0, mirror: uploaded, queue: null, ...over });
 
-  it('Pennylane canlıya geçmemişse ya da belge kapsam dışıysa durum yok', () => {
-    expect(status({ live: false })).toBeNull();
+  it("Pennylane'e bağlanılmadıysa ya da belge kapsam dışıysa durum yok", () => {
+    expect(status({ connected: false })).toBeNull();
     expect(status({ mirror: null })).toBeNull();
   });
 

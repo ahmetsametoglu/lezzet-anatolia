@@ -12,9 +12,10 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { PENNYLANE_LIVE_FROM_KEY, setMovementNature } from '@lezzet/application';
+import { setMovementNature } from '@lezzet/application';
 import { failingAiModel } from '@lezzet/ai/testing';
-import { mustDelete, purgeTestData, createTestWarehouse, settingsSnapshot } from '@lezzet/database/testing';
+import { mustDelete, purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { parisDayRange } from '@lezzet/helper';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
 import { applyMatch, documentPaymentOptions, linkDocument, matchOptions, matchQueue, suggestionsForMovements, unmatchRow } from './reconcile';
 
@@ -676,13 +677,11 @@ describe('satırın önerisi listede (12.19 · tek liste + tek panel)', () => {
 });
 
 describe("Pennylane'e eşlenen hesap", () => {
-  it('canlıya geçiş gününden sonraki satırı taşıyan dosya yazılmaz, çünkü iki kaynak aynı banka satırını iki kez yazardı', async () => {
-    const settings = settingsSnapshot(db);
-    await settings.override(PENNYLANE_LIVE_FROM_KEY, dayOffset(-2));
+  it('eşlendiği günden sonraki satırı taşıyan dosya yazılmaz, çünkü iki kaynak aynı banka satırını iki kez yazardı', async () => {
     const pennylaneId = 900_000_000 + (stamp % 100_000_000);
     const pennylaneAccounts = new PennylaneBankAccountService(db);
     await pennylaneAccounts.saveSeen([{ id: pennylaneId, name: 'Banque', currency: 'EUR' }], new Date().toISOString());
-    await pennylaneAccounts.map(pennylaneId, bankAccount, new Date().toISOString());
+    await pennylaneAccounts.map(pennylaneId, bankAccount, parisDayRange(dayOffset(-2)).from);
     try {
       const suggestion = await analyzeFile(STATEMENT, { model: failingAiModel('test: AI atlandı') });
       const profile =
@@ -691,11 +690,10 @@ describe("Pennylane'e eşlenen hesap", () => {
         status: 'pennylane_feed',
         from: dayOffset(-2),
       });
-      expect(await movements.listTouchingAccountSince(bankAccount, '2000-01-01')).toHaveLength(0);
+      expect(await movements.listTouchingAccount(bankAccount)).toHaveLength(0);
     } finally {
-      // Eşleme ve ayar kalırsa dosyanın öteki testlerindeki yükleme de reddedilirdi.
+      // Eşleme kalırsa dosyanın öteki testlerindeki yükleme de reddedilirdi.
       await mustDelete(db, 'pennylane_bank_account', (q) => q.eq('pennylane_id', pennylaneId));
-      await settings.restore();
     }
   });
 });

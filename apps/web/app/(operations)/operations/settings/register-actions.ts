@@ -2,15 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { AccountService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom } from '@lezzet/application';
-import { parisDayRange } from '@lezzet/helper';
+import { requeueRegisterStore } from '@lezzet/application';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { SETTINGS_PATH } from './settings-url';
 
 /**
- * Sertifikalı kasanın kurulumu: tesis ↔ kasa mağazası ↔ çekmecenin nakit hesabı ve canlıya geçiş günü. Mağaza kasa yazılımında elle
- * açılır, numarası buraya yazılır; eşleme yanlışsa satış başka mağazanın Z'sine düşer, bu yüzden kapı yöneticinindir.
+ * Sertifikalı kasanın kurulumu: tesis ↔ kasa mağazası ↔ çekmecenin nakit hesabı. Mağaza kasa yazılımında elle açılır, numarası buraya
+ * yazılır; eşleme yanlışsa satış başka mağazanın Z'sine düşer, bu yüzden kapı yöneticinindir.
  */
 
 export async function saveRegisterStoreAction(input: {
@@ -34,7 +33,7 @@ export async function saveRegisterStoreAction(input: {
       return { data: null, error: 'Çekmecenin hesabı açık bir nakit hesabı olmalı.' };
 
     const store = await new RegisterStoreService(db).save(input);
-    await requeueRegisterStore(db, store, await registerLiveFrom(db));
+    await requeueRegisterStore(db, store);
     revalidatePath(SETTINGS_PATH);
     return { data: { warehouseId: input.warehouseId }, error: null };
   } catch (error) {
@@ -46,19 +45,6 @@ export async function removeRegisterStoreAction(input: { warehouseId: string }):
   try {
     await requireAdmin();
     await new RegisterStoreService(serviceDb()).remove(input.warehouseId);
-    revalidatePath(SETTINGS_PATH);
-    return { data: null, error: null };
-  } catch (error) {
-    return { data: null, error: getErrorMessage(error) };
-  }
-}
-
-/** Gün Paris'in gece yarısından başlar; boş değer kasayı kapatır ve hiçbir şey yazılmaz. */
-export async function setRegisterLiveFromAction(input: { date: string | null }): Promise<ActionResult> {
-  try {
-    await requireAdmin();
-    if (input.date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { data: null, error: 'Tarih okunamadı.' };
-    await setRegisterLiveFrom(serviceDb(), input.date ? parisDayRange(input.date).from : null);
     revalidatePath(SETTINGS_PATH);
     return { data: null, error: null };
   } catch (error) {

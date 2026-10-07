@@ -81,7 +81,8 @@ function partyOf(doc: Pick<MoneyDocument, 'counterpartyId' | 'supplierId'>, part
 
 /** Belgelerin Pennylane durumunun girdisi, tek turda okunmuş haritalar; anahtar belge kimliğidir. */
 export interface DocumentPennylaneContext {
-  live: boolean;
+  /** Eşitleme Pennylane'e bağlanabildi mi; bağlanamıyorsa kuyruk işlenmez, durum yazılmaz. */
+  connected: boolean;
   mirrors: ReadonlyMap<string, Pick<PennylaneDocumentMirror, 'paymentStatus' | 'pennylaneOpenCents'>>;
   queue: ReadonlyMap<string, Pick<PennylaneQueue, 'attempts' | 'lastError'>>;
 }
@@ -134,7 +135,7 @@ export function toDocumentRows(
       label: `${documentHead(doc)} · ${partyName ?? '—'} · açık ${money(doc.balance.openAmountCents)}`,
       pennylane: pennylaneLine(
         pennylaneDocumentStatus({
-          live: pennylane.live,
+          connected: pennylane.connected,
           openAmountCents: doc.balance.openAmountCents,
           mirror: pennylane.mirrors.get(doc.id) ?? null,
           queue: queued ? { attempts: queued.attempts, blockReason: queueBlockReason(queued.lastError) } : null,

@@ -1,21 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
-import { LiveFromDialog } from './live-from-dialog';
-import { removeRegisterStoreAction, saveRegisterStoreAction, setRegisterLiveFromAction } from './register-actions';
+import { removeRegisterStoreAction, saveRegisterStoreAction } from './register-actions';
 import type { RegisterDayEndView, RegisterPanelData, RegisterStoreRowView } from './register-read';
 import { CardItem, CardLine, DialogError, JobText, QueueText, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
 
 /**
- * Sertifikalı kasa (Hiboutik): tesis ↔ kasa mağazası eşlemesi, canlıya geçiş günü ve kuyruğun hâli. Kasaya yazımın kendisi backend'in
- * işidir; kart onun izini gösterir, çünkü kasaya yazılamayan satış yasal bir açıktır ve fark edilmeli.
+ * Sertifikalı kasa (Hiboutik): tesis ↔ kasa mağazası eşlemesi ve kuyruğun hâli. Kasaya yazımın kendisi backend'in işidir; kart onun
+ * izini gösterir, çünkü kasaya yazılamayan satış yasal bir açıktır ve fark edilmeli.
  */
 interface RegisterCardProps {
   data: RegisterPanelData;
@@ -23,27 +21,13 @@ interface RegisterCardProps {
 
 export function RegisterCard({ data }: RegisterCardProps) {
   const [editing, setEditing] = useState<RegisterStoreRowView | null>(null);
-  const [liveOpen, setLiveOpen] = useState(false);
 
   return (
     <SettingsCard
       title="Sertifikalı kasa (Hiboutik)"
       count={data.stores.filter((store) => store.externalStoreId !== null).length}
       hint="B2C satış ve tesis çekmecesinin fiş dışı nakdi bu eşlemeyle kasaya yazılır. Mağaza kasa yazılımında açılır, numarası buraya girilir."
-      action={
-        <Button variant="dark" size="sm" onClick={() => setLiveOpen(true)}>
-          Canlıya geçiş
-        </Button>
-      }
     >
-      <CardLine label="Canlıya geçiş">
-        {data.liveFrom ? (
-          <span className="font-ops-mono text-ops-xs text-ops-ink">{data.liveFrom}</span>
-        ) : (
-          <Badge tone="amber">Kapalı — kasaya hiçbir şey yazılmıyor</Badge>
-        )}
-      </CardLine>
-
       {data.stores.map((store) => (
         <CardItem
           key={store.warehouseId}
@@ -72,14 +56,6 @@ export function RegisterCard({ data }: RegisterCardProps) {
       </CardLine>
 
       <StoreDialog row={editing} accounts={data.cashAccounts} onClose={() => setEditing(null)} />
-      <LiveFromDialog
-        open={liveOpen}
-        value={data.liveFrom}
-        subtitle="Bu günden (Paris, gece yarısı) sonra para gören sipariş ve yazılan kasa hareketi kasaya gider. Boş bırakılırsa kasaya hiçbir şey yazılmaz."
-        offLabel="Kasayı kapat"
-        onSave={(date) => setRegisterLiveFromAction({ date })}
-        onClose={() => setLiveOpen(false)}
-      />
     </SettingsCard>
   );
 }

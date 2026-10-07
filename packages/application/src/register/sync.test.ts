@@ -12,16 +12,15 @@ import {
   RegisterQueueService,
   RegisterStoreService,
   RegisterTicketService,
-  SettingsService,
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
-import { addDays, parisDateOf } from '@lezzet/helper';
+import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import type { PaymentMethod, RegisterQueue } from '@lezzet/types';
 import { closeRegisterDay } from './day-end';
 import { memoryRegister } from './memory-register.testkit';
-import { REGISTER_LIVE_FROM_KEY, processQueueRow, registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom } from './sync';
+import { processQueueRow, requeueRegisterStore, syncOrderNow } from './sync';
 
 /**
  * Kasa eşitlemesi kuyruk satırından kasaya: fiş, ödeme satırı ve fiş dışı nakit doğru yazılır, yarıda kalan yazım kasadaki hâlinden
@@ -33,7 +32,6 @@ const movements = new MoneyMovementService(db);
 const tickets = new RegisterTicketService(db);
 
 const stamp = Date.now();
-const LIVE_FROM = '2000-01-01T00:00:00.000Z';
 /** Gerçek kasa gibi dosya boyunca tek kasa: ürün aynası kalıcıdır ve kasadaki ürün numaralarını anar. */
 const fake = memoryRegister();
 let warehouseId: string;
@@ -138,14 +136,14 @@ async function queueRowOf(column: 'order_id' | 'movement_id', id: string): Promi
   };
 }
 
-async function runRow(column: 'order_id' | 'movement_id', id: string, liveFrom = LIVE_FROM) {
+async function runRow(column: 'order_id' | 'movement_id', id: string) {
   const row = await queueRowOf(column, id);
   if (!row) throw new Error(`kuyruk satırı yok (${column} ${id})`);
-  return processQueueRow(db, fake.register, row, { liveFrom, now: new Date() });
+  return processQueueRow(db, fake.register, row, { now: new Date() });
 }
 
 /** İşlenmiş satırı yeniden işlemek, tekrar eden turun ya da kuyruğa yeniden düşen aynı işin karşılığıdır. */
-const runAgain = (row: RegisterQueue) => processQueueRow(db, fake.register, row, { liveFrom: LIVE_FROM, now: new Date() });
+const runAgain = (row: RegisterQueue) => processQueueRow(db, fake.register, row, { now: new Date() });
 
 const salesOf = (referenceNo: string) =>
   [...fake.sales].filter(([, sale]) => sale.extRef.startsWith(`${referenceNo}-`)).map(([saleId, sale]) => ({ saleId, ...sale }));
@@ -356,23 +354,6 @@ describe('yazılmayan ve bekleyen', () => {
     expect(await queueRowOf('order_id', order.id)).toBeNull();
   });
 
-  it('canlıya geçişten önce para görmüş sipariş kasaya yazılmaz', async () => {
-    const order = await newOrder();
-    await pay(order.id, 2990);
-
-    expect(await runRow('order_id', order.id, new Date(Date.now() + 86_400_000).toISOString())).toBe('skipped');
-    expect(salesOf(order.referenceNo)).toHaveLength(0);
-  });
-
-  it('canlıya geçişten önce açılıp sonra ödenen sipariş kasaya yazılır', async () => {
-    const order = await newOrder();
-    const opened = (await orders.getWithItems(order.id))!.order;
-    await pay(order.id, 2990);
-
-    expect(await runRow('order_id', order.id, new Date(Date.parse(opened.createdAt) + 1).toISOString())).toBe('written');
-    expect(salesOf(order.referenceNo)).toHaveLength(1);
-  });
-
   it('yöntemi bilinmeyen tahsilat tahminle yazılmaz: satır sebebiyle ertelenir', async () => {
     const order = await newOrder();
     await pay(order.id, 2990, null);
@@ -573,8 +554,8 @@ describe('fiş dışı nakit', () => {
     const row = (await queueRowOf('movement_id', change.id))!;
     nightly.failOn('moveCash', 'after');
 
-    expect(await processQueueRow(db, nightly.register, row, { liveFrom: LIVE_FROM, now: night })).toBe('failed');
-    expect(await processQueueRow(db, nightly.register, row, { liveFrom: LIVE_FROM, now: night })).toBe('written');
+    expect(await processQueueRow(db, nightly.register, row, { now: night })).toBe('failed');
+    expect(await processQueueRow(db, nightly.register, row, { now: night })).toBe('written');
     expect(nightly.tills.filter((till) => till.label.endsWith(`#${change.id.slice(0, 8)}`))).toHaveLength(1);
   });
 
@@ -596,7 +577,7 @@ describe('fiş dışı nakit', () => {
 });
 
 describe('eşleme', () => {
-  it('eşlemeden önce yazılmış çekmece hareketi kuyruğa alınır, eşlemesi olmadığı için duran sipariş hemen yeniden denenir', async () => {
+  it('eşlemeden önce yazılmış çekmece hareketi kuyruğa alınır, eşlemesi olmadığı için duran sipariş hemen yeniden denenir ve yazılır', async () => {
     // Tetikleyici yalnız yazım anında eşlenmiş çekmeceyi görür; eşleme sonradan kurulunca aradaki nakit kasaya hiç gitmezdi.
     const warehouse = (await createTestWarehouse(db, { label: 'KASA-SONRADAN' })).id;
     const cash = (await new AccountService(db).insert({ name: `Sonradan eşlenen çekmece ${stamp}`, type: 'cash' })).id;
@@ -619,17 +600,40 @@ describe('eşleme', () => {
       externalStoreId: Number(String(stamp).slice(-9)) + 50,
       cashAccountId: cash,
     });
-    await requeueRegisterStore(db, store, LIVE_FROM);
+    await requeueRegisterStore(db, store);
 
     expect(Date.parse((await queueRowOf('order_id', order.id))!.nextAttemptAt)).toBeLessThanOrEqual(Date.now());
     expect(await runRow('movement_id', expense.id)).toBe('written');
     expect(tillsOf(expense.id)).toHaveLength(1);
+    // Satış eşlemeden önce ödendi diye atlanmaz; kasaya geç de olsa girer.
+    expect(await runRow('order_id', order.id)).toBe('written');
+    expect(salesOf(order.referenceNo)).toHaveLength(1);
+  });
+});
+
+describe('anında yazım', () => {
+  it('ödenen siparişin satırı hiçbir ayar beklemeden hemen kasaya yazılır; kuyruk satırı kalmayan siparişte yapılacak iş yoktur', async () => {
+    const order = await newOrder();
+    await pay(order.id, 2990);
+
+    expect(await syncOrderNow(db, fake.register, order.id)).toBe('written');
+    expect(salesOf(order.referenceNo)).toHaveLength(1);
+    expect(await queueRowOf('order_id', order.id)).toBeNull();
+    expect(await syncOrderNow(db, fake.register, order.id)).toBeNull();
   });
 });
 
 describe('gün sonu', () => {
   const today = () => parisDateOf(new Date());
   const daysBefore = (count: number) => Array.from({ length: count }).reduce<string>((day) => addDays(day, -1), today());
+  /** Mağazanın eşlendiği günü geriye alır; gün sonu o günden önceki güne bakmaz. */
+  const mappedOn = async (warehouse: string, date: string) => {
+    const { error } = await db
+      .from('register_store')
+      .update({ created_at: parisDayRange(date).from })
+      .eq('warehouse_id', warehouse);
+    if (error) throw error;
+  };
 
   it('defter, ayna ve kasa tutuyorsa gün kapanır ve ikinci kez kapatılmaz', async () => {
     const own = await ownStore('KASA-KAPANIS');
@@ -646,8 +650,8 @@ describe('gün sonu', () => {
     await runRow('movement_id', expense.id);
     const closeDay = vi.spyOn(fake.register, 'closeDay');
 
-    const first = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
-    const second = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+    const first = await closeRegisterDay(db, fake.register, { date: today(), close: true });
+    const second = await closeRegisterDay(db, fake.register, { date: today(), close: true });
 
     expect(first.stores.find((store) => store.warehouseId === own.warehouseId)).toEqual({
       warehouseId: own.warehouseId,
@@ -708,7 +712,7 @@ describe('gün sonu', () => {
     await ops.update({ id: wrong.id, status: 'written', writtenAt: new Date().toISOString() });
     await fake.register.moveCash({ storeId: own.storeId, direction: 'out', amountCents: 6000, label: 'çift çıkış' });
 
-    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true });
 
     const store = result.stores.find((candidate) => candidate.warehouseId === own.warehouseId)!;
     expect(store.closed).toBe(false);
@@ -729,7 +733,7 @@ describe('gün sonu', () => {
     await runRow('order_id', order.id);
     await items.setFulfilled(line!.id, 1);
 
-    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true });
 
     expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toEqual({
       warehouseId: own.warehouseId,
@@ -753,7 +757,7 @@ describe('gün sonu', () => {
     await items.setFulfilled(line!.id, 1);
     await runRow('order_id', order.id);
 
-    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true });
 
     expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toMatchObject({
       closed: true,
@@ -763,10 +767,10 @@ describe('gün sonu', () => {
 
   it('arama sınırının gerisinde kapanmamış gün varsa gün kapatılmaz, çünkü kapanış onu da karşılaştırmadan mühürlerdi', async () => {
     const own = await ownStore('KASA-ESKI-GUN');
+    await mappedOn(own.warehouseId, daysBefore(10));
     const closeDay = vi.spyOn(fake.register, 'closeDay');
-    const liveFromDate = daysBefore(10);
 
-    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true });
 
     const store = result.stores.find((candidate) => candidate.warehouseId === own.warehouseId)!;
     expect(store).toMatchObject({ closed: false, olderUnclosed: true });
@@ -776,11 +780,11 @@ describe('gün sonu', () => {
     closeDay.mockRestore();
   });
 
-  it('canlıya geçiş günü arama sınırının içindeyse daha eski gün aranmaz, gün kapanır', async () => {
+  it('mağazanın eşlendiği gün arama sınırının içindeyse daha eski gün aranmaz, gün kapanır', async () => {
     const own = await ownStore('KASA-SINIR');
-    const liveFromDate = daysBefore(6);
+    await mappedOn(own.warehouseId, daysBefore(6));
 
-    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true });
 
     expect(result.stores.find((candidate) => candidate.warehouseId === own.warehouseId)).toMatchObject({
       closed: true,
@@ -789,15 +793,15 @@ describe('gün sonu', () => {
   });
 
   it('canlı kasa değilse gün kapatılmaz, mutabakat yine koşar', async () => {
+    const own = await ownStore('KASA-KIPSIZ');
     const closeDay = vi.spyOn(fake.register, 'closeDay');
-    const date = '2026-01-01';
 
-    const result = await closeRegisterDay(db, fake.register, { date, close: false, liveFromDate: date });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: false });
 
     expect(closeDay).not.toHaveBeenCalled();
-    expect(result.stores.find((store) => store.warehouseId === warehouseId)).toMatchObject({
+    expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toMatchObject({
       closed: false,
-      days: [{ date, differences: [] }],
+      days: [{ date: today(), differences: [] }],
     });
     closeDay.mockRestore();
   });
@@ -811,29 +815,10 @@ describe('gün sonu', () => {
     await fake.register.addPayment({ saleId: manual, method: 'cash', amountCents: 500 });
     await fake.register.closeSale(manual);
 
-    const result = await closeRegisterDay(db, fake.register, { date: today(), close: false, liveFromDate: today() });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: false });
 
     const kinds = result.stores.find((store) => store.warehouseId === own.warehouseId)!.days[0]!.differences;
     expect(kinds).toContainEqual({ kind: 'unknown_sale', saleId: manual });
     expect(kinds).toContainEqual({ kind: 'vat', vatRate: 20, oursCents: 0, registerCents: 500 });
-  });
-});
-
-describe('canlıya geçiş', () => {
-  it('kasayı kapatmak ayarı siler: değeri boş yazılamaz, okuma hemen kapalı görür', async () => {
-    const settings = new SettingsService(db);
-    const before = (await settings.listByKey(REGISTER_LIVE_FROM_KEY))[0]?.value as string | undefined;
-    try {
-      await setRegisterLiveFrom(db, '2026-09-30T22:00:00.000Z');
-      expect(await registerLiveFrom(db)).toBe('2026-09-30T22:00:00.000Z');
-
-      await setRegisterLiveFrom(db, null);
-
-      expect(await registerLiveFrom(db)).toBeNull();
-      expect(await settings.listByKey(REGISTER_LIVE_FROM_KEY)).toEqual([]);
-    } finally {
-      // Küresel satır: testten önceki değer geri konur.
-      await setRegisterLiveFrom(db, before ?? null);
-    }
   });
 });

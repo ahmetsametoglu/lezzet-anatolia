@@ -2,6 +2,7 @@ import 'server-only';
 import {
   AccountService,
   CounterpartyService,
+  JobRunService,
   MoneyAllocationService,
   MoneyDocumentService,
   MoneyMovementService,
@@ -12,7 +13,7 @@ import {
   PennylaneQueueService,
   SupplierService,
 } from '@lezzet/database';
-import { pennylaneLiveFrom } from '@lezzet/application';
+import { PENNYLANE_SYNC_JOB, pennylaneConnectionOf } from '@lezzet/application';
 import {
   DEFAULT_PAGE_SIZE,
   type Account,
@@ -177,15 +178,15 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
   return toMovementRows(ledgerRows, { ...names, orderRefs, documentsOf, suggestions });
 }
 
-/** Belgelerin Pennylane durumunun girdisi tek turda: canlıya geçiş, aynalar ve kuyruk satırları. */
+/** Belgelerin Pennylane durumunun girdisi tek turda: bağlantı, aynalar ve kuyruk satırları. */
 async function pennylaneOf(db: SupabaseClient, documentIds: readonly string[]): Promise<DocumentPennylaneContext> {
-  const [liveFrom, mirrors, queue] = await Promise.all([
-    pennylaneLiveFrom(db),
+  const [sync, mirrors, queue] = await Promise.all([
+    new JobRunService(db).findByName(PENNYLANE_SYNC_JOB),
     new PennylaneDocumentService(db).listByDocuments(documentIds),
     new PennylaneQueueService(db).listByDocuments(documentIds),
   ]);
   return {
-    live: liveFrom !== null,
+    connected: pennylaneConnectionOf(sync?.lastResult ?? null) !== null,
     mirrors: new Map(mirrors.map((mirror) => [mirror.documentId, mirror] as const)),
     queue: new Map(queue.flatMap((row) => (row.documentId ? [[row.documentId, row] as const] : []))),
   };

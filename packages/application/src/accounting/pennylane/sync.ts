@@ -16,7 +16,6 @@ export async function syncPennylane(
   opts: { now?: Date; files?: DocumentFileReader } = {},
 ): Promise<Record<string, unknown>> {
   const bank = await syncBankFeed(db, pennylane, { now: opts.now });
-  if (bank['skipped']) return bank;
   const queue = await syncPennylaneQueue(db, pennylane, opts);
   const categories = await syncTransactionCategories(db, pennylane);
   return { ...bank, queue, categories, invoices: await syncInvoiceFeed(db, pennylane, { now: opts.now }) };

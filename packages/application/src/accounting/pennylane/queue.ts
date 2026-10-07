@@ -3,7 +3,7 @@ import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { PennylaneQueue } from '@lezzet/types';
 import { notifyPennylaneDocumentStuck, notifyPennylaneMatchStuck } from '../../notification/staff-events';
 import { deferBlocked, deferFailed } from '../../queue/defer';
-import { PENNYLANE_SYNC_JOB, pennylaneLiveFrom } from './bank-feed';
+import { PENNYLANE_SYNC_JOB } from './bank-feed';
 import { categoryResolver, type CategoryResolver } from './category';
 import { privateDocumentFiles, writeDocument, type DocumentFileReader } from './documents';
 import { writeMovementMatches } from './matches';
@@ -19,23 +19,18 @@ const BATCH = 20;
 export type PennylaneQueueOutcome = 'uploaded' | 'updated' | 'paid' | 'matched' | 'unchanged' | 'skipped' | 'blocked' | 'failed';
 
 interface QueueContext {
-  liveFrom: string;
   now: Date;
   files: DocumentFileReader;
   /** İşin kategorisi; tur başına iş başına bir kez çözülür. */
   category?: CategoryResolver;
 }
 
-/** Okuma kapalıyken hiçbir şey yazılmaz, çünkü canlıya geçiş günü kapsamın sınırıdır. */
 export async function syncPennylaneQueue(
   db: Db,
   pennylane: PennylanePort,
   opts: { now?: Date; files?: DocumentFileReader } = {},
 ): Promise<Record<string, unknown>> {
-  const liveFrom = await pennylaneLiveFrom(db);
-  if (!liveFrom) return { skipped: 'not_live' };
   const ctx: QueueContext = {
-    liveFrom,
     now: opts.now ?? new Date(),
     files: opts.files ?? privateDocumentFiles,
     category: categoryResolver(db, pennylane),

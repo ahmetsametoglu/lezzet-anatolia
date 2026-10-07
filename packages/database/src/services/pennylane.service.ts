@@ -71,7 +71,7 @@ export class PennylaneBankAccountService extends BaseDbService<PennylaneBankAcco
     for (const account of accounts) await this.upsert({ pennylaneId: account.id, name: account.name, seenAt: at }, 'pennylane_id');
   }
 
-  /** Eşlenmemiş satırın `listedAt`ı kısıt gereği boştur; yeni eşlenen hesabın listesi sonraki turda canlıya geçiş gününden okunur. */
+  /** Eşlenmemiş satırın `listedAt`ı kısıt gereği boştur; yeni eşlenen hesabın listesi sonraki turda eşleme gününden okunur. */
   async map(pennylaneId: number, accountId: string, at: string): Promise<void> {
     await this.updateWhereIn('pennylaneId', [String(pennylaneId)], { accountId, mappedAt: at });
   }

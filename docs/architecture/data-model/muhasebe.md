@@ -25,16 +25,17 @@ Pennylane'deki banka hesabı; banka hesabımız en fazla birine eşlenir ve eşl
 
 **Kararlar**
 
-- **Liste backend'den** — Pennylane anahtarı yalnız backend'dedir; eşitleme turu şirketi ve banka hesaplarını okuma kapalıyken de
+- **Liste backend'den** — Pennylane anahtarı yalnız backend'dedir; eşitleme turu şirketi ve banka hesaplarını eşli hesap yokken de
   okur, kurulum kartı eşleme seçeneklerini bu tablodan alır.
 - **`seen_at`** — son okunan listede görüldüğü an. Listeden düşen hesap eşleme seçeneklerinden çıkar; eşlenmişse okunmaz, çünkü boş
   gelen hareket listesi bütün satırlarını Pennylane'de silinmiş sayardı. Kart onu işaretler.
-- **`account_id`, `mapped_at`** — eşleme; ikisi birlikte dolu ya da boştur. Hareket gelmiyor sayacı eşleme gününden başlar. Başka
-  hesabımıza eşli Pennylane hesabı eşlenmez; hesabımızın eşlemesi taşınınca eskisi boşalır.
-- **`listed_at`** — canlıya geçiş gününden itibaren liste okundu mu; boşsa sonraki tur listeyi baştan okur (ilk eşleme, gün değişikliği,
+- **`account_id`, `mapped_at`** — eşleme; ikisi birlikte dolu ya da boştur. Hareketler `mapped_at` gününden (Paris) okunur, hareket
+  gelmiyor sayacı da o günden başlar; tarih ayarı yoktur. Başka hesabımıza eşli Pennylane hesabı eşlenmez; hesabımızın eşlemesi
+  taşınınca eskisi boşalır ve `mapped_at` korunur, çünkü önceki hesaptan gelen satırlar yeni hesabın listesiyle o günden karşılaştırılır.
+- **`listed_at`** — eşleme gününden itibaren liste okundu mu; boşsa sonraki tur listeyi baştan okur (ilk eşleme, eşleme taşıma,
   akışın kapsamadığı kesinti). Eşlenmemiş satırda boştur.
-- **Dosya satırıyla çakışma** — hesaba dosyadan yüklenen son satır canlıya geçiş gününe ya da sonrasına düşüyorsa hesap eşlenmez ve gün o
-  satıra ya da öncesine alınmaz; Pennylane aynı banka satırını ikinci kez yazardı. Eşlenen hesaba o günden sonrası için dosya da yüklenmez.
+- **Dosya satırıyla çakışma** — hesaba dosyadan yüklenen son satır eşleme gününe ya da sonrasına düşüyorsa hesap eşlenmez; Pennylane
+  aynı banka satırını ikinci kez yazardı. Eşlenen hesaba o günden sonrası için dosya da yüklenmez.
 
 ## PennylaneTransaction (hareket aynası)
 

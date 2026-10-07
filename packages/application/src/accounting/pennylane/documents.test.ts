@@ -28,7 +28,6 @@ const documents = new MoneyDocumentService(db);
 const queue = new PennylaneQueueService(db);
 const mirrors = new PennylaneDocumentService(db);
 const settings = settingsSnapshot(db);
-const LIVE_FROM = '2026-10-01';
 
 let twin: ReturnType<typeof memoryPennylane>;
 let files: Map<string, Uint8Array>;
@@ -52,7 +51,7 @@ afterEach(async () => {
 const reader = { read: async (key: string) => files.get(key) ?? Promise.reject(new Error(`dosya yok: ${key}`)) };
 const run = async (documentId: string, now = new Date()) => {
   const row = await queue.findByDocument(documentId);
-  return row ? processPennylaneQueueRow(db, twin.port, row, { liveFrom: LIVE_FROM, now, files: reader }) : 'not_queued';
+  return row ? processPennylaneQueueRow(db, twin.port, row, { now, files: reader }) : 'not_queued';
 };
 const fileOf = (documentId: string, content = documentId, extension = 'pdf') => {
   const key = `finance/documents/${documentId}/belge.${extension}`;
@@ -222,14 +221,6 @@ describe('yazılamayan belge', () => {
 
     expect(await run(doc.id, new Date(Date.now() + 120_000))).toBe('uploaded');
     expect(twin.invoices()).toHaveLength(1);
-  });
-
-  it('canlıya geçiş gününden önce girilmiş belge yüklenmez, kuyruk satırı tamamlanır', async () => {
-    const doc = await invoice();
-    const row = (await queue.findByDocument(doc.id))!;
-    expect(await processPennylaneQueueRow(db, twin.port, row, { liveFrom: '2999-01-01', now: new Date(), files: reader })).toBe('skipped');
-    expect(await queue.findByDocument(doc.id)).toBeNull();
-    expect(twin.invoices()).toHaveLength(0);
   });
 });
 

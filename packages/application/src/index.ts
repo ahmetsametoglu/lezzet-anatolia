@@ -640,18 +640,16 @@ export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParce
 // ── Sertifikalı kasa (Hiboutik) ──
 export { registerDayEnd } from './register/day-end';
 export { hiboutikFromEnv } from './register/hiboutik/client';
-export { kickOrderRegister, registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom, syncRegisterQueue } from './register/sync';
+export { kickOrderRegister, requeueRegisterStore, syncRegisterQueue } from './register/sync';
 export { pennylaneFromEnv } from './accounting/pennylane/client';
 export {
   BANK_FEED_QUIET_JOB,
-  PENNYLANE_LIVE_FROM_KEY,
   PENNYLANE_SYNC_JOB,
   bankFeedStatus,
   checkBankFeedQuiet,
   mapPennylaneBankAccount,
+  pennylaneConnectionOf,
   pennylaneFeedFrom,
-  pennylaneLiveFrom,
-  setPennylaneLiveFrom,
   syncBankFeed,
   type PennylaneSetupOutcome,
 } from './accounting/pennylane/bank-feed';

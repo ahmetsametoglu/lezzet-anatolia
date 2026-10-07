@@ -51,7 +51,7 @@ import {
   vatSplitOf,
 } from '@lezzet/domain-core';
 import { doorCheckOf } from '@lezzet/address';
-import { listOrderBoxes, readDeliveryProof, readOrderTracking, registerLiveFrom, thumbnailImageUrl } from '@lezzet/application';
+import { listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl } from '@lezzet/application';
 import { daysBetween, parisDateOf, toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
@@ -88,7 +88,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const { order, items } = found;
 
-  const [logs, returns, movements, accounts, batches, tickets, termDays, warehouseLabels, trust, registerTickets, registerQueue, liveFrom] =
+  const [logs, returns, movements, accounts, batches, tickets, termDays, warehouseLabels, trust, registerTickets, registerQueue] =
     await Promise.all([
       new OrderStatusLogService(db).listByOrder(orderId),
       new OrderItemReturnService(db).listByOrders([orderId]),
@@ -102,7 +102,6 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       readCustomerTrust(db, order.customerId, TRUST_PREVIEW_ROWS),
       new RegisterTicketService(db).listByOrder(orderId),
       new RegisterQueueService(db).findByOrder(orderId),
-      registerLiveFrom(db),
     ]);
 
   const variantIds = [...new Set(items.map((i) => i.variantId))];
@@ -273,7 +272,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
         receiptUrl: ticket.receiptUrl,
         written: ticket.status === 'written',
       })),
-      waiting: registerWaitingOf(registerQueue, liveFrom),
+      waiting: registerWaitingOf(registerQueue),
     },
 
     timeline: timelineOf(logs, actorNames, tickets, order.status),
@@ -629,10 +628,9 @@ async function proofOf(raw: unknown): Promise<OrderDetailView['delivery']['proof
   return { when: proof.at, receivedBy: proof.receivedBy, kind: proof.kind, imageUrl: proof.imageUrl };
 }
 
-/** Kuyrukta bekleyen siparişin sebebi: kasa kapalıysa o, plan durduysa sebep, kasaya yazılamıyorsa deneme sayısı ve hata, yoksa sırada. */
-function registerWaitingOf(row: RegisterQueue | null, liveFrom: string | null): string | null {
+/** Kuyrukta bekleyen siparişin sebebi: plan durduysa sebep, kasaya yazılamıyorsa deneme sayısı ve hata, yoksa sırada. */
+function registerWaitingOf(row: RegisterQueue | null): string | null {
   if (!row) return null;
-  if (!liveFrom) return 'kasa kapalı, canlıya geçiş günü girilmedi';
   if (row.attempts > 0 && !row.lastError?.startsWith('blocked:'))
     return `kasaya yazılamadı (${row.attempts}. deneme, yeniden denenecek): ${row.lastError ?? '—'}`;
   return blockReasonOf(row.lastError) ?? 'sırada';

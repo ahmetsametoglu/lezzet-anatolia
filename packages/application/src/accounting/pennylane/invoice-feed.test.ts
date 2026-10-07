@@ -23,7 +23,6 @@ import { processPennylaneQueueRow } from './queue';
 
 const db = serviceDb();
 const stamp = Date.now();
-const LIVE_FROM = '2026-10-01';
 const STREAM = 'supplier_invoices';
 const cursors = new PennylaneCursorService(db);
 const queue = new PennylaneQueueService(db);
@@ -57,11 +56,7 @@ afterEach(async () => {
 });
 
 const processDocument = async (documentId: string) =>
-  processPennylaneQueueRow(db, twin.port, (await queue.findByDocument(documentId))!, {
-    liveFrom: LIVE_FROM,
-    now: new Date(),
-    files: reader,
-  });
+  processPennylaneQueueRow(db, twin.port, (await queue.findByDocument(documentId))!, { now: new Date(), files: reader });
 /** Yüklenmiş muaf fatura; akış yüklemeden sonraki andan okunur. */
 const uploaded = async (amountCents: number) => {
   const documents = new MoneyDocumentService(db);

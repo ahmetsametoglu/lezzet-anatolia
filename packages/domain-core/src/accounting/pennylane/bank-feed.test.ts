@@ -2,7 +2,8 @@ import type { PennylaneTransaction } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
 import { bankFeedQuiet, planBankFeed, type BankFeedMirror } from './bank-feed';
 
-const LIVE = '2026-10-01';
+/** Hesabın eşlendiği gün. */
+const FEED_FROM = '2026-10-01';
 const tx = (over: Partial<PennylaneTransaction> = {}): PennylaneTransaction => ({
   id: 31309718454272,
   bankAccountId: 17111818240,
@@ -25,13 +26,13 @@ const mirror = (explained: boolean | null, over: Partial<BankFeedMirror> = {}): 
   ...over,
 });
 const plan = (transaction: PennylaneTransaction | null, current: BankFeedMirror | null) =>
-  planBankFeed({ transaction, mirror: current, liveFrom: LIVE });
+  planBankFeed({ transaction, mirror: current, feedFrom: FEED_FROM });
 
 describe('Pennylane hareketinin banka satırına etkisi', () => {
-  it('yeni hareket canlıya geçiş gününden itibaren yazılır; önceki gün ve sıfır tutar yazılmaz', () => {
+  it('yeni hareket hesabın eşlendiği günden itibaren yazılır; önceki gün ve sıfır tutar yazılmaz', () => {
     expect(plan(tx(), null)).toEqual({ kind: 'insert' });
     expect(plan(tx({ date: '2026-10-01' }), null)).toEqual({ kind: 'insert' });
-    expect(plan(tx({ date: '2026-09-30' }), null)).toEqual({ kind: 'skip', reason: 'before_live' });
+    expect(plan(tx({ date: '2026-09-30' }), null)).toEqual({ kind: 'skip', reason: 'before_feed' });
     expect(plan(tx({ amountCents: 0 }), null)).toEqual({ kind: 'skip', reason: 'zero_amount' });
   });
 

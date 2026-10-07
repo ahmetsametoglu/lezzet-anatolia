@@ -46,7 +46,7 @@ export async function writeDocument(
   db: Db,
   pennylane: PennylanePort,
   documentId: string,
-  ctx: { liveFrom: string; files: DocumentFileReader; category?: CategoryResolver },
+  ctx: { files: DocumentFileReader; category?: CategoryResolver },
 ): Promise<DocumentWriteResult> {
   const document = await new MoneyDocumentService(db).getById(documentId);
   if (!document) return { status: 'skipped' };
@@ -55,7 +55,6 @@ export async function writeDocument(
   const scope = pennylaneDocumentScope({
     document,
     partyCountry: party?.kind === 'supplier' ? party.country : null,
-    liveFrom: ctx.liveFrom,
     uploaded: mirror !== null,
   });
   if (scope.kind === 'skip') return { status: 'skipped' };

@@ -7,28 +7,20 @@ import {
   PennylaneCursorService,
   serviceDb,
 } from '@lezzet/database';
-import { mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { mustDelete, purgeTestData } from '@lezzet/database/testing';
 import type { AccountType, PennylaneCursor } from '@lezzet/types';
 import { setMovementNature } from '../natures';
 import { parisDateOf } from '@lezzet/helper';
-import {
-  PENNYLANE_LIVE_FROM_KEY,
-  checkBankFeedQuiet,
-  mapPennylaneBankAccount,
-  pennylaneLiveFrom,
-  setPennylaneLiveFrom,
-  syncBankFeed,
-} from './bank-feed';
+import { checkBankFeedQuiet, mapPennylaneBankAccount, syncBankFeed } from './bank-feed';
 import { memoryPennylane } from './memory-pennylane.testkit';
 
 /*
   Pennylane'den banka hareketi okuması gerçek tablolar ve bellek içi Pennylane ile sınanır: aynı hareket iki kez yazılmaz, izahlı satıra
-  dokunulmaz ve akışın kaçırdığı silinme liste yeniden okununca bulunur. Ayar ve akış imleci küreseldir, test sonunda geri konur.
+  dokunulmaz ve akışın kaçırdığı silinme liste yeniden okununca bulunur. Akış imleci küreseldir, test sonunda geri konur.
 */
 
 const db = serviceDb();
 const stamp = Date.now();
-const settings = settingsSnapshot(db);
 const cursors = new PennylaneCursorService(db);
 const movements = new MoneyMovementService(db);
 const bankAccounts = new PennylaneBankAccountService(db);
@@ -39,7 +31,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await settings.restore();
   if (originalCursor) await cursors.save('transactions', originalCursor.processedAt);
   else await mustDelete(db, 'pennylane_cursor', (q) => q.eq('stream', 'transactions'));
 });
@@ -64,14 +55,14 @@ const addBank = (name: string) => {
 beforeEach(async () => {
   // Her testin kendi Pennylane'i var; önceki testin akış anı yeni ikizin olaylarını süzmesin diye akış baştan kurulur.
   await cursors.save('transactions', '2000-01-01T00:00:00Z');
-  await settings.override(PENNYLANE_LIVE_FROM_KEY, '2026-10-01');
   created = [];
   twinAccounts = [];
   twin = memoryPennylane();
   bank = addBank('Banque');
   accountId = await accountOf('bank');
   await bankAccounts.saveSeen(await twin.port.listBankAccounts(), twin.now());
-  expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: bank })).toEqual({ status: 'ok' });
+  // Eşleme günü ikizin saatinden gelir (1 Ekim); hareketler o günden okunur.
+  expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: bank }, { now: new Date(twin.now()) })).toEqual({ status: 'ok' });
 });
 
 afterEach(async () => {
@@ -81,8 +72,7 @@ afterEach(async () => {
 });
 
 const sync = () => syncBankFeed(db, twin.port, { now: new Date(twin.now()) });
-const rowsOf = async () =>
-  (await movements.listTouchingAccountSince(accountId, '2000-01-01')).sort((a, b) => a.amountCents - b.amountCents);
+const rowsOf = async () => (await movements.listTouchingAccount(accountId)).sort((a, b) => a.amountCents - b.amountCents);
 const out = (amountCents: number, label: string, date = '2026-10-02') => ({
   bankAccountId: bank,
   date,
@@ -99,7 +89,7 @@ const alertsOf = async (movementId: string) => {
 };
 
 describe('Pennylane banka hareketi okuması', () => {
-  it('ilk tur hareketleri canlıya geçiş gününden itibaren bir kez yazar; önceki gün, sıfır tutar ve eşlenmemiş hesap yazılmaz', async () => {
+  it('ilk tur hareketleri hesabın eşlendiği günden itibaren bir kez yazar; önceki gün, sıfır tutar ve eşlenmemiş hesap yazılmaz', async () => {
     twin.add(out(50_000, 'VIR FOURNISSEUR'));
     twin.add({ bankAccountId: bank, date: '2026-10-02', label: 'VIR CLIENT', direction: 'in', amountCents: 25_000 });
     twin.add(out(9_900, 'ESKI', '2026-09-30'));
@@ -222,27 +212,22 @@ describe('Pennylane banka hareketi okuması', () => {
     expect(mine.every((row) => row.payload.lastDate === today)).toBe(true);
   });
 
-  it("hesap listesi okuma kapalıyken de yazılır; Pennylane'den düşen eşli hesap okunmaz ve satırları silinmiş sayılmaz", async () => {
+  it("hesap listesi okunacak eşli hesap yokken de yazılır; Pennylane'den düşen eşli hesap okunmaz ve satırları silinmiş sayılmaz", async () => {
     twin.add(out(50_000, 'VIR A'));
     expect(await sync()).toMatchObject({ company: 'Test şirketi', mode: 'sandbox', inserted: 1 });
 
-    // Kart, canlıya geçmeden önce eşlemeyi bu listeden kurar.
-    await settings.remove(PENNYLANE_LIVE_FROM_KEY);
-    const livret = addBank('Livret');
-    expect(await sync()).toEqual({ skipped: 'not_live', company: 'Test şirketi', mode: 'sandbox' });
-    expect(await bankAccounts.findByPennylaneId(livret)).toMatchObject({ name: 'Livret', accountId: null });
-
-    // Düşen hesabın hareket listesi boş gelir; okunsaydı bütün satırları Pennylane'de silinmiş sayılırdı.
-    await settings.override(PENNYLANE_LIVE_FROM_KEY, '2026-10-01');
+    // Düşen hesabın hareket listesi boş gelir; okunsaydı bütün satırları Pennylane'de silinmiş sayılırdı. Kart eşlemeyi yeni listeden kurar.
     twin.removeBankAccount(bank);
+    const livret = addBank('Livret');
     await bankAccounts.markListed([accountId], null);
-    expect(await sync()).toMatchObject({ accounts: 0 });
+    expect(await sync()).toMatchObject({ company: 'Test şirketi', accounts: 0 });
     expect(await rowsOf()).toHaveLength(1);
     expect(await bankAccounts.findByAccount(accountId)).toMatchObject({ pennylaneId: bank });
+    expect(await bankAccounts.findByPennylaneId(livret)).toMatchObject({ name: 'Livret', accountId: null });
   });
 });
 
-describe('Pennylane eşlemesi ve canlıya geçiş günü', () => {
+describe('Pennylane eşlemesi', () => {
   /** Dosyadan yüklenmiş banka satırı: yükleme kaydına bağlıdır. */
   const fileRow = async (account: string, valueDate: string) => {
     const batch = await new BankImportService(db).insert({ accountId: account, profileId: null, fileName: 'ekstre.csv' });
@@ -262,7 +247,7 @@ describe('Pennylane eşlemesi ve canlıya geçiş günü', () => {
     ]);
   };
 
-  it('banka dışı hesap ve başka hesaba eşli Pennylane hesabı eşlenmez; taşınan eşleme eskisini boşaltır ve liste baştan okunur', async () => {
+  it('banka dışı hesap ve başka hesaba eşli Pennylane hesabı eşlenmez; taşınan eşleme eskisini boşaltır, ilk günü korur ve liste baştan okunur', async () => {
     const cash = await accountOf('cash');
     const second = await accountOf('bank');
     const livret = addBank('Livret');
@@ -285,35 +270,31 @@ describe('Pennylane eşlemesi ve canlıya geçiş günü', () => {
     // Aynı eşlemeyi yeniden kaydetmek ret değildir ve okunmuş listeyi baştan açmaz.
     await sync();
     expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: bank })).toEqual({ status: 'ok' });
-    expect((await bankAccounts.findByAccount(accountId))?.listedAt).not.toBeNull();
+    const first = await bankAccounts.findByAccount(accountId);
+    expect(first?.listedAt).not.toBeNull();
+    // Taşıma bugün yapılsa da önceki hesaptan gelen satırlar ilk eşleme gününden karşılaştırılır.
     expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: livret })).toEqual({ status: 'ok' });
     expect(await bankAccounts.findByPennylaneId(bank)).toMatchObject({ accountId: null, mappedAt: null, listedAt: null });
-    expect(await bankAccounts.findByPennylaneId(livret)).toMatchObject({ accountId, listedAt: null });
+    expect(await bankAccounts.findByPennylaneId(livret)).toMatchObject({ accountId, mappedAt: first?.mappedAt, listedAt: null });
   });
 
-  it('dosyadan yüklenen satırı canlıya geçiş gününe düşen hesap eşlenmez; gün de eşli hesabın son dosya satırına ya da öncesine alınamaz', async () => {
+  it('dosyadan yüklenen satırı eşleme gününe ya da sonrasına düşen hesap eşlenmez; satırı önceki güne düşen eşlenir', async () => {
     const second = await accountOf('bank');
     const livret = addBank('Livret');
     await bankAccounts.saveSeen(await twin.port.listBankAccounts(), twin.now());
+    const mapToLivret = (account: string) =>
+      mapPennylaneBankAccount(db, { accountId: account, pennylaneId: livret }, { now: new Date(twin.now()) });
     await fileRow(second, '2026-10-01');
-    expect(await mapPennylaneBankAccount(db, { accountId: second, pennylaneId: livret })).toEqual({
+    expect(await mapToLivret(second)).toEqual({
       status: 'invalid',
-      reason: 'file_rows_after_live',
+      reason: 'file_rows_in_feed',
       accountId: second,
       lastFileDate: '2026-10-01',
     });
     expect(await bankAccounts.findByPennylaneId(livret)).toMatchObject({ accountId: null });
 
-    // Gerçek verinin dosya satırı bu kadar ileri düşmez; ret yalnız testin hesabından gelebilir.
-    await fileRow(accountId, '2099-01-10');
-    expect(await setPennylaneLiveFrom(db, '2099-01-10')).toEqual({
-      status: 'invalid',
-      reason: 'file_rows_after_live',
-      accountId,
-      lastFileDate: '2099-01-10',
-    });
-    expect(await pennylaneLiveFrom(db)).toBe('2026-10-01');
-    expect(await setPennylaneLiveFrom(db, '2099-01-11')).toEqual({ status: 'ok' });
-    expect(await pennylaneLiveFrom(db)).toBe('2099-01-11');
+    const third = await accountOf('bank');
+    await fileRow(third, '2026-09-30');
+    expect(await mapToLivret(third)).toEqual({ status: 'ok' });
   });
 });

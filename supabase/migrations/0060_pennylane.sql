@@ -10,9 +10,9 @@ create table public.pennylane_bank_account (
   -- Son okunan listede görüldüğü an; listeden düşen hesap eşleme seçeneklerinden çıkar, eşlenmişse okunmaz ve kartta işaretlenir.
   seen_at timestamptz not null,
   account_id uuid unique references public.account (id) on delete restrict,
-  -- Hareket gelmiyor sayacı eşleme gününden başlar.
+  -- Hareketler bu anın gününden okunur, hareket gelmiyor sayacı da oradan başlar; eşleme başka Pennylane hesabına taşınınca korunur.
   mapped_at timestamptz,
-  -- Canlıya geçiş gününden itibaren liste okundu mu; boşsa sonraki tur listeyi baştan okur.
+  -- Eşleme gününden itibaren liste okundu mu; boşsa sonraki tur listeyi baştan okur.
   listed_at timestamptz,
   constraint pennylane_bank_account_mapping check (
     (account_id is null) = (mapped_at is null) and (account_id is not null or listed_at is null)

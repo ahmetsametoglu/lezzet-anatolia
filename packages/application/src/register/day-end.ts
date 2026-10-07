@@ -15,7 +15,7 @@ import { captureError, SOURCES } from '@lezzet/observability';
 import type { RegisterStore } from '@lezzet/types';
 import { notifyRegisterDayUnclosed } from '../notification/staff-events';
 import type { CashRegister } from './port';
-import { registerLiveFrom, storeOf } from './sync';
+import { storeOf } from './sync';
 
 /**
  * Kasanın gün sonu: kapanmamış günler sırayla karşılaştırılır; hepsi tutuyor ve mağazanın kuyruğu boşsa gün kapanır. Kasanın kapanışı
@@ -49,11 +49,8 @@ export async function registerDayEnd(
   register: CashRegister,
   opts: { now: Date; close: boolean },
 ): Promise<Record<string, unknown>> {
-  const liveFrom = await registerLiveFrom(db);
   const date = addDays(parisDateOf(opts.now), -1);
-  if (!liveFrom || date < parisDateOf(new Date(liveFrom))) return { skipped: 'not_live' };
-
-  const result = await closeRegisterDay(db, register, { date, close: opts.close, liveFromDate: parisDateOf(new Date(liveFrom)) });
+  const result = await closeRegisterDay(db, register, { date, close: opts.close });
   const stores = [];
   for (const store of result.stores) {
     const differences = store.days.flatMap((day) => day.differences.map((difference) => ({ date: day.date, ...difference })));
@@ -93,21 +90,17 @@ export async function registerDayEnd(
 }
 
 /**
- * Günler `YYYY-MM-DD`, Paris takviminde; canlıya geçiş gününden önceki gün aranmaz. `close` yalnız canlı kasada açılır: kapanış mali
- * kayıttır, geri alınmaz.
+ * Günler `YYYY-MM-DD`, Paris takviminde; mağazanın eşlendiği günden önceki gün aranmaz. `close` yalnız canlı kasada açılır: kapanış
+ * mali kayıttır, geri alınmaz.
  */
-export async function closeRegisterDay(
-  db: Db,
-  register: CashRegister,
-  opts: { date: string; close: boolean; liveFromDate: string },
-): Promise<RegisterDayEnd> {
+export async function closeRegisterDay(db: Db, register: CashRegister, opts: { date: string; close: boolean }): Promise<RegisterDayEnd> {
   const storeService = new RegisterStoreService(db);
   const all = await storeService.list();
   const waiting = await waitingByWarehouse(db, all);
   const stores = [];
   for (const store of all) {
     const days = [];
-    const unclosed = await unclosedDays(register, store, opts.date, opts.liveFromDate);
+    const unclosed = await unclosedDays(register, store, opts.date);
     for (const date of unclosed.days) {
       const { from, to } = parisDayRange(date);
       const differences = [
@@ -128,22 +121,18 @@ export async function closeRegisterDay(
 }
 
 /**
- * İstenen günden geriye kapanmamış günler, eskiden yeniye: kapanmış güne, canlıya geçiş gününe ya da sınıra kadar. Sınırda durulursa
- * bir gün daha bakılır (`older`), çünkü sınırın gerisinde kapanmamış gün varsa kapanış onu karşılaştırmadan mühürlerdi.
+ * İstenen günden geriye kapanmamış günler, eskiden yeniye: kapanmış güne, mağazanın eşlendiği güne ya da sınıra kadar. Sınırda
+ * durulursa bir gün daha bakılır (`older`), çünkü sınırın gerisinde kapanmamış gün varsa kapanış onu karşılaştırmadan mühürlerdi.
  */
-async function unclosedDays(
-  register: CashRegister,
-  store: RegisterStore,
-  date: string,
-  liveFromDate: string,
-): Promise<{ days: string[]; older: boolean }> {
+async function unclosedDays(register: CashRegister, store: RegisterStore, date: string): Promise<{ days: string[]; older: boolean }> {
+  const firstDay = parisDateOf(new Date(store.createdAt));
   const days: string[] = [];
   let day = date;
-  for (; days.length < LOOKBACK_DAYS && day >= liveFromDate; day = addDays(day, -1)) {
+  for (; days.length < LOOKBACK_DAYS && day >= firstDay; day = addDays(day, -1)) {
     if ((await register.dayClosedAt(store.externalStoreId, day)) !== null) return { days, older: false };
     days.unshift(day);
   }
-  const older = day >= liveFromDate && (await register.dayClosedAt(store.externalStoreId, day)) === null;
+  const older = day >= firstDay && (await register.dayClosedAt(store.externalStoreId, day)) === null;
   return { days, older };
 }
 

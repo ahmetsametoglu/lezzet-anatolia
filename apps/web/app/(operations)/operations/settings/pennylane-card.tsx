@@ -7,15 +7,14 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { shortDate } from '@/components/operation/ui/format';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Select } from '@/components/operation/form/select';
-import { LiveFromDialog } from './live-from-dialog';
-import { removePennylaneAccountAction, savePennylaneAccountAction, setPennylaneLiveFromAction } from './pennylane-actions';
+import { removePennylaneAccountAction, savePennylaneAccountAction } from './pennylane-actions';
 import type { PennylaneAccountRowView, PennylanePanelData } from './pennylane-read';
 import { CardItem, CardLine, DialogError, JobText, QueueText, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
 
 /**
- * Muhasebe yazılımı (Pennylane): banka hesabımız ↔ Pennylane'deki hesabı, canlıya geçiş günü ve eşitlemenin izi. Pennylane'e yalnız
- * backend bağlanır; kart onun son turda okuduğunu gösterir.
+ * Muhasebe yazılımı (Pennylane): banka hesabımız ↔ Pennylane'deki hesabı ve eşitlemenin izi. Pennylane'e yalnız backend bağlanır; kart
+ * onun son turda okuduğunu gösterir.
  */
 interface PennylaneCardProps {
   data: PennylanePanelData;
@@ -23,18 +22,12 @@ interface PennylaneCardProps {
 
 export function PennylaneCard({ data }: PennylaneCardProps) {
   const [editing, setEditing] = useState<PennylaneAccountRowView | null>(null);
-  const [liveOpen, setLiveOpen] = useState(false);
 
   return (
     <SettingsCard
       title="Muhasebe (Pennylane)"
       count={data.accounts.filter((account) => account.pennylane !== null).length}
-      hint="Eşlenen banka hesabının hareketleri Pennylane'den okunur, alış faturası ve fişi Pennylane'e bizden yüklenir; Pennylane'deki hesap listesini eşitleme her turda yeniler."
-      action={
-        <Button variant="dark" size="sm" onClick={() => setLiveOpen(true)}>
-          Canlıya geçiş
-        </Button>
-      }
+      hint="Eşlenen banka hesabının hareketleri eşlendiği günden itibaren Pennylane'den okunur, alış faturası ve fişi Pennylane'e bizden yüklenir; Pennylane'deki hesap listesini eşitleme her turda yeniler."
     >
       <CardLine label="Şirket">
         {data.connection ? (
@@ -48,19 +41,12 @@ export function PennylaneCard({ data }: PennylaneCardProps) {
           <span className="font-ops-body text-ops-xs text-ops-muted">Bilinmiyor — eşitleme henüz başarıyla koşmadı.</span>
         )}
       </CardLine>
-      <CardLine label="Canlıya geçiş">
-        {data.liveFrom ? (
-          <span className="font-ops-mono text-ops-xs text-ops-ink">{data.liveFrom}</span>
-        ) : (
-          <Badge tone="amber">Kapalı — hiçbir hareket okunmuyor</Badge>
-        )}
-      </CardLine>
 
       {data.accounts.map((account) => (
         <CardItem
           key={account.accountId}
           title={account.accountName}
-          detail={<AccountDetail account={account} live={data.liveFrom !== null} quietDays={data.quietDays} />}
+          detail={<AccountDetail account={account} quietDays={data.quietDays} />}
           action={
             <Button variant="secondary" size="sm" onClick={() => setEditing(account)}>
               {account.pennylane ? 'Düzenle' : 'Eşle'}
@@ -80,31 +66,22 @@ export function PennylaneCard({ data }: PennylaneCardProps) {
       </CardLine>
 
       <AccountDialog row={editing} options={data.freeOptions} onClose={() => setEditing(null)} />
-      <LiveFromDialog
-        open={liveOpen}
-        value={data.liveFrom}
-        subtitle="Bu günden itibaren eşlenen hesapların hareketleri Pennylane'den okunur ve girilen alış belgeleri Pennylane'e yüklenir; öncesi Excel ekstresiyle girilir. Boş bırakılırsa ne hareket okunur ne belge yüklenir."
-        offLabel="Okumayı kapat"
-        onSave={(date) => setPennylaneLiveFromAction({ date })}
-        onClose={() => setLiveOpen(false)}
-      />
     </SettingsCard>
   );
 }
 
 interface AccountDetailProps {
   account: PennylaneAccountRowView;
-  live: boolean;
-  quietDays: number | null;
+  quietDays: number;
 }
 
 /** Pennylane'de görünmeyen eşli hesap kırmızıyla yazılır: hareketi ne Pennylane'den ne dosyadan gelir. */
-function AccountDetail({ account, live, quietDays }: AccountDetailProps) {
+function AccountDetail({ account, quietDays }: AccountDetailProps) {
   if (!account.pennylane) return <>Eşlenmedi — hareketleri Excel ekstresiyle girilir.</>;
   return (
     <>
       Pennylane: {account.pennylane.name}
-      {live ? ` · son hareket ${account.lastDate ? shortDate(account.lastDate) : 'yok'}` : null}
+      {` · son hareket ${account.lastDate ? shortDate(account.lastDate) : 'yok'}`}
       {account.pennylane.gone ? <span className="text-ops-red"> · Pennylane&apos;de görünmüyor, okunmuyor</span> : null}
       {account.quiet ? <span className="text-ops-amber-dark"> · {quietDays} günden uzun süredir hareket yok</span> : null}
     </>
@@ -144,8 +121,8 @@ function AccountDialog({ row, options, onClose }: AccountDialogProps) {
       title={row ? `${row.accountName} · Pennylane eşlemesi` : ''}
       subtitle={
         row?.pennylane
-          ? 'Eşleme değişirse hareketler canlıya geçiş gününden yeniden okunur; önceki Pennylane hesabından gelen izahsız satırlar silinir, izahlı olanlar için muhasebe uyarılır.'
-          : "Pennylane'de açık olan ve başka hesaba eşlenmemiş banka hesapları listelenir; hareketler canlıya geçiş gününden okunur."
+          ? 'Eşleme değişirse hareketler ilk eşleme gününden yeniden okunur; önceki Pennylane hesabından gelen izahsız satırlar silinir, izahlı olanlar için muhasebe uyarılır.'
+          : "Pennylane'de açık olan ve başka hesaba eşlenmemiş banka hesapları listelenir; hareketler eşleme gününden okunur, öncesi Excel ekstresiyle girilir."
       }
       footer={
         <>
