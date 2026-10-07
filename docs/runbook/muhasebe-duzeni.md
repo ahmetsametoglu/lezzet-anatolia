@@ -20,11 +20,8 @@
 
 - **Hiboutik dışında satış bağlantısı açma** (ödeme sağlayıcısı vb.). B2C satış yalnız Hiboutik'ten girer; ikinci bağlantı
   aynı satışı iki kez gelir sayar.
-- **Hiboutik bağlantısında satışı kategoriyle ayır, KDV oranı sekmesini kullanma.** "Other" (ürünler) → 707 Ventes de
-  marchandises, "Livraison" (faturalanan kargo) → 7085 Ports et frais accessoires facturés. KDV oranıyla ayrılırsa kargo ürün
-  satışına karışır, çünkü kargo ürünün oranını taşır.
-- **Hiboutik bağlantısında ödeme türünü banka hesabına bağlama.** CB ve WEB aynı bekleme hesabına (Revolut tek aktarımla
-  gönderir), ESP ve VIR kendi bekleme hesaplarına; banka hesabı seçilirse banka akışıyla aynı para iki kez girer.
+- **Hiboutik bağlantısını `hiboutik-pennylane-baglantisi.md`'deki eşlemeden ayırma.** Satış kategoriyle ayrılır (KDV oranıyla
+  ayrılırsa kargo ürün satışına karışır); ödeme türü banka hesabına bağlanmaz (banka akışıyla aynı para iki kez girer).
 - **Banka hareketini silme ya da arşivleme.** Bizde izah edilmemiş satır da silinir; izahlı satır kalır, muhasebeye uyarı gider.
 - **"Hareket gelmiyor" bildiriminde bankanın bağlantısını yenile.** Bankalar bağlantıyı en çok 180 gün açık tutar; kopunca
   hiçbir hareket gelmez.
