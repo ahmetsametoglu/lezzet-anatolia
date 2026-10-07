@@ -5,6 +5,7 @@ import { Linking, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   b2bApplicationIssues,
+  b2bIssueNotice,
   normalizeSiret,
   type B2bApplicationField,
   type B2bApplicationInput,
@@ -28,9 +29,9 @@ import { OtpSignInFields } from '@/screens/customer-kit/otp-sign-in-fields';
 import { useOtpSignIn } from '@/screens/customer-kit/use-otp-sign-in.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { ApplicationForm } from './application-form';
-import { emptyApplication, type FieldLabelKey, type Messages } from './professionals-types';
+import { emptyApplication, type Messages } from './professionals-types';
 import { useProfessionals } from './use-professionals.hook';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/professionals';
 
 /*
   Profesyonel başvurusu: iki hâl (gönderilmedi, gönderildi) ve başvurusu olan adayın durum blokları (`pending`, `approved`,
@@ -45,13 +46,12 @@ export function ProfessionalsScreen() {
   const router = useRouter();
 
   const [input, setInput] = useState<B2bApplicationInput>(emptyApplication);
-  /** Resmî kayıttan gelen olgular — aday YAZMAZ, taşır (sözleşme künyesi); AB yolunda üçü de null. */
+  /** Resmî kaydın olguları; AB yolunda resmî kayıt olmadığı için üçü de `null` kalır. */
   const [facts, setFacts] = useState<B2bCompanyFacts>({ activityCode: null, foundedYear: null, isActive: null });
   const [companyOpen, setCompanyOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
-  /** Reddedilen aday "Yeniden başvur"a bastı — durum bloğu kalkar, form geri gelir. */
   const [reapply, setReapply] = useState(false);
 
   const b2b = useProfessionals(locale, input.vatNumber);
@@ -90,26 +90,19 @@ export function ProfessionalsScreen() {
   const accountEmail =
     b2b.status === 'guest' ? null : applicant !== null && applicant.email !== '' ? applicant.email : undefined;
 
-  /** Motorun alan adları → sözlük anahtarları; `kind` bir alan değil, yol (tipte de ayrık). */
   const noticeForIssues = useCallback(
     (issues: readonly B2bApplicationField[]): string => {
-      if (input.kind === 'siret' && issues.includes('siret')) return t.errors.siretLength;
-      const labels = issues
-        // `email` de dışarıda: formda o kutu yok, olmayan bir alanın adı müşteriyi olmayan bir kutuyu aramaya yollar.
-        .filter((field): field is FieldLabelKey => field !== 'kind' && field !== 'email')
-        .map((field) => t.form[field]);
-      /* Geriye ad kalmadıysa ret hesabın adresindendir (telefonla açılmış taslak kayıtta e-posta yok); "Şu alanları kontrol edin: "
-         diye boş biten bir cümle gösterilemez. Çözüm müşterinin elinde: yeniden giriş. */
-      if (labels.length === 0) return t.errors.accountEmail;
-      return t.errors.incomplete.replace('{fields}', labels.join(' · '));
+      const notice = b2bIssueNotice(input.kind, issues);
+      if (notice.kind === 'siret_length') return t.errors.siretLength;
+      if (notice.kind === 'account_email') return t.errors.accountEmail;
+      return t.errors.incomplete.replace('{fields}', notice.fields.map((field) => t.form[field]).join(' · '));
     },
     [input.kind, t],
   );
 
-  /** Gönderim — kimlik gerekirse çekmeceyi açar; oturum kurulunca aynı gövde tekrar yola çıkar. */
   const send = useCallback(async () => {
     /* Numara tamsa blok kendiliğinden açılır: kapalı bir bloğun eksik alanını "tamamlayın" demek,
-       kullanıcıyı göremediği bir kapıya yollamaktı. */
+       kullanıcıyı göremediği bir kapıya yollardı. */
     if (input.kind === 'siret' && normalizeSiret(input.siret).length === 14) setCompanyOpen(true);
 
     // Denetim iki yerde: burada kullanıcı için (anında ve alan adlarıyla), sunucuda güvenlik için. `email` bu ön denetimden
@@ -145,7 +138,7 @@ export function ProfessionalsScreen() {
     onSignedIn: () => void send(),
   });
 
-  /** "Bul" — resmî kayıt; bulunamasa da blok AÇILIR, aday elle devam edebilsin (kapının künyesi). */
+  /** Kayıt bulunamasa da şirket bloğu açılır, ki aday elle devam edebilsin. */
   const lookup = useCallback(async () => {
     if (normalizeSiret(input.siret).length !== 14) {
       setNotice(t.errors.siretLength);
@@ -210,8 +203,7 @@ export function ProfessionalsScreen() {
       <View style={styles.screen}>
         {bar}
         <ScrollView contentContainerStyle={styles.content} testID="pro-status">
-          {/* `fill={false}`: kaydırma kabının içinde ve altında başka içerik var (başvuru künyesi) —
-              bu bir boş EKRAN değil, bir DURUM bloğu. */}
+          {/* Tam ekran değil, çünkü blok kaydırma kabının içinde ve altında ret gerekçesi durabilir. */}
           <EmptyState
             fill={false}
             icon={<Icon name="mail" size={theme.size.emptyIcon} color={theme.colors['olive-dark']} />}
@@ -240,8 +232,7 @@ export function ProfessionalsScreen() {
             testID="pro-status-block"
           />
 
-          {/* Gerekçe bir nezaket değil akışın kendisi: sebebini bilmeyen aday aynı eksikle yeniden
-              başvurur ve aynı kuyruğu ikinci kez meşgul eder (okuma kapısının künyesi). */}
+          {/* Gerekçe gösterilir, çünkü sebebini bilmeyen aday aynı eksikle yeniden başvurur ve aynı kuyruğu ikinci kez meşgul eder. */}
           {rejected && applicant.rejectReason !== null ? (
             <View style={styles.reason}>
               <Text style={styles.reasonTitle}>{t.status.reasonTitle}</Text>
@@ -263,8 +254,7 @@ export function ProfessionalsScreen() {
           title={t.sent.title}
           description={t.sent.body}
           action={
-            /* Çıkış KATALOG, hesap değil: onay gelene kadar yapılabilecek şey alışverişe devam
-               etmek — ve perakende fiyatla gezilebildiği hemen üstteki cümlede yazılı. */
+            /* Çıkış katalog, hesap değil: onay gelene kadar yapılabilecek şey perakende fiyatla alışverişe devam etmek. */
             <PrimaryButton
               label={t.sent.cta}
               shape="pill"
@@ -281,10 +271,8 @@ export function ProfessionalsScreen() {
   return (
     <View style={styles.screen}>
       {bar}
-      {/* Kaydırıcı KİTTEN: klavye açıkken hem alanı görünür tutar hem ilk dokunuşu yutmaz
-          (`form-scroll` künyesi — ikisi de bu ekranda ölçülmüş arızalar). */}
+      {/* Kitin kaydırıcısı, çünkü klavye açıkken alanı görünür tutar ve ilk dokunuşu yutmaz. */}
       <FormScroll contentContainerStyle={styles.content} testID="pro-form">
-        {/* Tanıtım kartı — v3'ün mürekkep bloğu: üstbaşlık · vaat · gerekçe. */}
         <View style={styles.hero}>
           {/* Büyük harf dilin kuralıyla, çünkü stilin `textTransform`u Android'de cihazın dilini kullanır. */}
           <Text style={styles.heroEyebrow}>{upperIn(t.hero.eyebrow, locale)}</Text>
@@ -294,8 +282,7 @@ export function ProfessionalsScreen() {
           <Text style={styles.heroBody}>{t.hero.body}</Text>
         </View>
 
-        {/* Adımlar — numara dairesi, sıranın kendisi bilgi taşıdığı için ekran okuyucuya da gider.
-            Kaç adım olduğunu kimlik belirler (yukarıdaki künye); numara listeden türer, sabit değil. */}
+        {/* Numara ekran okuyucuya da okunur, çünkü sıranın kendisi bilgi taşır. */}
         <View style={styles.steps}>
           {steps.map((step, index) => (
             <View key={step} style={styles.stepRow} accessible accessibilityLabel={`${index + 1}. ${step}`}>
@@ -335,8 +322,7 @@ export function ProfessionalsScreen() {
         </PressableSurface>
       </FormScroll>
 
-      {/* KİMLİK ADIMI — yalnız misafirde ve yalnız GÖNDERİM anında. Kapanırsa form olduğu gibi
-          durur: doldurulan alanlar kaybolmaz, müşteri isterse sonra gönderir. */}
+      {/* Çekmece kapanırsa form olduğu gibi kalır, ki müşteri doldurduğunu kaybetmeden sonra gönderebilsin. */}
       <BottomSheet
         visible={identityOpen}
         title={t.identity.sheetTitle}
@@ -360,14 +346,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
   },
-  /* v3: `padding:18px` · `gap:16px` — ikisi de ölçekten aynen (4xl · 3xl). */
   content: {
     padding: theme.space['4xl'],
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
     gap: theme.space['3xl'],
   },
 
-  /* v3: mürekkep zemin · `radius:20` · `padding:22px 20px` · `gap:10`. */
   hero: {
     backgroundColor: theme.colors.ink,
     borderRadius: theme.radius.card,
@@ -396,7 +380,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors['on-image-soft'],
   },
 
-  /* v3: satırlar `gap:8`, satır içi `gap:10`, daire 26 zeytin zeminli. */
   steps: {
     gap: theme.space.md,
   },
@@ -425,7 +408,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.ink,
   },
 
-  /** Ret gerekçesi bloğu — durum kutusunun altında, kendi başlığıyla. */
   reason: {
     gap: theme.space.md,
   },

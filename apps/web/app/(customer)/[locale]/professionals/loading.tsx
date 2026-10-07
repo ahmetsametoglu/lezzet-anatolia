@@ -6,8 +6,8 @@ import { Skeleton, SkeletonBlock, SkeletonCard, SkeletonRegion, SkeletonText } f
 import { detectDevice } from '@/lib/device';
 
 /**
- * Başvuru durumu sunucuda okunduğu için bu kare olmadan ekran veri gelene kadar önceki sayfada kalır. Koyu kahraman tek parça bir
- * yüzey olduğu için tek blok çizilir; altında başvuru kartı.
+ * Başvuru durumu sunucuda okunduğu için bu kare olmadan ekran veri gelene kadar önceki sayfada kalır. Koyu tanıtım tek parça bir
+ * yüzey olduğu için tek blok çizilir.
  */
 export default async function ProfessionalsLoading() {
   const [device, locale] = await Promise.all([detectDevice(), getLocale() as Promise<Locale>]);
@@ -16,12 +16,31 @@ export default async function ProfessionalsLoading() {
     <SiteFrame device={device} locale={locale} activeNav="pro">
       <SkeletonRegion>
         {device === 'mobile' ? (
-          <div className="flex flex-col">
-            <PhoneSkeleton tone="deep" radius="none" className="h-[300px] w-full" />
-            <div className="flex flex-col gap-3 px-4 py-4">
-              <PhoneSkeleton radius="card" className="h-[360px] w-full" />
-              <PhoneSkeleton className="h-11 w-full" />
+          <div className="flex flex-col gap-4 p-4.5 pb-7.5">
+            <PhoneSkeleton tone="deep" radius="card" className="h-[198px] w-full" />
+            <div className="flex flex-col gap-2">
+              {[0, 1, 2].map((slot) => (
+                <div key={slot} className="flex items-center gap-2.5">
+                  <PhoneSkeleton className="size-6.5 flex-none" />
+                  <PhoneSkeleton tone="soft" className="h-3.5 flex-1" />
+                </div>
+              ))}
             </div>
+            <div className="flex gap-2">
+              <PhoneSkeleton radius="control" className="h-11.5 flex-1" />
+              <PhoneSkeleton radius="control" className="h-11.5 flex-1" />
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <PhoneSkeleton tone="soft" className="h-3.5 w-full" />
+              <PhoneSkeleton tone="soft" className="h-3.5 w-3/5" />
+              <PhoneSkeleton className="mt-6 h-13.5 w-full" />
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <PhoneSkeleton tone="soft" className="h-4.5 w-1/3" />
+              <PhoneSkeleton className="mt-6 h-13.5 w-full" />
+              <PhoneSkeleton className="mt-6 h-13.5 w-full" />
+            </div>
+            <PhoneSkeleton radius="control" className="h-13 w-full" />
           </div>
         ) : (
           <div className="flex flex-col">

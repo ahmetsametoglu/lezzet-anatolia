@@ -11,23 +11,18 @@ import { readB2bApplicant } from '@/lib/b2b/application';
 import { readSiteImage } from '@/lib/storefront/site-image';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
+import professionalsCopy from '@lezzet/i18n/customer/professionals';
 import { ProfessionalsClient } from './professionals-client';
 import type { Messages } from './professionals-types';
 import messages from './messages.json';
 
 /**
- * Professionnels — B2B tanıtım + self-servis kayıt (08.7 · DOMAIN §10).
- *
- * **Ziyaretçiye AÇIK, girişe yönlendirmez.** Sayfanın işi tanıtmak ve başvuru almak; kimlik
- * başvurunun SONUNDA kuruluyor (e-postaya giden tek kullanımlık kodla). Girişli müşteri aynı
- * sayfayı görür, farkı kod adımının hiç doğmaması ve durum satırının çizilmesi.
- *
- * **Toptan fiyat bu sayfada HİÇ geçmez** — ne liste, ne aralık, ne "şu kadardan başlayan"
- * (tasarım §6). Onaysız açılan bir fiyat listesi, rakibe açılmış bir fiyat listesidir.
+ * B2B tanıtımı ve self-servis başvuru (DOMAIN §10): sayfa ziyaretçiye açıktır, kimlik başvurunun sonunda tek kullanımlık kodla kurulur.
+ * Toptan fiyat burada hiç geçmez, çünkü onaysız açılan fiyat listesi rakibe açılmış bir listedir.
  */
 interface ProfessionalsPageProps {
   params: Promise<{ locale: string }>;
-  /** Yalnız kampanya etiketleri için (08.9) — B2B kampanyası doğrudan buraya iner. */
+  /** Yalnız kampanya etiketleri için: B2B kampanyası doğrudan buraya iner. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
@@ -55,12 +50,12 @@ export default async function ProfessionalsPage({ params, searchParams }: Profes
     <SiteFrame device={device} locale={locale as Locale} activeNav="pro">
       <ProfessionalsClient
         t={t}
+        copy={professionalsCopy[locale]}
         locale={locale as Locale}
         device={device}
         // Girişsiz ziyaretçide durum daima "hiç başvurulmadı": kimliği olmayanın başvurusu da yok.
         status={applicant?.status ?? 'none'}
-        // Gerekçe yalnız GERÇEKTEN varsa taşınır: reddedilmemiş ya da operatörün gerekçe yazmadığı
-        // kayıtta `null` — ekran boş bir kutu çizmesin.
+        // Gerekçe yalnız gerçekten varsa taşınır ki ekran boş bir kutu çizmesin.
         rejection={applicant?.rejectReason ? { reason: applicant.rejectReason, translated: applicant.rejectReasonTranslated } : null}
         signedIn={applicant !== null}
         defaults={{

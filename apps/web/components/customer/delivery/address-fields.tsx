@@ -4,6 +4,7 @@ import { addressLineOf, type AddressKind } from '@lezzet/address';
 import type { Country, PlaceOption } from '@lezzet/types';
 import { useState } from 'react';
 
+import type { FieldVariant } from '@/components/customer/form/field-shell';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { SuggestionList } from '@/components/customer/ui/suggestion-list';
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
@@ -11,29 +12,9 @@ import { usePostalSuggest } from '@/lib/address/use-postal-suggest.hook';
 import { useDeliveryPlace } from './place-context';
 
 /*
-  ADRESİN ÜÇ ALANI — sokak · posta kodu · şehir, ÖNERİLERİYLE birlikte.
-
-  ── NEDEN AYRI BİR BİLEŞEN ──────────────────────────────────────────────────
-  Bu davranış `address-form`un içinde yaşayabilirdi, ama form iki şey birden yapıyor: alanları
-  ÇİZİYOR ve kaydı KENDİSİ yazıyor (`onSave` → adres tablosu). İkincisi yüzünden profesyonel
-  başvuru formu onu olduğu gibi kullanamıyordu — orada adres bir KAYIT değil, başvuru gövdesinin
-  bir parçası. Ölçüldü: başvuru ekranı üç düz `FormInputField` yazmıştı; ne BAN önerisi vardı, ne
-  kod önerisi, ne çok yerleşimli kodun şehir listesi, ne de ülke türetimi. Aynı müşteri, aynı
-  adresi, hangi ekrandan girdiğine göre farklı bir yardım alıyordu.
-
-  Ayrım şu: **kalıcılık çağıranın, DAVRANIŞ burasının.** Kaydeden form da (checkout · hesap),
-  kaydetmeyen form da (B2B başvurusu) aynı üç alanı aynı akıllılıkla çizsin.
-
-  Native tarafta aynı ayrım aynı gerekçeyle yapılmıştı (`address-fields.tsx`, MB-06). Kod
-  paylaşılmıyor — çizim iki yüzeyde farklı ve olması gereken de bu; paylaşılan şey DAVRANIŞ ve o
-  ortak çekirdekte (`@lezzet/address/react`) ile ortak kapıda (`@lezzet/address`) duruyor.
-
-  ── ÜLKE İÇERİDE TÜRER, DIŞARIYA BİLDİRİLİR ─────────────────────────────────
-  Ülke bir alan değil, posta kodundan türeyen bir sonuçtur: **610 kod iki ülkede birden geçerli**
-  (ölçüm 10.08). Türetme burada olur çünkü seçim burada yapılır; sonucu kullanan taraf çağırandır
-  — bu yüzden `onCountryChange` İSTEĞE BAĞLI. Kod ELLE değiştirilince ülke `null`a düşer: eski
-  seçim artık yeni kodun cevabı değildir ve "ölçülemeyen değer sıfır değildir" (CLAUDE §1) burada
-  da geçerli — bilinmeyen ülkeyi `FR`de bırakmak, bilinmeyeni bilinen gibi okutmak olurdu.
+  Adresin üç alanı (sokak, posta kodu, şehir) önerileriyle; kalıcılık çağıranın, davranış burasının, ki kaydeden form da kaydetmeyen
+  başvuru formu da aynı yardımı alsın. Ülke posta kodundan türer ve kod elle değişince `null`a düşer, çünkü eski seçim yeni kodun
+  cevabı değildir.
 */
 
 /** Üç alanın değeri — çağıranın kendi taslağının bir alt kümesi. Dışa AÇILMAZ: çağıranlar kendi
@@ -49,7 +30,11 @@ export interface AddressFieldsCopy {
   line1: string;
   postalCode: string;
   city: string;
-  /** BAN künyesi (Etalab 2.0) — öneri listesinin altında ZORUNLU. */
+  /** Yer tutucular isteğe bağlı; telefondaki başvuru formu native gibi boş alanı adıyla gösterir. */
+  line1Placeholder?: string;
+  postalCodePlaceholder?: string;
+  cityPlaceholder?: string;
+  /** BAN veri lisansının künyesi; öneri listesinin altında gösterilmesi zorunlu. */
   suggestCredit: string;
   suggestLabel: string;
   suggestBusy: string;
@@ -69,68 +54,28 @@ interface AddressFieldsProps {
   active?: boolean;
   /** Posta kodundan çözülen ülke; kod elle değişince `null`. Kullanmayan çağıran geçmez. */
   onCountryChange?: (country: Country | null) => void;
-  /**
-   * Seçilen önerinin KOORDİNATI (11.9) — `onCountryChange`in kardeşi ve aynı kuralı izler.
-   *
-   * BAN önerisi noktayı zaten taşıyor; bugüne dek atılıyordu ve adres sonradan bir tarama işiyle
-   * yeniden çözülüyordu — yani aynı soru iki kez soruluyordu. Öneri seçildiğinde nokta yukarı
-   * verilir, kod ELLE değiştirildiğinde `null`a düşer: nokta seçilen SATIRA aittir.
-   */
+  /** Seçilen önerinin koordinatı; kod elle değişince `null`a düşer, çünkü nokta seçilen satıra aittir. */
   onPointChange?: (point: { lat: number; lng: number; precision: AddressKind } | null) => void;
   /**
-   * BAN sokak önerisi çizilsin mi (varsayılan: evet).
-   *
-   * **Kapatılabilir olması şart, çünkü BAN YALNIZ FRANSIZ adreslerini bilir.** Profesyonel
-   * başvurusunun 🇩🇪 AB-vergi yolunda adres bir ALMAN şirketinindir.
-   *
-   * ÖLÇÜLDÜ (21.08, servise doğrudan sorularak): Alman yazımıyla girilen dört adres (*"Hauptstrasse
-   * 12 Kehl"*, *"Bahnhofstrasse 5 Offenburg"*, *"Marktplatz 3 Freiburg"*, *"Karlstrasse 8 77694
-   * Kehl"*) **sıfır** öneri döndürdü — yani çoğu zaman kapı zaten sessiz kalırdı. Ama beşinci
-   * sorgu tam da korkulanı üretti: *"Rue de Paris 10 Berlin"* → **5 öneri**, ilki *"Rue de Paris
-   * 62620 **Barlin**"* (skor 0,61). Barlin bir Fransız komünü ve Berlin'e benziyor; müşteri makul
-   * görünen o satırı seçse adres sessizce yanlış ülkeye yazılırdı.
-   *
-   * Yani kapının karşılığı ikili: yanlış ülkenin "kolaylığını" kapatır **ve** çoğunlukla boş
-   * dönecek bir sorguyu her tuşta ağa çıkarmaz. Öneri bir kolaylıktır; yanlış ülkenin kolaylığı
-   * ise sessiz bir veri hatasıdır.
-   *
-   * Posta kodu ve yerleşim önerileri BUNDAN ETKİLENMEZ ve etkilenmemeli: onların kaynağı kendi
-   * `postal_code_place` referansımız ve o iki ülkeyi de kapsıyor (610 ortak kod).
+   * BAN sokak önerisi (varsayılan açık). BAN yalnız Fransız adreslerini bildiği için Alman şirketinin adresinde kapatılır, yoksa benzer
+   * adlı bir Fransız komünü sessizce yanlış ülkeye yazılabilirdi.
    */
   streetSuggest?: boolean;
   /** Kod alanı terk edilince çağrılır — teslimat cevabını veren taraf çağırandır. */
   onPostalBlur?: (postalCode: string) => void;
   /** Kod alanının hata metni; çağıranın kendi doğrulamasından gelir. */
   postalError?: string;
-  /**
-   * Cümlesiz geçersizlik — kırmızı çerçeve, altında metin YOK. `postalError`ın kardeşi:
-   * adres formu kod için ayrı bir cümle söylüyor (*"5 haneli bir posta kodu girin"*), başvuru
-   * formu ise tüm alanlarını topluca ve cümlesiz işaretliyor (`FormInputField.invalid` künyesi).
-   * İkincisine uydurma bir cümle üretmek, olmayan bir sözlük anahtarı icat etmek olurdu.
-   */
+  /** Cümlesiz geçersizlik: başvuru formu alanlarını topluca ve cümlesiz işaretler; uydurma bir cümle olmayan bir anahtar olurdu. */
   postalInvalid?: boolean;
   /** Sokak alanının hata işareti (başvuru formunun alan-alan doğrulaması). */
   line1Invalid?: boolean;
   cityInvalid?: boolean;
-  /**
-   * Sokak bloğu ile posta kodu satırının ARASINA giren alan(lar) — adres formunun "kapı/kat"ı.
-   *
-   * Yuva şart, çünkü alan sırası K33'te SABİT: başlık · alıcı · **sokak · kapı/kat · posta kodu +
-   * şehir** · telefon. Kapı/katı üçlünün altına atmak sırayı bozardı; bileşenin içine almak ise
-   * onu B2B başvuru formuna da dayatırdı — orada öyle bir alan yok. Kapı/kat üçlünün parçası
-   * değil zaten: BAN önerisi sokak satırını yazar, kapı/kat müşterinin kendi eklediği bilgidir.
-   */
+  /** Sokak ile posta kodu arasına giren alan (adres formunun kapı/katı): alan sırası sabit ve başvuru formunda o alan yok. */
   afterLine1?: React.ReactNode;
-  /**
-   * Mobil web forku — posta kodu ve şehir AYNI SATIRDA ama sabit genişlikle değil, ORANLA
-   * bölüşür (%35 / %65).
-   *
-   * Sabit sütun masaüstünün ölçüsüydü ve dar ekranda tersine dönüyordu — ölçüldü (390 px): kod
-   * **150 px**, şehir **116 px**; beş haneli bir sayı şehir adından geniş. Bir tur alt alta
-   * alındılar, kullanıcı düzeltti: ikisi mantıkça bir bütün, ayrı satırlara bölünmeleri formu
-   * gereksiz uzatıyor. Doğru çözüm satırı bölmek değil, PAYI çevirmekti.
-   */
+  /** Telefon forku: posta kodu ve şehir aynı satırda orana göre bölüşür (%35/%65), çünkü dar ekranda sabit genişlik şehri ezer. */
   compact?: boolean;
+  /** Alanların çizimi; telefondaki başvuru formu native gibi hap alan ister. */
+  variant?: FieldVariant;
 }
 
 export function AddressFields({
@@ -148,6 +93,7 @@ export function AddressFields({
   afterLine1,
   streetSuggest = true,
   compact = false,
+  variant = 'form',
 }: AddressFieldsProps) {
   /* Kod listesinden SEÇİLEN satır — yalnız ŞEHİR listesini çizmek için (çok yerleşimli kod).
      Elle yazılan kodda `null` kalır. */
@@ -161,21 +107,8 @@ export function AddressFields({
      önerisini yeniden getirir ve liste seçimin üstünde asılı kalırdı. */
   const [suggestOpen, setSuggestOpen] = useState(false);
   /**
-   * ÖNERİLER MÜŞTERİNİN BULUNDUĞU YERİ ÖNE ALIR (08.41 · kullanıcı kararı 25.08).
-   *
-   * Ölçülen eksik şuydu: *"12 rue foch"* Saint-Denis · Montpellier · Tournefeuille döndürüyordu —
-   * beşinin hiçbiri müşterinin bölgesinde değil. Sokak adı Fransa'da yüzlerce kez tekrar ediyor ve
-   * servis sıralamayı yalnız metne bakarak yapıyordu. Yer ipucuyla aynı sorgu Schiltigheim ·
-   * Mundolsheim döndürüyor, Saint-Denis dördüncü sırada KALIYOR.
-   *
-   * Nokta site genelindeki yer bağlamından okunuyor, prop'la değil: `PlaceProvider` müşteri
-   * yerleşiminin kökünde (`(customer)/[locale]/layout.tsx`), yani bu bileşenin İKİ çağıranı da
-   * (adres çekmecesi · B2B başvurusu) onun içinde. Prop olsaydı aynı satır iki yerde yazılır ve
-   * biri bir gün unutulurdu — unutulduğunda da hiçbir şey kırılmaz, yalnız liste sessizce
-   * kötüleşirdi. Bu bir DAVRANIŞ girdisi, kalıcılık değil; bileşenin künyesindeki ayrım gereği
-   * burada duruyor.
-   *
-   * Yer bilinmiyorsa (`place === null`) ipucu gönderilmez ve arama bugünkü gibi çalışır.
+   * Öneriler müşterinin bulunduğu yeri öne alır: sokak adı Fransa'da yüzlerce kez tekrarlanır ve servis yalnız metne bakarsa uzak
+   * şehirler başa gelir. Nokta site genelindeki yer bağlamından okunur; yer bilinmiyorsa ipucu gönderilmez.
    */
   /* Adı `browsingPlace`: aşağıdaki `place` KOD LİSTESİNDEN seçilen satırdır (şehir listesini
      çizmek için), bu ise sitenin gezinme yeri. İkisi farklı sorular — aynı adı taşımamalılar. */
@@ -212,10 +145,8 @@ export function AddressFields({
   const zipKey = (suggestion: PlaceOption): string => `${suggestion.country}:${suggestion.postalCode}`;
 
   /**
-   * Posta kodu seçildi. Şehir de buradan gelir: kod tek yerleşimliyse doğrudan yazılır, çok
-   * yerleşimliyse alan BOŞALIR ve altında liste açılır — kodların ~%40'ı çok yerleşimli ve birini
-   * kendiliğinden seçmek "Bischheim'lı müşteriye Strasbourg yazmak" olurdu. O ders bu dosyanın
-   * komşusunda kayıtlı (`address-form` künyesi: `67800` bizde "Strasbourg", gerçeği Bischheim).
+   * Posta kodu seçildi: tek yerleşimliyse şehir yazılır, çok yerleşimliyse alan boşalır ve liste açılır, çünkü birini kendiliğinden
+   * seçmek müşteriye yanlış şehir yazabilirdi.
    */
   const applyZip = (id: string): void => {
     const picked = zipSuggestions.find((suggestion) => zipKey(suggestion) === id);
@@ -237,6 +168,8 @@ export function AddressFields({
     <>
       <FormInputField
         label={copy.line1}
+        placeholder={copy.line1Placeholder}
+        variant={variant}
         value={value.line1}
         onChange={(e) => {
           setSuggestOpen(true);
@@ -246,9 +179,7 @@ export function AddressFields({
         autoComplete="address-line1"
         name="address-line1"
       />
-      {/* Adres servisinin önerileri — alanın hemen ALTINDA, seçilince üç alanı birden doldurur.
-          Künye satırı listeyle birlikte gelir: veri Etalab 2.0 altında ve kaynak gösterimi
-          gösteren yüzeyin sorumluluğu (STACK "Adres arama (FR)"). */}
+      {/* Servisin önerileri alanın hemen altında; künye satırı listeyle gelir, çünkü kaynak gösterimi gösteren yüzeyin sorumluluğu. */}
       <SuggestionList
         items={search.suggestions.map((suggestion) => ({
           id: suggestion.id,
@@ -259,9 +190,7 @@ export function AddressFields({
         footnote={copy.suggestCredit}
         label={copy.suggestLabel}
       />
-      {/* Kota doldu (429): tek satır söylenir ve BİTER — alan yazmaya açık kalır, kaydetme
-          engellenmez. Öneri yardımcı bir özellik; yokluğu müşterinin işini durdurmaz. Bu bir hata
-          DEĞİL, o yüzden kırmızı değil: kırmızı biçim hatasına ayrılmış (K34). */}
+      {/* Kota dolunca tek satır söylenir, alan yazmaya açık kalır; öneri yardımcıdır, yokluğu hata değil, bu yüzden kırmızı değil. */}
       {search.throttled && (
         <span className="font-sans text-note leading-relaxed text-body">{copy.suggestBusy}</span>
       )}
@@ -269,28 +198,19 @@ export function AddressFields({
       {afterLine1}
 
       <div className="flex gap-3">
-        {/**
-         * Posta kodu DAR: beş hane, tam genişlikte kutu değerinden büyük görünüyor.
-         *
-         * **Masaüstünde SABİT 150 px, çekmecede ORAN (kullanıcı kararı 21.08: "şehir yüzde altmış
-         * beşini kaplar, geri kalanını posta kodu").** Sabit genişlik geniş kapta doğru, dar kapta
-         * yanlıştı — ölçüldü (390 px): kod 150 px, şehir 116 px; beş haneli bir sayı şehir adından
-         * genişti. Alt alta almak da çözüm değildi (denendi ve kullanıcı düzeltti): iki alan
-         * mantıkça bir bütün ve ayrı satırlara bölünmeleri formu gereksiz uzatıyor.
-         */}
+        {/* Posta kodu dar (beş hane): masaüstünde sabit 150 px, telefonda oran, çünkü dar kapta sabit genişlik şehir alanını ezer. */}
         <div className={compact ? 'basis-[35%]' : 'w-[150px] flex-none'}>
           <FormInputField
             label={copy.postalCode}
+            placeholder={copy.postalCodePlaceholder}
+            variant={variant}
             value={value.postalCode}
             onChange={(e) => {
-              /* Kod ELLE değişti: önceki seçim artık bu kodun cevabı değil. Ülkeyi ve şehir
-                 listesini düşürmek şart — kalsalardı müşteri kodu değiştirdikten sonra hâlâ eski
-                 yerin cevabını okur, üstelik o ülkeyle kaydederdi. */
+              /* Kod elle değişti: önceki seçimin ülkesi ve şehir listesi düşer, kalsalardı müşteri eski yerin cevabıyla kaydederdi. */
               setZipOpen(true);
               setCityOpen(false);
               onCountryChange?.(null);
-              // Nokta da kodun peşinden gider: elle değiştirilen bir kodda önerinin koordinatı
-              // artık bu adresin cevabı değildir (`geo-address` künyesindeki aynı kural).
+              // Nokta da kodun peşinden gider: elle değiştirilen kodda önerinin koordinatı bu adresin cevabı değildir.
               onPointChange?.(null);
               setPlace(null);
               onChange({ postalCode: e.target.value.replace(/\D/g, '').slice(0, 5) });
@@ -307,6 +227,8 @@ export function AddressFields({
         <div className="flex-1">
           <FormInputField
             label={copy.city}
+            placeholder={copy.cityPlaceholder}
+            variant={variant}
             value={value.city}
             onChange={(e) => onChange({ city: e.target.value })}
             invalid={cityInvalid}

@@ -33,7 +33,8 @@
     "./customer/notifications": "./src/customer/notifications.json",
     "./customer/invite": "./src/customer/invite.json",
     "./customer/neighbor": "./src/customer/neighbor.json",
-    "./customer/feedback": "./src/customer/feedback.json"
+    "./customer/feedback": "./src/customer/feedback.json",
+    "./customer/professionals": "./src/customer/professionals.json"
   },
   "types": "./src/index.ts",
   "scripts": {

@@ -3,16 +3,13 @@ import { FramedImage } from '@/components/media/framed-image';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
 import { Icon } from '@/components/customer/ui/icons';
-import { ApplicationForm } from './components/application-form';
-import { StatusNote } from './components/status-note';
+import { DesktopApplicationForm } from './components/desktop-application-form';
+import { DesktopStatusNote } from './components/desktop-status-note';
 import type { ProfessionalsViewProps } from './professionals-types';
 
 /**
- * Professionnels — masaüstü düzeni (tasarım: `Musteri - Professionnels.dc.html`, "Professionnels
- * Web" ekranı). Bölüm sırası tasarımdan birebir: koyu kahraman (metin + görsel) → üç adım kartı →
- * başvuru kutusu + yan sütun.
- *
- * Bu dosya KOMPOZİSYONDUR: formu ve durum satırını yerleştirir, kendi mantığını kurmaz.
+ * Masaüstü düzeni tasarımdan birebir: koyu kahraman, üç adım kartı, başvuru kutusu ve yan sütun. Kompozisyondur; form ve durum
+ * satırını yerleştirir, kendi mantığını kurmaz.
  */
 export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults, whatsappHref, whatsappNumber, locale, hero }: ProfessionalsViewProps) {
   return (
@@ -21,8 +18,7 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
       <section className="flex items-stretch bg-ink text-on-image">
         <div className="flex min-w-0 flex-1 flex-col gap-4.5 px-12 py-13">
           <span className="font-sans text-caps-label tracking-[0.14em] text-olive-light uppercase">{t.hero.eyebrow}</span>
-          {/* Başlık tasarımın kendi ölçüsünde (44 px, kullanıcı kararı 24.09): 30 px'te tek satıra
-              sığıyor, sol sütun kısalıyor ve fotoğraf sütunu dar kalıyordu. */}
+          {/* Başlık tasarımın ölçüsünde: daha küçük puntoda tek satıra sığar, sol sütun kısalır ve fotoğraf sütunu daralır. */}
           <h1 className="font-serif text-h1-md">{t.hero.title}</h1>
           <ul className="flex flex-col gap-2.5 font-sans text-copy leading-relaxed text-on-image-soft">
             {t.hero.benefits.map((benefit) => (
@@ -47,21 +43,15 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
             </a>
           </div>
         </div>
-        {/* Kahraman `site_image.professionals_hero` slotundan (08.33); yüklenmemişse yer tutucu.
-            Görsel BLOĞUN TAM YÜKSEKLİĞİNİ kaplar (tasarım: `height:100%`): 16:9 kutu olarak
-            çizilince sol sütun ondan uzun kalıyor ve fotoğrafın üstünde-altında koyu bant
-            oluşuyordu — fotoğraf blok içinde çerçevelenmiş gibi duruyordu. Yükseklik bloğun
-            kendisinden geldiği için genişliği de oran belirler; iki sütunun payı buna göre oturur. */}
+        {/* Görsel bloğun tam yüksekliğini kaplar: 16:9 kutu olarak çizilse sol sütun ondan uzun kalır ve fotoğrafın üstünde-altında
+            koyu bant oluşur. */}
         <FramedImage
           src={hero?.url ?? null}
           alt={hero?.alt ?? t.hero.imageAlt}
           ratio={RATIO_BAND}
           crop={hero?.crop}
           frames={hero?.frames}
-          // %59 = bloğun yüksekliğinin 16:9 karşılığı (464 × 16/9 ≈ 825 ÷ 1360): tasarımda genişliği
-          // oran belirliyor, ama o hesap ızgarada döngüye giriyor (genişlik yüksekliğe, yükseklik
-          // metne bağlı). Pay sabit verilince kadraj aynı yere oturur ve blok hiçbir enlemde taşmaz.
-          // Görsel ~800 px; içerik 1360 px'te durur.
+          // %59 bloğun yüksekliğinin 16:9 karşılığı; oranı ızgaraya bırakmak döngüye girerdi (genişlik yüksekliğe, yükseklik metne bağlı).
           sizes="750px"
           className="!rounded-none h-auto min-h-[340px] w-[59%] flex-none"
         />
@@ -80,12 +70,12 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
 
       <section id="application" className="grid grid-cols-2 items-start gap-10 px-12 pb-12">
         <Card>
-          <StatusNote t={t} status={status} rejection={rejection} />
+          <DesktopStatusNote t={t} status={status} rejection={rejection} />
           {/* Başvurusu ONAYLANMIŞ müşteriye form çizilmiyor: ikinci bir künye göndermenin
               karşılığı yok, kayıt zaten açık. Bekleyen başvuruda form duruyor — aday bir
               alanını yanlış yazdıysa yeniden gönderebilmeli. */}
           {status !== 'approved' && (
-            <ApplicationForm t={t} locale={locale} signedIn={signedIn} defaults={defaults} />
+            <DesktopApplicationForm t={t} locale={locale} signedIn={signedIn} defaults={defaults} />
           )}
         </Card>
 

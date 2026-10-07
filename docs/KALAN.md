@@ -74,9 +74,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [x] (08.44) **KAMPANYA VİTRİNDE VE FİLTRELENMİŞ KATALOGDA GÖRÜNSÜN — rozet ve cümle, FİYAT DEĞİL** *(kullanıcı kararı 19.08; ölçüm ve karşılaştırma aynı gün yapıldı)* · `touches (planlanan): packages/application/src/catalog/**, apps/web/lib/storefront/home.ts, apps/web/app/(customer)/[locale]/catalog/**, apps/mobile-api/src/lib/home.ts, apps/mobile-customer/src/screens/home/**`
   - Görev kapandı; koddaki `BEKLEYEN(08.44)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (08.58) ~~**MOBİL WEB v1 — kabuk birebir, ekranlar sırayla**~~ → **MOBİL WEB — telefon görünümü native uygulamanın tasarımına (kullanıcı kararı 14.09)** *(kullanıcı isteği 13.09: öteki şerit masaüstünü `Musteri Web v1.dc.html`'e taşırken mobil web `Musteri Mobil v1.dc.html`'e; sıra ve dosya ayrımı kullanıcıyla konuşuldu)*
-  - Kalan ekranlar — kare adı `design/01-musteri/Musteri Mobil.dc.html`'in `data-screen-label`'ı; biten satır silinir:
-    - [ ] Checkout + Ödeme `checkout` ↔ native `checkout` — yalnız ödeme bölümü: kart ödemesi Revolut'a geçti
-    - [ ] Professionnels `professionals` ↔ native `professionals`
   - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): çekmece başı (native tutamak, web ×) ·
     sepette alıcı telefonu · vitrin konum satırı · vitrin konum çekmecesinde gel-al · misafir posta kodu çekmecesi · yalnız bir
     yüzeyde olanlar: indirimliler süzgeci, paket kartı ayrıntıları, misafire bildirim zili, çözülmüş talep notu, kaydırınca küçük

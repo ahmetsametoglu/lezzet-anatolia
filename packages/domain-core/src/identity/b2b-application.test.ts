@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   b2bApplicationIssues,
+  b2bIssueNotice,
   b2bStatusOf,
   formatSiret,
   isValidSiret,
@@ -139,6 +140,20 @@ describe('başvuru denetimi', () => {
   });
 });
 
+describe('eksiklerin cümlesi', () => {
+  it('SIRET yolunda eksik numara diğer alanların önüne geçer', () => {
+    expect(b2bIssueNotice('siret', ['siret', 'legalName', 'phone'])).toEqual({ kind: 'siret_length' });
+  });
+
+  it('formda olmayan e-posta alan listesine girmez', () => {
+    expect(b2bIssueNotice('eu_vat', ['vatNumber', 'email', 'phone'])).toEqual({ kind: 'incomplete', fields: ['vatNumber', 'phone'] });
+  });
+
+  it('yalnız e-posta eksikse sorun hesabın adresidir, boş alan listesi kurulmaz', () => {
+    expect(b2bIssueNotice('siret', ['email'])).toEqual({ kind: 'account_email' });
+  });
+});
+
 describe('başvuru durumu', () => {
   const company = { legalName: 'Restaurant Anatolie SARL' };
 
@@ -158,10 +173,7 @@ describe('başvuru durumu', () => {
     expect(b2bStatusOf({ companyInfo: company, b2bApproved: true, b2bPending: false })).toBe('approved');
   });
 
-  /**
-   * 08.7'nin açığı: ret ile "sırasını bekliyor" ayrışmadığı için sayfa reddedilen adaya hiç
-   * gelmeyecek bir cevabı beklediğini söylüyordu.
-   */
+  /** Ret ile "sırasını bekliyor" ayrışmazsa sayfa reddedilen adaya hiç gelmeyecek bir cevabı beklediğini söyler. */
   it('reddedilen aday "inceleniyor" GÖRMEZ', () => {
     expect(b2bStatusOf({ companyInfo: company, b2bApproved: false, b2bPending: false })).toBe('rejected');
   });

@@ -144,6 +144,21 @@ export function b2bApplicationIssues(input: B2bApplicationInput): B2bApplication
   return issues;
 }
 
+/** Sözlükte etiketi olan alanlar: `kind` alan değil yoldur, `email` ise formda yok, çünkü adres kodla doğrulanmış hesap adresidir. */
+export type B2bLabelledField = Exclude<B2bApplicationField, 'kind' | 'email'>;
+
+export type B2bIssueNotice = { kind: 'siret_length' } | { kind: 'account_email' } | { kind: 'incomplete'; fields: B2bLabelledField[] };
+
+/**
+ * Eksiklerin hangi cümleyle söyleneceği. Eksik SIRET önce gelir, çünkü şirket alanları ondan dolar; etiketli alan kalmadıysa eksik
+ * olan hesabın adresidir ve "şu alanları kontrol edin" boş bir listeyle biterdi.
+ */
+export function b2bIssueNotice(kind: B2bApplicationKind, issues: readonly B2bApplicationField[]): B2bIssueNotice {
+  if (kind === 'siret' && issues.includes('siret')) return { kind: 'siret_length' };
+  const fields = issues.filter((field): field is B2bLabelledField => field !== 'kind' && field !== 'email');
+  return fields.length === 0 ? { kind: 'account_email' } : { kind: 'incomplete', fields };
+}
+
 /**
  * Durum ayrı bir kolonda değil, profil alanlarından türer. `b2bApproved === false` tek başına hem bekleyeni hem reddedileni
  * taşır; ayrımı bu fonksiyon yapar.

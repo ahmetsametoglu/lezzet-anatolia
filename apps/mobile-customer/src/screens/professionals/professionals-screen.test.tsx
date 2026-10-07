@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 
 import { lightTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { ProfessionalsScreen } from './professionals-screen';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/professionals';
 
 /*
   PROFESYONEL BAŞVURUSU — tel cevapları fetch mock'undan gelir: ekran GERÇEK istemci yolunu
@@ -80,14 +80,10 @@ function wire(handlers: { applicant?: Response; company?: Response; vat?: Respon
   });
 }
 
-/**
- * Formu tam doldurur — E-POSTA YOK (MB-04): o alan kaldırıldı, adres oturumdan geliyor. Motorun
- * `email` denetimi ekranın ön denetiminde süzülüyor, yani bu küme "sıfır eksik" sayılmalı.
- */
+/** Formu tam doldurur; e-posta yok, çünkü adres oturumdan gelir ve ekranın ön denetimi `email`i süzer. */
 async function fillForm() {
   await fireEvent.changeText(screen.getByTestId('pro-legal-name'), 'Boulangerie Test');
-  /* Kimlikler `pro-address-*` çünkü üç alan artık ORTAK bloktan geliyor (MB-06 · `address-fields`):
-     adres çekmecesiyle aynı davranış, aynı öneriler. Eski `pro-line1` düz bir alandı. */
+  /* Kimlikler `pro-address-*`, çünkü üç alan adres çekmecesiyle ortak bloktan gelir. */
   await fireEvent.changeText(screen.getByTestId('pro-address-line'), '8 rue du Fossé');
   await fireEvent.changeText(screen.getByTestId('pro-address-zip'), '67000');
   await fireEvent.changeText(screen.getByTestId('pro-address-city'), 'Strasbourg');
@@ -190,12 +186,8 @@ describe('ProfessionalsScreen', () => {
     await fireEvent.press(screen.getByTestId('pro-submit'));
 
     await waitFor(() => expect(screen.getByTestId('pro-identity-email')).toBeOnTheScreen());
-    /* Gövde gerçekten yola çıktı ve 401 aldı: kapı SUNUCUDA, ekranın tahmininde değil. İki çağrı,
-       çünkü `authorizedFetch` 401'de BİR tazeleme + BİR tekrar yapıyor (kendi sözleşmesi).
-
-       Bu satır aynı zamanda MB-04'ün KİLİDİ: misafirin `email`i artık boş (alan kaldırıldı) ve
-       motor o alanı zorunlu tutuyor. Ekranın ön denetimi `email`i süzmeseydi gönderim burada
-       dururdu — istek hiç çıkmaz, 401 gelmez, çekmece AÇILMAZDI. */
+    /* İstek yola çıkıp 401 aldı, yani kimlik kapısı sunucuda; iki çağrı, çünkü `authorizedFetch` 401'de bir tazeleme ve bir tekrar
+       yapar. Ekranın ön denetimi boş `email`i süzmeseydi istek hiç çıkmaz ve çekmece açılmazdı. */
     expect(callsTo('/me/b2b/application')).toHaveLength(2);
   });
 
@@ -261,7 +253,7 @@ describe('ProfessionalsScreen', () => {
     wire({ applicant: ok(SIGNED_IN) });
     await renderScreen();
 
-    // Kutu hiçbir hâlde geri gelmemeli: adres artık bir girdi değil, kimliğin kendisi.
+    // E-posta kutusu çizilmez: adres bir girdi değil, kimliğin kendisi.
     await waitFor(() => expect(screen.getByTestId('pro-account-email')).toHaveTextContent(PROFILE.email));
     expect(screen.queryByTestId('pro-email')).toBeNull();
     expect(screen.getByText(t.form.resultTo)).toBeOnTheScreen();
@@ -342,8 +334,7 @@ describe('ProfessionalsScreen', () => {
   });
 
   it('ülke rozetleri ekranı EŞİT böler ve etiket çerçeveye değmez', async () => {
-    /* Bozukluğun sebebi dolgu değil `flex: 1`in kaybolmasıydı (künye `KindTab`te): stil İÇ
-       yüzeye gidiyor, genişliği yuva dağıtmalı. İkisi de burada ölçülüyor. */
+    /* Genişliği yuva dağıtır, çünkü hapın stili iç yüzeye gider ve `flex: 1` orada kaybolur. */
     await renderScreen();
 
     expect(screen.getByTestId('pro-tab-siret-slot')).toHaveStyle({ flex: 1 });
