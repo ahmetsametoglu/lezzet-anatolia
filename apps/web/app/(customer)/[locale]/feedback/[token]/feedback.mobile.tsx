@@ -110,7 +110,7 @@ export function FeedbackMobile({ locale, token, invite, copy, t }: FeedbackViewP
               </span>
             )}
             <div className="absolute inset-x-5.5 bottom-4.5 flex flex-col gap-1">
-              <span className="font-sans text-eyebrow text-olive-light">{copy.vote.eyebrow}</span>
+              <span className="font-sans text-eyebrow-xs text-olive-light">{copy.vote.eyebrow}</span>
               <h1 className="font-serif text-page-title-sm text-on-image">{card.name}</h1>
             </div>
           </div>
