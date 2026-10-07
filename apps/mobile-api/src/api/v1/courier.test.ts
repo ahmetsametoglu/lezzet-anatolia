@@ -33,6 +33,7 @@ import type {
   StartCourierDayResponse,
 } from '@lezzet/types';
 import { app } from '../../app';
+import { addDays, parisDateOf } from '@lezzet/helper';
 
 /**
  * Kurye uçları uçtan uca, port açmadan: kapının kararı gövdeye bozulmadan çıkıyor mu, kimlik jetondan mı geliyor, rolsüz
@@ -44,8 +45,9 @@ const orders = new OrderService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
-const today = new Date().toISOString().slice(0, 10);
-const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+// Kod günü Paris takviminden alır; UTC günü Paris'te gece yarısından sonraki saatlerde bir gün geride kalır.
+const today = parisDateOf(new Date());
+const dayOffset = (n: number) => addDays(today, n);
 
 /** Kurye rollü gerçek oturum — kimliğin JETONDAN geldiğini ancak gerçek bir token kanıtlar. */
 let courierToken = '';

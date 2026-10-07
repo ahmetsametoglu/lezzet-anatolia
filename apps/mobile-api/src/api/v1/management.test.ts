@@ -4,6 +4,7 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { ComplaintResponse, ComplaintsResponse, ExceptionAskResponse, ExceptionsResponse, ManagementHub, OfferCandidatesResponse, OfferOpenResponse, SupplyDraftResponse, SupplyResponse, TicketActionResponse } from '@lezzet/types';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
+import { addDays, parisDateOf } from '@lezzet/helper';
 
 /**
  * Yönetim hub ucu yalnız `admin`e açıktır ve karar kutusu motorların sözünü sayar; paylaşılan veritabanında sayaç için eşitlik değil alt
@@ -30,8 +31,9 @@ let nearExpiryVariantId: string;
 let nearExpiryStockId: string;
 let expiredStockId: string;
 
-const today = new Date().toISOString().slice(0, 10);
-const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+// Kod günü Paris takviminden alır; UTC günü Paris'te gece yarısından sonraki saatlerde bir gün geride kalır.
+const today = parisDateOf(new Date());
+const dayOffset = (n: number) => addDays(today, n);
 
 const hub = (user: SignedInUser) => app.request('/api/v1/management/hub', { headers: bearer(user.token) });
 

@@ -12,6 +12,7 @@ import { listCourierRoutes } from './routes';
 import { recordOrderPayment } from '../order/payment';
 import { cancelOrder } from '../order/refund';
 import { advanceOrder } from '../order/advance.testkit';
+import { addDays, parisDateOf } from '@lezzet/helper';
 
 /**
  * Kuryenin gün listesi ve kapıdaki iki olumsuz sonuç. En kritik iki doğrulama: başka kuryenin durağı görünmüyor mu ve ulaşılamadı
@@ -49,8 +50,9 @@ let foreignZoneId: string;
 let secondZoneId: string;
 const createdProfiles: string[] = [];
 
-const today = new Date().toISOString().slice(0, 10);
-const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+// Kod günü Paris takviminden alır; UTC günü Paris'te gece yarısından sonraki saatlerde bir gün geride kalır.
+const today = parisDateOf(new Date());
+const dayOffset = (n: number) => addDays(today, n);
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;

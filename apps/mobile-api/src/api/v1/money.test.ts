@@ -6,6 +6,7 @@ import { recordOrderPayment } from '@lezzet/application';
 import type { MoneyDayEnd, MoneyOverview } from '@lezzet/types';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
+import { parisDateOf } from '@lezzet/helper';
 
 /**
  * Para uçları: kapı yalnız `accounting` ve `admin`e açıktır, bekleyen tahsilat günün ödenmemiş siparişlerinden türer ve gün sonu farkı
@@ -25,7 +26,8 @@ let orderId: string;
 let partialOrderId: string;
 let accountId: string;
 
-const today = new Date().toISOString().slice(0, 10);
+// Kod günü Paris takviminden alır; UTC günü Paris'te gece yarısından sonraki saatlerde bir gün geride kalır.
+const today = parisDateOf(new Date());
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
