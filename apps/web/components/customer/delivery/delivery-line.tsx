@@ -49,7 +49,7 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
     <button
       type="button"
       onClick={() => setPanelOpen(true)}
-      className="cursor-pointer font-sans font-semibold text-olive underline hover:text-olive-dark"
+      className="cursor-pointer font-sans font-semibold text-olive-dark underline hover:text-ink"
     >
       {place ? t.changePlace : t.setPlace}
     </button>

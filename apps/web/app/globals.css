@@ -51,8 +51,9 @@
   --color-olive-edge: #cddbb0; /* yer hapının çerçevesi */
   --color-olive-light: #a9c46b; /* koyu blok üstünde vurgu, ikon */
 
-  /* Terracotta: fırsat/indirim ve masaüstünde hata/iptal; ayrı koyu katman yok, anlam ayrımı ton farkıyla kurulur. */
+  /* Terracotta: fırsat/indirim ve masaüstünde hata/iptal; açık zemindeki yazı eşik için koyu tonu taşır. */
   --color-terracotta: #b05c2e; /* fırsat/indirim vurgusu, eski fiyat üstü */
+  --color-terracotta-dark: #9a5028; /* açık zemindeki fırsat yazısı, etiket */
   --color-terracotta-bg: #f9ede2; /* fırsat kutusu, indirim rozeti */
   --color-terracotta-line: #e8c9b3; /* kutu çerçevesi, hatalı girdi */
   --color-terracotta-bright: #c25e3a; /* hata/iptal metni, geçersiz kod */

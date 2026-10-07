@@ -57,7 +57,7 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
         type="button"
         onClick={() => setPanelOpen(true)}
         aria-label={postal === null ? header.locationEmptyLabel : header.locationLabel.replace('{postal}', postal)}
-        className={`w-max max-w-full cursor-pointer truncate text-left font-sans text-micro leading-normal font-bold tracking-[0.08em] text-terracotta transition-colors hover:text-terracotta-bright ${focusRingClass}`}
+        className={`w-max max-w-full cursor-pointer truncate text-left font-sans text-micro leading-normal font-bold tracking-[0.08em] text-terracotta-dark transition-colors hover:text-terracotta-bright ${focusRingClass}`}
       >
         {updating ? (
           <Skeleton className="inline-block h-3 w-32 rounded-full align-middle" />
@@ -91,7 +91,7 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
     >
       <Icon name="pin" size={16} className="flex-none text-olive-dark" />
       <span className={['truncate', place || address ? 'text-ink' : 'text-muted'].join(' ')}>{label}</span>
-      {channel && <span className="flex-none font-sans text-field-label font-semibold whitespace-nowrap text-olive">· {channel}</span>}
+      {channel && <span className="flex-none font-sans text-field-label font-semibold whitespace-nowrap text-olive-dark">· {channel}</span>}
       <span aria-hidden className="text-micro font-semibold text-muted">
         ▾
       </span>

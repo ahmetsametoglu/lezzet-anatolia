@@ -14,7 +14,7 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 
 /* Beklenen sayılar elle sabitlenir: token ekleyen bu sayıyı da güncelleyip farkın iki tarafta olduğunu gösterir. CSS tarafı ayrıca
    sayılmaz, modülden türetilir. */
-const EXPECTED_LIGHT_COUNT = 215; // @theme bloğu, fontlar hariç (126 renk + 69 yazı + 9 yarıçap + 3 hareket + 8 gölge)
+const EXPECTED_LIGHT_COUNT = 216; // @theme bloğu, fontlar hariç (127 renk + 69 yazı + 9 yarıçap + 3 hareket + 8 gölge)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));

@@ -42,7 +42,7 @@ interface FilterChipProps {
  * v1'in `cip()`i ile nötr süzgeç çipi zaten aynı renkler (zeytin dolu · beyaz + kum-400 çerçeve).
  */
 export function chipToneClass(tone: NonNullable<FilterChipProps['tone']>, active: boolean): string {
-  if (tone === 'offer') return active ? 'border-terracotta bg-terracotta text-white' : 'border-terracotta-line bg-terracotta-bg text-terracotta hover:border-terracotta';
+  if (tone === 'offer') return active ? 'border-terracotta bg-terracotta text-white' : 'border-terracotta-line bg-terracotta-bg text-terracotta-dark hover:border-terracotta';
   if (tone === 'place') return active ? 'border-olive bg-olive text-white' : 'border-olive-line bg-olive-bg text-olive-dark hover:border-olive';
   return active ? 'border-olive bg-olive text-white' : 'border-sand-400 bg-card text-ink hover:border-olive';
 }

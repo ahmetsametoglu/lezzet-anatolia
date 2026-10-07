@@ -27,7 +27,7 @@ export async function DevLoginLinks({ customerOnly }: DevLoginLinksProps) {
             href={`/auth/dev-login?email=${encodeURIComponent(account.email)}`}
             // Müşteri zeytin, operasyon terracotta: hangi yüzeye gidildiği renkten okunur.
             className={`cursor-pointer font-sans text-note font-bold hover:underline ${
-              account.operations ? 'text-terracotta-bright' : 'text-olive'
+              account.operations ? 'text-terracotta-bright' : 'text-olive-dark'
             }`}
           >
             {account.label}

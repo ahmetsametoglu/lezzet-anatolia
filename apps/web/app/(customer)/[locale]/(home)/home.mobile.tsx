@@ -114,7 +114,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
       {home.bands.length > 0 && (
         // Daireler bandın dışına sarkıyor: yatay taşma sayfayı kaydırmasın, dikey taşma görünür kalsın.
         <section className="overflow-x-clip">
-          <p className="px-5.5 pb-2 font-sans text-eyebrow-xs text-terracotta uppercase">{copy.collections.eyebrow}</p>
+          <p className="px-5.5 pb-2 font-sans text-eyebrow-xs text-terracotta-dark uppercase">{copy.collections.eyebrow}</p>
           {home.bands.map((band, index) => (
             <PhoneCollectionBand
               key={band.slug}
@@ -227,7 +227,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
 
       {home.packages.length > 0 && (
         <>
-          <p className="px-5.5 font-sans text-eyebrow-xs text-terracotta uppercase">{copy.packages.eyebrow}</p>
+          <p className="px-5.5 font-sans text-eyebrow-xs text-terracotta-dark uppercase">{copy.packages.eyebrow}</p>
           <div className="flex flex-col gap-3 px-5.5">
             {/* Paket kartı da yer işareti taşımaz; solma yalnız tükendide kalır (ürün rafıyla aynı gerekçe). */}
             {home.packages.map((pack) => (

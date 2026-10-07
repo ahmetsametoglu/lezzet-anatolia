@@ -9,11 +9,11 @@ import type { Messages } from '../orders-types';
 const BADGE_CLASS: Record<CustomerOrderStatus, string> = {
   // Ödeme bekleyen sipariş bekleyen durum ailesinde: sıradaki hareket müşterinin.
   awaiting_payment: 'bg-honey-bg text-honey',
-  received: 'bg-olive-bg text-olive',
-  preparing: 'bg-olive-bg text-olive',
+  received: 'bg-olive-bg text-olive-dark',
+  preparing: 'bg-olive-bg text-olive-dark',
   // Gel-al'ın "hazır"ı da aktif ailede: müşterinin yapacağı iş var (gidip almak).
-  ready_for_pickup: 'bg-olive-bg text-olive',
-  on_the_way: 'bg-olive-bg text-olive',
+  ready_for_pickup: 'bg-olive-bg text-olive-dark',
+  on_the_way: 'bg-olive-bg text-olive-dark',
   delivered: 'bg-closed-bg text-closed',
   cancelled: 'bg-terracotta-bg text-terracotta-bright',
   returning: 'bg-honey-bg text-honey',

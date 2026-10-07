@@ -13,9 +13,9 @@ import { Tag } from '@/components/customer/phone-kit/tag';
 const TONES = ['olive', 'sand', 'terracotta'] as const;
 
 const TONE: Record<(typeof TONES)[number], { band: string; accent: string; title: string }> = {
-  olive: { band: 'bg-olive', accent: 'text-olive-light', title: 'text-sand-50' },
-  sand: { band: 'bg-sand-150', accent: 'text-terracotta', title: 'text-ink' },
-  terracotta: { band: 'bg-terracotta', accent: 'text-terracotta-line', title: 'text-card' },
+  olive: { band: 'bg-olive', accent: 'text-white', title: 'text-white' },
+  sand: { band: 'bg-sand-150', accent: 'text-terracotta-dark', title: 'text-ink' },
+  terracotta: { band: 'bg-terracotta', accent: 'text-white', title: 'text-card' },
 };
 
 interface PhoneCollectionBandProps {

@@ -189,7 +189,7 @@ export function PointsCard({
       {/* İç panel koyu kartın üstünde bir kademe açık: ayrı gri token yerine `cream` saydamla katmanlanır ki palet değişince o da
           değişsin; Tailwind'in `neutral-700`ü soğuk ve paletimizin dışında. */}
       <div className="flex flex-col gap-1.5 rounded-soft bg-cream/10 px-4 py-3">
-        <span className="font-sans text-note leading-relaxed font-semibold text-olive-light">
+        <span className="font-sans text-note leading-relaxed font-semibold text-on-image">
           {enough ? rule : `${t.pointsShort.replace('{missing}', String(minimumPoints - points.balance))} (${rule})`}
         </span>
         <RedeemPoints t={t} locale={locale} amount={points.nextRedeem} enough={enough} />

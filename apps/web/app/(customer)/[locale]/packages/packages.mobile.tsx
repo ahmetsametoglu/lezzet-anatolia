@@ -21,7 +21,7 @@ export function PackagesMobile({ locale, packages }: PackagesViewProps) {
   return (
     <div className="flex flex-col gap-3 px-4.5 pb-5">
       <header className="flex flex-col gap-1 pt-4">
-        <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{copy.eyebrow}</span>
+        <span className="font-sans text-eyebrow-xs text-terracotta-dark uppercase">{copy.eyebrow}</span>
         <h1 className="font-serif text-page-title-sm leading-[1.15] text-ink">{copy.title}</h1>
         <p className="font-sans text-note leading-[1.6] text-muted">{copy.body}</p>
       </header>

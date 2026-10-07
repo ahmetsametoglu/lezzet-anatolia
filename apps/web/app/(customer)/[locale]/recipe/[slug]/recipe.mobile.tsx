@@ -86,7 +86,7 @@ export function RecipeMobile({ locale, recipe }: RecipeViewProps) {
               {recipe.steps.map((step, index) => (
                 // Adımların kimliği yok; numarayı ekran verir.
                 <li key={index} className="flex gap-3">
-                  <span aria-hidden className="grid size-7 flex-none place-items-center rounded-full bg-sand-150 font-sans text-note font-bold text-terracotta">
+                  <span aria-hidden className="grid size-7 flex-none place-items-center rounded-full bg-sand-150 font-sans text-note font-bold text-terracotta-dark">
                     {index + 1}
                   </span>
                   <span className="font-sans text-note leading-[1.6] text-ink">{step}</span>

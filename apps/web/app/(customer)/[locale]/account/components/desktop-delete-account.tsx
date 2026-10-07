@@ -42,7 +42,7 @@ export function DesktopDeleteAccount({ t }: DesktopDeleteAccountProps) {
   return (
     <>
       {/* Dolgulu değil: dolgulu kırmızı düğme sayfanın en güçlü çağrısı olur ve müşteriyi silmeye davet ederdi. */}
-      <Button variant="ghost" size="sm" className="!px-0 !text-terracotta-bright hover:!text-terracotta" onClick={() => setOpen(true)}>
+      <Button variant="ghost" size="sm" className="!px-0 !text-error hover:!text-terracotta-bright" onClick={() => setOpen(true)}>
         {t.deleteAccount.action}
       </Button>
 

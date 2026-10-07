@@ -28,11 +28,11 @@ const SHAPE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
 };
 
 const HARD_SHADOW_LIVE =
-  'cursor-pointer bg-olive text-on-image shadow-hard hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none';
+  'cursor-pointer bg-olive text-white shadow-hard hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none';
 
 /** Açık hâlin dolgusu ve basış geri bildirimi — gölgeli yüzey kayar, gölgesiz yüzey küçülür. */
 const LIVE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
-  pill: 'cursor-pointer bg-olive text-on-image hover:bg-olive-dark active:scale-[0.97]',
+  pill: 'cursor-pointer bg-olive text-white hover:bg-olive-dark active:scale-[0.97]',
   block: HARD_SHADOW_LIVE,
   raised: HARD_SHADOW_LIVE,
 };

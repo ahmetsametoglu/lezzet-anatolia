@@ -9,7 +9,7 @@ import { Link } from '@/i18n/navigation';
 type InviteTone = 'terracotta' | 'olive';
 
 const TONE: Record<InviteTone, { border: string; ink: string }> = {
-  terracotta: { border: 'border-terracotta', ink: 'text-terracotta' },
+  terracotta: { border: 'border-terracotta', ink: 'text-terracotta-dark' },
   olive: { border: 'border-olive-line', ink: 'text-olive-dark' },
 };
 

@@ -87,7 +87,7 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex cursor-pointer items-center justify-center gap-2 rounded-pill bg-olive-bg px-4 py-3 text-center font-sans text-body-sm font-bold text-olive transition-opacity hover:opacity-75"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-pill bg-olive-bg px-4 py-3 text-center font-sans text-body-sm font-bold text-olive-dark transition-opacity hover:opacity-75"
             >
               <Icon name="chat" size={16} />
               {t.aside.whatsapp.replace('{phone}', whatsappNumber)}

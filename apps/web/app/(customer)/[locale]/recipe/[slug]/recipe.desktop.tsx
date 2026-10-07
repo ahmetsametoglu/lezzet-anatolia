@@ -68,7 +68,7 @@ export function RecipeDesktop({ t, locale, recipe }: RecipeViewProps) {
               {/* Öğün AYRI RENKTE (tasarım): süre ve porsiyon tarifin ölçüsü, öğün ise ne zaman
                   yeneceği — farklı bir soruya cevap veriyor. */}
               {recipe.meal && (
-                <span className="rounded-soft bg-terracotta-bg px-3 py-1.5 font-sans text-micro font-bold text-terracotta">
+                <span className="rounded-soft bg-terracotta-bg px-3 py-1.5 font-sans text-micro font-bold text-terracotta-dark">
                   {recipe.meal}
                 </span>
               )}

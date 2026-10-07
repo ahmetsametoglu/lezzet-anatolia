@@ -80,7 +80,7 @@ export function SiteFrame({
     <div className={`flex flex-col overflow-x-clip bg-cream text-ink ${fill ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {/* Duyuru bandı — hesap alanında ve ince başlıkta yok. */}
       {!account && !thinChrome && (
-      <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-sand-50">
+      <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-white">
         <div className={`${SHELL} flex justify-center gap-7 text-center`}>
           {[t.announcement.cold, t.announcement.local, t.announcement.shipping].map((item, i) => (
             <span key={item} className="inline-flex items-center gap-1.5">

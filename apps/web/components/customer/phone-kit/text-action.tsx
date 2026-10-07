@@ -32,7 +32,7 @@ export function TextAction({ label, onClick, href, externalHref, tone = 'olive',
     "relative font-sans text-control transition-opacity after:absolute after:content-['']",
     disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-70 active:opacity-50',
     EDGES[edges],
-    tone === 'olive' ? 'text-olive' : 'text-terracotta',
+    tone === 'olive' ? 'text-olive-dark' : 'text-terracotta-dark',
   ].join(' ');
   if (disabled) {
     return (

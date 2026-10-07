@@ -105,7 +105,7 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
               {allergens.map((a) => (
                 <span
                   key={a}
-                  className="inline-flex w-max items-center gap-1.5 rounded-badge border border-terracotta-line bg-terracotta-bg px-2.75 py-1 font-sans text-field-label font-bold text-terracotta"
+                  className="inline-flex w-max items-center gap-1.5 rounded-badge border border-terracotta-line bg-terracotta-bg px-2.75 py-1 font-sans text-field-label font-bold text-terracotta-dark"
                 >
                   <Icon name="warning" size={13} />
                   {resolveLocalizedText(ALLERGEN_LABELS[a], locale)}

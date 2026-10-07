@@ -185,7 +185,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
               bağlantı altı çizili bir metin — ortak başlık 28 px'lik ana sayfa ölçüsünü taşıyor. */}
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="font-serif text-page-title-sm text-ink">{t.similar}</h2>
-            <Link href="/catalog" className="cursor-pointer font-sans text-control font-semibold text-olive underline hover:text-olive-dark">
+            <Link href="/catalog" className="cursor-pointer font-sans text-control font-semibold text-olive-dark underline hover:text-ink">
               {t.similarAll}
             </Link>
           </div>

@@ -54,10 +54,11 @@ export const customerOlive = {
   'olive-light': '#a9c46b', // koyu blok üstünde vurgu, ikon
 } as const satisfies Record<string, string>;
 
-/* Terracotta: fırsat/indirim; ayrı koyu katman yok, anlam ton farkıyla kurulur. Masaüstü hata metni bugün `terracotta-bright`i
-   kullanıyor, telefon görünümü ise hata için `customerError` ailesini taşır. */
+/* Terracotta: fırsat/indirim; `terracotta` açık zeminde metin eşiğinin altında kaldığı için oradaki yazı `terracotta-dark` taşır.
+   Masaüstü hata metni `terracotta-bright`tır, telefon görünümü hata için `customerError` ailesini taşır. */
 export const customerTerracotta = {
   terracotta: '#b05c2e', // fırsat/indirim vurgusu, eski fiyat üstü
+  'terracotta-dark': '#9a5028', // açık zemindeki fırsat yazısı, etiket
   'terracotta-bg': '#f9ede2', // fırsat kutusu, indirim rozeti
   'terracotta-line': '#e8c9b3', // kutu çerçevesi, hatalı girdi
   'terracotta-bright': '#c25e3a', // hata/iptal metni, geçersiz kod

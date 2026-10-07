@@ -77,7 +77,7 @@ export function OrdersMobile({ t, locale, orders, nextCursor, loadingMore, onLoa
             <div className={`flex items-center justify-between gap-2.5 pt-2.5 ${DASHED_TOP}`}>
               <span className="font-sans text-step-sm text-ink">{formatPrice(order.totalCents, locale)}</span>
               {/* Kart zaten basılabilir; bu yazı düğme değil, nereye gidileceğini söyleyen işaret. */}
-              <span aria-hidden className="font-sans text-control text-terracotta">
+              <span aria-hidden className="font-sans text-control text-terracotta-dark">
                 {pending ? copy.row.pay : copy.row.detail}
               </span>
             </div>
