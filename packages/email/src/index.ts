@@ -1,5 +1,4 @@
-// @lezzet/email — mail istemcisi + şablonlar. Auth OTP dahil TÜM mail buradan.
-// Supabase mail yapısı KULLANILMAZ. İçerik: docs/build/14-bildirim-email.md
+// E-posta istemcisi ve şablonları; giriş kodu dahil her e-posta buradan gider, Supabase'in kendi e-postası kullanılmaz.
 export { sendEmail, type SendEmailParams, type SendEmailResult } from './client';
 export { OtpCodeEmail, otpSubject, type OtpCodeEmailProps, type OtpCodePurpose } from './templates/otp-code';
 

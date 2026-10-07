@@ -1,15 +1,8 @@
 import { z } from 'zod';
 import { PreferredLanguageEnum, TicketSenderEnum, TicketStatusEnum, TicketTypeEnum } from '../primitives/enums.schema';
 
-// Bildirim (modül 14) — müşteriye giden mesajın VERİ ŞEKLİ. DOMAIN §6, build/14.
-//
-// Neden burada: aynı şekli üç yer okur — şablon (`packages/email`), sürücü katmanı
-// (`packages/notify`) ve veriyi kuran uygulama kapısı (`apps/web/lib/order/notify.ts`). Şablonun
-// içine gömülseydi sürücü onu bilmezdi; kapıya konsaydı şablon uygulamaya bağlanırdı.
-//
-// **Bu bir görünüm modelidir, tablo değil.** Hiçbir yerde saklanmaz: gönderim anında siparişten,
-// kalemlerinden ve ödeme türetiminden kurulur. Sipariş sonradan değişse bile giden mail değişmez —
-// zaten gitmiştir; e-posta bir kopyadır, canlı ekran değil.
+// Müşteriye giden bildirimin veri şekli; şablon, sürücü ve veriyi kuran kapı aynı şekli okur. Görünüm modelidir, saklanmaz:
+// gönderim anında kurulur ve sonradan değişen sipariş gitmiş e-postayı değiştirmez.
 
 /** Zaman çizgisi adımının hâli — tasarımda üç görünüm: dolu, o an, soluk. */
 export const NotificationStepStateEnum = z.enum(['done', 'current', 'pending']);
@@ -71,14 +64,8 @@ export const OrderNotificationSchema = z.object({
     .object({ headline: z.string(), detail: z.string(), icon: z.string() })
     .nullable(),
   /**
-   * Kargoda kurye penceresi yerine takip (DOMAIN §6).
-   *
-   * **DİZİ, çünkü çok kolili gönderide her kolinin AYRI takip numarası var** (multicollo,
-   * ölçüldü 28.08). Tek numara taşısaydı üç kutulu bir siparişin ikisi mailde hiç görünmezdi —
-   * ve müşteri eksik olanı aramak için desteğe yazardı.
-   *
-   * `null` = takip edilecek bir şey yok. **Boş dizi başka bir hâldir** ve o hâl buraya hiç
-   * gelmez: "gönderi var ama numarası henüz yazılmadı" bir maile konu olmaz.
+   * Kargoda kurye penceresi yerine takip; dizi, çünkü çok kolili gönderide her kolinin ayrı numarası var. `null` takip edilecek bir
+   * şey yok demektir; numarası henüz yazılmamış gönderi e-postaya konu olmaz.
    */
   tracking: z
     .array(
@@ -120,23 +107,11 @@ export const OrderNotificationSchema = z.object({
 export type OrderNotification = z.infer<typeof OrderNotificationSchema>;
 
 /**
- * Talep bildiriminin verisi (14.7 · 16.4) — DOMAIN §15.
- *
- * **Enum'lar ham geçer, etiket değil.** Sipariş bildiriminde tutarlar biçimlenmiş gelir çünkü para
- * biçimi bir uygulama kararıdır; ama "çözüldü" kelimesi bir ÇEVİRİDİR ve çevirinin yeri şablonun
- * yanındaki metin tablosudur (`ticket-copy.ts`). Kapı etiket üretseydi aynı sözlük iki dilde iki
- * yerde dururdu.
- *
- * **Mail yazışmanın KENDİSİNİ taşır** (16.4, referans desen): son mesajlar `history` içinde gelir,
- * müşteri bağlamı görmek için tıklamak zorunda kalmaz. Önce yalnız `replyBody` vardı — cevabın
- * öncesi görünmüyordu ve "neye cevap verdiler" sorusu için tıklamak gerekiyordu.
+ * Talep bildiriminin verisi. Enum'lar ham geçer, çünkü etiket bir çeviridir ve çeviri şablonun yanındaki metin tablosunda durur;
+ * e-posta son mesajları da taşır ki müşteri bağlamı görmek için tıklamasın.
  */
 
-/**
- * Alıntılanan tek mesaj. **Gövde kapıda kırpılır, şablonda değil:** bir talebin mesajları sınırsız
- * büyür (`CLAUDE.md §1`) ve şablona kırpılmamış bir yazışma vermek, payload'ı ve maili sınırsız
- * şişirirdi. Sunum kararı değil, sözleşme sınırı.
- */
+/** Alıntılanan tek mesaj. Gövde kapıda kırpılır, çünkü talebin mesajları sınırsız büyür ve kırpılmamış yazışma e-postayı şişirirdi. */
 export const TicketHistoryEntrySchema = z.object({
   /** Kim yazdı — şablon "Siz" ile markayı ayırt eder. `ai` müşteriye ayrı gösterilmez (DOMAIN §15). */
   sender: TicketSenderEnum,
@@ -146,13 +121,8 @@ export const TicketHistoryEntrySchema = z.object({
   /** Kırpıldıysa şablon "…" ve tam metnin bağlantısını gösterir — sessiz kırpma yalan söylerdi. */
   truncated: z.boolean(),
   /**
-   * Müşterinin HENÜZ GÖRMEDİĞİ mesaj mı (17.08) — mailin "haber" kısmını "bağlam" kısmından ayırır.
-   *
-   * Alan, cevap maili ERTELENİR olduğu için gerekti (21.70): tek mail artık birden çok yeni cevap
-   * taşıyabiliyor, oysa şablon "biri cevap, gerisi geçmiş" varsayıyordu — üç yeni cevabın ikisi
-   * soluk alıntıya düşüyordu. Kural zaman damgası değil, YÖNdür: müşterinin son mesajından sonra
-   * gelen kesintisiz karşı-taraf dizisi. Müşteri yazdığı anda orada olduğu kesindir, o yüzden
-   * ayıraç onun kendi mesajıdır — ayrı bir okundu damgası taşımaya gerek yok.
+   * Müşterinin henüz görmediği mesaj mı; tek e-posta birden çok yeni cevap taşıyabildiği için haberi bağlamdan bu alan ayırır.
+   * Ölçüt yöndür: müşterinin son mesajından sonra gelen kesintisiz karşı taraf dizisi.
    */
   unread: z.boolean(),
 });
@@ -172,17 +142,8 @@ export const TicketNotificationSchema = z.object({
   openedOn: z.string(),
 
   /**
-   * Yazışmanın son mesajları, **en yeniden eskiye** — mailin okunma yönü budur (yeni haber üstte,
-   * bağlam altında; e-posta alıntı geleneği).
-   *
-   * `history[0]` mailin KONUSU olan mesajdır: `ticket_replied`'da personelin cevabı,
-   * `ticket_received`'da müşterinin kendi anlatımı. Şablon onu tam kartta gösterir, kalanını
-   * alıntılar. Ayrı bir `replyBody` alanı vardı ve kaldırıldı: aynı mesajı iki alanda taşımak,
-   * "hangisi güncel" sorusunu doğuran türden bir tekrardı.
-   *
-   * `ticket_status_changed` şablonu bunu KULLANMAZ (o mailin konusu bir mesaj değil bir durum);
-   * alan yine dolu gelir çünkü kapı olay başına ayrı veri kurmaz — hangi bloğun çizileceği
-   * şablonun kararıdır.
+   * Yazışmanın son mesajları, en yeniden eskiye; `history[0]` e-postanın konusu olan mesajdır ve tam kartta çizilir. Durum
+   * değişikliği şablonu bunu kullanmaz ama alan yine dolu gelir, çünkü hangi bloğun çizileceği şablonun kararıdır.
    */
   history: z.array(TicketHistoryEntrySchema),
   /**
@@ -197,17 +158,8 @@ export const TicketNotificationSchema = z.object({
 export type TicketNotification = z.infer<typeof TicketNotificationSchema>;
 
 /**
- * Alım-sonrası değerlendirme davetinin verisi (17.2) — DOMAIN §14.
- *
- * **Sipariş bildirimi DEĞİLDİR ve `OrderNotification`'ı yeniden kullanmaz.** O şekil siparişin
- * anlatısını taşır (zaman çizgisi, kalemler, tutarlar, ödeme); davetin işi tek bir şey istemek.
- * Aynı tipe bindirilseydi şablon otuz alandan üçünü doldurup gerisini `null` geçerdi ve derleyici
- * "bu mailde tutar niye yok" sorusunu hiç soramazdı.
- *
- * **Puan miktarı BURADA YOKTUR ve bu bilinçli.** Puan tamamlamada verilir, verilip verilmeyeceği o
- * anki günlük tavana ve müşteri türüne bağlıdır (B2B kazanmaz — DOMAIN §14). Davette bir sayı
- * yazmak, tutulamayabilecek bir söz vermektir; müşteri akışı bitirir, puanı görmez ve haklı olarak
- * kandırıldığını düşünür.
+ * Alım sonrası değerlendirme davetinin verisi; tek bir şey istediği için sipariş bildiriminin şeklini kullanmaz. Puan miktarı
+ * taşınmaz, çünkü verilip verilmeyeceği tamamlama anındaki tavana ve müşteri türüne bağlıdır.
  */
 export const FeedbackInviteNotificationSchema = z.object({
   customerName: z.string().nullable(),
@@ -230,16 +182,8 @@ export const FeedbackInviteNotificationSchema = z.object({
 export type FeedbackInviteNotification = z.infer<typeof FeedbackInviteNotificationSchema>;
 
 /**
- * **BEKLENEN BÖLGE AÇILDI** (14.10 · 19.21).
- *
- * Müşteri bir posta kodu için "gelince haber verin" demişti (`zone_notice`) — kayıt bir SÖZ
- * değildi, bir nottu; bu mail o notun karşılığıdır.
- *
- * **Kimlik taşımıyor ve taşımamalı:** `zone_notice` ziyaretçiden de kayıt alıyor (`customerId`
- * null olabilir), yani elimizde çoğu zaman yalnız e-posta ve posta kodu var. Şablon bir sipariş
- * künyesi ya da hesap bilgisi isteseydi kayıtların yarısı gönderilemezdi.
- *
- * **`customerName` null olabilir ve normali budur** — ziyaretçi adını hiç vermedi.
+ * Beklenen bölge açıldı: müşterinin "gelince haber verin" kaydının karşılığı. Kimlik taşımaz, çünkü kayıt ziyaretçiden de alınır ve
+ * elde çoğu zaman yalnız e-posta ile posta kodu vardır; `customerName` bu yüzden çoğu zaman boştur.
  */
 export const ZoneAvailableNotificationSchema = z.object({
   customerName: z.string().nullable(),
@@ -252,28 +196,15 @@ export const ZoneAvailableNotificationSchema = z.object({
 });
 export type ZoneAvailableNotification = z.infer<typeof ZoneAvailableNotificationSchema>;
 
-/**
- * **B2B BAŞVURU SONUCU** (14.10) — onay ya da ret.
- *
- * **Boşluğun tarifi:** gerekçe veride ZORUNLU, 20.2 onu üç dile çeviriyor ve bugüne dek hiçbir
- * okuyucuya ulaşmıyordu; künye "müşteriye e-postayla gidiyor" diyordu ama öyle bir şablon hiç
- * yazılmamıştı (müşteri şeridinin ölçümü, 04.08).
- *
- * **Tek olay, iki sonuç** — ayrı olaylar değil: alıcı aynı, kanal aynı, tetikleyen aynı karar.
- * İki olay olsaydı sürücü listesine iki satır, şablon klasörüne iki dosya girer ve ikisi bir gün
- * ayrışırdı. Ayrım `approved` bayrağında.
- */
+/** Kurumsal başvurunun sonucu, onay ya da ret. Tek olaydır, çünkü alıcı, kanal ve tetikleyen karar aynıdır; ayrım `approved`ta. */
 export const B2bApplicationResultNotificationSchema = z.object({
   customerName: z.string().nullable(),
   locale: PreferredLanguageEnum,
   companyName: z.string().nullable(),
   approved: z.boolean(),
   /**
-   * Ret gerekçesi — **müşterinin dilinde çözülmüş hâli** (20.2 `resolveUserText`). Onayda `null`.
-   *
-   * Operatör gerekçeyi Türkçe yazıyor; çeviri işi onu müşterinin diline çeviriyor. Ham metni
-   * geçirseydik Fransız müşteri Türkçe bir cümle okurdu — gerekçenin zorunlu olmasının sebebi de
-   * tam olarak okunabilmesiydi.
+   * Ret gerekçesi, müşterinin dilinde çözülmüş hâliyle; onayda `null`. Operatör Türkçe yazar, ham metin geçseydi Fransız müşteri
+   * Türkçe cümle okurdu.
    */
   reason: z.string().nullable(),
   /** Onayda toptan vitrine, rette hesaba — çağıran çözer, şablon yalnız çizer. */
