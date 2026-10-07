@@ -5,15 +5,8 @@ import { reportClientErrorAction } from '@/lib/observability/report-client-error
 import { Icon } from '@/components/customer/ui/icons';
 
 /**
- * Kök son-çare hatası — yalnız kök layout'un KENDİSİ patlarsa devreye girer (nadir). Kök layout
- * yerine geçtiği için kendi `<html>/<body>`sini ve stilini taşır (globals'a güvenmez). Yüzey
- * ayrımı (müşteri/operasyon) burada bilinmez → nötr Türkçe. Normal 404/500'ler yüzeye özgü
- * not-found.tsx / error.tsx tarafından karşılanır; buraya düşülmez.
- *
- * **Kayıt burada en ÇOK gerekiyor** (denetim G1) ve sebebi tam olarak nadir olması: bu sınır
- * tetiklendiyse kök layout patlamıştır, yani sitenin tamamı çökmüştür. Öbür iki sınır bir
- * segmenti kaybettirir, bu sınır her şeyi. İz bırakmadığı sürece böyle bir çöküş ancak birileri
- * şikâyet ederse öğrenilir.
+ * Kök layout'un yerine geçtiği için `globals.css` yüklü değildir, renkler satır içidir; yüzey bilinmediğinden metin nötr
+ * Türkçedir. Bu sınır tetiklendiyse sitenin tamamı çökmüştür ve iz bırakmazsa ancak şikâyetle öğrenilir.
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -41,7 +34,6 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             textAlign: 'center',
           }}
         >
-          {/* Çizgi ikon — globals yüklü değil, renk satır içi (sayfanın kendi düğme rengi). */}
           <span style={{ display: 'flex', color: '#5f7a2c' }}>
             <Icon name="warning" size={42} />
           </span>

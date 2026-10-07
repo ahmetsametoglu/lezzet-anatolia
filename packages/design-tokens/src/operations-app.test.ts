@@ -1,17 +1,7 @@
 /*
-  KOMPOZİSYON SÖZLEŞMESİ — `operations-app.ts`in güvencesi (21.9).
-
-  Operasyon mobil teması ÜÇ katmanın birleşimidir: ortak taban (`customer.ts`) → mobil müşteri
-  seti (`customer-app.ts`) → operasyon mobil farkları (bu dosyanın konusu); aynı addaki anahtarda
-  EN SON katman kazanır. Bu test o kuralın üç yönünü birden sabitler:
-    · fark anahtarları gerçekten operasyon değerini veriyor mu (ezme ÇALIŞIYOR mu),
-    · alt katmanların geri kalanı olduğu gibi geçiyor mu (ezme SIZMIYOR mu),
-    · setin ANTİ-KOPYA kuralı tutuyor mu — operasyona-yeni bir rengin değeri, alt katmanlarda
-      zaten duran bir değerle BİREBİR aynı olamaz. Bu üçüncüsü yorumla anlatılan disiplinin
-      makineyle doğrulanan hâlidir: aynı tonun iki adla yaşaması ancak burada yakalanır.
-
-  Parite testinden AYRI: o test `globals.css` ikizini denetler ve bu dosyayı hiç görmez.
-  DB'siz, saf: birim projesinde koşar.
+  Operasyon mobil teması `customer.ts` → `customer-app.ts` → `operations-app.ts` birleşimidir; aynı addaki anahtarda son
+  katman kazanır. Fark anahtarı tabanı ezmezse, ezme alt katmana sızarsa ya da yeni bir durak tabandaki bir değerin ikinci
+  adı olursa kırmızıya döner.
 */
 import { describe, expect, it } from 'vitest';
 import {
@@ -58,16 +48,14 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
   it('fark anahtarları operasyon değerini verir (son katman TABANI EZER)', () => {
     expect(composedColors.cream).toBe('#f2f0e8'); // taban #faf6ec
     expect(composedColors['olive-bg']).toBe('#e3ecd2'); // taban #eef2e2
-    /* TONLU KARTIN HATA ZEMİNİ (30.08) — taban #f4e3e0 bu yüzeyde fazla koyu: v3'ün kalıbı çok
-       açık zemin + renkli kenar, dolu bir pembe kutuyu uyarı bandına çevirirdi. Rol birebir aynı
-       olduğu için yeni ad AÇILMADI, değer ezildi. */
+    /* Tabanın #f4e3e0'ı tonlu kartta dolu bir pembe kutu olup uyarı bandına dönerdi; rol aynı olduğu için yeni ad açılmaz,
+       değer ezilir. */
     expect(composedColors['error-bg']).toBe('#fdf6f4');
     expect(sharedKeys(baseColors, operationsAppColors)).toEqual(['cream', 'olive-bg', 'error-bg']);
   });
 
   it('operasyona-YENİ anahtarlar iki taban katmanında da yok, birleşimde var', () => {
-    /* `error-line` bu listeden ÇIKTI (30.08): tabana taşındı (`customerAppError`) çünkü paylaşılan
-       kitin `error` tonu iki yüzeyde birden yaşıyor. Artık operasyona-yeni değil, MİRAS. */
+    /* `error-line` tabandadır (`customerAppError`), çünkü paylaşılan kitin hata tonu iki yüzeyde de kullanılır. */
     for (const key of ['panel', 'neutral-bg', 'ink-inset', 'warehouse', 'tab-inactive']) {
       expect(baseColors, `${key} taban katmanlarında olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
@@ -112,14 +100,14 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(composedText).not.toHaveProperty('tag--font-weight');
     expect(composedText).not.toHaveProperty('tag--letter-spacing');
     expect(composedText).not.toHaveProperty('meta--font-weight');
-    // Tasarımda 10,5 diye bir değer birleşimde YOKTU; yarım piksel yuvarlanmadı.
+    // 10,5 taban merdiveninde yok; tasarımın yarım pikseli yuvarlanmaz.
     expect(composedText.meta).toBe('10.5px');
     expect(Object.values(baseText)).not.toContain('10.5px');
   });
 
   it('yazı ölçeği operasyon mobilde YENİDEN KURULMAZ — merdiven mobil müşterininki', () => {
-    /* Tasarımda 18 ayrı boy ölçüldü; 16'sı buradan gelir, ikisi (`meta`, `tag`) yukarıda ayrıca
-       sınandı. Bu satırlar o devralmanın bekçisi: biri kayarsa operasyon ekranları da kayar. */
+    /* Tasarımın 18 yazı boyundan 16'sı mobil müşteri merdiveninden gelir (`meta` ile `tag` yukarıda); biri kayarsa
+       operasyon ekranları da kayar. */
     expect(composedText.eyebrow).toBe('10px'); // üstbaşlık (10/700/.18em)
     expect(composedText['eyebrow--letter-spacing']).toBe('0.18em');
     expect(composedText['badge-sm']).toBe('10px'); // sayaç rozeti, kart etiketi
@@ -128,9 +116,8 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(composedText.note).toBe('13px');
     expect(composedText.control).toBe('13.5px');
     expect(composedText['body-sm']).toBe('14px');
-    /* `button` operasyonda EZİLDİ (30.08): 14,5 → 13,5. Değer `control` ile aynı çıkıyor ve bu
-       bir kopya DEĞİL — ikisi ayrı rol (biri girdi/kontrol ölçüsü, öteki düğme etiketi) ve eşik
-       kuralı yeni ANAHTAR açmayı yönetir, farkı değil (dosyanın kendi künyesi). */
+    /* `button` operasyonda ezilir ve `control` ile aynı değeri taşır; ikisi ayrı rol olduğu için bu kopya sayılmaz, eşik
+       kuralı yeni anahtar açmayı yönetir. */
     expect(composedText.button).toBe('13.5px'); // düğme etiketi — operasyon farkı
     expect(composedText.body).toBe('15px');
     expect(composedText.step).toBe('16px');
@@ -150,10 +137,10 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(composedColors.card).toBe('#ffffff'); // girdi zemini + dolu düğme metni
     expect(composedColors['on-image']).toBe('#f5f1e6'); // koyu yüzeyde krem metin
     expect(composedColors['sand-150']).toBe('#efdfc2'); // koyu CTA içindeki rozet metni
-    expect(composedColors['sand-500']).toBe('#cdc4a8'); // standart kenarlık (#c9c2ae buraya bağlandı)
-    expect(composedColors['sand-300']).toBe('#e2d8bd'); // satır ayracı (#ddd6c4 buraya bağlandı)
+    expect(composedColors['sand-500']).toBe('#cdc4a8'); // standart kenarlık; tasarımın #c9c2ae'si de bu
+    expect(composedColors['sand-300']).toBe('#e2d8bd'); // satır ayracı; tasarımın #ddd6c4'ü de bu
     expect(composedColors['sand-600']).toBe('#b3ab97'); // yön oku "›"
-    expect(composedColors['olive-line']).toBe('#cddbb0'); // zeytin çip kenarı (#cdd8b6 buraya)
+    expect(composedColors['olive-line']).toBe('#cddbb0'); // zeytin çip kenarı; tasarımın #cdd8b6'sı da bu
     expect(composedColors['disabled-fill']).toBe('#b9b29e'); // kapalı CTA
     expect(composedColors.error).toBe('#a44a3f');
     expect(composedColors['terracotta-bg']).toBe('#f9ede2');
@@ -168,21 +155,19 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
   });
 
   it('v3 ölçümleri: üçüncü gri güncellendi, tonlu kartın kenarı açıldı', () => {
-    /* v2'nin #a49b85'i v3 şablonunda HİÇ geçmiyor; yerini alan ton 91 kullanımla hem seçilmeyen
-       sekmenin hem de dipnot satırının rengi. Değer korunsaydı ekranın en çok yazılan yardımcı
-       satırı tasarımdan bir kademe koyu çizilirdi. */
+    /* Seçilmeyen sekmenin ve dipnot satırının ortak tonu; ekranın en çok yazılan yardımcı satırı olduğu için bir kademelik
+       kayma her ekranda görünür. */
     expect(composedColors['tab-inactive']).toBe('#a8a191');
     /* Tonlu kartın kimliği ZEMİNDE değil KENARDA: hata zemini (#fdf6f4) `panel`e Δ2/4/0
        uzaklıkta, yani ayrı bir durak açmaya değmez — ayıran şey bu kenarlıktır. */
     expect(composedColors['error-line']).toBe('#e0b9b2');
     expect(composedColors['error-line']).not.toBe(composedColors['terracotta-line']);
-    /* UYARI kenarı (30.08) — hata kenarından AYRI bir durak: ikisi farklı şey söylüyor ("bir
-       şey bozuk" ⟷ "bir şey eksik"). `terracotta-line`e bağlanamaz (Δ13/32/4, ikinci kanal
-       eşiğin çok üstünde) ve o zaten turuncu ailenin kenarıdır. */
+    /* Uyarı kenarı hata kenarından ayrı bir duraktır, çünkü ikisi ayrı şey söyler ("bir şey bozuk" ⟷ "bir şey eksik");
+       `terracotta-line`e bağlanamaz (Δ13/32/4), o turuncu ailenin kenarıdır. */
     expect(composedColors['warning-line']).toBe('#d9a97f');
     expect(composedColors['warning-line']).not.toBe(composedColors['error-line']);
-    /* OLUMLU kenarı (31.08) — üçüncü aile. `olive-line`a bağlanamaz (Δ11/4/12): o ZEYTİN ÇERÇEVELİ
-       DÜĞMENİN kenarıdır, bu tonlu kartın. D1'in "kutu açık" ve "hepsi kutulandı" kartları. */
+    /* Olumlu kenar tonlu kartın üçüncü ailesidir; `olive-line`a bağlanamaz (Δ11/4/12), o zeytin çerçeveli düğmenin
+       kenarıdır. */
     expect(composedColors['success-line']).toBe('#c3d3a4');
     expect(composedColors['success-line']).not.toBe(composedColors['olive-line']);
     expect(Object.keys(operationsAppLine)).toEqual(['warning-line', 'success-line']);
@@ -214,7 +199,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
 
   it('fark/yeni dağılımı sabit: 4 fark + 18 yeni', () => {
     expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(3);
-    // `button` 30.08'de farka döndü: operasyon düğmeleri müşterininkinden bir punto küçük.
+    // Tek yazı farkı `button`: operasyon düğmeleri müşterininkinden bir punto küçük.
     expect(sharedKeys(baseText, operationsAppText)).toHaveLength(1);
     expect(sharedKeys(baseRadius, operationsAppRadius)).toHaveLength(0);
 
@@ -224,32 +209,8 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
       Object.keys(operationsAppRadius).length +
       Object.keys(operationsAppShadow).length +
       Object.keys(operationsAppGradient).length;
-    /* 3 fark + 17 operasyona-yeni. `error-line` 30.08'de TABANA taşındı (paylaşılan kitin `error`
-       tonu iki yüzeyde birden yaşıyor) — sayı bir azaldı ve azalması gerekiyordu: aynı değeri iki
-       katmanda tanımlamak "ikinci ad" olurdu, anti-kopya testi onu zaten reddediyor.
-       30.08'de dört durak açıldı: `shadow.glow` (v3'ün TEK gölge
-       benzeri durağı — yapışkan okutma CTA'sının zeytin ışıması), `warning-line` (uyarı kartının
-       kenarı) ve TONLU KARTIN İKİ ZEMİNİ — `error-bg` (fark: tabanın #f4e3e0'ı ezildi) +
-       `warning-bg` (yeni). Son ikisi §4'ün eşiğine takılıp bilerek AÇILMAMIŞTI; kullanıcı cihazda
-       farkı gördü ve varsayım çürüdü — gerekçesi `operations-app.ts`te kanal dengesi ölçümüyle
-       yazılı. Sayı bilerek elle yazılıyor — türetilseydi test "kaç durak var"ı ölçmez, kendini
-       ölçerdi; yeni bir durak açan buraya uğrayıp gerekçesini yazmak zorunda kalsın diye böyle.
-       31.08'de üç durak daha açıldı ve üçü de D1'in kutu eksenli akışından doğdu: `shadow.fab`
-       (yüzen okutma düğmesinin gölgesi — `glow`dan ayrı, gerekçesi orada) + TONLU KARTIN ÜÇÜNCÜ
-       AİLESİ `success-bg`/`success-line` (tasarımda 8 kullanımla ölçülmüştü, tüketicisi yoktu).
-       05.09'da üç durak daha, üçü de v3 BİLDİRİM SATIRINDAN: `courier-bg` (bölüm rozeti ailesinin
-       dördüncü üyesi — `neutral-bg`e Δ5/2/14 ve ondan farklı olarak SOĞUK, gerekçe orada) +
-       `badge-xs` ile `badge-xs--letter-spacing` (8,5 px rozet kademesi; setin tabanı 10 ve
-       `customer.ts` §0.4b kontrol kademelerinde yuvarlamayı yasaklıyor) + `snug--line-height`
-       (1.45; şablonda 29 kullanım, sette tek oran `lead` 1.6 idi ve o bir PARAGRAFIN nefesi).
-       07.09'da BİR durak: `shadow.card` (v3:29 talep listesinin acil kartı, `0 6px 18px` %6).
-       Dosyanın kendi özeti *"v3 düz bir yüzeye geçti, gölge yok"* diyor ve o özet DOĞRU — ama
-       v3:29 bu tek istisnayı taşıyor; özetin kapsamadığı bir sayfa çıkınca özet güncellenir,
-       ölçüm yok sayılmaz. `fab`/`glow`dan ayrı çünkü onlar "sayfanın ÜSTÜNDE duruyorum" der
-       (%24-26, gözle görünür); bu ise akışın İÇİNDEKİ bir kartın bir gömlek öne çıkması ve tek
-       başına taşıyıcı DEĞİL — kartı asıl ayıran kırmızı çerçevesi ile beyaz zemini.
-       14.09'da bir durak daha: `error-mark-bg` — operasyon girişinin kilit karosu (21.312; en yakın iki durak kanal
-       dengesinde başka aileden, gerekçesi `operations-app.ts`te). */
+    /* Sayı bilerek elle yazılır, türetilseydi test kendini ölçerdi. Yeni durak açan buraya uğrar ve gerekçesini
+       `operations-app.ts`te yazar. */
     expect(total).toBe(30);
   });
 
