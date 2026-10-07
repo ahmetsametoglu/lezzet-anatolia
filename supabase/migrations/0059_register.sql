@@ -274,8 +274,11 @@ revoke execute on function public.register_queue_mark_order() from public, anon,
 -- ── Gün sonu: defter ↔ ayna ─────────────────────────────────────────────────
 -- Aralıkta açılmış her hareketin kasada olması gereken etkisi (defter) ve aynada yazılmış olanı, yazımın saatinden bağımsız. B2C
 -- sipariş parası fişin ödeme satırıdır; çekmecenin kart dışı öteki nakdi defter görünümünden okunur, karşı yakası susan satır gelmez.
+-- Siparişin deposu fişinkinden farklı olabilir (araç satışı ana tesisin mağazasına yazılır); hangi depoların satışının bu mağazaya
+-- yazıldığını fişi yazan kural bilir ve listeyi uygulama verir.
 create or replace function public.register_day_movements(
   p_warehouse_id uuid,
+  p_order_warehouse_ids uuid[],
   p_cash_account_id uuid,
   p_from timestamptz,
   p_to timestamptz
@@ -293,7 +296,7 @@ as $$
            case when m.type = 'order_payment' then m.amount else -m.amount end as amount
       from public.money_movement m
       join public.order o on o.id = m.order_id
-     where o.warehouse_id = p_warehouse_id
+     where o.warehouse_id = any(p_order_warehouse_ids)
        and o.channel = 'b2c'
        and m.type in ('order_payment', 'order_refund')
        and m.created_at >= p_from and m.created_at < p_to
@@ -328,7 +331,7 @@ as $$
     full join written w on w.movement_id = e.movement_id and w.kind = e.kind and w.method is not distinct from e.method;
 $$;
 
-revoke execute on function public.register_day_movements(uuid, uuid, timestamptz, timestamptz) from public, anon, authenticated;
+revoke execute on function public.register_day_movements(uuid, uuid[], uuid, timestamptz, timestamptz) from public, anon, authenticated;
 
 -- Kurye seferi kapanışındaki nakit farkı; hesap kodu muhasebecinin kararıdır (kasa farkı ya da kurye alacağı).
 insert into public.movement_nature (slug, label, direction, account_code) values ('kasa-farki', 'Kasa farkı', null, null);

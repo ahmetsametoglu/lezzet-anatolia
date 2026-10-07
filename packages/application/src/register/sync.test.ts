@@ -708,6 +708,23 @@ describe('gün sonu', () => {
     closeDay.mockRestore();
   });
 
+  it('araç satışı aracın bağlı olduğu tesisin gününde karşılaştırılır; fark çıkmaz, gün kapanır', async () => {
+    const own = await ownStore('KASA-ARAC');
+    const vehicle = (await createTestWarehouse(db, { label: 'KASA-ARAC-V', kind: 'vehicle', homeWarehouseId: own.warehouseId })).id;
+    // Araç tesisinden önce silinir: bağ araçtan tesise `restrict`.
+    ownTestRegisters.warehouseIds.unshift(vehicle);
+    const order = await newOrder({ warehouseId: vehicle });
+    await pay(order.id, 2990);
+    await runRow('order_id', order.id);
+
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true });
+
+    expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toMatchObject({
+      closed: true,
+      days: [{ date: today(), differences: [] }],
+    });
+  });
+
   it('defterin saymadığı kasa kaydı fark çıkarır ve gün kapanmaz', async () => {
     // Bağlı ekstre satırına plan kasa kaydı yazsaydı (çift çıkış) ayna ile kasa yine tutardı; farkı ancak defter gösterir.
     const own = await ownStore('KASA-DEFTER');

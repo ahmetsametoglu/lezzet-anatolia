@@ -7,6 +7,7 @@ import {
   RegisterStoreService,
   RegisterTicketLineService,
   RegisterTicketService,
+  WarehouseService,
   type Db,
 } from '@lezzet/database';
 import { reconcileLedgerDay, reconcileRegisterDay, type RegisterDaySide } from '@lezzet/domain-core';
@@ -141,9 +142,17 @@ export async function checkRegisterDay(db: Db, register: CashRegister, opts: { n
 async function differencesOf(db: Db, register: CashRegister, store: RegisterStore, date: string): Promise<RegisterDayDifference[]> {
   const { from, to } = parisDayRange(date);
   return [
-    ...reconcileLedgerDay(await new RegisterStoreService(db).dayMovements(store, from, to)),
+    ...reconcileLedgerDay(await new RegisterStoreService(db).dayMovements(store, await warehousesOfStore(db, store), from, to)),
     ...reconcileRegisterDay(await oursOf(db, store, date), await registerSideOf(register, store, date)),
   ];
+}
+
+/** Satışı bu mağazaya yazılan depolar: kendisi ve kendi mağazası olmayan araçları; karar fişi yazan kuralındır (`storeOf`). */
+async function warehousesOfStore(db: Db, store: RegisterStore): Promise<string[]> {
+  const vehicles = await new WarehouseService(db).list({ kind: 'vehicle', homeWarehouseId: store.warehouseId });
+  const candidates = [store.warehouseId, ...vehicles.map((vehicle) => vehicle.id)];
+  const owners = await Promise.all(candidates.map((warehouseId) => storeOf(db, warehouseId)));
+  return candidates.filter((_, index) => owners[index]?.warehouseId === store.warehouseId);
 }
 
 /**

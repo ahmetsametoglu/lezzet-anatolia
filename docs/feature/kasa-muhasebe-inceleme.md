@@ -8,7 +8,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 | # | Bulgu | Ağırlık | Durum |
 |---|---|---|---|
-| 1 | Araç satışı ana deponun kasa gününü kilitliyor | Yüksek | Açıklandı |
+| 1 | Araç satışı ana deponun kasa gününü kilitliyor | Yüksek | Yapıldı |
 | 2 | Onaylı işletme müşterisinden KDV alınmıyor | Yüksek | Kabul, yapılacak |
 | 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Kabul, yapılacak |
 | 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
@@ -30,7 +30,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 ## 1. Araç satışı ana deponun kasa gününü kilitliyor
 
-**Durum:** Açıklandı · **Ağırlık:** yüksek · iki ajan da buldu
+**Durum:** Yapıldı (07.10) · **Ağırlık:** yüksek · iki ajan da buldu
 
 - **Mevcut durum:** Aracın kendi kasa mağazası yok; araç satışının fişi aracın bağlı olduğu ana deponun Hiboutik mağazasına
   yazılır. Gece karşılaştırması ise "olması gereken" satışları siparişin deposuna göre toplar ve araç satışının deposu araçtır.
@@ -48,6 +48,8 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
   4. Ertesi gece aynı fark yine çıkar. Hiboutik'te bir günü kapatmak önceki açık günleri de kapattığı için sonraki günler de
      kapatılmaz; 7 gün sonra "daha eski kapanmamış gün" uyarısı başlar, Pano her gün fark gösterir.
   5. Pennylane kapanmamış gün için "POS still open" der; düzeltilene kadar tesisin satışları muhasebeye gitmez.
+- **Çözüm (07.10):** Karşılaştırma, mağazaya satışı yazılan depoların listesini alır: tesisin kendisi ve kendi mağazası olmayan
+  araçları. Liste fişi yazan kuraldan türer; kural ikinci bir yerde yazılmaz.
 - **Ek:** Ana deposu tanımlanmamış araçta satış hiçbir mağazaya yazılamaz ve kuyrukta süresiz bekler.
 - **Kanıt:** `supabase/migrations/0059_register.sql:296` (beklenen taraf: siparişin deposu) · `:313` (yazılan taraf: fişin
   deposu) · `packages/application/src/register/sync.ts:266-271` (araç → ana depo) · `order/on-site-sale.ts:144` ·

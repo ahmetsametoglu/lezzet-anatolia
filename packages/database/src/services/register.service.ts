@@ -81,11 +81,13 @@ export class RegisterStoreService extends BaseDbService<RegisterStore, RegisterS
 
   /**
    * Gün sonu, defter ↔ ayna: `[from, to)` aralığında açılmış hareketlerin kasada beklenen etkisi ve aynada yazılmış olanı. Hesap
-   * `register_day_movements`tadır, çünkü defterin karşı yaka kuralı `account_movement` görünümünde yaşar.
+   * `register_day_movements`tadır, çünkü defterin karşı yaka kuralı `account_movement` görünümünde yaşar. `orderWarehouseIds` satışı bu
+   * mağazaya yazılan depolardır; listeyi fişi yazan kural verir.
    */
-  async dayMovements(store: RegisterStore, from: string, to: string): Promise<RegisterDayMovement[]> {
+  async dayMovements(store: RegisterStore, orderWarehouseIds: readonly string[], from: string, to: string): Promise<RegisterDayMovement[]> {
     const { data, error } = await this.supabase.rpc('register_day_movements', {
       p_warehouse_id: store.warehouseId,
+      p_order_warehouse_ids: [...orderWarehouseIds],
       p_cash_account_id: store.cashAccountId,
       p_from: from,
       p_to: to,
