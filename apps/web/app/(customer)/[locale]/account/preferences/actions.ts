@@ -15,19 +15,8 @@ import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
 /**
- * Bildirim tercihlerinin yazma eylemleri (22.08).
- *
- * ── ÖZNE HER EYLEMDE YENİDEN ÇÖZÜLÜR ────────────────────────────────────────
- * İstemci kimlik GÖNDERMEZ, yalnız jetonu geri verir — ve jeton da sunucuda çözülür. Kimliği
- * gövdeden almak, konsoldan gönderilen bir kimlikle başkasının tercihlerini kapatmaya açık kapı
- * bırakırdı (adres kapısının aynı dersi).
- *
- * ── JETON OTURUMUN YERİNE GEÇER, YETKİSİNİ ALMAZ ────────────────────────────
- * Yetkisi dar: yalnız tercihleri okumak ve yazmak. Jetonla gelen biri ad, adres, sipariş göremez —
- * bağ yıllar boyunca bir mailin altbilgisinde durabilir.
- *
- * ── OTURUM ÖNCE, JETON SONRA ────────────────────────────────────────────────
- * Girişli müşteri kendi sayfasındayken jeton hiç taşımaz; jeton yolu mailden gelen içindir.
+ * Özne her eylemde oturumdan, yoksa jetondan sunucuda çözülür; istemciden kimlik alınsaydı başkasının tercihleri kapatılabilirdi.
+ * Jeton yalnız tercihlere yetki verir, çünkü bağ yıllarca bir e-postanın altbilgisinde durabilir.
  */
 async function subjectOf(token: string | null): Promise<PreferencesSubject> {
   const db = serviceDb();
@@ -53,9 +42,7 @@ export async function setCampaignConsentAction(
 ): Promise<CustomerResult<true>> {
   try {
     const subject = await subjectOf(token);
-    // Ziyaretçinin kampanya tercihi YOKTUR: kampanya hesaba bağlıdır, kaydı olmayan birinin
-    // kapatabileceği bir kanal da yok. Sessizce başarı dönmek, olmayan bir şeyi kapattığını
-    // sandırırdı.
+    // Ziyaretçinin kampanya tercihi yoktur, çünkü kampanya hesaba bağlıdır; sessiz başarı olmayan bir şeyi kapattığını sandırırdı.
     if (subject.kind !== 'profile') throw new CustomerError('session_expired');
     const ok = await setMarketingConsent(serviceDb(), {
       customerId: subject.profile.id,
@@ -93,12 +80,7 @@ export async function setKindConsentAction(
   }
 }
 
-/**
- * Bekleyen bölge haberlerinden vazgeçme — **hem ziyaretçi hem girişli için**.
- *
- * Burada kapatılan bir izin değil, GERİ ALINAN bir istektir: müşteri "haber ver" demişti; vazgeçmek
- * o kaydı silmektir. Bu yüzden ziyaretçi de yapabilir — zaten kaydı olan tek şey bu.
- */
+/** Bekleyen bölge haberlerinden vazgeçme; kapatılan bir izin değil geri alınan bir istek olduğu için ziyaretçi de yapabilir. */
 export async function cancelZoneNoticesAction(token: string | null): Promise<CustomerResult<true>> {
   try {
     const subject = await subjectOf(token);

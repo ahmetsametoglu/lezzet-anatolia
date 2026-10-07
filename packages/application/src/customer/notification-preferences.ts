@@ -6,24 +6,8 @@ import type { MarketingChannel, NotificationKind, UserProfile } from '@lezzet/ty
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
-  BİLDİRİM TERCİHLERİ KAPISI (22.08) — sayfanın okuması, yazması ve maillerin bağı tek yerde.
-
-  ── NEDEN BU KAPI VAR ───────────────────────────────────────────────────────
-  Bağ TEK BİR SAYFAYA çıkıyor ama ONU ÜRETEN altı ayrı yol var (sipariş bildirimleri, talep
-  bildirimi, B2B başvuru cevabı, bölge müjdesi, değerlendirme daveti) ve hepsi bugüne kadar aynı
-  dizeyi elle kuruyordu: `localizedUrl('/account/notifications', locale)`. Jeton devreye girince o
-  altı yerin altısının da "jetonu bul ya da üret, sonra sorgu dizesine ekle" bilmesi gerekirdi —
-  biri unutulsa o mailin bağı sessizce giriş duvarına çıkardı ve kimse fark etmezdi.
-
-  ── İKİ ÖZNE, TEK SAYFA ─────────────────────────────────────────────────────
-  Alıcı ya bir PROFİLDİR (dokuz şablon) ya da yalnız bir E-POSTADIR (bölge müjdesi; `customer_id`
-  çoğu ziyaretçi kaydında yok). İkisinin jetonu ayrı tablodan gelir ama sayfa tektir: profil dört
-  satır görür, ziyaretçi yalnız bekleyen bölge kayıtlarını.
-
-  ── NE GÖSTERİLMEZ ──────────────────────────────────────────────────────────
-  Jeton oturum DEĞİLDİR ve oturumun yetkisini taşımaz: bu kapıdan ad, adres, sipariş, puan
-  okunmaz. Taşıdığı tek yetki tercihleri okumak ve yazmaktır — jeton bir mailin altbilgisinde
-  yıllarca durabilir, blast yarıçapı dar olmalı.
+  Bildirim tercihleri sayfasının okuması, yazması ve e-postalardaki bağı; bağı üreten her gönderim yolu jetonu buradan alır. Özne ya
+  profildir ya da yalnız bir e-postadır (bölge haberi); jeton oturumun yetkisini taşımaz, yalnız tercihleri açar.
 */
 
 /** Sipariş/talep bildirimleri kapatılamaz — sözleşme gereği. Ekran bunu YAZAR, gizlemez. */
@@ -46,13 +30,8 @@ export type PreferencesSubject =
   | { kind: 'visitor'; email: string };
 
 /**
- * Jetonun sahibini çözer — önce profil, sonra bölge kaydı.
- *
- * Sıra önemli değil (iki jeton kümesi ayrı tablolarda ve çakışmaları imkânsız); ama profil önce
- * sorulur çünkü on şablonun dokuzu oradan gelir.
- *
- * `null` = geçersiz jeton. Sebebi SÖYLENMEZ (eski mi, silinmiş mi, hiç var olmadı mı): ayırt etmek
- * "bu adres bizde kayıtlı" bilgisini sızdırırdı.
+ * Jetonun sahibini çözer: önce profil, sonra bölge kaydı. `null` geçersiz jetondur ve sebebi söylenmez, çünkü ayırt etmek "bu adres
+ * bizde kayıtlı" bilgisini sızdırırdı.
  */
 export async function resolvePreferencesToken(db: SupabaseClient, token: string): Promise<PreferencesSubject | null> {
   const temiz = token.trim();
@@ -141,24 +120,14 @@ export async function setNotificationConsent(
   return true;
 }
 
-/**
- * Bekleyen bölge kayıtlarını kaldırır — ziyaretçinin de girişlinin de "artık haber vermeyin"i.
- *
- * Haberi GİTMİŞ satırlara dokunulmaz: onlar bekleyiş değil, olmuş bir olayın kaydıdır.
- */
+/** Bekleyen bölge kayıtlarını kaldırır; haberi gitmiş satır bekleyiş değil olmuş bir olayın kaydıdır, ona dokunulmaz. */
 export async function cancelZoneNotices(db: SupabaseClient, email: string): Promise<void> {
   await new ZoneNoticeService(db).removeAllPendingForEmail(email);
 }
 
 /**
- * Profilin jetonu — yoksa üretilir, varsa aynısı döner (`ensureCustomerReferralCode` deseni).
- *
- * **Tekilliği veritabanı söyler** (`user_profiles_notification_token_key`), uygulama değil: "bu
- * jeton var mı" diye sorup sonra yazmak, iki eşzamanlı mail arasında yine çakışırdı.
- *
- * `null` iki hâlde: profil yok ya da çakışma tekrarı tükendi. İkincisi bir arızadır ve sessiz
- * geçmez — log'a KİMLİK yazılır, jetonun kendisi hiçbir hâlde yazılmaz (CLAUDE §1: jeton bir
- * anahtardır, log'a içerik girmez).
+ * Profilin jetonu; yoksa üretilir, tekilliğini veritabanı kısıtı söyler. `null` profil yok ya da çakışma tekrarı tükendi demektir;
+ * ikincisi log'a kimlikle yazılır, jeton hiçbir hâlde yazılmaz.
  */
 const MAX_ATTEMPTS = 5;
 
@@ -183,19 +152,14 @@ export async function ensureNotificationToken(db: SupabaseClient, customerId: st
 }
 
 /**
- * Her mailin altbilgisindeki "Bildirim tercihleri" adresi.
- *
- * **Jetonlu üretilir**, çünkü bağın gittiği yer oturum ister ve mailin alıcısı çoğu zaman o an
- * girişli değildir. Jeton çözülemezse ÇIPLAK adres döner — bu bir geri düşüştür, hata değil:
- * girişli müşteri sayfayı yine açar, giriş yapmayan giriş sayfasına düşer. Bağı hiç yazmamak ya da
- * mail göndermeyi kesmek, bir kolaylık uğruna bildirimin kendisini kaybetmek olurdu.
+ * Her e-postanın altbilgisindeki tercih adresi; alıcı çoğu zaman girişli olmadığı için jetonlu kurulur. Jeton çözülemezse çıplak
+ * adres döner, çünkü bağı ya da e-postayı düşürmek bildirimin kendisini kaybettirirdi.
  */
 export async function notificationPreferencesUrl(
   db: SupabaseClient,
   locale: Locale,
   subject: { customerId?: string | null; zoneNoticeToken?: string | null },
 ): Promise<string> {
-  // Rota 14.15'te `/account/preferences`a taşındı: "notifications" kelimesi artık akışın (zil listesi).
   const base = localizedUrl('/account/preferences', locale);
   const token = subject.customerId
     ? await ensureNotificationToken(db, subject.customerId)
