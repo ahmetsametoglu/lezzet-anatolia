@@ -70,10 +70,8 @@ export function SettingsClient({ data, urlState }: SettingsClientProps) {
           accountOptions={data.accountOptions}
           propagationSeconds={data.propagationSeconds}
           onClose={() => setEditingKey(null)}
-          onSaved={() => {
-            router.refresh();
-            setEditingKey(null);
-          }}
+          // Pencere sayfayı kendisi tazeler ve yeni değer çizilince kapanır (`useDialogAction`).
+          onSaved={() => setEditingKey(null)}
         />
       ) : null}
 

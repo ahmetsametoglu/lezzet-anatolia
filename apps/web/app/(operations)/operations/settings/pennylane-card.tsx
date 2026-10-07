@@ -89,8 +89,8 @@ function OpenAccountButton({ pennylaneId }: OpenAccountButtonProps) {
   return (
     <span className="flex items-center gap-2">
       {error ? <span className="max-w-[260px] font-ops-body text-ops-xs text-ops-red">{error}</span> : null}
-      <Button variant="secondary" size="sm" disabled={busy} onClick={() => void run(() => openPennylaneAccountAction({ pennylaneId }))}>
-        Bizde aç ve eşle
+      <Button variant="secondary" size="sm" loading={busy} onClick={() => void run(() => openPennylaneAccountAction({ pennylaneId }))}>
+        {busy ? 'Açılıp eşleniyor…' : 'Bizde aç ve eşle'}
       </Button>
     </span>
   );
@@ -128,7 +128,7 @@ function AccountDialog({ row, options, onClose }: AccountDialogProps) {
     setLoadedFor(null);
     onClose();
   };
-  const { busy, error, run, clearError } = useDialogAction(close);
+  const { busy, running, error, run, clearError } = useDialogAction(close);
 
   // Pencere başka bir hesap için açılınca seçim o hesabın eşlemesiyle dolar.
   if (row && loadedFor !== row.accountId) {
@@ -155,10 +155,11 @@ function AccountDialog({ row, options, onClose }: AccountDialogProps) {
           {row?.pennylane ? (
             <Button
               variant="secondary"
-              disabled={busy}
-              onClick={() => void run(() => removePennylaneAccountAction({ accountId: row.accountId }))}
+              loading={running === 'remove'}
+              disabled={busy && running !== 'remove'}
+              onClick={() => void run(() => removePennylaneAccountAction({ accountId: row.accountId }), 'remove')}
             >
-              Eşlemeyi kaldır
+              {running === 'remove' ? 'Kaldırılıyor…' : 'Eşlemeyi kaldır'}
             </Button>
           ) : null}
           <Button variant="secondary" onClick={close} disabled={busy}>
@@ -166,12 +167,13 @@ function AccountDialog({ row, options, onClose }: AccountDialogProps) {
           </Button>
           <Button
             variant="dark"
-            disabled={busy || !row || pennylaneId === '' || pennylaneId === current}
+            loading={running === 'save'}
+            disabled={running !== 'save' && (busy || !row || pennylaneId === '' || pennylaneId === current)}
             onClick={() =>
               row && void run(() => savePennylaneAccountAction({ accountId: row.accountId, pennylaneId: Number(pennylaneId) }))
             }
           >
-            Kaydet
+            {running === 'save' ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </>
       }

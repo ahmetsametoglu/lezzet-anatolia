@@ -135,7 +135,8 @@ export function DialogFooter({
         variant="primary"
         type="submit"
         form={formId}
-        disabled={submitting || Boolean(blockedReason)}
+        loading={submitting}
+        disabled={Boolean(blockedReason)}
         title={blockedReason ?? undefined}
         className="shrink-0 whitespace-nowrap"
       >

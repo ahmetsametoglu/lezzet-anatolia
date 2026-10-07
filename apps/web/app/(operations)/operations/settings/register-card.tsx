@@ -120,7 +120,7 @@ function StoreDialog({ row, stores, storesNote, accounts, defaultAccountId, onCl
     setLoadedFor(null);
     onClose();
   };
-  const { busy, error, run, clearError } = useDialogAction(close);
+  const { busy, running, error, run, clearError } = useDialogAction(close);
 
   // Pencere başka bir tesis için açılınca alanlar o tesisin eşlemesiyle dolar; eşlenmemiş tesisin çekmecesi sabit Kasa'dır.
   if (row && loadedFor !== row.warehouseId) {
@@ -141,10 +141,11 @@ function StoreDialog({ row, stores, storesNote, accounts, defaultAccountId, onCl
           {row?.externalStoreId !== null && row ? (
             <Button
               variant="secondary"
-              disabled={busy}
-              onClick={() => void run(() => removeRegisterStoreAction({ warehouseId: row.warehouseId }))}
+              loading={running === 'remove'}
+              disabled={busy && running !== 'remove'}
+              onClick={() => void run(() => removeRegisterStoreAction({ warehouseId: row.warehouseId }), 'remove')}
             >
-              Eşlemeyi kaldır
+              {running === 'remove' ? 'Kaldırılıyor…' : 'Eşlemeyi kaldır'}
             </Button>
           ) : null}
           <Button variant="secondary" onClick={close} disabled={busy}>
@@ -152,7 +153,8 @@ function StoreDialog({ row, stores, storesNote, accounts, defaultAccountId, onCl
           </Button>
           <Button
             variant="dark"
-            disabled={busy || !row || storeId.trim() === '' || accountId === ''}
+            loading={running === 'save'}
+            disabled={running !== 'save' && (busy || !row || storeId.trim() === '' || accountId === '')}
             onClick={() =>
               row &&
               void run(() =>
@@ -160,7 +162,7 @@ function StoreDialog({ row, stores, storesNote, accounts, defaultAccountId, onCl
               )
             }
           >
-            Kaydet
+            {running === 'save' ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </>
       }

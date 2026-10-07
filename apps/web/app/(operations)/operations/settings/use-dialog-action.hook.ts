@@ -1,26 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-/** Kurulum penceresinin yazımı: düğmeler beklerken kilitlenir, ret pencerede kalır, başarıda sayfa tazelenir ve pencere kapanır. */
+/**
+ * Kurulum ve ayar pencerelerinin yazımı: basılan düğme iş bitene kadar yükleniyor hâlinde kalır, ret pencerede kalır. Başarıda sayfa
+ * tazelenir ve pencere ancak yeni veri çizilince kapanır; önce kapansaydı ekran eski veriyi gösterir, değişiklik sonradan bir anda
+ * belirirdi.
+ */
 export function useDialogAction(onDone: () => void) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [running, setRunning] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const run = async (action: () => Promise<{ error: string | null }>) => {
-    setBusy(true);
+  useEffect(() => {
+    if (!closing || refreshing) return;
+    setClosing(false);
+    setRunning(null);
+    onDone();
+  }, [closing, refreshing, onDone]);
+
+  /** `key` hangi düğmenin yükleniyor hâlinde döneceğini söyler; öteki düğmeler iş bitene kadar kapalıdır. */
+  const run = async (action: () => Promise<{ error: string | null }>, key = 'save') => {
+    setRunning(key);
     setError(null);
     const result = await action();
-    setBusy(false);
     if (result.error) {
+      setRunning(null);
       setError(result.error);
       return;
     }
-    router.refresh();
-    onDone();
+    setClosing(true);
+    startRefresh(() => router.refresh());
   };
 
-  return { busy, error, run, clearError: () => setError(null) };
+  return { busy: running !== null, running, error, run, clearError: () => setError(null) };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
@@ -13,6 +13,7 @@ import { removeSettingExceptionAction, resetSettingAction, saveSettingAction } f
 import { channelLabel, checkBounds, parseSettingValue, SCOPE_AXIS_LABELS, toEditableNumber } from './settings-labels';
 import type { AccountOption, ExceptionScope, ScopeOptions, SettingRowView } from './settings-types';
 import type { SettingValue } from './settings-catalog';
+import { useDialogAction } from './use-dialog-action.hook';
 
 /**
  * Ayar düzenleme penceresi (09.16).
@@ -43,8 +44,7 @@ interface SettingDialogProps {
 
 export function SettingDialog({ row, scopeOptions, accountOptions, propagationSeconds, onClose, onSaved }: SettingDialogProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(row, row.value));
-  const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const { busy, running, error, run } = useDialogAction(onSaved);
 
   /** Açık istisna formu: eksen seçilince açılır. */
   const [exceptionAxis, setExceptionAxis] = useState<ExceptionScope | null>(null);
@@ -53,27 +53,18 @@ export function SettingDialog({ row, scopeOptions, accountOptions, propagationSe
 
   const liveWarning = numericWarning(row, draft);
 
-  const run = (fn: () => Promise<{ error: string | null }>) => {
-    setError(null);
-    start(async () => {
-      const result = await fn();
-      if (result.error) setError(result.error);
-      else onSaved();
-    });
-  };
-
   const saveGeneral = () =>
-    run(async () => {
+    void run(async () => {
       const parsed = parseSettingValue(row, draft.raw);
       if (!parsed.ok) return { error: parsed.error };
       return saveSettingAction({ key: row.key, scopeType: 'global', scopeId: null, raw: draft.raw });
-    });
+    }, 'save');
 
   const saveException = () =>
-    run(async () => {
+    void run(async () => {
       if (!exceptionAxis || !exceptionTarget) return { error: 'İstisnanın hedefini seçin.' };
       return saveSettingAction({ key: row.key, scopeType: exceptionAxis, scopeId: exceptionTarget, raw: exceptionDraft.raw });
-    });
+    }, 'exception');
 
   const axes = row.exceptionScopes;
 
@@ -89,12 +80,17 @@ export function SettingDialog({ row, scopeOptions, accountOptions, propagationSe
           {/* Dönülecek bir yer yoksa düğme HİÇ çizilmez, devre dışı da değil: devre dışı bir
               "Varsayılana dön", bir varsayılanın var olduğunu ama şu an dönülemediğini söyler. */}
           {row.fallbackDisplay === null ? null : (
-            <Button variant="secondary" disabled={pending || !row.changed} onClick={() => run(() => resetSettingAction({ key: row.key }))}>
-              Varsayılana dön
+            <Button
+              variant="secondary"
+              loading={running === 'reset'}
+              disabled={running !== 'reset' && (busy || !row.changed)}
+              onClick={() => void run(() => resetSettingAction({ key: row.key }), 'reset')}
+            >
+              {running === 'reset' ? 'Dönülüyor…' : 'Varsayılana dön'}
             </Button>
           )}
-          <Button variant="primary" className="ml-auto" disabled={pending} onClick={saveGeneral}>
-            {pending ? 'Kaydediliyor…' : 'Kaydet'}
+          <Button variant="primary" className="ml-auto" loading={running === 'save'} disabled={busy && running !== 'save'} onClick={saveGeneral}>
+            {running === 'save' ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </div>
       }
@@ -138,11 +134,12 @@ export function SettingDialog({ row, scopeOptions, accountOptions, propagationSe
                 <button
                   type="button"
                   aria-label={`${ex.scopeLabel} istisnasını kaldır`}
-                  disabled={pending}
-                  onClick={() => run(() => removeSettingExceptionAction({ id: ex.id, key: row.key }))}
-                  className="cursor-pointer font-ops-display text-ops-base text-ops-faint transition-colors hover:text-ops-red"
+                  disabled={busy}
+                  aria-busy={running === `remove:${ex.id}` || undefined}
+                  onClick={() => void run(() => removeSettingExceptionAction({ id: ex.id, key: row.key }), `remove:${ex.id}`)}
+                  className="cursor-pointer font-ops-display text-ops-base text-ops-faint transition-colors hover:text-ops-red disabled:cursor-progress"
                 >
-                  ✕
+                  {running === `remove:${ex.id}` ? '…' : '✕'}
                 </button>
               </div>
             ))}
@@ -163,11 +160,18 @@ export function SettingDialog({ row, scopeOptions, accountOptions, propagationSe
                   accountOptions={accountOptions}
                 />
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="secondary" disabled={pending} onClick={() => setExceptionAxis(null)}>
+                  <Button size="sm" variant="secondary" disabled={busy} onClick={() => setExceptionAxis(null)}>
                     Vazgeç
                   </Button>
-                  <Button size="sm" variant="primary" className="ml-auto" disabled={pending} onClick={saveException}>
-                    İstisnayı kaydet
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="ml-auto"
+                    loading={running === 'exception'}
+                    disabled={busy && running !== 'exception'}
+                    onClick={saveException}
+                  >
+                    {running === 'exception' ? 'Kaydediliyor…' : 'İstisnayı kaydet'}
                   </Button>
                 </div>
               </div>
