@@ -12,6 +12,7 @@ import {
   HiboutikProductListSchema,
   HiboutikSaleIdListSchema,
   HiboutikSaleReadSchema,
+  HiboutikStoreListSchema,
   HiboutikTaxListSchema,
   HiboutikTillMoveListSchema,
   type HiboutikSale,
@@ -76,6 +77,12 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
     request(config, `/sale/${saleId}`, 'PUT', { sale_attribute: attribute, new_value: value });
 
   return {
+    async listStores() {
+      const body = await request(config, '/stores/', 'GET');
+      return parse(HiboutikStoreListSchema, body, 'mağaza listesi')
+        .filter((row) => row.store_enabled !== 0)
+        .map((row) => ({ externalStoreId: row.store_id, name: row.store_name }));
+    },
     async findProductByRef(refExt) {
       const body = await request(config, `/products/search?products_ref_ext=${encodeURIComponent(refExt)}`, 'GET');
       return parse(HiboutikProductListSchema, body, 'ürün araması')[0]?.product_id ?? null;

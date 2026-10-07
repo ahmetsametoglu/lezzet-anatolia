@@ -127,7 +127,9 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - B2C satış NF525 sertifikalı kasaya yazılır: Hiboutik. Ayrıntı ve ölçümler `docs/feature/kasa-muhasebe.md` §6–§7.
 - Port `CashRegister` (`packages/application/src/register/port.ts`), uyarlama `register/hiboutik/client.ts`; cevap biçimi
   `packages/types` sözleşmesinde (`hiboutik.schema.ts`). Anahtar yoksa port yoktur (`HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`,
-  `HIBOUTIK_API_KEY`, yalnız backend).
+  `HIBOUTIK_API_KEY`); anında yazım ödemeyi yazan süreçte koştuğu için anahtar backend'in yanında web ve mobil API'de de durur.
+- Kurulum kartı mağaza listesini Hiboutik'ten okur (`GET /stores/`); eşleme kaydedilirken numaranın açık bir mağazaya ait olduğu
+  denetlenir.
 - Yazım yolu: `money_movement` tetikleyicisi siparişi ya da eşlenmiş kasanın hareketini, kalem ve durum tetikleyicisi fişi olan
   siparişi kuyruğa işaretler, backend cron'u
   (`register_sync`, dakikada bir) sipariş başına durum farkını fiş ve ödeme satırı olarak, fiş dışı nakdi kasa giriş/çıkışı

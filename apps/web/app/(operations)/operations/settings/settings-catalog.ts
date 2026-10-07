@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { BUSINESS_LABELS, BusinessEnum, SYSTEM_ACCOUNT_IDS, SettingScopeEnum } from '@lezzet/types';
+import { BUSINESS_LABELS, BusinessEnum, SYSTEM_ACCOUNT_IDS, SettingScopeEnum, type AccountType } from '@lezzet/types';
 
 /**
  * İstisna açılabilen eksenler; `global` istisna değil, değerin kendisidir. Tip burada durur, çünkü `settings-types` sözlükten tip
@@ -58,6 +58,8 @@ export interface SettingDef {
   kind: SettingKind;
   /** Sayısal değerin birimi (`dk`, `gün`, `puan`, `cent`). Para ve yüzde kendi biçimini taşır. */
   unit?: string;
+  /** `account` türünde seçilebilen hesap türü; başka türdeki hesaba yazılan para yanlış yerde birikir ya da aktarım yazılamaz. */
+  accountType?: AccountType;
   /** `choice` türünün seçenekleri: değer listeden gelir ki ekran bir enum'u ham kimliğiyle göstermesin. */
   choices?: readonly { value: string; label: string }[];
   /** Alt/üst sınır — ham sayı üzerinden (para cent, yüzde tam sayı). */
@@ -306,6 +308,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     help: 'Kapıda, gel-al tezgâhında ve kapı önü satışta nakit alınan paranın yazılacağı hesap (çekmece). Boşsa nakit tahsilat yazılmaz.',
     section: 'accounts',
     kind: 'account',
+    accountType: 'cash',
     // Fabrika değeri migration'ın açtığı sabit Kasa hesabıdır.
     fallback: SYSTEM_ACCOUNT_IDS.cash_drawer,
     impact:
@@ -320,6 +323,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     help: 'Kapıda, gel-al tezgâhında ve kapı önü satışta kartla alınan paranın yazılacağı hesap (kart cihazının hesabı). Boşsa kartla tahsilat yazılmaz.',
     section: 'accounts',
     kind: 'account',
+    accountType: 'provider',
     impact:
       'Kart parası nakit çekmeceden ayrı tutulur, çünkü çekmece sayımı yalnız nakdi sayar ve kart parası cihazın hesabından bankaya geçer. Yanlış hesap seçilirse kart tahsilatı yanlış hesapta birikir ve banka mutabakatı tutmaz.',
     // Fabrika değeri sabit Revolut Merchant hesabıdır; istisna ekseni nakit kasasıyla aynı sebeple yok.
@@ -332,10 +336,11 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     help: 'Revolut Merchant hesabındaki kart ödemelerinin aktarıldığı banka hesabı. Aktarım tamamlanınca havuz → bu hesap transferi kendiliğinden yazılır.',
     section: 'accounts',
     kind: 'account',
+    accountType: 'bank',
     // Fabrika değeri YOK: aktarımın gittiği banka sabit hesap değildir, banka eşlemesiyle gelir.
     impact:
       'Ayar boşken aktarım olayı İŞLENMEZ ve sağlayıcı yeniden dener; ayar girilince işlenir. Yanlış hesap seçilirse banka ekstresinin satırı transferin karşısını bulamaz ve para iki hesapta birden görünür.',
-    unsetNote: 'Boşken aktarım olayı işlenmez; sağlayıcı yeniden dener.',
+    unsetNote: 'Banka hesabı seçilmedikçe aktarım olayı işlenmez; sağlayıcı yeniden dener.',
     exceptionScopes: [],
   },
 

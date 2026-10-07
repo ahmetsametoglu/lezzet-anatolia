@@ -60,6 +60,8 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
   };
 
   const register: CashRegister = {
+    // Bellek içi kasa mağaza tutmaz; satış hangi numarayla açılırsa o mağazanındır.
+    listStores: () => run('listStores', () => []),
     findProductByRef: (refExt) =>
       run('findProductByRef', () => [...products].find(([, product]) => product.refExt === refExt)?.[0] ?? null),
     createProduct: (input) =>

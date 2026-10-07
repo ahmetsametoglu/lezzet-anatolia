@@ -77,6 +77,13 @@ export function SettingsDesktop({
         ) : urlState.tab === 'setup' ? (
           data.setup ? (
             <CardGrid>
+              {/* Kasa ve muhasebe birlikte okunur: iki kart sütun akışına bırakılmaz, en üstte yan yana durur. */}
+              <GridCell wide>
+                <div className="grid grid-cols-2 gap-x-3.5">
+                  <RegisterCard data={data.setup.register} />
+                  <PennylaneCard data={data.setup.pennylane} />
+                </div>
+              </GridCell>
               <GridCell wide>
                 <SiteImagesCard images={data.setup.siteImages} />
               </GridCell>
@@ -85,12 +92,6 @@ export function SettingsDesktop({
               </GridCell>
               <GridCell>
                 <McpCard data={data.setup.mcp} />
-              </GridCell>
-              <GridCell wide>
-                <RegisterCard data={data.setup.register} />
-              </GridCell>
-              <GridCell wide>
-                <PennylaneCard data={data.setup.pennylane} />
               </GridCell>
             </CardGrid>
           ) : null

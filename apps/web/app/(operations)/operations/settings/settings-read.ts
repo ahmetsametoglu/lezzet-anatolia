@@ -33,6 +33,7 @@ export function toSettingRows(
   const warehouseNames = new Map(input.warehouses.map((w) => [w.id, `${w.code} · ${w.name}`]));
   // Kimlik taşıyan değerlerin ad sözlüğü — `door_cash_account_id` uuid tutuyor, ekranda "Kasa" yazar.
   const names = { accounts: new Map((input.accounts ?? []).map((a) => [a.id, a.name])) };
+  const accountTypes = new Map((input.accounts ?? []).map((a) => [a.id, a.type]));
   const byKey = new Map<string, Setting[]>();
   for (const row of input.settings) {
     const list = byKey.get(row.key);
@@ -59,11 +60,16 @@ export function toSettingRows(
       }))
       .sort((a, b) => a.scopeLabel.localeCompare(b.scopeLabel, 'tr'));
 
+    // Türü uymayan hesap seçiliyse para yanlış hesapta birikir ya da aktarım yazılamaz; satır boş seçim gibi uyarır.
+    const typeOfValue = accountTypes.get(String(value));
+    const mismatched =
+      def.kind === 'account' && def.accountType !== undefined && typeOfValue !== undefined && typeOfValue !== def.accountType;
+
     return {
       ...def,
       exceptionScopes: def.exceptionScopes,
       value,
-      display: formatSettingValue(def, value, names),
+      display: mismatched ? `${formatSettingValue(def, value, names)} · türü uymuyor` : formatSettingValue(def, value, names),
       // Fabrika değeri yoksa gösterilecek bir "varsayılan" da yok — ekran o satırda "Varsayılana
       // dön" sunmaz ve `null` bunu tek bakışta söyler (boş dize "varsayılan boşmuş" diye okunurdu).
       fallbackDisplay: def.fallback === undefined ? null : formatSettingValue(def, def.fallback, names),
@@ -71,7 +77,7 @@ export function toSettingRows(
       // ayarda her değer kurulumun kendi seçimidir; onu "varsayılandan farklı" diye işaretlemek,
       // olmayan bir normalden sapma uydurmak olurdu.
       changed: def.fallback !== undefined && !sameValue(value, def.fallback),
-      unset: isUnset(def, value),
+      unset: isUnset(def, value) || mismatched,
       rowId: global?.id ?? null,
       updatedAt: global?.updatedAt ?? null,
       exceptions,

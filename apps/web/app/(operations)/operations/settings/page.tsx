@@ -62,7 +62,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     scopeOptions: toScopeOptions(zones, warehouses.filter((w) => w.isActive)),
     // Araçlar da burada, çünkü kuryenin aracı kapsamından bulunur; elense kurye araç stoğunu göremezdi.
     warehouseOptions: warehouses.filter((w) => w.isActive).map((w) => ({ value: w.id, label: `${w.code} · ${w.name}` })),
-    accountOptions: accounts.filter((a) => a.isActive).map((a) => ({ value: a.id, label: a.name })),
+    accountOptions: accounts.filter((a) => a.isActive).map((a) => ({ value: a.id, label: a.name, type: a.type })),
     propagationSeconds: Math.round(SETTINGS_CACHE_TTL_MS / 1000),
     setup,
   };

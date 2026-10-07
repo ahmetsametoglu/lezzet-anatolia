@@ -45,6 +45,22 @@ const sale = (over: Record<string, unknown> = {}) => [
   },
 ];
 
+describe('mağaza listesi', () => {
+  it('kapatılmış mağaza seçenek olmaz; numara ve ad Hiboutik alanlarından okunur', async () => {
+    const { register, calls } = fakeHiboutik([
+      {
+        json: [
+          { store_id: 1, store_name: 'QUALITE', store_enabled: 1, store_warehouse_id: 1 },
+          { store_id: 2, store_name: 'Eski tezgâh', store_enabled: 0, store_warehouse_id: 2 },
+        ],
+      },
+    ]);
+
+    expect(await register.listStores()).toEqual([{ externalStoreId: 1, name: 'QUALITE' }]);
+    expect(calls).toEqual([{ path: '/stores/', method: 'GET', body: null }]);
+  });
+});
+
 describe('tutar ve oran gönderimi', () => {
   it('cent ondalık dizeye artıksız gider, eksi birim fiyat ve eksi ödeme işaretini korur', async () => {
     const { register, calls } = fakeHiboutik([

@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { SettingScopeEnum, UserRoleEnum, type Setting, type UserProfile, type UserRole } from '@lezzet/types';
+import {
+  SettingScopeEnum,
+  UserRoleEnum,
+  type Account,
+  type AccountType,
+  type Setting,
+  type UserProfile,
+  type UserRole,
+} from '@lezzet/types';
 import type { ExceptionScope, SettingDef, SettingValue } from './settings-catalog';
 import type { SectionDef } from './settings-layout';
 import type { SiteImageView } from './site-images-read';
@@ -72,6 +80,9 @@ export type SettingRowView = Omit<SettingDef, 'exceptionScopes'> & {
   exceptions: SettingExceptionView[];
 };
 
+/** Hesap seçicinin satırı; tür, ayarın beklediği hesap türüne göre süzmek içindir. */
+export type AccountOption = { value: string; label: string; type: AccountType };
+
 /** Personel satırı — kimlik + roller + erişim. */
 export interface StaffRowView {
   id: string;
@@ -110,7 +121,7 @@ export interface SettingsData {
    * kalır ama yeni harekete kapalıdır (`AccountService.deactivate` künyesi) — onu seçilebilir
    * bırakmak, kapı önü satışın parasını kapalı bir kasaya yazmak olurdu.
    */
-  accountOptions: { value: string; label: string }[];
+  accountOptions: AccountOption[];
   /** Değişikliğin tüm süreçlerde geçerli olacağı azami süre (sn) — ekranın operatöre verdiği söz. */
   propagationSeconds: number;
   /** Kurulum sekmesinin verisi; yalnız o sekme açıkken okunur, öteki sekmelerde `null`. */
@@ -159,6 +170,6 @@ export interface SettingsReadInput {
   staff: UserProfile[];
   zones: { id: string; name: string }[];
   warehouses: { id: string; code: string; name: string }[];
-  /** Hesaplar — `account` türündeki ayarın hem seçenekleri hem ad sözlüğü (`door_cash_account_id`). */
-  accounts: { id: string; name: string }[];
+  /** Hesaplar — `account` türündeki ayarın ad sözlüğü (`door_cash_account_id`); tür, ayarın beklediğiyle karşılaştırılır. */
+  accounts: Pick<Account, 'id' | 'name' | 'type'>[];
 }

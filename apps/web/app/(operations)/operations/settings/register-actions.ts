@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { AccountService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { requeueRegisterStore } from '@lezzet/application';
+import { hiboutikFromEnv, requeueRegisterStore } from '@lezzet/application';
+import { logger } from '@lezzet/observability';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { SETTINGS_PATH } from './settings-url';
@@ -31,6 +32,8 @@ export async function saveRegisterStoreAction(input: {
       return { data: null, error: 'Kasa yalnız bir tesise eşlenir; araç satışı tesisinin kasasına yazılır.' };
     if (!account || account.type !== 'cash' || !account.isActive)
       return { data: null, error: 'Çekmecenin hesabı açık bir nakit hesabı olmalı.' };
+    const refusal = await externalStoreRefusal(input.externalStoreId);
+    if (refusal) return { data: null, error: refusal };
 
     const store = await new RegisterStoreService(db).save(input);
     await requeueRegisterStore(db, store);
@@ -49,6 +52,22 @@ export async function removeRegisterStoreAction(input: { warehouseId: string }):
     return { data: null, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Numara kasa yazılımında açık bir mağazaya ait olmalı, yoksa satış başka mağazanın Z'sine yazılırdı. Anahtarsız ortamda kasaya hiçbir şey
+ * yazılmadığı için numara denetlenmez.
+ */
+async function externalStoreRefusal(externalStoreId: number): Promise<string | null> {
+  const register = hiboutikFromEnv();
+  if (!register) return null;
+  try {
+    const stores = await register.listStores();
+    return stores.some((store) => store.externalStoreId === externalStoreId) ? null : 'Bu numarada açık bir Hiboutik mağazası yok.';
+  } catch (err) {
+    logger.warn({ err: err instanceof Error ? err.message : String(err) }, 'kasa: mağaza listesi okunamadı, eşleme kaydedilmedi');
+    return "Hiboutik'e ulaşılamadı; mağaza doğrulanamadığı için eşleme kaydedilmedi. Biraz sonra yeniden deneyin.";
   }
 }
 

@@ -257,7 +257,7 @@ export interface FinanceData {
  * Açık diyalog, `null` hiçbiri: `document` belge girişi, `dictionary` tür · cari · etiket sözlüğü, `bankImport` dosya yükleme.
  * `movement` ile `transfer` aynı penceredir, ikincisi onu transfer kipinde açar.
  */
-export type DialogKind = 'movement' | 'transfer' | 'document' | 'dictionary' | 'bankImport' | null;
+export type DialogKind = 'movement' | 'transfer' | 'document' | 'dictionary' | 'bankImport' | 'account' | null;
 
 /** Satırın yazım sözleşmesi: ortadaki hücrenin seçenekleri ve kapıları (`useRowWrites`); pasif etiketin adı sözlüğün tamamından. */
 export interface RowEditor {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { FieldShell } from '@/components/operation/form/field-shell';
@@ -26,17 +26,13 @@ export function RegisterCard({ data }: RegisterCardProps) {
     <SettingsCard
       title="Sertifikalı kasa (Hiboutik)"
       count={data.stores.filter((store) => store.externalStoreId !== null).length}
-      hint="B2C satış ve tesis çekmecesinin fiş dışı nakdi bu eşlemeyle kasaya yazılır. Mağaza kasa yazılımında açılır, numarası buraya girilir."
+      hint="Tesisin B2C satışları (nakit, kapıda kart, online) eşlendiği Hiboutik mağazasına yazılır, ödeme türleri kasada ayrılır; çekmecenin fiş dışı nakdi de o mağazaya gider."
     >
       {data.stores.map((store) => (
         <CardItem
           key={store.warehouseId}
           title={store.warehouseName}
-          detail={
-            store.externalStoreId === null
-              ? 'Eşlenmedi — bu tesisin satışı kasaya yazılmaz, kuyrukta bekler.'
-              : `Mağaza ${store.externalStoreId} · çekmece ${store.cashAccountName}`
-          }
+          detail={<StoreDetail store={store} listed={data.externalStores !== null} />}
           action={
             <Button variant="secondary" size="sm" onClick={() => setEditing(store)}>
               {store.externalStoreId === null ? 'Eşle' : 'Düzenle'}
@@ -55,7 +51,14 @@ export function RegisterCard({ data }: RegisterCardProps) {
         <JobText job={data.dayEnd}>{data.dayEnd?.date ? <DayEndText dayEnd={data.dayEnd} /> : null}</JobText>
       </CardLine>
 
-      <StoreDialog row={editing} accounts={data.cashAccounts} onClose={() => setEditing(null)} />
+      <StoreDialog
+        row={editing}
+        stores={data.externalStores}
+        storesNote={data.externalStoresNote}
+        accounts={data.cashAccounts}
+        defaultAccountId={data.defaultCashAccountId}
+        onClose={() => setEditing(null)}
+      />
     </SettingsCard>
   );
 }
@@ -81,15 +84,35 @@ function DayEndText({ dayEnd }: { dayEnd: RegisterDayEndView & { date: string | 
   );
 }
 
-function StoreDialog({
-  row,
-  accounts,
-  onClose,
-}: {
+interface StoreDetailProps {
+  store: RegisterStoreRowView;
+  /** Mağaza listesi okundu mu; okunmadıysa numaranın açık bir mağazaya ait olup olmadığı bilinmez. */
+  listed: boolean;
+}
+
+/** Liste okunduğu hâlde numara listede yoksa eşleme açık bir mağazayı göstermiyor; satış o numaraya yazılamaz. */
+function StoreDetail({ store, listed }: StoreDetailProps) {
+  if (store.externalStoreId === null) return <>Eşlenmedi — bu tesisin satışı kasaya yazılmaz, kuyrukta bekler.</>;
+  const name = store.externalStoreName ? `${store.externalStoreName} (${store.externalStoreId})` : String(store.externalStoreId);
+  return (
+    <>
+      Hiboutik mağazası {name} · çekmece {store.cashAccountName}
+      {listed && !store.externalStoreName ? <span className="text-ops-red"> · Hiboutik&apos;te bu numarada açık mağaza yok</span> : null}
+    </>
+  );
+}
+
+interface StoreDialogProps {
   row: RegisterStoreRowView | null;
+  /** Hiboutik'teki açık mağazalar; `null` ise numara elle girilir ve sebebi `storesNote`ta yazar. */
+  stores: { value: string; label: string }[] | null;
+  storesNote: string | null;
   accounts: { value: string; label: string }[];
+  defaultAccountId: string;
   onClose: () => void;
-}) {
+}
+
+function StoreDialog({ row, stores, storesNote, accounts, defaultAccountId, onClose }: StoreDialogProps) {
   const [storeId, setStoreId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
@@ -99,11 +122,11 @@ function StoreDialog({
   };
   const { busy, error, run, clearError } = useDialogAction(close);
 
-  // Pencere başka bir tesis için açılınca alanlar o tesisin eşlemesiyle dolar.
+  // Pencere başka bir tesis için açılınca alanlar o tesisin eşlemesiyle dolar; eşlenmemiş tesisin çekmecesi sabit Kasa'dır.
   if (row && loadedFor !== row.warehouseId) {
     setLoadedFor(row.warehouseId);
     setStoreId(row.externalStoreId === null ? '' : String(row.externalStoreId));
-    setAccountId(row.cashAccountId ?? '');
+    setAccountId(row.cashAccountId ?? defaultAccountId);
     clearError();
   }
 
@@ -112,7 +135,7 @@ function StoreDialog({
       open={row !== null}
       onClose={close}
       title={row ? `${row.warehouseName} · kasa eşlemesi` : ''}
-      subtitle="Mağaza numarası kasa yazılımındaki mağazanındır; çekmece, o mağazanın fiziksel kasasının nakit hesabıdır."
+      subtitle="Tesisin B2C satışları (nakit, kapıda kart, online) seçilen Hiboutik mağazasına yazılır; Hiboutik onları ödeme türüyle ayırır: nakit ESP, kapıda kart CB, online WEB. Araç satışı aracın bağlı olduğu tesisin mağazasına gider."
       footer={
         <>
           {row?.externalStoreId !== null && row ? (
@@ -143,14 +166,45 @@ function StoreDialog({
       }
     >
       <div className="flex flex-col gap-3.5">
-        <FieldShell fieldId="register-store-id" label="Mağaza numarası" required>
-          <Input id="register-store-id" inputMode="numeric" value={storeId} onChange={(e) => setStoreId(e.target.value)} placeholder="1" />
-        </FieldShell>
-        <FieldShell label="Çekmecenin nakit hesabı" required>
+        {stores ? (
+          <FieldShell label="Hiboutik mağazası" required>
+            <Select
+              value={storeId}
+              onChange={setStoreId}
+              options={stores}
+              placeholder={stores.length > 0 ? 'Mağaza seç' : "Hiboutik'te açık mağaza yok"}
+            />
+          </FieldShell>
+        ) : (
+          <FieldShell fieldId="register-store-id" label="Hiboutik mağaza numarası" required>
+            <Input
+              id="register-store-id"
+              inputMode="numeric"
+              value={storeId}
+              onChange={(e) => setStoreId(e.target.value)}
+              placeholder="1"
+            />
+            <FieldNote>{storesNote} Numara elle girilir; yanlış numara satışı başka mağazanın Z raporuna yazar.</FieldNote>
+          </FieldShell>
+        )}
+        <FieldShell label="Çekmecedeki nakdin hesabı" required>
           <Select value={accountId} onChange={setAccountId} options={accounts} placeholder="Hesap seç" />
+          <FieldNote>
+            Mağazanın fiziksel kasa çekmecesindeki nakit bizde bu hesapta tutulur; Ayarlar › Para hesaplarındaki kapıda nakit kasasıyla aynı
+            hesap olmalı. Bankaya yatırma ve çekmeceden ödenen gider gibi fiş dışı nakit hareketleri Hiboutik&apos;e bu hesaptan gider, gün
+            sonu bu hesabı kasanın nakdiyle karşılaştırır. Kart ve online ödeme çekmeceye girmez.
+          </FieldNote>
         </FieldShell>
         <DialogError error={error} />
       </div>
     </Dialog>
   );
+}
+
+interface FieldNoteProps {
+  children: ReactNode;
+}
+
+function FieldNote({ children }: FieldNoteProps) {
+  return <span className="font-ops-body text-ops-xs leading-[1.45] text-ops-muted">{children}</span>;
 }

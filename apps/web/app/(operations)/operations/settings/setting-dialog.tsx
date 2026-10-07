@@ -11,7 +11,7 @@ import { Select } from '@/components/operation/form/select';
 import { ToggleField } from '@/components/operation/form/toggle';
 import { removeSettingExceptionAction, resetSettingAction, saveSettingAction } from './actions';
 import { channelLabel, checkBounds, parseSettingValue, SCOPE_AXIS_LABELS, toEditableNumber } from './settings-labels';
-import type { ExceptionScope, ScopeOptions, SettingRowView } from './settings-types';
+import type { AccountOption, ExceptionScope, ScopeOptions, SettingRowView } from './settings-types';
 import type { SettingValue } from './settings-catalog';
 
 /**
@@ -35,7 +35,7 @@ interface SettingDialogProps {
   row: SettingRowView;
   scopeOptions: ScopeOptions;
   /** `account` türündeki ayarın seçenekleri — yalnız aktif hesaplar (`page.tsx`). */
-  accountOptions: { value: string; label: string }[];
+  accountOptions: AccountOption[];
   propagationSeconds: number;
   onClose: () => void;
   onSaved: () => void;
@@ -223,7 +223,7 @@ interface ValueEditorProps {
   onChange: (draft: Draft) => void;
   label: string;
   /** `account` türü için seçenekler; başka türlerde kullanılmaz. */
-  accountOptions: { value: string; label: string }[];
+  accountOptions: AccountOption[];
 }
 
 function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEditorProps) {
@@ -274,19 +274,22 @@ function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEdito
      * olurdu; seçici hem o işi yapıyor hem yanlış kimliğin ilk kapısını kapatıyor (ikincisi
      * `saveSettingAction`'da, çünkü ekranın kısıtı action'ı bağlamaz).
      *
-     * Liste YALNIZ aktif hesapları taşır (`page.tsx`) — kapatılmış hesap yeni harekete kapalıdır.
+     * Liste YALNIZ aktif hesapları taşır (`page.tsx`) — kapatılmış hesap yeni harekete kapalıdır. Ayar bir hesap türü bekliyorsa
+     * yalnız o türdekiler sunulur: aktarımın banka yerine ödeme sağlayıcısına yazılması kendine transfer olurdu.
      */
-    case 'account':
+    case 'account': {
+      const options = accountOptions.filter((option) => !row.accountType || option.type === row.accountType);
       return (
         <FieldShell label={label}>
           <Select
             value={typeof draft.raw === 'string' ? draft.raw : ''}
             onChange={(v) => onChange({ raw: v, numeric: null })}
-            placeholder="Hesap seçin"
-            options={accountOptions}
+            placeholder={options.length > 0 ? 'Hesap seçin' : 'Bu türde açık hesap yok — önce Para › Hesaplar'}
+            options={options}
           />
         </FieldShell>
       );
+    }
     // Seçenekli ayar (15.30): hesap seçiciyle aynı kap — listeden seçilir, yazılmaz.
     case 'choice':
       return (

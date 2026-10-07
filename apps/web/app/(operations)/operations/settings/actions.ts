@@ -77,6 +77,8 @@ export async function saveSettingAction(input: unknown): Promise<ActionResult<{ 
       const account = await new AccountService(serviceDb()).getById(String(value.value));
       if (!account) return { data: null, error: 'Seçilen hesap bulunamadı.' };
       if (!account.isActive) return { data: null, error: `"${account.name}" kapatılmış bir hesap — yeni harekete kapalı.` };
+      if (def.accountType && account.type !== def.accountType)
+        return { data: null, error: `"${account.name}" bu ayarın beklediği türde bir hesap değil.` };
     }
 
     // Açıklama sözlükten yazılır: satırı veritabanında görenin de ne olduğunu okuyabilmesi için.

@@ -83,6 +83,10 @@ export const RegisterCashMoveSchema = z.object({
 });
 export type RegisterCashMove = z.infer<typeof RegisterCashMoveSchema>;
 
+/** Kasa yazılımındaki açık mağaza; tesis eşlemesi mağazayı adıyla buradan seçer. */
+export const RegisterExternalStoreSchema = z.object({ externalStoreId: z.number().int(), name: z.string() });
+export type RegisterExternalStore = z.infer<typeof RegisterExternalStoreSchema>;
+
 /** Kasanın bir iş günü: oran başına KDV dahil toplam ve satış başına ödemeler, nakit akışları dahil (**cent**). */
 export const RegisterDaySchema = z.object({
   vat: z.array(z.object({ vatRate: z.number(), grossCents: z.number().int() })),

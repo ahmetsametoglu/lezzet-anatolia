@@ -54,7 +54,7 @@ const SECTIONS: Record<SettingSection, Omit<SectionDef, 'key'>> = {
     label: 'Para hesapları',
     tab: 'money',
     layout: 'rows',
-    hint: 'Paranın yazıldığı hesaplar. Kuruluma özgüdür, fabrika değeri yoktur.',
+    hint: "Paranın yazıldığı hesaplar: kapı nakdi Kasa'ya, kapıda kart ve online ödeme Revolut Merchant'a yazılır (ikisi de sabit hesap); aktarım hesabı, Revolut'un bu parayı gönderdiği şirket banka hesabıdır.",
   },
   bankFeed: { label: 'Pennylane', tab: 'money', layout: 'rows' },
   cost: {

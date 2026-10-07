@@ -3,7 +3,7 @@
 import { movementToday } from '@/components/operation/form/movement-form/schema';
 import { BusinessToggle } from '@/components/operation/form/business-toggle';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { AccountSetup } from './account-setup';
+import { AccountDialog } from './account-dialog';
 import { BankImportDialog } from './bank-import-dialog';
 import { DictionaryDialog } from './dictionary-dialog';
 import { DocumentDialog } from './document-dialog';
@@ -47,7 +47,6 @@ export function FinanceDesktop({
   onClosePay,
   onOpenDocumentFile,
 }: FinanceViewProps) {
-  const hasAccounts = data.accounts.length > 0;
   // Pasif etiket de adıyla okunur — satır eski etiketi taşımaya devam eder, ad sözlüğün tamamından.
   const tagLabels = new Map(data.dictionary.tags.map((tag) => [tag.slug, tag.label] as const));
   const editor: RowEditor = {
@@ -70,48 +69,42 @@ export function FinanceDesktop({
         <BusinessToggle value={urlState.business} onChange={(business) => onFilter({ business })} />
       </PageHeader>
 
-      {hasAccounts ? (
-        <>
-          <AccountStrip accounts={data.accounts} totalCents={data.totalCents} selected={urlState.acct} onSelect={(acct) => onFilter({ acct })} />
-          <FinanceToolbar
-            urlState={urlState}
-            unexplainedCount={data.unexplainedCount}
-            openDocumentCount={data.openDocumentCount}
-            writableAccountCount={writableAccounts.length}
-            onChange={onFilter}
-            onOpenDialog={onOpenDialog}
-          />
+      <AccountStrip accounts={data.accounts} totalCents={data.totalCents} selected={urlState.acct} onSelect={(acct) => onFilter({ acct })} />
+      <FinanceToolbar
+        urlState={urlState}
+        unexplainedCount={data.unexplainedCount}
+        openDocumentCount={data.openDocumentCount}
+        writableAccountCount={writableAccounts.length}
+        onChange={onFilter}
+        onOpenDialog={onOpenDialog}
+      />
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {rowError ? (
-              <p className="border-b border-ops-red-line bg-ops-red-bg px-6 py-2.5 font-ops-body text-ops-xs text-ops-red">{rowError}</p>
-            ) : null}
-            {onDocuments ? (
-              <DocumentList
-                rows={documentRows}
-                note={data.documents?.note ?? null}
-                tagLabels={tagLabels}
-                actions={documentActions}
-                hasMore={hasMore}
-                loadingMore={loadingMore}
-                onLoadMore={onLoadMore}
-              />
-            ) : (
-              <MovementList
-                rows={movementRows}
-                note={data.ledger?.note ?? null}
-                editor={editor}
-                matcher={matcher}
-                hasMore={hasMore}
-                loadingMore={loadingMore}
-                onLoadMore={onLoadMore}
-              />
-            )}
-          </div>
-        </>
-      ) : (
-        <AccountSetup onCreated={onSaved} />
-      )}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {rowError ? (
+          <p className="border-b border-ops-red-line bg-ops-red-bg px-6 py-2.5 font-ops-body text-ops-xs text-ops-red">{rowError}</p>
+        ) : null}
+        {onDocuments ? (
+          <DocumentList
+            rows={documentRows}
+            note={data.documents?.note ?? null}
+            tagLabels={tagLabels}
+            actions={documentActions}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={onLoadMore}
+          />
+        ) : (
+          <MovementList
+            rows={movementRows}
+            note={data.ledger?.note ?? null}
+            editor={editor}
+            matcher={matcher}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={onLoadMore}
+          />
+        )}
+      </div>
 
       {/* Elle hareket ve transfer tek penceredir; "Eylemler → Transfer" onu transfer kipinde açar. */}
       {dialog === 'movement' || dialog === 'transfer' ? (
@@ -168,6 +161,7 @@ export function FinanceDesktop({
           onSaved={onSaved}
         />
       ) : null}
+      {dialog === 'account' ? <AccountDialog onClose={onCloseDialog} onSaved={onSaved} /> : null}
       {/* Sözlük penceresi yazımdan sonra KAPANMAZ: sözlük action'ları sayfayı aynı cevapta tazeliyor
           (`revalidatePath`), liste yeni veriyle kendiliğinden çizilir. */}
       {dialog === 'dictionary' ? <DictionaryDialog dictionary={data.dictionary} onClose={onCloseDialog} /> : null}

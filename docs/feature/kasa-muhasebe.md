@@ -152,6 +152,7 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
 | Ürün dış referansı (`products_ref_ext`) | 20 karakterde kesiliyor; belgede sınır yazmıyor. Varyant kimliğimiz (`uuid`, 36 karakter) sığmaz → ürün eşlemesi bizde tutulur. 20 karakterlik referansla arama (`/products/search?products_ref_ext=`) ürünü buluyor. |
 | Açık satış | `completed_at` boş tarih (`0000-00-00 00:00:00`), `unique_sale_id` boş. Kalem (`DELETE /sale_line_item/{id}`) ve ödeme satırı (`DELETE /sales_payment_div/{id}`) silinebiliyor; boşalan satış silinebiliyor, silinen satış okunurken 404. |
 | Vergi listesi | `GET /taxes`: oran kesir (`tax_value` = `0.05500`) ve vergi kimliği; ürün açarken kimlik, kalemde kesir istenir. |
+| Mağaza listesi | `GET /stores/`: `store_id`, `store_name`, `store_enabled` (0 = kapalı); demo hesapta tek mağaza var (07.10). |
 | Stok | Stok takipsiz üründe satış stok hareketi doğurmuyor. |
 | Nakit kasası | Para koyma/çıkarma, anlık sayım ve aylık hareketler çalışıyor; sayım kapanmış satışların nakit payıyla tutuyor. |
 | Gün sonu okumaları | Ödeme yöntemine, KDV oranına göre ve alınan ödemeler dökümü geliyor. Kasa defteri ve nakit akışı boş (kapanış olmadan). |
@@ -333,8 +334,9 @@ kalem varsa. Hiboutik kalemi:
 
 **Sabit hesaplar** (18. karar): Kasa (nakit) ve Revolut Merchant (sağlayıcı) migration'la açılır ve pasifleşmez. Kapı nakdi
 ayarı (`door_cash_account_id`) Kasa'yı, kapıda kart ayarı (`door_card_account_id`) Revolut Merchant'ı gösterir; online
-tahsilat da Revolut Merchant'a yazılır. Kart parasının aktarıldığı banka (`card_payout_account_id`) sabit değildir, banka
-eşlemesiyle gelir. Ödemenin yazılacağı hesap okunamazsa ödeme başlamaz: online'da ödeme sayfası açılmaz, kapıda ve kapı
+tahsilat da Revolut Merchant'a yazılır. Kart parasının aktarıldığı banka (`card_payout_account_id`) sabit değildir: Para › Eylemler ›
+Hesap ekle'de açılan banka hesabı seçilir. Her hesap ayarı kendi türünü bekler (kapı nakdi nakit kasası, kapıda kart ödeme
+sağlayıcısı, aktarım banka); seçici yalnız o türdekileri sunar, türü uymayan değer satırda uyarı verir. Ödemenin yazılacağı hesap okunamazsa ödeme başlamaz: online'da ödeme sayfası açılmaz, kapıda ve kapı
 önünde tahsilat başlamaz.
 
 **Ödeme kodu hareketin yönteminden:** nakit `ESP`, kapıda ve tezgâhta kart `CB`, çevrim içi `WEB`, havale
@@ -345,7 +347,9 @@ asıl ödemenin yöntemi; ortak cari iade yolu olarak sunulmaz, çünkü müşte
 
 **Eşlemeler (bizde):**
 - **Mağaza:** tesis deposu ↔ Hiboutik mağazası ↔ o kasanın nakit hesabı. Araç satışı aracın ana
-  deposunun mağazasına yazılır. Eşlemesiz depodaki sipariş beklemede kalır ve uyarı verir.
+  deposunun mağazasına yazılır. Eşlemesiz depodaki sipariş beklemede kalır ve uyarı verir. Mağaza kurulum kartında
+  Hiboutik'ten okunan listeden adıyla seçilir; kaydederken numaranın açık bir mağazaya ait olduğu denetlenir, anahtarsız
+  ortamda numara elle girilir.
 - **Ürün:** varyant ↔ Hiboutik ürün numarası; ilk satışta açılır. Stok takipsiz; ad Fransızca ürün adı ve
   boy (fişte görünen bu); KDV varyantın oranı; katalog fiyatı B2C liste fiyatı ki Hiboutik'in indirim
   raporu anlam taşısın. `products_ref_ext` = varyant kimliğinin ilk 20 onaltılık hanesi (kurtarma anahtarı).
@@ -416,8 +420,8 @@ kapanışı önceki günleri de kapattığı için tutmayan gün düzelene kadar
 gerisinde kapanmamış gün kalmışsa da gün kapatılmaz ve bildirim gider, o gün elle incelenir. Fark `error_log`a
 uyarı olarak, özet `job_run`a yazılır.
 
-**Ekranlar:** yeni ekran yok. Ayarlar › Kurulum: Hiboutik kartı (tesis ↔ mağaza ↔ çekmece eşlemesi, kuyruk
-özeti, son eşitleme ve gün sonu turu); kuyruk özeti sistem ekranında değil kasanın yanında, çünkü çözümü (eşleme)
+**Ekranlar:** yeni ekran yok. Ayarlar › Kurulum'un en üstünde, Pennylane kartıyla yan yana Hiboutik kartı (tesis ↔
+mağaza ↔ çekmece eşlemesi, kuyruk özeti, son eşitleme ve gün sonu turu); kuyruk özeti sistem ekranında değil kasanın yanında, çünkü çözümü (eşleme)
 orada. Sipariş detayı: hareketin yöntemi, kasa fişinin günlük numarası,
 dijital fiş bağlantısı ve kasaya yazılmayı bekliyorsa sebebi. Sistem ekranı: gün sonu farkı ve beşinci
 denemede düşen yazım hata kaydı olarak.

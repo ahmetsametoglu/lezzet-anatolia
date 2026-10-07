@@ -8,7 +8,7 @@ import { Chip } from '@/components/operation/ui/chip';
 import { DateRangeFilterChip } from '@/components/operation/ui/date-range-filter-chip';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
-import { BookIcon, DocumentIcon, NavIcon, TransferIcon, UploadIcon } from '@/components/operation/ui/icons';
+import { BookIcon, DocumentIcon, NavIcon, PlusIcon, TransferIcon, UploadIcon } from '@/components/operation/ui/icons';
 import { amount, dayMonthLong, money, num, weekdayName } from '@/components/operation/ui/format';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Tabs } from '@/components/operation/ui/tabs';
@@ -259,6 +259,13 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
                 onSelect: () => onOpenDialog('bankImport'),
               },
               { key: 'dictionary', icon: <BookIcon />, label: 'Sözlük', hint: 'tür · cari · etiket', onSelect: () => onOpenDialog('dictionary') },
+              {
+                key: 'account',
+                icon: <PlusIcon />,
+                label: 'Hesap ekle',
+                hint: 'banka hesabı, kasa, ödeme sağlayıcı ya da ortak cari',
+                onSelect: () => onOpenDialog('account'),
+              },
             ]}
           />
         </>

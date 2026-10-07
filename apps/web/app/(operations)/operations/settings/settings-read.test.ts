@@ -4,6 +4,7 @@ import type { Setting, UserProfile } from '@lezzet/types';
 import { SETTING_BY_KEY, SETTING_CATALOG } from './settings-catalog';
 import { checkBounds, formatSettingValue, parseSettingValue } from './settings-labels';
 import { filterSettingRows, toScopeOptions, toSettingRows, toStaffRows } from './settings-read';
+import type { SettingsReadInput } from './settings-types';
 
 const ZONES = [
   { id: 'z-1', name: 'Kuzey hattı' },
@@ -188,8 +189,8 @@ describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
 });
 
 describe('fabrika değeri OLMAYAN ayar — kart ödemeleri aktarım hesabı', () => {
-  const ACCOUNTS = [{ id: '1dd7ec2f-27bb-462a-9873-cbbf5a16d885', name: 'Revolut' }];
-  const row = (settings: Setting[] = [], accounts = ACCOUNTS) =>
+  const ACCOUNTS = [{ id: '1dd7ec2f-27bb-462a-9873-cbbf5a16d885', name: 'Revolut', type: 'bank' as const }];
+  const row = (settings: Setting[] = [], accounts: SettingsReadInput['accounts'] = ACCOUNTS) =>
     toSettingRows({ settings, zones: ZONES, warehouses: [], accounts }).rows.find((r) => r.key === 'card_payout_account_id')!;
 
   it('kimlik değil AD gösterilir — operatör uuid okumaz', () => {
@@ -210,6 +211,13 @@ describe('fabrika değeri OLMAYAN ayar — kart ödemeleri aktarım hesabı', ()
   it('fabrika değeri YOK: dönülecek varsayılan da yok', () => {
     // Ekran bu satırda "Varsayılana dön" düğmesini hiç çizmiyor; `null` o kararın kaynağı.
     expect(row().fallbackDisplay).toBeNull();
+  });
+
+  it('banka bekleyen ayarda ödeme sağlayıcısı seçiliyse satır uyarır — aktarım kendine transfer olurdu', () => {
+    const merchant = { id: '00000000-0000-4000-8000-000000000102', name: 'Revolut Merchant', type: 'provider' as const };
+    const view = row([setting({ key: 'card_payout_account_id', value: merchant.id })], [...ACCOUNTS, merchant]);
+    expect(view).toMatchObject({ display: 'Revolut Merchant · türü uymuyor', unset: true });
+    expect(row([setting({ key: 'card_payout_account_id', value: ACCOUNTS[0]!.id })])).toMatchObject({ display: 'Revolut', unset: false });
   });
 
   it('"varsayılandan farklı" İŞARETLENMEZ — karşılaştırılacak bir normal yok', () => {

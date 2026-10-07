@@ -21,6 +21,10 @@ export const HiboutikTaxListSchema = z.array(
   z.object({ tax_id: z.number().int(), tax_value: decimal, tax_enabled: z.number().optional() }),
 );
 
+/** `store_enabled` 0 olan mağaza kapatılmıştır. */
+export const HiboutikStoreListSchema = z.array(
+  z.object({ store_id: z.number().int(), store_name: z.string(), store_enabled: z.number().int().optional() }),
+);
 export const HiboutikProductListSchema = z.array(z.object({ product_id: z.number().int() }));
 export const HiboutikSaleIdListSchema = z.array(z.object({ sale_id: z.number().int() }));
 export const HiboutikTillMoveListSchema = z.array(
