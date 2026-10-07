@@ -26,7 +26,7 @@ type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
  * Müşteri çerçevesinin telefon yüzü, native uygulamanın kabuğu: başlığı ekranın türü seçer ve sekme çubuğu yalnız sekme
  * köklerinde durur, çünkü native'de öteki her ekran yığında açılır. Footer yok; yasal bağlantılar ve dil seçimi hesap ekranında.
  */
-type SiteFrameMobileProps = Pick<SiteFrameProps, 'locale' | 'mobileChrome' | 'accountChrome' | 'fill' | 'children'>;
+type SiteFrameMobileProps = Pick<SiteFrameProps, 'locale' | 'mobileChrome' | 'accountChrome' | 'mobileTitle' | 'fill' | 'children'>;
 
 interface Tab {
   key: TabKey;
@@ -97,12 +97,12 @@ function titleOf(route: string, t: Copy): string {
   return TITLES[route as Route]?.(t) ?? '';
 }
 
-export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, children }: SiteFrameMobileProps) {
+export function SiteFrameMobile({ locale, mobileChrome, accountChrome, mobileTitle, fill, children }: SiteFrameMobileProps) {
   const t = messages[locale];
   const route: string = usePathname();
   const wholesale = useWholesale();
   const kind = headerOf(route, mobileChrome);
-  const title = accountChrome?.title ?? titleOf(route, t);
+  const title = accountChrome?.title ?? mobileTitle ?? titleOf(route, t);
   // Geçmiş boşken ‹'nin gideceği üst sayfa (`BackButton` sözleşmesi) — derin bağlantıyla gelen de döner.
   const fallback = accountChrome?.back?.href ?? '/';
   const hero = HERO_PAGES.includes(route);

@@ -16,7 +16,7 @@ import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { rememberNeighborInvite } from '@/lib/invite/invite-store';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/neighbor';
 import { useNeighborWelcome } from './use-neighbor-welcome.hook';
 
 /*
@@ -100,9 +100,9 @@ function NeighborFace({ welcome, t, accept, iconColor, day }: NeighborFaceProps)
           description={t.ok.body}
           action={
             <View style={styles.actions}>
-              {/* HAP: boş hâl çağrısının biçimi (tasarım kuralı — `radius:22`, gölgesiz). */}
+              {/* HAP: boş hâl çağrısının biçimi (tasarım kuralı — `radius:22`, gölgesiz); ikinci çağrı da aynı biçimde. */}
               <PrimaryButton label={t.ok.primary} shape="pill" onPress={() => accept('/catalog')} testID="neighbor-accept-catalog" />
-              <SecondaryButton label={t.ok.secondary} onPress={() => accept('/login')} testID="neighbor-accept-login" />
+              <SecondaryButton label={t.ok.secondary} shape="pill" onPress={() => accept('/login')} testID="neighbor-accept-login" />
             </View>
           }
         />
@@ -162,9 +162,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     justifyContent: 'center',
   },
-  /** İki düğme alt alta ve tam genişlikte — boş durum bloğu kendi yatay payını zaten veriyor. */
+  /** İki hap alt alta ve ortalı: hap kendi genişliğinde durur ve gerilen kapta sola yaslanır. */
   actions: {
-    alignSelf: 'stretch',
+    alignItems: 'center',
     gap: theme.space.md,
   },
 }));

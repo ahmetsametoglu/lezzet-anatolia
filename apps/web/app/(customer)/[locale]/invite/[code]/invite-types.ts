@@ -1,10 +1,11 @@
-import type { LocalizedCopy } from '@lezzet/i18n';
-// `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import messages from './messages.json';
+import type { InviteWelcome } from '@lezzet/application';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import type inviteCopy from '@lezzet/i18n/customer/invite';
+import type messages from './messages.json';
 
-// Davet karşılamasının tip modülü (view DEĞİL — ekranın kendisi `page.tsx`).
-
+/** Ekranın native'le ortak metni. */
+export type InviteCopy = LocalizedCopy<typeof inviteCopy>;
+/** Yalnız web'in metni: sayfa künyesi. */
 export type Messages = LocalizedCopy<typeof messages>;
 
 /**
@@ -13,3 +14,10 @@ export type Messages = LocalizedCopy<typeof messages>;
  * dilediğiniz adrese yönlendiren bir açık yönlendirme (open redirect) kapısı olurdu.
  */
 export type InviteTarget = 'catalog' | 'login';
+
+export interface InviteViewProps {
+  locale: Locale;
+  code: string;
+  welcome: InviteWelcome;
+  copy: InviteCopy;
+}

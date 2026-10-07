@@ -4,37 +4,9 @@
       "title": "Komşu daveti — Lezzet Anatolie",
       "description": "Komşunuz sizi aynı gün teslimatına çağırıyor. Aynı güne sipariş verin, birlikte teslim alın."
     },
-    "ok": {
-      "eyebrow": "Komşu daveti",
-      "title": "{name} sizi {date} teslimatına çağırıyor",
-      "someone": "Komşunuz",
-      "description": "Aynı gün, aynı araç, aynı sokak. Siz de aynı güne sipariş verirseniz komşunuzla birlikte teslim alırsınız.",
-      "primary": "Aynı güne sipariş ver",
-      "secondary": "Önce katalogu göreyim"
-    },
-    "unknown": {
-      "eyebrow": "Komşu daveti",
-      "title": "Bu davet bağlantısı tanınmıyor",
-      "description": "Bağlantı eksik kopyalanmış olabilir. Yine de hoş geldiniz — teslimat günlerimizi katalogda görebilirsiniz.",
-      "primary": "Kataloğu keşfet"
-    },
-    "runClosed": {
-      "eyebrow": "Komşu daveti",
-      "title": "{date} teslimatı için artık geç",
-      "description": "Bu davetin çağırdığı teslimat kapandı. Bölgenizin bir sonraki teslimat günü ödeme adımında görünür — sipariş vermeye devam edebilirsiniz.",
-      "primary": "Kataloğu keşfet"
-    },
-    "full": {
-      "eyebrow": "Komşu daveti",
-      "title": "Bu davetin kontenjanı doldu",
-      "description": "{date} teslimatı için davet edilebilecek komşu sayısına ulaşıldı. Siz yine sipariş verebilirsiniz; teslimat gününü ödeme adımında seçersiniz.",
-      "primary": "Kataloğu keşfet"
-    },
-    "self": {
-      "eyebrow": "Komşu daveti",
-      "title": "Bu sizin davet bağlantınız",
-      "description": "Bağlantınız çalışıyor. Komşularınıza gönderin; siparişleri aynı güne düştüğünde puanınız hesabınıza geçer.",
-      "primary": "Siparişlerime dön"
+    "desktop": {
+      "sameDay": "Aynı güne sipariş ver",
+      "catalogFirst": "Önce kataloğu göreyim"
     }
   },
   "fr": {
@@ -42,37 +14,9 @@
       "title": "Invitation entre voisins — Lezzet Anatolie",
       "description": "Votre voisin vous invite à vous faire livrer le même jour que lui. Commandez pour ce jour-là et soyez livrés ensemble."
     },
-    "ok": {
-      "eyebrow": "Invitation entre voisins",
-      "title": "{name} vous invite à la livraison du {date}",
-      "someone": "Votre voisin",
-      "description": "Même jour, même camion, même rue. Commandez pour ce jour-là et vous serez livrés ensemble.",
-      "primary": "Commander pour ce jour",
-      "secondary": "Voir d'abord le catalogue"
-    },
-    "unknown": {
-      "eyebrow": "Invitation entre voisins",
-      "title": "Ce lien d'invitation n'est pas reconnu",
-      "description": "Le lien a peut-être été copié en partie. Bienvenue tout de même — nos jours de livraison s'affichent au catalogue.",
-      "primary": "Découvrir le catalogue"
-    },
-    "runClosed": {
-      "eyebrow": "Invitation entre voisins",
-      "title": "Trop tard pour la livraison du {date}",
-      "description": "La livraison visée par cette invitation est close. Le prochain jour de livraison dans votre zone apparaît à l'étape du paiement — vous pouvez continuer à commander.",
-      "primary": "Découvrir le catalogue"
-    },
-    "full": {
-      "eyebrow": "Invitation entre voisins",
-      "title": "Cette invitation a atteint sa limite",
-      "description": "Le nombre maximal de voisins invités pour la livraison du {date} est atteint. Vous pouvez tout de même commander ; vous choisirez le jour de livraison à l'étape du paiement.",
-      "primary": "Découvrir le catalogue"
-    },
-    "self": {
-      "eyebrow": "Invitation entre voisins",
-      "title": "C'est votre lien d'invitation",
-      "description": "Le lien fonctionne. Envoyez-le à vos voisins : vos points arrivent dès qu'un voisin commande pour ce jour et règle sa commande.",
-      "primary": "Retour à mes commandes"
+    "desktop": {
+      "sameDay": "Commander pour ce jour",
+      "catalogFirst": "Voir d'abord le catalogue"
     }
   },
   "de": {
@@ -80,37 +24,9 @@
       "title": "Einladung von nebenan – Lezzet Anatolie",
       "description": "Ihre Nachbarin oder Ihr Nachbar lädt Sie ein, sich am selben Tag beliefern zu lassen. Bestellen Sie für denselben Tag."
     },
-    "ok": {
-      "eyebrow": "Einladung von nebenan",
-      "title": "{name} lädt Sie zur Lieferung am {date} ein",
-      "someone": "Ihre Nachbarin oder Ihr Nachbar",
-      "description": "Gleicher Tag, gleiches Fahrzeug, gleiche Straße. Bestellen Sie für diesen Liefertag und Sie werden zusammen beliefert.",
-      "primary": "Für diesen Liefertag bestellen",
-      "secondary": "Erst den Katalog ansehen"
-    },
-    "unknown": {
-      "eyebrow": "Einladung von nebenan",
-      "title": "Dieser Einladungslink ist unbekannt",
-      "description": "Der Link wurde vielleicht unvollständig kopiert. Willkommen trotzdem – unsere Liefertage stehen im Katalog.",
-      "primary": "Katalog entdecken"
-    },
-    "runClosed": {
-      "eyebrow": "Einladung von nebenan",
-      "title": "Für die Lieferung am {date} ist es zu spät",
-      "description": "Für diese Lieferung ist Bestellschluss. Den nächsten Liefertag für Ihr Gebiet sehen Sie beim Bestellen – Sie können weiter bestellen.",
-      "primary": "Katalog entdecken"
-    },
-    "full": {
-      "eyebrow": "Einladung von nebenan",
-      "title": "Diese Einladung ist ausgeschöpft",
-      "description": "Für die Lieferung am {date} sind bereits genug Nachbarn eingeladen. Bestellen können Sie trotzdem; den Liefertag wählen Sie beim Bestellen.",
-      "primary": "Katalog entdecken"
-    },
-    "self": {
-      "eyebrow": "Einladung von nebenan",
-      "title": "Das ist Ihr eigener Einladungslink",
-      "description": "Der Link funktioniert. Schicken Sie ihn Ihren Nachbarn – Ihre Punkte kommen, sobald eine Bestellung für diesen Tag bezahlt ist.",
-      "primary": "Zurück zu meinen Bestellungen"
+    "desktop": {
+      "sameDay": "Für diesen Liefertag bestellen",
+      "catalogFirst": "Erst den Katalog ansehen"
     }
   }
 }

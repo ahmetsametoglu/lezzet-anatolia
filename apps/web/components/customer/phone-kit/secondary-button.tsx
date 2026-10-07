@@ -15,6 +15,8 @@ interface SecondaryButtonProps {
   tone?: 'sand' | 'olive' | 'terracotta';
   shape?: 'block' | 'pill';
   disabled?: boolean;
+  /** Formun gönder düğmesi — davet kabulü sunucu eylemli formla gider. Varsayılan `button`. */
+  type?: 'button' | 'submit';
 }
 
 const TONE: Record<NonNullable<SecondaryButtonProps['tone']>, string> = {
@@ -35,7 +37,7 @@ const PRESS: Record<NonNullable<SecondaryButtonProps['shape']>, string> = {
 
 const BASE = 'relative items-center justify-center border-[1.5px] px-5 text-center font-sans text-button';
 
-export function SecondaryButton({ label, onClick, href, tone = 'sand', shape = 'block', disabled = false }: SecondaryButtonProps) {
+export function SecondaryButton({ label, onClick, href, tone = 'sand', shape = 'block', disabled = false, type = 'button' }: SecondaryButtonProps) {
   // Pasif hâl bir durumdur, bu yüzden bağ olarak değil düğme olarak çizilir.
   if (disabled) {
     return (
@@ -53,9 +55,10 @@ export function SecondaryButton({ label, onClick, href, tone = 'sand', shape = '
     );
   }
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button type={type === 'submit' ? 'submit' : 'button'} onClick={onClick} className={className}>
       {label}
-      <HapticTarget />
+      {/* Form gönderen düğmede yok: etiket etkinleşmeyi üstlenir ve form gönderilmezdi. */}
+      {type === 'button' && <HapticTarget />}
     </button>
   );
 }

@@ -76,12 +76,11 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
     - [ ] Checkout + Ödeme `checkout` ↔ native `checkout` — yalnız ödeme bölümü: kart ödemesi Revolut'a geçti
     - [ ] Geri Bildirim `feedback/[token]` ↔ native `feedback`
     - [ ] Professionnels `professionals` ↔ native `professionals`
-    - [ ] Tasarımda karesi yok, ölçü native ikizinden: `invite/[code]` (native `invite`) · `neighbor/[token]` (native `neighbor`)
   - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): çekmece başı (native tutamak, web ×) ·
     sepette alıcı telefonu · vitrin konum satırı · vitrin konum çekmecesinde gel-al · misafir posta kodu çekmecesi · yalnız bir
     yüzeyde olanlar: indirimliler süzgeci, paket kartı ayrıntıları, misafire bildirim zili, çözülmüş talep notu, kaydırınca küçük
     başlık, puan bakiyesi satırı, misafire dil kartı, misafir Siparişlerim, K.33.
-  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `feedback/[token]` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
+  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `feedback/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 - [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, katalog ~0,54 sn (DB'siz yasal sayfa ~0,16 sn).
   Supabase istekleri Cloudflare'in Paris düğümünden geçiyor (açık bağlantıda istek ~45–55 ms) ve sıralı her okuma bir tur ekliyor.

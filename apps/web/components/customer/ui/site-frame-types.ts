@@ -45,6 +45,8 @@ export interface SiteFrameProps {
     /** Sağ uçtaki öğe — masaüstünde başlığın, mobilde `AppBar`ın ucu ("+ Yeni" · "↻ Tekrar sipariş"). */
     right?: ReactNode;
   };
+  /** Mobil başlık çubuğunun başlığı, hesap alanı dışındaki yığın ekranlarında (davet, komşu daveti); masaüstü okumaz. */
+  mobileTitle?: string;
   /**
    * Masaüstünün ince başlığı (keşif): logo, sayfa adı ve "← Geri"; duyuru bandı, menü ve footer çizilmez.
    * Verilince vitrin başlığının yerine geçer.

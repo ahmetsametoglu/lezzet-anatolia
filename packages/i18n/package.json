@@ -30,7 +30,9 @@
     "./customer/points-history": "./src/customer/points-history.json",
     "./customer/points-earn": "./src/customer/points-earn.json",
     "./customer/points-award": "./src/customer/points-award.json",
-    "./customer/notifications": "./src/customer/notifications.json"
+    "./customer/notifications": "./src/customer/notifications.json",
+    "./customer/invite": "./src/customer/invite.json",
+    "./customer/neighbor": "./src/customer/neighbor.json"
   },
   "types": "./src/index.ts",
   "scripts": {

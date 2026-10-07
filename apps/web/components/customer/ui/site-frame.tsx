@@ -51,10 +51,21 @@ function tabClass(key: AccountTab, active: AccountTab | undefined, base = ''): s
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', accountChrome, thinChrome, fill, footer, children }: SiteFrameProps) {
+export function SiteFrame({
+  device,
+  locale,
+  activeNav,
+  mobileChrome = 'default',
+  accountChrome,
+  mobileTitle,
+  thinChrome,
+  fill,
+  footer,
+  children,
+}: SiteFrameProps) {
   if (device === 'mobile') {
     return (
-      <SiteFrameMobile locale={locale} mobileChrome={mobileChrome} accountChrome={accountChrome} fill={fill}>
+      <SiteFrameMobile locale={locale} mobileChrome={mobileChrome} accountChrome={accountChrome} mobileTitle={mobileTitle} fill={fill}>
         {children}
       </SiteFrameMobile>
     );
