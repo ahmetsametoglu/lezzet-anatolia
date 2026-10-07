@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import type { MeCartViewLine, MeSavedView } from '@lezzet/types';
+import type { MeCartViewLine, MeSavedView, Country } from '@lezzet/types';
 
 import { cancelZoneNotice, fetchSaved, restoreSaved } from '@/lib/api/saved';
 import { toastError } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { refreshCart } from '@/screens/customer-kit/cart-store';
 
 /*
-  "Sonraya kaydedilenler" kartının durumu. Okuma düşerse kart çizilmez: uydurulmuş boş bir liste müşteriye kalemlerinin kaybolduğunu
-  söylerdi. Posta kodu satırın bu adrese gelip gelmediğini çözdürür, değişince kart yeniden okunur.
+  Okuma düşerse kart çizilmez, çünkü uydurulmuş boş liste müşteriye kalemlerinin kaybolduğunu söylerdi.
+  Yer satırın bu adrese gelip gelmediğini çözdürür, değişince kart yeniden okunur.
 */
 
 export function useSaved(
@@ -16,6 +16,7 @@ export function useSaved(
   locale: Locale,
   postalCode: string | undefined,
   failedText: string,
+  country: Country | null = null,
 ): {
   view: MeSavedView | null;
   busy: boolean;
@@ -28,13 +29,13 @@ export function useSaved(
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    void fetchSaved(locale, postalCode).then((result) => {
+    void fetchSaved(locale, postalCode, country).then((result) => {
       if (alive) setView(result.error === null ? result.data : null);
     });
     return () => {
       alive = false;
     };
-  }, [enabled, locale, postalCode]);
+  }, [country, enabled, locale, postalCode]);
 
   const settle = (request: Promise<Awaited<ReturnType<typeof fetchSaved>>>, afterwards?: () => void) => {
     setBusy(true);
@@ -63,9 +64,10 @@ export function useSaved(
           ),
           locale,
           postalCode,
+          country,
         ),
         refreshCart,
       ),
-    cancelNotice: (code) => settle(cancelZoneNotice(code, locale, postalCode)),
+    cancelNotice: (code) => settle(cancelZoneNotice(code, locale, postalCode, country)),
   };
 }

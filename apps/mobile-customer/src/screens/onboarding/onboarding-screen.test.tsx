@@ -23,7 +23,7 @@ jest.mock('@/lib/onboarding/onboarding-store', () => ({
 /* Yer çözümü gerçek uçtan gelir; test o ucu mock'lar ki dört hâlin hangi cümleyi doğurduğu ağa çıkmadan ölçülsün. */
 const mockResolve = jest.fn();
 jest.mock('@/lib/api/places', () => ({
-  resolvePostalCode: (code: string) => mockResolve(code),
+  resolvePostalCode: (code: string, country: string | null) => mockResolve(code, country),
 }));
 
 /* Puan kuralları da gerçek uçtan gelir ve misafire açıktır; test o ucu mock'lar. 500/5 € çifti, ekranın
@@ -118,7 +118,7 @@ describe('onboarding', () => {
     // Seçim yapılır yapılmaz o ekranın metni de seçilen dile döner.
     expect(screen.getByText('Dans quelle langue continuons-nous ?')).toBeOnTheScreen();
 
-    // v3: seçimden 250 ms sonra kendiliğinden bir sonraki adım — o adım da Fransızca çizilir.
+    // Seçimden kısa süre sonra kendiliğinden sonraki adıma geçilir; o adım da Fransızca çizilir.
     await waitFor(() => expect(screen.getByText('Choisissez la taille du texte')).toBeOnTheScreen());
   });
 
@@ -158,6 +158,18 @@ describe('onboarding', () => {
         placeMessages.tr.zip.shippingNote,
       ),
     );
+  });
+
+  it('seçilen ülke yer sorusuna gider ve kayda yazılır', async () => {
+    await render(<OnboardingScreen />);
+    await goToZipStep();
+
+    await fireEvent.press(screen.getByTestId('onboarding-country-DE'));
+    await fireEvent.changeText(screen.getByTestId('onboarding-zip'), '67000');
+    await waitFor(() => expect(mockResolve).toHaveBeenCalledWith('67000', 'DE'));
+
+    await fireEvent.press(screen.getByTestId('onboarding-skip'));
+    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: '67000', country: 'DE' });
   });
 
   it('uçtan uca: puan bölümü KART KART ilerler, hesap teklifi ancak SON kartta çıkar', async () => {
@@ -201,7 +213,7 @@ describe('onboarding', () => {
     expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Hesap aç, kazanmaya başla');
 
     await pressNext(); // → hesap aç
-    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: '67000' });
+    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: '67000', country: 'FR' });
     expect(mockReplace).toHaveBeenCalledWith('/login');
   });
 
@@ -218,7 +230,7 @@ describe('onboarding', () => {
     expect(within(screen.getByTestId('points-earn-referral')).getByText('+500 (5 €)')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByTestId('onboarding-later'));
-    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: null });
+    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: null, country: null });
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
 
@@ -227,7 +239,7 @@ describe('onboarding', () => {
 
     await fireEvent.press(screen.getByTestId('onboarding-skip'));
 
-    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: null });
+    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: null, country: null });
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
 
@@ -238,6 +250,6 @@ describe('onboarding', () => {
     await waitFor(() => expect(screen.getByText('Textgröße wählen')).toBeOnTheScreen());
 
     await fireEvent.press(screen.getByTestId('onboarding-skip'));
-    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'de', postalCode: null });
+    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'de', postalCode: null, country: null });
   });
 });

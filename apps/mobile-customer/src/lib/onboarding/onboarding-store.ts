@@ -1,44 +1,26 @@
 import { z } from 'zod';
 import { LOCALES } from '@lezzet/i18n';
+import { CountryEnum } from '@lezzet/types';
 
 import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
-  ONBOARDING DEPOSU — ilk açılış akışının cihazda kalan izi: gösterildi mi (`done`), hangi dil
-  seçildi (`locale`), hangi posta kodu yazıldı (`postalCode`).
-
-  NEDEN SECURESTORE: projede kurulu tek yerel anahtar-değer deposu bu (ÖLÇÜLDÜ — package.json'da
-  AsyncStorage yok; oturum da aynı depoda, `lib/auth/session-store.ts`). Veri sır değil ama ikinci
-  bir depo paketi açmak, tek tercih uğruna yeni bir bağımlılık ve ikinci bir saklama kapısı
-  demekti. Oturum deposuyla aynı desen: TEK anahtar, TEK JSON — iki anahtara bölmek aynı verinin
-  iki kopyasını ve ayrışma riskini doğururdu (CLAUDE §1). Erişim `lib/storage/device-store`
-  üzerinden: anahtar ailesinin sahibi ve yeniden kurulum kapısı orada.
-
-  ŞEMA BURADA, `packages/types`TA DEĞİL: bu bir alan sözleşmesi değil, CİHAZ-YEREL saklama
-  şeklidir — tek okuyanı ve tek yazanı bu modül (sayfaya-özel tip kuralının lib karşılığı).
-  Zod'la doğrulanır çünkü depodan dönen değer bizim yazdığımız değer olmayabilir (eski sürüm,
-  bozuk kayıt); bozuk kayıt "kayıt yok" ile aynı kapıya çıkar, uygulama kararmaz.
-
-  BELLEK YANSIMASI: kök kapının (`use-onboarding-gate.hook.ts`) okuduğu anlık durum burada
-  yaşar. `saveOnboarding` ÖNCE belleği günceller, sonra diske yazar — akışı bitiren ekran
-  vitrine dönerken kapı eski bayrağı okuyup kullanıcıyı onboarding'e geri fırlatmasın.
+  Şema `packages/types`ta değil, çünkü bu bir alan sözleşmesi değil cihaz-yerel saklama şeklidir; tek okuyanı ve yazanı bu modül.
+  `saveOnboarding` önce belleği günceller, sonra diske yazar ki akışı bitiren ekran vitrine dönerken kapı eski bayrağı okumasın.
 */
 
-/** Depo anahtarı — ham dizge burada YAZILMAZ, ailenin sahibinden gelir. */
+/** Anahtar ailenin sahibinden gelir, çünkü yeniden kurulum kapısı anahtarları orada toplar. */
 const ONBOARDING_STORAGE_KEY = DEVICE_STORE_KEYS.onboarding;
 
 const OnboardingStateSchema = z.object({
-  /** Akış tamamlandı ya da atlandı — ikisi de "bir daha gösterme" demek (v3 `onbDone`). */
+  /** Akış tamamlandı ya da atlandı; ikisi de "bir daha gösterme" demektir. */
   done: z.boolean(),
-  /**
-   * Akıştan çıkarken geçerli olan dil — AKIŞIN İZİ, uygulamanın dil KAYNAĞI DEĞİL. Kaynak
-   * `lib/i18n/app-locale`tir (kullanıcı kararı 09.08): seçim yapıldığı anda oraya yazılır ve
-   * uygulama o karede döner. Buradaki alan yalnız "onboarding'i hangi dille bitirdi" kaydıdır;
-   * okuyan taraf uygulamanın GÜNCEL dilini sormak için `useAppLocale()` kullanır.
-   */
+  /** Akışın bittiği dil; uygulamanın dil kaynağı değildir, güncel dil `useAppLocale()`dan okunur. */
   locale: z.enum(LOCALES),
   /** Yazılan posta kodu (0–5 hane); hiç yazılmadıysa `null` — boş dizge "bilgi yok"u gizlerdi. */
   postalCode: z.string().nullable(),
+  /** Kodun seçilen ülkesi; eski kayıtta yok, o zaman ülke koddan çözülür. */
+  country: CountryEnum.nullable().optional(),
 });
 
 export type OnboardingState = z.infer<typeof OnboardingStateSchema>;
@@ -55,10 +37,7 @@ function publish(next: OnboardingState | null): void {
   listeners.forEach((listener) => listener());
 }
 
-/**
- * Depodaki kaydı okur. `null` üç hâli birden kapsar: kayıt yok, kayıt bozuk, depo okunamadı —
- * üçünde de doğru davranış aynıdır (onboarding gösterilir), ayırt etmek karar değiştirmezdi.
- */
+/** `null` kayıt yok, bozuk ya da okunamadı demektir; üçünde de onboarding gösterilir, ayırt etmek kararı değiştirmezdi. */
 export async function readOnboarding(): Promise<OnboardingState | null> {
   try {
     const raw = await deviceStore.getItem(ONBOARDING_STORAGE_KEY);
@@ -66,9 +45,7 @@ export async function readOnboarding(): Promise<OnboardingState | null> {
     const parsed = OnboardingStateSchema.safeParse(JSON.parse(raw));
     return parsed.success ? parsed.data : null;
   } catch {
-    // Sessizliğin nedeni: mobilde log altyapısı yok (kök layout'un font kapısındaki hükümle aynı,
-    // 01-teknoloji §9) ve bu hatanın kullanıcıya söylenecek bir karşılığı yok — akış "ilk açılış"
-    // varsayımıyla devam eder, en kötüsü onboarding bir kez daha görünür.
+    // Sessiz, çünkü mobilde log altyapısı yok ve en kötü sonuç onboarding'in bir kez daha görünmesidir.
     return null;
   }
 }
@@ -79,16 +56,11 @@ export async function saveOnboarding(state: OnboardingState): Promise<void> {
   try {
     await deviceStore.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(state));
   } catch {
-    // Sessizliğin nedeni: yukarıdaki okumayla aynı (log altyapısı yok). Bellek yansıması bu
-    // oturumu zaten taşıyor; yazma düştüyse bedeli sonraki açılışta onboarding'in bir kez daha
-    // görünmesi — kilitlenmekten ucuz.
+    // Sessiz, çünkü log altyapısı yok; bellek bu oturumu taşır, bedeli sonraki açılışta onboarding'in bir kez daha görünmesidir.
   }
 }
 
-/**
- * Kapının aboneliği — İLK abonelikte depo bir kez okunur (use-me deseninin sadeleşmiş hâli;
- * bayrak cihaz ömrü boyunca sabit olduğu için abonelik düşünce yeniden okuma kurulmaz).
- */
+/** Depo ilk abonelikte bir kez okunur; bayrak cihaz ömrü boyunca sabit olduğu için abonelik düşünce yeniden okunmaz. */
 export function subscribeOnboarding(listener: () => void): () => void {
   if (!readStarted) {
     readStarted = true;

@@ -6,6 +6,7 @@ import {
   type MeCartItemWriteSchema,
   type MeCartReorder,
   type MeCartView,
+  type Country,
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
@@ -25,6 +26,8 @@ export interface CartViewQuery {
   locale: Locale;
   /** Cihazda kayıtlı posta kodu; `null` = hiç girilmemiş → parametre YAZILMAZ (katalog kuralı). */
   postalCode: string | null;
+  /** Kodun seçilen ülkesi; aynı kod iki ülkede varsa yer ancak bununla çözülür. */
+  country?: Country | null;
   /** Uygulanmak İSTENEN kupon kodu; `null` = kupon denenmiyor. */
   coupon: string | null;
   /** Gel-al seçimi: görünüm seçilen deponun stoğuyla çözülür; sunucu kimliği teklif kapısından geçirir, geçemeyeni yok sayar. */
@@ -49,6 +52,7 @@ function viewQuery(query: CartViewQuery, extra: Record<string, string | undefine
   return queryOf({
     locale: query.locale,
     postalCode: present(query.postalCode),
+    country: present(query.postalCode) === undefined ? undefined : (query.country ?? undefined),
     pickupWarehouseId: present(query.pickupWarehouseId),
     coupon: present(query.coupon),
     ...extra,
@@ -116,9 +120,11 @@ export function fetchGuestCartView(
   couponCode: string | null,
   locale: Locale,
   postalCode: string | null,
+  country: Country | null = null,
 ): Promise<ApiResult<MeCartView>> {
   const body: z.input<typeof CartViewBodySchema> = { items: [...items], couponCode: present(couponCode) ?? null };
-  return apiFetch(`/api/v1/cart/view${queryOf({ locale, postalCode: present(postalCode) })}`, MeCartViewSchema, {
+  const place = present(postalCode);
+  return apiFetch(`/api/v1/cart/view${queryOf({ locale, postalCode: place, country: place === undefined ? undefined : (country ?? undefined) })}`, MeCartViewSchema, {
     method: 'POST',
     body,
   });

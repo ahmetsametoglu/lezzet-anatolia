@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { applyBestDiscount, diffCartByPlace, meetsMinBasket, minBasketBaseOf, undeliverableTotalOf } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
-import type { CartLineChange, CatalogImage, MeCartView, MeCartViewLine } from '@lezzet/types';
+import type { CartLineChange, CatalogImage, Country, MeCartView, MeCartViewLine } from '@lezzet/types';
 
 import {
   addCartItems,
@@ -211,6 +211,7 @@ export function refreshCart(): void {
 interface ViewContext {
   locale: Locale;
   postalCode: string | null;
+  country: Country | null;
 }
 
 /**
@@ -225,35 +226,40 @@ let context: ViewContext | null = null;
  * ikinci bir görünüm yoktur.
  */
 let purchasePostalCode: string | null = null;
+let purchaseCountry: Country | null = null;
 /** Gel-al seçimi (adres seçicideki depo kartı): görünüm o deponun stoğuyla çözülür, posta kodu yalnız yedek. */
 let purchasePickupWarehouseId: string | null = null;
 /** Yer değişince bir sonraki okumanın kıyaslanacağı eski görünüm; okuma dönünce boşalır. */
 let compareTo: MeCartView | null = null;
 
 /** Görünümün çözüleceği yer — adres biliniyorsa o, yoksa gezinme kodu (künye: `purchasePostalCode`). */
-function placeNow(): string | null {
-  return purchasePostalCode ?? context?.postalCode ?? null;
+function placeNow(): { postalCode: string | null; country: Country | null } {
+  // Kod ile ülke aynı kaynaktan okunur; birinin adresten öbürünün gezinme kaydından gelmesi başka bir yer olurdu.
+  if (purchasePostalCode !== null) return { postalCode: purchasePostalCode, country: purchaseCountry };
+  return { postalCode: context?.postalCode ?? null, country: context?.country ?? null };
 }
 
 function queryNow(): CartViewQuery | null {
   if (context === null) return null;
-  return { locale: context.locale, postalCode: placeNow(), coupon: state.couponCode, pickupWarehouseId: purchasePickupWarehouseId };
+  return { locale: context.locale, ...placeNow(), coupon: state.couponCode, pickupWarehouseId: purchasePickupWarehouseId };
 }
 
 /** Satın alma yerini bildirir; değişince görünüm yeniden çözülür, `null` gezinme koduna döner. */
-function setPurchasePlace(postalCode: string | null, pickupWarehouseId: string | null): void {
-  if (purchasePostalCode === postalCode && purchasePickupWarehouseId === pickupWarehouseId) return;
+function setPurchasePlace(postalCode: string | null, country: Country | null, pickupWarehouseId: string | null): void {
+  if (purchasePostalCode === postalCode && purchaseCountry === country && purchasePickupWarehouseId === pickupWarehouseId) return;
   // Gezinme kodundan ilk satın alma yerine hizalanma duyurulmaz: değişen bir yer değil, gelen cevaptır.
   const known = purchasePostalCode !== null || purchasePickupWarehouseId !== null;
   compareTo = known && state.view.lines.length > 0 ? state.view : null;
   purchasePostalCode = postalCode;
+  purchaseCountry = country;
   purchasePickupWarehouseId = pickupWarehouseId;
   refreshView();
 }
 
 /** Satın alma yeri adres listesinden ve seçimden kurulur; ekranlar yeri bildirmez, yalnız okur. */
 function syncPurchasePlace(): void {
-  setPurchasePlace(purchaseAddressNow()?.postalCode ?? null, getSelectedPickupWarehouse());
+  const address = purchaseAddressNow();
+  setPurchasePlace(address?.postalCode ?? null, address?.country ?? null, getSelectedPickupWarehouse());
 }
 
 // ── SUNUCU TURU ─────────────────────────────────────────────────────────────
@@ -575,7 +581,7 @@ async function resolveGuestView(query: CartViewQuery): Promise<void> {
   const mine = ++revision;
   publish({ ...state, resolving: true });
 
-  const result = await fetchGuestCartView(items, query.coupon, query.locale, query.postalCode);
+  const result = await fetchGuestCartView(items, query.coupon, query.locale, query.postalCode, query.country ?? null);
   if (mine !== revision) return;
 
   if (result.error !== null) {
@@ -667,7 +673,8 @@ function stopWatching(): void {
  * yaptığı seçimi yok saymaktır.
  */
 function setViewContext(next: ViewContext): void {
-  const changed = context === null || context.locale !== next.locale || context.postalCode !== next.postalCode;
+  const changed =
+    context === null || context.locale !== next.locale || context.postalCode !== next.postalCode || context.country !== next.country;
   context = next;
   if (changed) refreshView();
 }
@@ -680,6 +687,7 @@ export function useCartSync(enabled = true): void {
   const locale = useAppLocale();
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
+  const country = onboarding?.country ?? null;
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -689,8 +697,8 @@ export function useCartSync(enabled = true): void {
 
   useEffect(() => {
     if (!enabled) return;
-    setViewContext({ locale, postalCode });
-  }, [enabled, locale, postalCode]);
+    setViewContext({ locale, postalCode, country });
+  }, [country, enabled, locale, postalCode]);
 }
 
 // ── YAZMA KAPILARI (ekranlar yalnız bunları çağırır) ────────────────────────
@@ -778,10 +786,7 @@ export function removeProduct(id: string): void {
   slug değil uuid'dir.
 */
 
-/**
- * Hazır paketi sepete ekler; aynı paket zaten varsa ADEDİNİ artırır (`addProduct`un aynı kuralı —
- * v3 `addPkg` de böyle: `cartPkgs`ta satır varsa `qty` toplanır, yeni satır açılmaz).
- */
+/** Aynı paket zaten varsa adedini artırır, yeni satır açmaz (`addProduct`un aynı kuralı). */
 export function addBundle(line: Omit<CartBundleLine, 'quantity'>, quantity = 1): void {
   const existing = state.bundles.find((bundle) => bundle.id === line.id);
   const next: CartState = {

@@ -1,23 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Home } from '@lezzet/types';
+import type { Home, Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchHome } from '@/lib/api/home';
 
 /*
-  VİTRİN VERİSİ — tek istek, üç bölüm (bantlar · fırsatlar · tarifler). Sayfalama yok, süzgeç yok;
-  ürün detay hook'uyla aynı iskelet. Eskimiş cevap koruması yine tek sebepten: art arda iki uçuş
-  başlarsa yavaş olanın sonucu hızlıyı ezmesin.
-
-  HATA EKRANA TAŞINMAZ, BÖLÜM ÇİZİLMEZ: vitrin tasarımında bu bölümler için iskelet/hata hâli
-  tanımlı değil (v3'te vitrin hep dolu) ve vitrinin geri kalanı (fixture bölümleri) ayakta.
-  Sessiz yutma değil — durum burada duruyor, ekran "boş dizi = bölüm yok" kuralıyla çiziyor;
-  vitrine tasarımdan bir hata hâli gelirse bu durumdan okunur.
-
-  AŞAĞI ÇEKEREK YENİLEME (kullanıcı isteği 09.08) İLK YÜKTEN AYRI BİR ŞEYDİR: yenileme sırasında
-  `status` 'loading'e DÜŞMEZ — düşseydi ekrandaki bütün bölümler bir an kaybolur, sonra geri
-  gelirdi. Eski veri de yenileme HATASINDA silinmez: "yeni veriyi alamadım" ile "veri yok" ayrı
-  cümlelerdir ve ikincisini söylemek elimizdekini gizlemek olurdu.
+  Hatada bölüm çizilmez, çünkü tasarımda bu bölümlerin hata hâli yok ve vitrinin geri kalanı ayaktadır; durum yine burada tutulur.
+  Yenileme `status`u 'loading'e düşürmez ve hatasında eski veri silinmez, çünkü "yeni veriyi alamadım" ile "veri yok" ayrı cümlelerdir.
 */
 
 type HomeStatus = 'loading' | 'ready' | 'error';
@@ -31,13 +20,13 @@ interface UseHomeResult {
   retry: () => void;
 }
 
-/**
- * @param postalCode Cihazdaki saklı posta kodu. Yerin SORUSUDUR, cevabı sunucu verir — fırsat
- * şeridi buna bağlı (ölçüldü 09.08: kodsuz `offers=0`, 67000 ile `offers=2`). Kod DEĞİŞİNCE
- * vitrin yeniden okunur: teklif ve stok yere göre değişiyor, eski ekran kalırsa müşteri başka bir
- * bölgenin fiyatına bakar.
- */
-export function useHome(locale: Locale, postalCode: string | null, pickupWarehouseId: string | null = null): UseHomeResult {
+/** Yer değişince vitrin yeniden okunur, çünkü teklif ve stok yere göre değişir ve eski ekran başka bölgenin fiyatını gösterirdi. */
+export function useHome(
+  locale: Locale,
+  postalCode: string | null,
+  pickupWarehouseId: string | null = null,
+  country: Country | null = null,
+): UseHomeResult {
   const [status, setStatus] = useState<HomeStatus>('loading');
   const [home, setHome] = useState<Home | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +38,7 @@ export function useHome(locale: Locale, postalCode: string | null, pickupWarehou
       if (options.refresh) setRefreshing(true);
       else setStatus('loading');
 
-      void fetchHome(locale, postalCode, pickupWarehouseId).then((result) => {
+      void fetchHome(locale, postalCode, pickupWarehouseId, country).then((result) => {
         if (run !== generation.current) return;
         setRefreshing(false);
         if (result.error !== null) {
@@ -61,7 +50,7 @@ export function useHome(locale: Locale, postalCode: string | null, pickupWarehou
         setStatus('ready');
       });
     },
-    [locale, pickupWarehouseId, postalCode],
+    [country, locale, pickupWarehouseId, postalCode],
   );
 
   useEffect(() => {

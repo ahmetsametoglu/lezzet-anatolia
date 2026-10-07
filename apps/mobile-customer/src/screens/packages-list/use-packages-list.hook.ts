@@ -1,26 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { HomePackage } from '@lezzet/types';
+import type { HomePackage, Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchPackages } from '@/lib/api/packages';
 
 /*
-  PAKET LİSTESİ VERİSİ — tek uç (`GET /api/v1/packages`), üç hâl.
-
-  MİSAFİR DALI YOK: uç oturumsuz gezilir (katalog kümesindendir) — 401 diye bir hâli yok, kimlik
-  hiç okunmuyor.
-
-  SAYFALAMA YOK ve olmaması sözleşmenin kararıdır (`PackageListSchema` künyesi): paket kataloğu
-  doğal tavanlı, operatörün elle kurduğu bir kümedir → tek turda gelir (CLAUDE §1'in "sayfalama
-  ölçütü liste olmak değil, SINIRSIZ büyümek" kuralı). Bu yüzden `nextCursor`/`loadMore` de yok —
-  olmayan bir kuyruğu beklemek listenin sonunu yalan söylemek olurdu.
-
-  İLK YÜK İLE KUYRUK/YENİLEME AYRI ŞEYLERDİR (kullanıcı bulgusu 09.08): aşağı çekerek yenileme
-  ekranı iskelete DÜŞÜRMEZ — satırlar yerinde kalır, hareketin kendi göstergesi yeter. `status`
-  yalnız ilk yükün hâlidir; `refreshing` yenilemenin.
-
-  ESKİMİŞ CEVAP KORUMASI (`generation`): "tekrar dene"ye art arda basan parmak iki uçuş başlatır;
-  yavaş olanın sonucu hızlıyı ezmesin diye sayacı tutmayan cevap YAZILMAZ (`use-orders.hook` deseni).
+  Sayfalama yok, çünkü paket kataloğu operatörün kurduğu doğal tavanlı bir kümedir ve tek turda gelir.
+  Aşağı çekerek yenileme ekranı iskelete düşürmez: `status` yalnız ilk yükün, `refreshing` yenilemenin hâlidir.
 */
 
 type PackagesStatus = 'loading' | 'ready' | 'error';
@@ -34,19 +20,17 @@ interface UsePackagesListResult {
   retry: () => void;
 }
 
-/**
- * @param postalCode Cihazdaki saklı posta kodu (`lib/onboarding`); `null` = kod hiç girilmemiş.
- *   YERİN SORUSUDUR, cevabı sunucu verir — kart "bu adrese gelir mi"yi ancak bu kodla söyleyebilir
- *   (10.08). Kod değişince liste baştan okunur: `load` ona bağlı.
- */
+/** Yer değişince liste baştan okunur, çünkü kart "bu adrese gelir mi"yi ancak bu yerle söyleyebilir. */
 export function usePackagesList(
   locale: Locale,
   postalCode: string | null,
   pickupWarehouseId: string | null = null,
+  country: Country | null = null,
 ): UsePackagesListResult {
   const [status, setStatus] = useState<PackagesStatus>('loading');
   const [packages, setPackages] = useState<HomePackage[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  // Art arda "tekrar dene" iki uçuş başlatır; sayacı tutmayan cevap yazılmaz ki yavaş olan hızlıyı ezmesin.
   const generation = useRef(0);
 
   const load = useCallback(
@@ -55,7 +39,7 @@ export function usePackagesList(
       if (options.refresh) setRefreshing(true);
       else setStatus('loading');
 
-      void fetchPackages(locale, postalCode, pickupWarehouseId).then((result) => {
+      void fetchPackages(locale, postalCode, pickupWarehouseId, country).then((result) => {
         if (run !== generation.current) return;
         setRefreshing(false);
 
@@ -71,7 +55,7 @@ export function usePackagesList(
         setStatus('ready');
       });
     },
-    [locale, pickupWarehouseId, postalCode],
+    [country, locale, pickupWarehouseId, postalCode],
   );
 
   useEffect(() => {

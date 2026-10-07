@@ -63,15 +63,15 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
   const { theme } = useUnistyles();
   const router = useRouter();
   /* Katalog vitrinle aynı yeri gönderir (`usePurchasePlace`), çünkü fiyat, teklif ve stok depoya göre değişir. */
-  const { postalCode } = usePurchasePlace();
+  const { postalCode, country } = usePurchasePlace();
   // Gel-al seçiliyken liste seçilen depodan okunur; ürün detayı aynı seçimi taşır.
   const pickupWarehouseId = useSelectedPickupWarehouse();
-  const catalog = useCatalog(locale, postalCode, pickupWarehouseId);
+  const catalog = useCatalog(locale, postalCode, pickupWarehouseId, country);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
 
   /* Yerin çözümü kartın cümlesini ve süzgeç satırını belirler; stok hâli sunucunun cevabından gelir, bu çözüm yalnız "rota
      içinde miyim" sorusunu cevaplar. Aşağı çekme kapsamı da tazeler, çünkü soğuk zincir ürünlerinin gösterilmesi ona bağlı. */
-  const placeLookup = usePlaceLookup(postalCode ?? '');
+  const placeLookup = usePlaceLookup(postalCode ?? '', country);
   const place = placeLookup.place;
   const placeMode = placeModeOf(place);
   const chipVisible = shippableChipVisible(placeMode);

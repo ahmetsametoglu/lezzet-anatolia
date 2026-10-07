@@ -109,10 +109,10 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 
   /* Kod müşterinin yerinden gelir (girişlide seçili teslimat adresi, değilse cihazın kodu), adı `/places`tan; satırın biçimi web ile
      ortaktır (`placeLineOf`). Kod hiç yoksa hap bir davet olur, boş yer adı basılmaz. */
-  const { address: purchaseAddress, postalCode } = usePurchasePlace();
+  const { address: purchaseAddress, postalCode, country } = usePurchasePlace();
   /* Tam kanca (`place` + `refresh`), çünkü aşağı çekme kapsamı da tazeler; hareket çağıranın kaydırma alanına ait olduğu için buradan
      bağlanır. */
-  const savedPlaceLookup = usePlaceLookup(postalCode ?? '');
+  const savedPlaceLookup = usePlaceLookup(postalCode ?? '', country);
   const savedPlace = savedPlaceLookup.place;
   const resolvedName = savedPlace?.kind === 'resolved' ? savedPlace.place.placeName : null;
   /* Hatırlanan ad: `/places` cevabı gelene kadar ya da istek düşerse başlık çıplak kod yazardı; bir posta kodunun şehri değişmez,
@@ -135,7 +135,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
      posta kodunun tanımlandığı satırdan sonra durur. */
   // Gel-al seçiliyken vitrin seçilen depodan okunur; kaynak sepetle aynı seçim deposu.
   const pickupWarehouseId = useSelectedPickupWarehouse();
-  const home = useHome(locale, postalCode, pickupWarehouseId);
+  const home = useHome(locale, postalCode, pickupWarehouseId, country);
   const bands = home.home?.bands ?? [];
   const featured = home.home?.featured ?? [];
   const offers = home.home?.offers ?? [];

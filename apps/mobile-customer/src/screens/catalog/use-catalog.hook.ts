@@ -1,68 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CatalogCategory, CatalogCollection, CatalogPage, CatalogProduct, CatalogSort } from '@lezzet/types';
+import type { CatalogCategory, CatalogCollection, CatalogPage, CatalogProduct, CatalogSort, Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchCategories, fetchProducts } from '@/lib/api/catalog';
 import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 
 /*
-  KATALOG VERİSİ — kategori rayı (tek tur) + keyset sayfalı ürün listesi + ARAMA ve SIRALAMA.
-
-  SAYFALAYAN OKUMANIN TÜKETENİ VAR (CLAUDE §1): `nextCursor` saklanır ve bir sonraki istekte aynen
-  geri verilir; `null` gelene kadar liste büyür. İmleç OPAKTIR — içi okunmaz, yorumlanmaz.
-
-  ESKİMİŞ CEVAP KORUMASI (`generation`): süzgeç değişince ya da yenileme başlayınca sayaç artar;
-  uçuşta olan eski istekler döndüğünde sayacı tutmadıkları için sonuçları YAZILMAZ. Bu bir incelik
-  değil zorunluluk: "Baklava" çipine basıp hemen "Tümü"ne dönen müşteri, ilk isteğin geç gelen
-  cevabıyla yanlış listeyi görürdü ve çip "Tümü"de kalırdı. Aynı koruma arama için de geçerli ve
-  orada DAHA da gerekli: harf harf yazan bir parmak, her harf için bir uçuş demektir.
-
-  ── YAZILAN ARAMA ile İSTENEN ARAMA AYRI TUTULUR ────────────────────────────
-  `searchText` kutunun gösterdiği metindir ve her tuşta değişir; `filters.search` ise UCA GİDEN
-  değerdir ve ancak parmak durunca (`searchDebounceMs`) güncellenir. İkisini tek durumda tutmak
-  şu somut arızayı doğururdu: müşteri yazarken listenin sonuna gelirse, kuyruk isteği HENÜZ
-  istenmemiş bir arama metniyle atılır ve iki farklı sorgunun sayfaları aynı listeye karışırdı.
-
-  HATA YUTULMAZ: ilk yük düşerse ekran hata durumuna geçer (yeniden dene ile aynı sorguyu tekrar
-  eder); KUYRUK düşerse liste yerinde kalır ve listenin sonunda tekrar-dene çıkar. İkisi ayrı
-  ayrı taşınır çünkü ikisi ayrı şey: biri "hiç veri yok", öteki "devamı gelmedi".
-
-  ── YER (POSTA KODU) SÜZGEÇ DEĞİL, OKUMANIN BAĞLAMIDIR ──────────────────────
-  Kod `filters`e GİRMEZ: müşteri onu katalogda seçmiyor (kaynak cihazdaki kayıt) ve seçilmiş bir
-  süzgeç gibi davranırsa "temizle" düğmesinin kapsamına girerdi. Yine de her isteğe eşlik eder —
-  fiyat, teklif ve stok hâli depoya bağlı. Kod DEĞİŞİNCE liste baştan okunur ama SÜZGEÇLER
-  KORUNUR (`filtersRef`): bölge değiştirmek, seçili kategoriyi ya da aramayı iptal etmek değildir.
+  Eski cevap koruması (`generation`) zorunludur: çipe basıp hemen geri dönen ya da harf harf yazan müşteri, geç gelen cevapla yanlış listeyi görürdü.
+  Posta kodu süzgeç değil okumanın bağlamıdır: "temizle"nin kapsamına girmez, kod değişince liste baştan okunur ama süzgeçler korunur.
 */
 
 /** İlk yükün üç hâli — kuyruk (sonraki sayfa) durumu ayrı taşınır. */
 type CatalogStatus = 'loading' | 'ready' | 'error';
 
-/**
- * UCA GİDEN süzgeç kümesi. Tek nesne, çünkü üçü BİRLİKTE bir sorguyu tarif eder; ayrı ayrı
- * durumlarda tutulsalardı "hangi üçlüyle istendi" sorusunun cevabı yükün kendisinde olmazdı.
- */
+/** Uca giden süzgeçler tek nesnededir, çünkü birlikte bir sorguyu tarif ederler ve yükün hangi kümeyle istendiği kendisinde kalır. */
 interface CatalogFilters {
   /** Kategori SLUG'ı; `null` = "Tümü". */
   category: string | null;
-  /**
-   * Koleksiyon SLUG'ı; `null` = kesit yok (21.64). Kategoriden AYRI bir eksen ve ikisi birlikte
-   * açık olabilir: bant çizilirken çip rayı gizlenmiyor, yani müşteri kesitin içinde daraltabiliyor
-   * (kullanıcı kararı 16.08). Sorguyu uç AND'liyor.
-   *
-   * Süzgeç kümesine girmesinin ölçütü öteki üçüyle aynı: uca gidiyor, sayfalamayı sıfırlıyor,
-   * `total`ı değiştiriyor.
-   */
+  /** Koleksiyon slug'ı; `null` = kesit yok. Kategoriden ayrı bir eksendir, ikisi birlikte açık olabilir ve uç kesişimi döner. */
   collection: string | null;
   /** Aranan metin; boş dize = arama yok (uca hiç gitmez). */
   search: string;
   sort: CatalogSort;
-  /**
-   * "Adresime gönderilebilir" çipi (21.20) — VARSAYILAN KAPALI ve öteki süzgeçlerle aynı kümede
-   * durur, çünkü aynı işi yapar: uca gider, sayfalamayı sıfırlar, `total`ı değiştirir.
-   *
-   * Posta kodunun kendisi buraya GİRMEZ (o okumanın bağlamı, süzgeç değil — yukarıdaki künye);
-   * çip ise müşterinin KENDİ daraltmasıdır ve bir süzgeçtir.
-   */
+  /** "Adresime gönderilebilir" çipi müşterinin kendi daraltmasıdır, bu yüzden posta kodunun aksine süzgeç kümesinde durur. */
   onlyShippable: boolean;
 }
 
@@ -74,21 +34,11 @@ interface UseCatalogResult {
   categories: CatalogCategory[];
   /** Seçili kategori SLUG'ı; `null` = "Tümü". */
   activeCategory: string | null;
-  /**
-   * Etkin koleksiyon — bandın çizileceği tek kaynak; `null` = bant yok.
-   *
-   * ADI SUNUCUDAN gelir (`CatalogPage.activeCollection`), gezinme parametresinden DEĞİL: vitrin
-   * bandı adı biliyor ama derin bağlantıyla gelen ya da dili değişen bir ekran bilmez, ve ad dile
-   * göre çözülüyor. Slug ile ad böylece hep aynı cevaptan çıkar; ikisini ayrı kaynaklardan almak,
-   * bir gün "Bayram Sofrası" yazıp başka bir kesiti listelemenin yolu olurdu.
-   */
+  /** Bandın tek kaynağı; ad sunucunun cevabından gelir, çünkü derin bağlantıyla gelen ya da dili değişen ekran adı bilmez ve ayrı kaynaktan gelen ad slug'dan ayrışabilir. */
   activeCollection: CatalogCollection | null;
-  /**
-   * **Etkin kesitin kampanyası** (08.44) — `null` = yok ya da süzgeç yok. Karar sunucunun
-   * (`getCatalogData` → `readScopeCampaigns`); ekran yalnız cümleye döker.
-   */
+  /** Etkin kesitin kampanyası; `null` = yok. Kararı sunucu verir, ekran yalnız cümleye döker. */
   campaign: CatalogPage['campaign'];
-  /** Arama kutusunun GÖSTERDİĞİ metin (uca gitmiş olması gerekmez). */
+  /** Kutunun gösterdiği metin; uca giden `filters.search`ten ayrıdır, yoksa yazarken atılan kuyruk isteği iki sorgunun sayfalarını karıştırırdı. */
   searchText: string;
   sort: CatalogSort;
   /** "Adresime gönderilebilir" açık mı — çip seçili hâlini bundan okur. */
@@ -103,13 +53,7 @@ interface UseCatalogResult {
   tailFailed: boolean;
   refreshing: boolean;
   selectCategory: (slug: string | null) => void;
-  /**
-   * Koleksiyon kesiti — `null` bandın çarpısıdır (kesitten çık, katalogun tamamına dön), slug ise
-   * vitrin bandından gelen istektir. Kategorinin ikizi: TEK kapı, iki yön.
-   *
-   * Öteki süzgeçlere DOKUNMAZ: müşteri kesitin içinde bir kategori seçtiyse o seçim onundur ve
-   * bandı kapatmak onu da iptal etmek anlamına gelmez.
-   */
+  /** `null` bandın çarpısı, slug vitrin bandının isteğidir; öteki süzgeçlere dokunmaz, çünkü kesit içinde seçilen kategori müşterinindir. */
   selectCollection: (slug: string | null) => void;
   /** Kutuya yazılan metin; uca gecikmeyle gider. */
   search: (text: string) => void;
@@ -122,19 +66,19 @@ interface UseCatalogResult {
   retry: () => void;
 }
 
-/**
- * @param postalCode Cihazdaki saklı posta kodu (`lib/onboarding`); `null` = kod hiç girilmemiş.
- * Yerin SORUSUDUR, cevabı sunucu verir — vitrinle aynı desen (`use-home.hook.ts`). Kod değişince
- * katalog yeniden okunur: eski liste kalırsa müşteri başka bir bölgenin fiyatına bakar.
- */
-export function useCatalog(locale: Locale, postalCode: string | null, pickupWarehouseId: string | null = null): UseCatalogResult {
+/** Yer değişince katalog yeniden okunur, çünkü eski liste kalırsa müşteri başka bir bölgenin fiyatına bakar. */
+export function useCatalog(
+  locale: Locale,
+  postalCode: string | null,
+  pickupWarehouseId: string | null = null,
+  country: Country | null = null,
+): UseCatalogResult {
   const [status, setStatus] = useState<CatalogStatus>('loading');
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [filters, setFilters] = useState<CatalogFilters>({
     category: null,
-    /* Başlangıç DEĞERİ olarak dışarıdan alınmıyor: sekme mount kalıyor (navigatör tembel), yani
-       ikinci kez banda basıldığında yeni bir mount olmuyor ve `useState`in başlangıcı hiç
-       koşmuyordu. Banttan gelen istek kategoriyle AYNI kapıdan, bir etkiyle uygulanıyor. */
+    /* Dışarıdan başlangıç değeri alınmaz, çünkü sekme mount kalır ve ikinci bant isteğinde `useState` başlangıcı koşmaz; istek
+       kategoriyle aynı kapıdan bir etkiyle uygulanır. */
     collection: null,
     search: '',
     sort: DEFAULT_SORT,
@@ -155,12 +99,7 @@ export function useCatalog(locale: Locale, postalCode: string | null, pickupWare
   /** Bekleyen arama zamanlayıcısı — yeni tuş öncekini iptal eder. */
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  /**
-   * İlk sayfayı (ve gerekiyorsa kategori rayını) getirir.
-   *
-   * Kategoriler yalnız AÇILIŞTA ve YENİLEMEDE okunur, çip/arama/sıralama değişiminde okunmaz:
-   * doğal tavanlı bir küme her süzgeç dokunuşunda yeniden çekilecek bir şey değil.
-   */
+  /** Kategoriler yalnız açılışta ve yenilemede okunur, çünkü doğal tavanlı küme her süzgeç dokunuşunda yeniden çekilecek bir şey değil. */
   const load = useCallback(
     async (next: CatalogFilters, options: { withCategories: boolean; refresh: boolean }) => {
       const run = (generation.current += 1);
@@ -178,14 +117,15 @@ export function useCatalog(locale: Locale, postalCode: string | null, pickupWare
           sort: next.sort,
           onlyShippable: next.onlyShippable,
           postalCode,
+          country,
           pickupWarehouseId,
         }),
       ]);
       if (run !== generation.current) return;
 
       setRefreshing(false);
-      // Uçuşta kalmış bir kuyruk isteği varsa göstergesi burada kapanır: onun cevabı artık
-      // yazılmayacak (sayaç değişti), yani gösterge kendi kendine sönmezdi.
+      // Uçuşta kalan kuyruk isteğinin göstergesi burada kapanır, çünkü sayaç değiştiği için onun cevabı yazılmaz ve gösterge
+      // kendi sönmezdi.
       setLoadingMore(false);
 
       /* Kategori rayı düşerse ekran süzgeçsiz AÇILMAZ, hata gösterir. Sessizce daha geniş bir
@@ -206,13 +146,11 @@ export function useCatalog(locale: Locale, postalCode: string | null, pickupWare
       setCursor(pageResult.data.nextCursor);
       setStatus('ready');
     },
-    [locale, pickupWarehouseId, postalCode],
+    [country, locale, pickupWarehouseId, postalCode],
   );
 
-  /* Etkinin okuduğu GÜNCEL süzgeçler. Ref, çünkü etkinin bağımlılığı olsalardı her çip dokunuşu
-     ikinci bir açılış yükü (kategori rayı dahil) tetiklerdi; `load`un içine kapansalardı da yeni
-     `load` eski süzgeçle koşardı. Eşitleme AYRI ve ÖNCE gelen bir etkide: React etkileri yazım
-     sırasına göre koşturur, yani aşağıdaki yük etkisi hep taze değeri görür. */
+  /* Ref, çünkü süzgeçler etkinin bağımlılığı olsa her çip dokunuşu ikinci bir açılış yükü tetiklerdi. Eşitleme ayrı ve önce gelen
+     etkide, çünkü React etkileri yazım sırasıyla koşturur ve yük etkisi böylece taze değeri görür. */
   const filtersRef = useRef(filters);
   useEffect(() => {
     filtersRef.current = filters;
@@ -313,10 +251,11 @@ export function useCatalog(locale: Locale, postalCode: string | null, pickupWare
       onlyShippable: filters.onlyShippable,
       cursor,
       postalCode,
+      country,
       pickupWarehouseId,
     }).then(
       (result) => {
-        // Bu kuyruk artık BAŞKA bir listenin kuyruğu olabilir (süzgeç değişti) — yazılmaz.
+        // Süzgeç değiştiyse bu kuyruk başka bir listenindir, yazılmaz.
         if (run !== generation.current) return;
         setLoadingMore(false);
         if (result.error !== null) {
@@ -327,7 +266,7 @@ export function useCatalog(locale: Locale, postalCode: string | null, pickupWare
         setCursor(result.data.nextCursor);
       },
     );
-  }, [cursor, filters, loadingMore, locale, pickupWarehouseId, postalCode, status]);
+  }, [country, cursor, filters, loadingMore, locale, pickupWarehouseId, postalCode, status]);
 
   return {
     status,
@@ -338,16 +277,8 @@ export function useCatalog(locale: Locale, postalCode: string | null, pickupWare
     searchText,
     sort: filters.sort,
     onlyShippable: filters.onlyShippable,
-    /* Kategori çipi bu sayıya GİRMEZ: rayda zaten seçili çip görünüyor ve süzgeç düğmesinin
-       "etkin" hâli, rayda görünmeyen bir süzgecin var olduğunu söylemek içindir.
-
-       KARGO SÜZGECİ ARTIK GİRER (kullanıcı isteği 10.08): çipken ekranda kendi seçili hâliyle
-       duruyordu ve bu sayıya girmesi gereksizdi; süzgeç sayfasına taşınınca kapalı sayfanın
-       arkasında görünmez oldu — düğmenin dolu hâli onun var olduğunu söyleyen TEK işaret.
-
-       KOLEKSİYON GİRMEZ (21.64), ölçüt yine aynı: bant ekranda, adıyla ve çarpısıyla duruyor.
-       Görünen bir süzgeci düğmede ikinci kez işaretlemek, müşteriye kapalı süzgeç sayfasında
-       arayacağı bir şey varmış demek olurdu. */
+    /* Kategori ve koleksiyon sayılmaz, çünkü ikisi ekranda kendi seçili hâliyle görünür; kargo süzgeci süzgeç sayfasında gizli
+       kaldığı için sayılır. */
     filtersActive: filters.sort !== DEFAULT_SORT || filters.onlyShippable,
     products,
     hasMore: cursor !== null,

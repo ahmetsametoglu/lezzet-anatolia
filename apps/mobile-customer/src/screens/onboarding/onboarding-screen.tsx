@@ -1,6 +1,6 @@
 import { formatCompactEuro } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
-import type { MePointsEarnWayKey } from '@lezzet/types';
+import type { Country, MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, Text, TextInput, View } from 'react-native';
@@ -17,6 +17,7 @@ import placeMessages from '@lezzet/i18n/customer/place';
 import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@lezzet/mobile-kit/src/lib/settings/font-scale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { CountryChips } from '@/screens/customer-kit/country-chips';
 import { PointsEarnList } from '@/screens/customer-kit/points-earn-list';
 import { usePointsRules } from '@/screens/customer-kit/use-points-rules.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
@@ -71,6 +72,7 @@ export function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [fontScale, setFontScale] = useState<FontScale>('normal');
   const [zip, setZip] = useState('');
+  const [zipCountry, setZipCountry] = useState<Country>('FR');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* Kural ekran açılınca istenir, müşteri puan adımına gelene kadar cevap gelmiş olur. Kimliksiz uç, misafirde de çalışır. */
@@ -125,7 +127,7 @@ export function OnboardingScreen() {
 
   /* Bekleyiş bayrağı hook'tan gelir, türetilmez: `place === null` düşen isteği de kapsar ve türetilmiş bayrak orada
      sönmediği için iskelet hep dönerdi. */
-  const { place, pending: zipPending } = usePlaceLookup(zip);
+  const { place, pending: zipPending } = usePlaceLookup(zip, zipCountry);
 
   /* Dört hâlin her biri kendi cümlesini alır; bilinmeyen kod kapı değil uyarıdır. */
   const zipInside = place?.kind === 'resolved' && place.place.inRoute;
@@ -151,7 +153,7 @@ export function OnboardingScreen() {
    * "Sonra bakarım" vitrine.
    */
   const leave = (target: '/' | '/login') => {
-    void saveOnboarding({ done: true, locale, postalCode: zip === '' ? null : zip });
+    void saveOnboarding({ done: true, locale, postalCode: zip === '' ? null : zip, country: zip === '' ? null : zipCountry });
     void saveFontScale(fontScale);
     router.replace(target);
   };
@@ -299,6 +301,7 @@ export function OnboardingScreen() {
               {t.zip.title}
             </Text>
             <Text style={styles.body}>{t.zip.body}</Text>
+            <CountryChips value={zipCountry} onChange={setZipCountry} testIDPrefix="onboarding-country" />
             <TextInput
               value={zip}
               onChangeText={onZipChange}

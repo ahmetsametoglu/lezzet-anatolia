@@ -172,7 +172,7 @@ export function AccountScreen({
      sinyaldir ve ikisi aynı sayılırsa yatırım kararı yanlış veriden çıkar. */
   const defaultAddress = addressBook.addresses.find((a) => a.isDefault) ?? addressBook.addresses[0];
   const zipOfDefault = defaultAddress?.postalCode;
-  const saved = useSaved(signedIn, locale, zipOfDefault, t.saved.failed);
+  const saved = useSaved(signedIn, locale, zipOfDefault, t.saved.failed, defaultAddress?.country ?? null);
   /** Yalnız rota dışındaysa dolu; kaydın anahtarı ülke ve kod. */
   const [zonePlace, setZonePlace] = useState<{ country: Country; postalCode: string } | null>(null);
   useEffect(() => {
@@ -181,7 +181,7 @@ export function AccountScreen({
       return;
     }
     let alive = true;
-    void resolvePostalCode(zipOfDefault).then((result) => {
+    void resolvePostalCode(zipOfDefault, defaultAddress?.country ?? null).then((result) => {
       // Çözülemeyen kod "bölge dışı" sayılmaz: bilinmeyeni olumsuz okumak ölçemediğimizi ölçmüş gibi göstermek olurdu.
       if (!alive || result.error !== null) return;
       const place = result.data.kind === 'resolved' && !result.data.place.inRoute ? result.data.place : null;
@@ -190,7 +190,7 @@ export function AccountScreen({
     return () => {
       alive = false;
     };
-  }, [zipOfDefault]);
+  }, [defaultAddress?.country, zipOfDefault]);
   const outOfZone = zonePlace !== null;
 
   /*

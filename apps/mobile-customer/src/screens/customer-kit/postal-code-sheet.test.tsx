@@ -4,15 +4,14 @@ import messages from '@lezzet/i18n/customer/place';
 import { PostalCodeSheet } from './postal-code-sheet';
 
 /*
-  TESLİMAT BÖLGESİ ÇEKMECESİ — kod ÖNERİSİ (kullanıcı kararı 26.08): kısmi kod yazan müşteri
-  adayları listeden seçebilmeli (web `place-dialog` ile aynı davranış; ayrışma denetimin 25.08
-  kaydıydı). İki kural ölçülür:
-    · yazarken adaylar listelenir, dokununca alan dolar ve liste kapanır;
-    · beş hane ELLE tamamlanınca liste hiç açılmaz — o noktada soruyu yer çözümü cevaplıyor.
-  Ağ FETCH SEVİYESİNDE sahte, cevaplar sözleşme şeklinde — öneri kancası ve zarf gerçek yolunu koşar.
+  Kısmi kod yazan müşteri adayları listeden seçebilir, beş hane elle tamamlanınca soruyu yer çözümü cevaplar; seçilen ülke yer sorusuna ve
+  kayda gider. Ağ fetch düzeyinde sahte ve cevaplar sözleşme şeklinde, ki öneri kancası ve zarf gerçek yolunu koşsun.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
+
+const mockSave = jest.fn();
+jest.mock('@/lib/onboarding/onboarding-store', () => ({ saveOnboarding: (state: unknown) => mockSave(state) }));
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: (href: unknown) => mockPush(href) }) }));
@@ -81,12 +80,13 @@ beforeAll(() => {
 beforeEach(() => {
   fetchMock.mockReset();
   mockPush.mockReset();
+  mockSave.mockReset();
   mockPlaces();
 });
 
 function renderSheet() {
   return render(
-    <PostalCodeSheet visible code={null} onClose={jest.fn()} showZonesLink={false} testID="zip" />,
+    <PostalCodeSheet visible code={null} country={null} onClose={jest.fn()} showZonesLink={false} testID="zip" />,
   );
 }
 
@@ -102,7 +102,7 @@ test('kısmi kod adayları listeler; dokununca alan dolar, liste kapanır', asyn
   await fireEvent.press(row);
   expect(screen.getByTestId('zip-field').props.value).toBe('67200');
   expect(screen.queryByTestId('zip-suggestions')).toBeNull();
-  // Beş haneye seçimle ulaşmak da kaydı açar — düğme artık kilitli değil.
+  // Beş haneye seçimle ulaşmak da kaydı açar.
   await waitFor(() => expect(screen.getByText(t.save)).toBeEnabled());
 });
 
@@ -110,14 +110,26 @@ test('beş hane elle tamamlanınca liste hiç açılmaz — soruyu artık yer ç
   await renderSheet();
 
   await fireEvent.changeText(screen.getByTestId('zip-field'), '67200');
-  // Çözüm cevabı ekranda: istek turu bitti, "liste yok" iddiası artık erken bir bakış değil.
+  // Çözüm cevabı ekranda, yani istek turu bitti ve "liste yok" iddiası erken bir bakış değil.
   await screen.findByText('67200 · Strasbourg');
-  /* Öneri kancasının gecikme penceresi (300 ms) bilerek BEKLENİR: çözüm cevabı anında geldiği
-     için erken bakış "liste açılmadı"yı hep doğrular ve iddia sahte yeşil olurdu (21.111'in
-     dersi — sabotajla yakalandı: eşik kaldırılınca test yine geçiyordu). */
+  /* Öneri kancasının gecikme penceresi (300 ms) bilerek beklenir: çözüm cevabı anında geldiği için erken bakış "liste açılmadı"yı hep
+     doğrular ve iddia sahte yeşil olurdu. */
   await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
 
   expect(screen.queryByTestId('zip-suggestions')).toBeNull();
   const asked = fetchMock.mock.calls.map(([url]) => String(url));
   expect(asked.some((url) => url.includes('/places/suggest'))).toBe(false);
+});
+
+test('seçilen ülke yer sorusuna gider ve kayda yazılır', async () => {
+  await renderSheet();
+
+  await fireEvent.press(screen.getByTestId('zip-country-DE'));
+  await fireEvent.changeText(screen.getByTestId('zip-field'), '67200');
+  await screen.findByText('67200 · Strasbourg');
+  const asked = fetchMock.mock.calls.map(([url]) => String(url)).filter((url) => url.includes('/places/by-postal-code'));
+  expect(asked.at(-1)).toContain('country=DE');
+
+  await fireEvent.press(screen.getByText(t.save));
+  expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ postalCode: '67200', country: 'DE' }));
 });

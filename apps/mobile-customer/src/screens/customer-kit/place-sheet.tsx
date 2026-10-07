@@ -26,14 +26,16 @@ interface PlaceSheetProps {
 export function PlaceSheet({ visible, onClose, showZonesLink = false, testID }: PlaceSheetProps) {
   const { status } = useMe();
   const { addresses } = useAddresses(false);
-  const { address, postalCode } = usePurchasePlace();
+  const { address, postalCode, country } = usePurchasePlace();
   const pickupPoints = usePickupPoints(status === 'ready' && address !== null);
   const selectedPickupId = useSelectedPickupWarehouse();
   const [adding, setAdding] = useState(false);
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 
   if (address === null) {
-    return <PostalCodeSheet visible={visible} code={postalCode} onClose={onClose} showZonesLink={showZonesLink} testID={testID} />;
+    return (
+      <PostalCodeSheet visible={visible} code={postalCode} country={country} onClose={onClose} showZonesLink={showZonesLink} testID={testID} />
+    );
   }
 
   return (

@@ -62,10 +62,10 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
   const t: Messages = messages[locale];
   /* Yer katalog ve vitrinle aynı kaynaktan (`usePurchasePlace`); ikinci çözüm yalnız "rota içinde miyim" sorusunu cevaplar ve
      cümlenin geçici mi kalıcı mı olduğu ondan çıkar. */
-  const { postalCode } = usePurchasePlace();
-  const place = usePlaceResolution(postalCode ?? '');
+  const { postalCode, country } = usePurchasePlace();
+  const place = usePlaceResolution(postalCode ?? '', country);
   const pickupWarehouseId = useSelectedPickupWarehouse();
-  const { status, detail, retry } = usePackage(slug, locale, postalCode, pickupWarehouseId);
+  const { status, detail, retry } = usePackage(slug, locale, postalCode, pickupWarehouseId, country);
 
   const [quantity, setQuantity] = useState(1);
   const cart = useCart();

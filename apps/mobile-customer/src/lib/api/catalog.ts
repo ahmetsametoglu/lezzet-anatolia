@@ -1,23 +1,13 @@
 import type { z } from 'zod';
-import { CatalogCategoryListSchema, CatalogPageSchema, CatalogProductDetailSchema, type CatalogSort } from '@lezzet/types';
+import { CatalogCategoryListSchema, CatalogPageSchema, CatalogProductDetailSchema, type CatalogSort, type Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 import { maybeAuthorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
 
 /*
-  KATALOG OKUMALARI — `/api/v1/categories` + `/api/v1/products`.
-
-  ŞEMA BURADA YAZILMAZ: gövde sözleşmesi `@lezzet/types`ın (`catalog-api.schema.ts`) ve uç da AYNI
-  şemayla üretiyor (02-mimari §3.2 "sözleşme tek kaynak"). Bu dosyanın işi yalnız sorgu dizesini
-  kurmak ve şemayı istemciye vermek — alan adı değişirse iki taraf birden derlemede kırılır.
-
-  `locale` HER İSTEKTE zorunlu: uç dilsiz çağrıyı 400'le reddediyor (sessizce Türkçe'ye düşmesin
-  diye). Değer UYGULAMANIN DİLİDİR (`lib/i18n/app-locale.ts` — kullanıcının seçimi, yoksa cihaz
-  dili), ekranların kendi kararı değil: ekran metniyle ürün adı aynı kaynaktan beslenir.
-
-  ÜRÜN VE LİSTE KİMLİKLE OKUNUR (`maybeAuthorizedFetch`): gel-al deposu sunucuda müşteri izniyle kapılanır,
-  kimliksiz istek seçimi yok sayar; oturum yoksa istek yine atılır. Kategori rayı kimliksizdir.
+  Şema burada yazılmaz: gövde sözleşmesi `@lezzet/types`ta ve uç da aynı şemayla üretir, alan adı değişirse iki taraf birden kırılır.
+  Ürün ve liste kimlikle okunur (`maybeAuthorizedFetch`), çünkü gel-al deposu sunucuda müşteri izniyle kapılanır; kategori rayı kimliksizdir.
 */
 
 /** Sorgu dizesi — verilmemiş (`undefined`) parametre YAZILMAZ; boş dize meşru bir değerdir. */
@@ -28,8 +18,7 @@ function queryOf(params: Record<string, string | undefined>): string {
   return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
 }
 
-/** Kategori rayı — DOĞAL TAVANLI küme, tek turda çekilir (sayfalama YOK — CLAUDE §1). Zarf dahil
- *  şema types'tan: uç da AYNI şemayla üretiyor, alan adı ayrışırsa iki taraf birden derlemede kırılır. */
+/** Kategori rayı doğal tavanlı bir küme, bu yüzden sayfalanmaz ve tek turda gelir. */
 export function fetchCategories(locale: Locale): Promise<ApiResult<z.infer<typeof CatalogCategoryListSchema>>> {
   return apiFetch(`/api/v1/categories${queryOf({ locale })}`, CatalogCategoryListSchema);
 }
@@ -38,46 +27,21 @@ interface ProductPageQuery {
   locale: Locale;
   /** Kategori SLUG'ı; `null` = "Tümü" (süzgeç yok). */
   category: string | null;
-  /**
-   * Koleksiyon SLUG'ı (21.64); `null` = kesit yok, katalogun tamamı.
-   *
-   * Kategoriden BAĞIMSIZ bir eksen: ikisi birlikte gönderilebilir ve uç AND'ler. Tel üstündeki
-   * adı web'in URL'siyle aynı (`?collection=`) — `shippable`ın kuralı birebir.
-   */
+  /** Koleksiyon slug'ı; `null` = katalogun tamamı. Kategoriden bağımsız bir eksendir, ikisi birlikte gelince uç kesişimi döner. */
   collection: string | null;
-  /**
-   * Ad araması — uç üç dilde birden arıyor (`q`). BOŞ DİZE GÖNDERİLMEZ: uç `min(1)` istiyor ve
-   * "arama yok" ile "boş dize aradım" aynı şey değil; ayrımı burada, tek yerde yapıyoruz.
-   */
+  /** Ad araması (`q`); boş dize gönderilmez, çünkü uç `min(1)` ister ve "arama yok" ile "boş dize" ayrı şeydir. */
   search?: string;
   /** Sıralama; verilmezse uç kendi varsayılanına (`featured`) düşer — istemci ikinci bir varsayılan tutmaz. */
   sort?: CatalogSort;
-  /**
-   * Bir önceki sayfanın `nextCursor`ı — OPAK dize, yorumlanmaz, aynen geri verilir. İçinin ne
-   * olduğu sunucunun bileceği iş; istemci onu okumaya kalksaydı keyset'in şekli sözleşme olurdu.
-   */
+  /** Önceki sayfanın `nextCursor`ı; opak kalır, çünkü istemci içini okusaydı keyset'in şekli sözleşme olurdu. */
   cursor?: string;
-  /**
-   * Cihazda kayıtlı posta kodu — YERİN SORUSUDUR, cevabı değil: depoyu sunucu çözer (uç künyesi
-   * `apps/mobile-api/src/api/v1/catalog.ts` → `readPlace`). Fiyat, teklif ve stok hâli depoya göre
-   * değişir; kod gitmezse liste "hiç var mı" sorusunun ağ-geneli cevabıyla döner.
-   *
-   * `null`/boş = kod hiç girilmemiş → parametre HİÇ YAZILMAZ (vitrin okumasının kuralı birebir,
-   * `home.ts`): boş bir `postalCode=` sunucuda yine "yer bilinmiyor"a düşer ama isteği kirletir.
-   */
+  /** Yerin sorusudur, depoyu sunucu çözer; kod gitmezse fiyat ve stok ağ geneli cevapla döner. */
   postalCode?: string | null;
+  /** Kodun seçilen ülkesi; aynı kod iki ülkede varsa yer ancak bununla çözülür. */
+  country?: Country | null;
   /** Seçili gel-al deposu (adres çekmecesindeki depo kartı): sunucu teklif kapısından geçirir, geçerse yer o depodur. */
   pickupWarehouseId?: string | null;
-  /**
-   * "Adresime gönderilebilir" çipi (21.20) — kargolanabilir kalemlere daraltır.
-   *
-   * Tel üstündeki adı WEB'İN URL'siyle AYNI (`?shippable=1`): iki yüzey aynı soruyu aynı kelimeyle
-   * sorar. Varsayılan KAPALI ve kapalıyken parametre HİÇ YAZILMAZ — `shippable=0` göndermek
-   * "süzgeç yok" ile aynı sonucu verir ama isteği kirletir (`postalCode`un kuralı birebir).
-   *
-   * **Süzgeç YALNIZ YER eksenini daraltır:** tükenmiş ürün listede kalır (o başka bir eksen ve
-   * kendi işareti var). Çipin adının söylemediği ikinci bir daraltma yapılmaz.
-   */
+  /** "Adresime gönderilebilir" çipi yalnız yer eksenini daraltır; tükenmiş ürün listede kalır, çünkü onun kendi işareti var. */
   onlyShippable?: boolean;
 }
 
@@ -87,17 +51,15 @@ export function fetchProductDetail(
   locale: Locale,
   postalCode?: string | null,
   pickupWarehouseId?: string | null,
+  country: Country | null = null,
 ): Promise<ApiResult<z.infer<typeof CatalogProductDetailSchema>>> {
-  /* POSTA KODU DETAYDA DA ZORUNLU — atlanınca ÖLÇÜLEBİLİR bir tutarsızlık doğuyor (09.08):
-     katalog kodu gönderiyor, detay göndermiyordu ve aynı ürün listede 1,84 €, detayda 2,30 €
-     görünüyordu. Müşteri indirimli fiyata dokunup normal fiyatı görüyor — verilmiş sözün
-     bozulmasının ta kendisi. Teklif tutarı depoya bağlı olduğu için iki ekranın AYNI yeri
-     sorması şart. */
+  /* Detay da yeri sorar, çünkü teklif tutarı depoya bağlıdır; sormasa aynı ürün listede indirimli, detayda normal fiyatla görünür. */
   const trimmed = postalCode?.trim();
   return maybeAuthorizedFetch(
     `/api/v1/products/${encodeURIComponent(slug)}${queryOf({
       locale,
       ...(trimmed ? { postalCode: trimmed } : {}),
+      ...(trimmed && country !== null ? { country } : {}),
       ...(pickupWarehouseId ? { pickupWarehouseId } : {}),
     })}`,
     CatalogProductDetailSchema,
@@ -116,6 +78,7 @@ export function fetchProducts(query: ProductPageQuery): Promise<ApiResult<z.infe
     sort: query.sort,
     cursor: query.cursor,
     postalCode: postalCode === undefined || postalCode.length === 0 ? undefined : postalCode,
+    country: postalCode === undefined || postalCode.length === 0 ? undefined : (query.country ?? undefined),
     pickupWarehouseId: query.pickupWarehouseId ?? undefined,
     shippable: query.onlyShippable === true ? '1' : undefined,
   })}`;

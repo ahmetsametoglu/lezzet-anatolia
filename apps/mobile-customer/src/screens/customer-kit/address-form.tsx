@@ -11,7 +11,7 @@ import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import addressCopy from '@lezzet/i18n/customer/address';
 import placeCopy from '@lezzet/i18n/customer/place';
-import { CountryEnum, type Country } from '@lezzet/types';
+import type { Country } from '@lezzet/types';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -38,6 +38,7 @@ import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { ChannelBadge } from './channel-badge';
+import { CountryChips } from './country-chips';
 import { selectDeliveryAddress } from './delivery-address-store';
 import { useAddressLookup } from './use-address-lookup.hook';
 import { useDoorCodes } from './use-door-codes.hook';
@@ -250,22 +251,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
 
   return (
     <View style={styles.form}>
-      {/* ÖNCE ÜLKE: öneri ve doğrulama seçilen ülkede yapılır. */}
-      <View style={styles.group}>
-        <Text style={styles.eyebrow}>{t.countryLabel}</Text>
-        <View style={styles.chipRow}>
-          {CountryEnum.options.map((code) => (
-            <Chip
-              key={code}
-              grow
-              label={code === 'DE' ? place.countryDE : place.countryFR}
-              selected={country === code}
-              onPress={() => changeCountry(code)}
-              testID={`address-country-${code}`}
-            />
-          ))}
-        </View>
-      </View>
+      <CountryChips value={country} onChange={changeCountry} testIDPrefix="address-country" />
 
       <View style={styles.group}>
         <TextField
@@ -465,14 +451,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   group: {
     gap: theme.space.md,
-  },
-  /* "ÜLKE" — tasarımın üst başlık dili (terracotta, açık harf aralığı), sepetin adres künyesiyle aynı kalıp. */
-  eyebrow: {
-    fontFamily: theme.font.body[theme.text['eyebrow-xs--font-weight']],
-    fontSize: theme.text['eyebrow-xs'],
-    letterSpacing: theme.text['eyebrow-xs'] * 0.18,
-    textTransform: 'uppercase',
-    color: theme.colors.terracotta,
   },
   /** Satırı paylaşan seçim çipleri — ülke ikisi, etiket üçü eşit paylı (tasarım `flex:1`). */
   chipRow: {

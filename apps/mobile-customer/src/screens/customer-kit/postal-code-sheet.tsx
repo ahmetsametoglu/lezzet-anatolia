@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Country } from '@lezzet/types';
 
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
@@ -16,10 +17,11 @@ import messages from '@lezzet/i18n/customer/place';
 import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
+import { CountryChips } from './country-chips';
 import { usePostalSuggest } from './use-postal-suggest.hook';
 
 /*
-  Teslimat bölgesi çekmecesi: vitrin başlığındaki posta kodu hapına dokununca açılır (posta kodu → çözüm notu → Kaydet); üç çağıran aynı
+  Teslimat bölgesi çekmecesi: vitrin başlığındaki posta kodu hapına dokununca açılır (ülke ve posta kodu → çözüm notu → Kaydet); üç çağıran aynı
   soruyu sorduğu için metin, kayıt ve kimlik buradadır ve yer çözümü onboarding'in posta kodu adımıyla aynı kapıdan gelir. Taslak yereldir,
   Kaydet beş haneden önce kapalıdır ve "Nerelere gidiyorsunuz?" bağlantısı prop'la açılır, çünkü bölgeler sayfasından açılınca ölü kapı
   olurdu.
@@ -31,6 +33,8 @@ interface PostalCodeSheetProps {
   visible: boolean;
   /** Saklı posta kodu — çekmece her açılışta buradan başlar; `null` = kod hiç girilmemiş. */
   code: string | null;
+  /** Saklı kodun ülkesi; yoksa çekmece Fransa seçili açılır. */
+  country: Country | null;
   /** Kapanış: örtü, sürükleme, Android geri VE kaydetme sonrası — çağıran çekmecesini kapatır. */
   onClose: () => void;
   /** "Nerelere gidiyorsunuz?" bağlantısı çizilsin mi — teslimat bölgeleri sayfasında `false` (künye). */
@@ -39,7 +43,7 @@ interface PostalCodeSheetProps {
   testID?: string;
 }
 
-export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID }: PostalCodeSheetProps) {
+export function PostalCodeSheet({ visible, code, country, onClose, showZonesLink, testID }: PostalCodeSheetProps) {
   const locale = useAppLocale();
   const router = useRouter();
   const t: Messages = messages[locale];
@@ -50,16 +54,18 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
   const signedIn = meState.status === 'ready' && meState.me !== null;
 
   const [draft, setDraft] = useState(code ?? '');
-  /* Öneri listesi yalnız yazarken ve eksik kodda görünür: beş haneden sonra soruyu yer çözümü cevaplar. Seçim yalnız kodu doldurur, iki
-     ülkede geçerli kodun ülkesi adres girilirken netleşir. */
+  const [selectedCountry, setSelectedCountry] = useState<Country>(country ?? 'FR');
+  /* Öneri listesi yalnız yazarken ve eksik kodda görünür: beş haneden sonra soruyu yer çözümü cevaplar. Seçim kodu ülkesiyle birlikte
+     doldurur, çünkü aynı kod iki ülkede de bulunabilir. */
   const [suggestOpen, setSuggestOpen] = useState(false);
   // Açılışta saklı değere dönülür (künye: yarım kalmış düzenleme taşınmaz); liste kapalı başlar.
   useEffect(() => {
     if (visible) {
       setDraft(code ?? '');
+      setSelectedCountry(country ?? 'FR');
       setSuggestOpen(false);
     }
-  }, [code, visible]);
+  }, [code, country, visible]);
   const suggestions = usePostalSuggest(draft, { enabled: visible && suggestOpen });
 
   /** Aynı kod iki ülkede geçerli olabiliyor; satır anahtarı adres formundakiyle aynı gerekçeyle ikili. */
@@ -76,11 +82,12 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
     if (picked === undefined) return;
     setSuggestOpen(false);
     setDraft(picked.postalCode);
+    setSelectedCountry(picked.country);
   };
 
   /* Bekleyiş bayrağı hook'tan gelir, TÜRETİLMEZ: `place === null` "istek düştü" hâlini de kapsıyor
      ve türetilmiş bir bayrak orada sönmezdi — iskelet ebediyen dönerdi (künyesi hook'ta). */
-  const { place, pending } = usePlaceLookup(draft);
+  const { place, pending } = usePlaceLookup(draft, selectedCountry);
   /* İskelet çubuklarının boyu metin kademesinden okunur, sabit yazılmaz: yazı boyutu büyütülünce bekleyiş de cevapla birlikte büyür. */
   const { theme } = useUnistyles();
   const inRoute = place?.kind === 'resolved' && place.place.inRoute;
@@ -110,7 +117,7 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
     /* Dil CANLI kaynaktan yazılır, kayıttaki eski değerden değil: kayıttaki dil akışın İZİdir
        (onboarding'in yapıldığı andaki dil). Kullanıcı sonradan dilini değiştirdiyse onu geri
        yazmak, ayarı sessizce eski hâline döndürürdü. */
-    void saveOnboarding({ done: true, locale, postalCode: draft });
+    void saveOnboarding({ done: true, locale, postalCode: draft, country: selectedCountry });
     toastSuccess(copy.saved);
   };
 
@@ -123,6 +130,7 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
 
   return (
     <BottomSheet visible={visible} title={copy.title} onClose={onClose} testID={idOf('sheet')}>
+      <CountryChips value={selectedCountry} onChange={setSelectedCountry} testIDPrefix={`${testID ?? 'zip'}-country`} />
       <TextField
         value={draft}
         onChangeText={typeCode}

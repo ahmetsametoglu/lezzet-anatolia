@@ -121,13 +121,13 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   /* Yer bağlamı katalogla aynı kaynaktan: iki ekran farklı yer sorarsa aynı ürün iki fiyatla görünür. */
-  const { postalCode } = usePurchasePlace();
+  const { postalCode, country } = usePurchasePlace();
   // Gel-al seçiliyken stok ve fiyat seçilen depodan okunur: soğuk zincir kalem adrese gelmese de depodan alınabilir.
   const pickupWarehouseId = useSelectedPickupWarehouse();
-  const { status, detail, retry } = useProduct(slug, locale, postalCode, pickupWarehouseId);
+  const { status, detail, retry } = useProduct(slug, locale, postalCode, pickupWarehouseId, country);
   /* "Rota içinde miyim" kapısı katalogla aynı; stok hâlini sunucu cevaplar, bu çözüm yalnız `elsewhere`in geçici kalem ile
      kalıcı bölge sebebini ayırır. */
-  const place = usePlaceResolution(postalCode ?? '');
+  const place = usePlaceResolution(postalCode ?? '', country);
 
   /* Seçim boya aittir; aile çipi slug'ı değiştirince rota ekranı yeniden kurar ve seçim sıfırlanır. `null` = henüz seçilmedi,
      açılış boyu kullanılır. */

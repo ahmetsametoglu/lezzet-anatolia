@@ -101,7 +101,7 @@ export function DeliveryZonesScreen() {
                 taraf her zaman ekran (uç biçimli metin göndermez, katalog kartının kuralı). */}
             <Text style={styles.country}>{t.countries[area.country]}</Text>
             {area.places.map((place, index) => (
-              /* Anahtar ad ve sıraya bağlı: adsız öbek `null` taşır ve iki ülke aynı yer adını taşıyabilir, çıplak ad o gün çakışırdı. */
+              /* Anahtar ad ve sıraya bağlı, çünkü adsız öbek `null` taşır ve iki ülke aynı yer adını taşıyabilir. */
               <Text key={`${place.name ?? ''}-${index}`} style={styles.placeLine} testID={`zones-place-${index}`}>
                 {/* Adı olmayan öbek YALNIZ kodlarıyla çizilir (sözleşmenin `name: null` hâli):
                     yer kaydı yok diye kodu gizlemek, gittiğimiz bir yeri saklamak olurdu. */}
@@ -142,6 +142,7 @@ export function DeliveryZonesScreen() {
         <PostalCodeSheet
           visible={zipSheet.visible}
           code={onboarding?.postalCode ?? null}
+          country={onboarding?.country ?? null}
           onClose={zipSheet.close}
           // Bağlantı ÇİZİLMEZ: müşteri zaten o sayfada — kendine götüren bir kapı ölü kapıdır.
           showZonesLink={false}

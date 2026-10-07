@@ -47,12 +47,12 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
   const router = useRouter();
   /* Yer katalog ve vitrinle aynı kaynaktan (`usePurchasePlace`): kod sunucuya gider, depo orada çözülür ve kartın `soldOut`/`route`
      alanları ona göre dolar. */
-  const { postalCode } = usePurchasePlace();
+  const { postalCode, country } = usePurchasePlace();
   const pickupWarehouseId = useSelectedPickupWarehouse();
-  const list = usePackagesList(locale, postalCode, pickupWarehouseId);
+  const list = usePackagesList(locale, postalCode, pickupWarehouseId, country);
   /* İkinci çözüm YALNIZ "rota içinde miyim" sorusunu cevaplar (depo kimliği istemciye hiç
      verilmez): cümlenin GEÇİCİ mi KALICI mı olduğunu ve bandın çizilip çizilmeyeceğini belirler. */
-  const place = usePlaceResolution(postalCode ?? '');
+  const place = usePlaceResolution(postalCode ?? '', country);
   /* BANT: kataloğunkiyle aynı koşul (çözülmüş + rota dışı) ve aynı komponent. Bu sekmeye alt
      çubuktan DOĞRUDAN gelinebiliyor — katalogdan geçmeyen müşteri, adresinin gerçeğini hiç
      okumadan bir paket listesine bakardı. */
@@ -111,7 +111,7 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
               <Text style={styles.soldOutLabel}>{t.card.soldOut}</Text>
             </View>
           ) : null}
-          {/* Fiyat rozeti SAĞ ÜSTTE (v3:878) — vitrin şeridinde sol altta; ikisi ayrı kart. */}
+          {/* Fiyat rozeti sağ üstte; vitrin şeridinde sol altta durur, ikisi ayrı karttır. */}
           <View style={styles.priceBadge}>
             <Tag label={formatPrice(pack.priceCents, locale)} rotate={3} shadow />
           </View>
@@ -127,8 +127,8 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
             )}
           </View>
         </View>
-        {/* Gövde bugün YALNIZ eylemi taşıyor; tasarımın kesikli ayracı da onunla birlikte gelecek —
-            ayıracak bir şey yokken çizilen bir ayraç, olmayan bir içeriğin sözünü verirdi. */}
+        {/* Tasarımın kesikli ayracı çizilmez, çünkü gövde yalnız eylemi taşır ve ayıracak bir şey yokken çizilen ayraç olmayan bir
+            içeriğin sözünü verirdi. */}
         <View style={styles.cardBody}>
           <Text style={styles.cta}>{t.cta}</Text>
         </View>
@@ -136,9 +136,7 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
     );
   };
 
-  /* İLK YÜK: başlık GERÇEK kalır (yukarıdaki kural), kartların yerini skeleton tutar. Blok
-     ekrandan `packages-list-skeleton`a taşındı — gövde satırı burada daire çapı ve yazı boyuyla
-     çiziliyordu, ikisi de o rol için ölçülmemiş değerlerdi (o dosyanın künyesi). */
+  /* İlk yükte kartların yerini iskelet tutar; başlık yukarıdaki kuralla gerçek kalır. */
   if (list.status === 'loading') {
     return (
       <View style={styles.screen}>
@@ -187,11 +185,10 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
             testID="packages-place-notice"
           />
         )}
-        {/* Boş hâl KESİKLİ ÇERÇEVELİ kutu (v3:866) — kitin boş durumu o kutunun içinde durur. */}
+        {/* Boş hâl kesikli çerçeveli kutudur; kitin boş durumu o kutunun içinde durur. */}
         {list.packages.length === 0 ? (
           <View style={styles.emptyBox}>
-            {/* `fill={false}`: boş hâl kesikli çerçeveli KUTUNUN içinde (v3:866) — sayfanın gövdesi
-                değil. Ortalama kutuyu ekran boyuna şişirirdi. */}
+            {/* `fill={false}`, çünkü ortalama kutuyu ekran boyuna şişirirdi. */}
             <EmptyState
               fill={false}
               title={t.empty.title}
@@ -224,8 +221,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   content: {
     paddingHorizontal: theme.space['4xl'],
     paddingBottom: theme.space['5xl'],
-    // v3:872 kartlar arası 16; başlıkla ilk kart arasındaki 12 farkı ölçekte ayrı bir durak
-    // gerektirmiyor — başlığın kendi alt nefesi zaten var.
+    // Başlıkla ilk kart arasına ayrı durak açılmaz, çünkü başlığın kendi alt nefesi var.
     gap: theme.space['3xl'],
   },
   header: {
@@ -243,7 +239,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
-    // v3:862 satır aralığı 1.15 — oran da token (`h1--line-height`), ham çarpan yazılmadı.
+    // Satır aralığı oranı da token'dan gelir, ham çarpan yazılmaz.
     lineHeight: theme.text['page-title-sm'] * theme.text['h1--line-height'],
     color: theme.colors.ink,
   },
@@ -259,11 +255,10 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors.card,
     borderWidth: theme.border.base,
     borderColor: theme.colors['sand-200'],
-    // v3 köşeyi 24 çiziyor; resmî yarıçap seti (Token Kararlari #7) kartı `card` (20) kademesine
-    // bağlıyor — beşinci bir durak açmak seti bozardı (`BottomSheet`in aynı hükmü).
+    // Tasarımdaki 24 yerine `card` kademesi, çünkü beşinci bir yarıçap durağı açmak seti bozardı.
     borderRadius: theme.radius.card,
     overflow: 'hidden',
-    // v3 gölgesi `0 4px 18px rgba(58,65,71,.07)`; token seti bu rolde tek durak taşıyor (`soft`).
+    // Tasarımın kendi gölgesi yerine `soft`, çünkü token seti bu rolde tek durak taşır.
     boxShadow: theme.shadow.soft,
   },
   /* Fotoğraf BLOĞU: yüzeyin kendisi değil, onu ve üstündeki bilgi katmanını taşıyan kutu.
@@ -311,7 +306,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   meta: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    // v3:882 .16em; kitin üstbaşlık aralığı .18em — fark ekranda ölçülemez, token kazanır.
+    // Tasarımın .16em'i yerine kitin .18em'i, çünkü fark ekranda ölçülemez.
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
   },
@@ -334,7 +329,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.olive,
   },
 
-  /** v3:866 — kesikli çerçeveli boş kutu; içindeki blok kitin `EmptyState`i. */
+  /** Kesikli çerçeveli boş kutu; içindeki blok kitin `EmptyState`i. */
   emptyBox: {
     borderWidth: theme.border.base,
     borderStyle: 'dashed',
