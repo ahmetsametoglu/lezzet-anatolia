@@ -1,5 +1,7 @@
 import { fromCents, toCents } from '@lezzet/helper';
 import {
+  HiboutikCategoryListSchema,
+  HiboutikCreatedCategorySchema,
   HiboutikCreatedLineSchema,
   HiboutikCreatedPaymentSchema,
   HiboutikCreatedProductSchema,
@@ -43,6 +45,8 @@ const TIMEOUT_MS = 15_000;
 const GET_ATTEMPTS = 3;
 /** Hiboutik boş tarihi böyle yazar: kapanmamış satış ve kapanmamış gün. */
 const EMPTY_DATE = '0000-00-00 00:00:00';
+/** Kategori listesinin sayfa boyu; dolu sayfadan sonra bir sonraki sayfa okunur. */
+const CATEGORY_PAGE = 250;
 
 const amount = (cents: number): string => fromCents(cents).toFixed(2);
 /** Kalem KDV'si kesir ister (`0.055`); yüzde ya da vergi kimliği reddedilir. */
@@ -87,6 +91,16 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
       const body = await request(config, `/products/search?products_ref_ext=${encodeURIComponent(refExt)}`, 'GET');
       return parse(HiboutikProductListSchema, body, 'ürün araması')[0]?.product_id ?? null;
     },
+    async ensureCategory({ name, refExt }) {
+      for (let page = 1; ; page += 1) {
+        const rows = parse(HiboutikCategoryListSchema, await request(config, `/categories/?p=${page}`, 'GET'), 'kategori listesi');
+        const found = rows.find((row) => row.category_ref_ext === refExt);
+        if (found) return found.category_id;
+        if (rows.length < CATEGORY_PAGE) break;
+      }
+      const body = await request(config, '/categories', 'POST', { category_name: name, category_ref_ext: refExt });
+      return parse(HiboutikCreatedCategorySchema, body, 'kategori').category_id;
+    },
     async createProduct(input) {
       const body = await request(config, '/products', 'POST', {
         product_model: input.name,
@@ -94,6 +108,7 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
         product_vat: await taxIdOf(input.vatRate),
         product_stock_management: 0,
         products_ref_ext: input.refExt,
+        ...(input.categoryId === undefined ? {} : { product_category: input.categoryId }),
       });
       return parse(HiboutikCreatedProductSchema, body, 'ürün').product_id;
     },
@@ -101,6 +116,7 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
       if (change.name !== undefined) await setProduct(productId, 'product_model', change.name);
       if (change.priceCents !== undefined) await setProduct(productId, 'product_price', amount(change.priceCents));
       if (change.vatRate !== undefined) await setProduct(productId, 'product_vat', String(await taxIdOf(change.vatRate)));
+      if (change.categoryId !== undefined) await setProduct(productId, 'product_category', String(change.categoryId));
     },
     async createSale(storeId) {
       const body = await request(config, '/sales', 'POST', { store_id: storeId, currency_code: 'EUR' });

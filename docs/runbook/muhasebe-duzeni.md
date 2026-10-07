@@ -10,6 +10,8 @@
 - **Elle kasa girişi ya da çıkışı yapma.** Çekmece hareketi bizden yazılır; elle girilen kayıt gün sonunda fark çıkarır.
 - **Günü Hiboutik'te elle kapatma.** Kapanış geri alınmaz ve önceki günleri de kapatır; gün tutunca sistem kapatır.
 - **Ürün silme.** Bizdeki ürün eşlemesi silinen ürünü anar ve o ürünlü her yazım düşer.
+- **"Livraison" kategorisini silme, kargo ürününün kategorisini değiştirme.** Silinen kategori ürünlerden düşer; kargo geliri
+  Pennylane'de ürün satışına (707) karışır.
 - **WEB ve VIR ödeme türlerini kapatma.** O yöntemle yazılan ödeme reddedilir.
 - **Yeni tesisi kurulum kartında mağazaya eşle.** Eşlemesiz tesisin satışı kasaya yazılmaz, kuyrukta bekler.
 - **"Kapanmadı" uyarısını aynı gün çöz.** Kapanmayan kasa günü yasal açıktır, sonraki günler de bekler.
@@ -18,6 +20,11 @@
 
 - **Hiboutik dışında satış bağlantısı açma** (ödeme sağlayıcısı vb.). B2C satış yalnız Hiboutik'ten girer; ikinci bağlantı
   aynı satışı iki kez gelir sayar.
+- **Hiboutik bağlantısında satışı kategoriyle ayır, KDV oranı sekmesini kullanma.** "Other" (ürünler) → 707 Ventes de
+  marchandises, "Livraison" (faturalanan kargo) → 7085 Ports et frais accessoires facturés. KDV oranıyla ayrılırsa kargo ürün
+  satışına karışır, çünkü kargo ürünün oranını taşır.
+- **Hiboutik bağlantısında ödeme türünü banka hesabına bağlama.** CB ve WEB aynı bekleme hesabına (Revolut tek aktarımla
+  gönderir), ESP ve VIR kendi bekleme hesaplarına; banka hesabı seçilirse banka akışıyla aynı para iki kez girer.
 - **Banka hareketini silme ya da arşivleme.** Bizde izah edilmemiş satır da silinir; izahlı satır kalır, muhasebeye uyarı gider.
 - **"Hareket gelmiyor" bildiriminde bankanın bağlantısını yenile.** Bankalar bağlantıyı en çok 180 gün açık tutar; kopunca
   hiçbir hareket gelmez.

@@ -8,6 +8,7 @@ import { z } from 'zod';
 const decimal = z.union([z.string(), z.number()]);
 
 export const HiboutikCreatedProductSchema = z.object({ product_id: z.number().int() });
+export const HiboutikCreatedCategorySchema = z.object({ category_id: z.number().int() });
 export const HiboutikCreatedSaleSchema = z.object({ sale_id: z.number().int() });
 export const HiboutikCreatedLineSchema = z.object({ id_sale_product_detail: z.number().int() });
 /** Gün kapanmışsa kasa ödemeyi satışın nakit akışı olarak kaydeder ve onun numarasını döner. */
@@ -26,6 +27,8 @@ export const HiboutikStoreListSchema = z.array(
   z.object({ store_id: z.number().int(), store_name: z.string(), store_enabled: z.number().int().optional() }),
 );
 export const HiboutikProductListSchema = z.array(z.object({ product_id: z.number().int() }));
+/** Kategori dış referansıyla bulunur; adı kasa ekranından değişebilir. */
+export const HiboutikCategoryListSchema = z.array(z.object({ category_id: z.number().int(), category_ref_ext: z.string() }));
 export const HiboutikSaleIdListSchema = z.array(z.object({ sale_id: z.number().int() }));
 export const HiboutikTillMoveListSchema = z.array(
   z.object({

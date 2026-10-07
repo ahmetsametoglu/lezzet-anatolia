@@ -45,6 +45,44 @@ const sale = (over: Record<string, unknown> = {}) => [
   },
 ];
 
+describe('kategori', () => {
+  it('kategori dış referansıyla bulunur, adı değişmiş olsa da ikinci kez açılmaz; yoksa adı ve referansıyla açılır', async () => {
+    const known = fakeHiboutik([{ json: [{ category_id: 4, category_name: 'Port', category_ref_ext: 'livraison' }] }]);
+    expect(await known.register.ensureCategory({ name: 'Livraison', refExt: 'livraison' })).toBe(4);
+    expect(known.calls).toEqual([{ path: '/categories/?p=1', method: 'GET', body: null }]);
+
+    const missing = fakeHiboutik([{ json: [] }, { status: 201, json: { category_id: 9 } }]);
+    expect(await missing.register.ensureCategory({ name: 'Livraison', refExt: 'livraison' })).toBe(9);
+    expect(missing.calls.at(-1)).toEqual({
+      path: '/categories',
+      method: 'POST',
+      body: { category_name: 'Livraison', category_ref_ext: 'livraison' },
+    });
+  });
+
+  it('dolu sayfadan sonra sonraki sayfaya bakılır; ilk sayfada yok diye ikinci kategori açılmaz', async () => {
+    const page = Array.from({ length: 250 }, (_, index) => ({ category_id: 1000 + index, category_ref_ext: '' }));
+    const { register, calls } = fakeHiboutik([{ json: page }, { json: [{ category_id: 4, category_ref_ext: 'livraison' }] }]);
+
+    expect(await register.ensureCategory({ name: 'Livraison', refExt: 'livraison' })).toBe(4);
+    expect(calls.map(({ path, method }) => `${method} ${path}`)).toEqual(['GET /categories/?p=1', 'GET /categories/?p=2']);
+  });
+
+  it('kategori ürüne açılışta ve sonradan `product_category` olarak yazılır', async () => {
+    const { register, calls } = fakeHiboutik([
+      { json: [{ tax_id: 3, tax_value: '0.055', tax_enabled: 1 }] },
+      { status: 201, json: { product_id: 5 } },
+      { json: 'Product attribute successfully updated' },
+    ]);
+
+    await register.createProduct({ name: 'Frais de livraison 5,5 %', priceCents: 0, vatRate: 5.5, refExt: 'livraison-5.5', categoryId: 9 });
+    await register.updateProduct(5, { categoryId: 9 });
+
+    expect(calls[1]).toMatchObject({ path: '/products', method: 'POST', body: { product_category: 9 } });
+    expect(calls[2]).toEqual({ path: '/product/5', method: 'PUT', body: { product_attribute: 'product_category', new_value: '9' } });
+  });
+});
+
 describe('mağaza listesi', () => {
   it('kapatılmış mağaza seçenek olmaz; numara ve ad Hiboutik alanlarından okunur', async () => {
     const { register, calls } = fakeHiboutik([

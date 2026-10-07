@@ -75,6 +75,7 @@
 | 19 | **Kasa ve muhasebede canlıya geçiş günü yok; eşleme yeter** (07.10) | Tarih ayarı yalnız bir kez kullanılacak bir tetikti, testte de kasayı ve muhasebeyi kapalı tutuyordu. Bağlantıyı backend'deki anahtarlar kurar. Tesis kurulum kartında kasa mağazasına eşlendiği an kuyrukta bekleyen satışı ve çekmecenin önceki hareketleri kasaya yazılır; satış hiçbir tarihe göre atlanmaz, gün sonu eşleme gününden başlar. Banka hesabının hareketleri Pennylane'deki hesaba eşlendiği günden okunur, öncesi Excel'le girilir; eşleme başka Pennylane hesabına taşınınca ilk gün korunur. Alış belgesi girildiği güne bakılmadan yüklenir; Pennylane'de aynı tedarikçide aynı numara varsa belge bekler. |
 | 20 | **Transferin banka ucu kendiliğinden bağlanır** (07.10) | Kasadan yatırmayı operatör o gün transfer olarak yazar, kart ödemeleri aktarımını Revolut'un bildirimi yazar; transfer iki hesabı hemen etkiler, bankadaki ucu yolda olan paradır. Pennylane'den (ya da dosyadan) gelen banka satırı, yönü ve tutarı birebir, günü 7 gün içinde tutan ve birbirinin tek adayı olan bekleyen transfere kendiliğinden bağlanır; banka parayı bir kez sayar. Hangisi önce gelirse gelsin bağlanır: satır gelince de transfer yazılınca da bakılır. Aday yoksa ya da birden fazlaysa satır öneri olarak bekler, tahmin yapılmaz. Öteki eşleştirmeler öneri + elle onay kalır. |
 | 21 | **Kasa gün içinde de karşılaştırılır** (07.10) | Gece kapanışının karşılaştırması bugün için gün içinde de yapılır, kapatmadan: iş saatlerinde zamanlanmış tur ve Kurulum'daki düğme. Fark Pano'nun bekleyen işlerinde görünür ki gece kapanışından önce düzeltilsin. |
+| 22 | **Faturalanan kargo kasada "Livraison" kategorisinde** (07.10) | PCG'ye göre kayıt, adı niteliğine uyan hesaba yazılır (Art. 1011-5); faturalanan kargo ticari mal satışı (707) değil, yan faaliyet geliridir (708 zorunlu, alt hesabı 7085 isteğe bağlı). Pennylane'in Hiboutik bağlantısı satış hesabını kasa kategorisinden seçtiği için kargo ürünü "Livraison" kategorisinde açılır; ürünler kategorisiz kalır ("Other" → 707). Ücretsiz kargo fişe yazılmaz, maliyeti taşıyıcının faturasıyla gider olarak girer. |
 
 ## 3. Veri akışı
 
@@ -330,7 +331,8 @@ kalem varsa. Hiboutik kalemi:
 - Paket kalemleri zaten ayrı `order_item`, ayrı yazılır.
 - Kargo, ücretlenen kalem tutarlarına göre KDV oranlarına bölünür (`apportionShippingVat`); oran başına
   bir "Frais de livraison" kalemi. Kalem değişince kargonun oran payı da değişir, fark iade fişinde
-  düzeltilir.
+  düzeltilir. Kargo ürünü Hiboutik'te "Livraison" kategorisindedir (dış referans `livraison`, 22. karar); ayna
+  sıfırlanınca kasada bulunan kargo ürünü de bu kategoriye alınır. Ücretsiz kargoda kargo kalemi yoktur.
 - Kalemler türetilen borcu tutmazsa plan bunu işaretler ve uyarı yazılır; fark fişin bakiyesinde görünür.
   İndirimin kalemlere tam dağıtıldığını veritabanı zaten zorluyor (`assert_order_discount_balance`).
 

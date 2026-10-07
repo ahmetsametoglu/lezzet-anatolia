@@ -16,8 +16,10 @@ export interface CashRegister {
   /** Açık mağazalar; kapatılmış mağaza listede yoktur. */
   listStores(): Promise<RegisterExternalStore[]>;
   findProductByRef(refExt: string): Promise<number | null>;
-  createProduct(input: { name: string; priceCents: number; vatRate: number; refExt: string }): Promise<number>;
-  updateProduct(productId: number, change: { name?: string; priceCents?: number; vatRate?: number }): Promise<void>;
+  /** Dış referansıyla bulunan kategori, yoksa açılır; muhasebe bağlantısı satışı kategoriye göre hesaplara ayırır. */
+  ensureCategory(input: { name: string; refExt: string }): Promise<number>;
+  createProduct(input: { name: string; priceCents: number; vatRate: number; refExt: string; categoryId?: number }): Promise<number>;
+  updateProduct(productId: number, change: { name?: string; priceCents?: number; vatRate?: number; categoryId?: number }): Promise<void>;
   createSale(storeId: number): Promise<number>;
   /** Satışı `extRef` ile işaretler ve tutarları açık yazılan satış yapar; tekrar çağrılabilir. */
   prepareSale(saleId: number, extRef: string): Promise<void>;

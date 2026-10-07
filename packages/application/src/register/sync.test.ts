@@ -344,6 +344,25 @@ describe('sipariş fişi', () => {
   });
 });
 
+describe('kargo', () => {
+  it('faturalanan kargo "Livraison" kategorili üründür; kasada kategorisiz bulunan kargo ürünü kategoriye alınır', async () => {
+    // Kargo ürünü oran başına küreseldir; öteki testlerin kargo ürününe dokunmamak için bu test kullanılmayan oranlarla çalışır.
+    fake.knowProduct(900_001, { name: 'Frais de livraison 8,5 %', priceCents: 0, vatRate: 8.5, refExt: 'livraison-8.5' });
+    const opened = await newOrder({ vatRate: 2.1 });
+    const found = await newOrder({ vatRate: 8.5 });
+    await pay(opened.id, 2990);
+    await pay(found.id, 2990);
+
+    expect(await runRow('order_id', opened.id)).toBe('written');
+    expect(await runRow('order_id', found.id)).toBe('written');
+
+    const category = fake.categories.get('livraison')!.id;
+    const shippingOf = (referenceNo: string) => fake.products.get(salesOf(referenceNo)[0]!.lines.at(-1)!.productId)!;
+    expect(shippingOf(opened.referenceNo)).toMatchObject({ refExt: 'livraison-2.1', categoryId: category });
+    expect(shippingOf(found.referenceNo)).toMatchObject({ refExt: 'livraison-8.5', categoryId: category });
+  });
+});
+
 describe('yazılmayan ve bekleyen', () => {
   it('B2B siparişi kasaya yazılmaz, kuyruk satırı tamamlanır', async () => {
     const order = await newOrder({ channel: 'b2b' });

@@ -65,6 +65,12 @@ export async function ensureItemProducts(
   return byVariant;
 }
 
+/**
+ * Faturalanan kargo ticari mal satışı değil, yan faaliyet gelirdir (PCG 708, alt hesabı 7085); muhasebe bağlantısı hesabı kasa
+ * kategorisinden seçtiği için kargo ürünü kendi kategorisindedir.
+ */
+const SHIPPING_CATEGORY = { name: 'Livraison', refExt: 'livraison' };
+
 /** Kargo oran başına ayrı üründür; fiyatı satışta yazılır, katalog fiyatı yoktur. */
 export async function ensureShippingProduct(db: Db, register: CashRegister, vatRate: number): Promise<RegisterProduct> {
   const mirror = new RegisterProductService(db);
@@ -72,7 +78,10 @@ export async function ensureShippingProduct(db: Db, register: CashRegister, vatR
   if (have) return have;
   const name = `Frais de livraison ${String(vatRate).replace('.', ',')} %`;
   const refExt = `livraison-${vatRate}`;
-  const externalProductId =
-    (await register.findProductByRef(refExt)) ?? (await register.createProduct({ name, priceCents: 0, vatRate, refExt }));
+  const categoryId = await register.ensureCategory(SHIPPING_CATEGORY);
+  const found = await register.findProductByRef(refExt);
+  // Ayna sıfırlanınca ürün kasada bulunur; kategori kuralından önce açılmışsa kategorisi boştur.
+  if (found !== null) await register.updateProduct(found, { categoryId });
+  const externalProductId = found ?? (await register.createProduct({ name, priceCents: 0, vatRate, refExt, categoryId }));
   return mirror.insert({ kind: 'shipping', variantId: null, externalProductId, name, vatRate, priceCents: 0 });
 }

@@ -33,7 +33,8 @@ const localTime = (at: Date): string =>
 export function memoryRegister(opts: { now?: () => Date } = {}) {
   const clock = opts.now ?? (() => new Date());
   let nextId = 1;
-  const products = new Map<number, { name: string; priceCents: number; vatRate: number; refExt: string }>();
+  const products = new Map<number, { name: string; priceCents: number; vatRate: number; refExt: string; categoryId?: number }>();
+  const categories = new Map<string, { id: number; name: string }>();
   const sales = new Map<number, MemorySale>();
   const tills: MemoryTill[] = [];
   const closedDays = new Map<string, string>();
@@ -64,6 +65,14 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
     listStores: () => run('listStores', () => []),
     findProductByRef: (refExt) =>
       run('findProductByRef', () => [...products].find(([, product]) => product.refExt === refExt)?.[0] ?? null),
+    ensureCategory: ({ name, refExt }) =>
+      run('ensureCategory', () => {
+        const known = categories.get(refExt);
+        if (known) return known.id;
+        const id = nextId++;
+        categories.set(refExt, { id, name });
+        return id;
+      }),
     createProduct: (input) =>
       run('createProduct', () => {
         const id = nextId++;
@@ -180,6 +189,7 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
   return {
     register,
     products,
+    categories,
     sales,
     tills,
     closedDays,
