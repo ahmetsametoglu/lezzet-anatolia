@@ -23,90 +23,25 @@ import { PointsAward, PointsSpark } from '@/screens/customer-kit/points-award';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { FeedbackSkeleton } from './feedback-skeleton';
 import { ThumbIcon } from './feedback-icons';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/feedback';
 import { useFeedback } from './use-feedback.hook';
 
 /*
-  GERİ BİLDİRİM (v3 `vFb`) — sipariş sonrası değerlendirme; mail/bildirimdeki token'lı derin
-  bağlantıyla açılır (`/feedback/<token>`). Üç aşama, akış kurucusu v3:2007-2018 + `fbVote`/
-  `fbFinish` (v3:560-561):
-  · oy      — ürün ürün "Beğendim / Beğenmedim"; büyük fotoğraf + sipariş rozeti + sayaç ("1 / 3")
-  · yorum   — tüm ürünler oylanınca tek serbest yorum (zorunlu değil)
-  · sonuç   — teşekkür + puan kartı; hepsi beğenildiyse dış değerlendirme daveti, değilse
-              "Sorun bildir" köprüsü (`/support/new?order=…`), en altta vitrine dönüş.
-
-  ── GERÇEK UÇLARA BAĞLI (10.08) ─────────────────────────────────────────────
-  Dört uç da `apps/mobile-api`de yazılıydı ve ekran onları HİÇ çağırmıyordu: davet fixture'dan
-  okunuyor, oylar ekran durumunda birikip kayboluyordu — yani davet linkiyle gelen müşteri kurgu
-  ürünleri oyluyordu. Veri artık `use-feedback.hook`tan gelir (`GET /feedback/:token` +
-  oy/yorum/tamamlama yazımları); ekran kural hesaplamaz, sözleşmeyi çizer.
-
-  Aşama İSTEMCİDE türetilir (sözleşmenin kararı), ama hangi kartta olduğumuz AYRI BİR DURUM DEĞİL:
-  hook'un `votes` haritasındaki ilk oysuz kart. Yarıda bırakılan akış böylece kendiliğinden kaldığı
-  yerden sürer ve reddedilen bir oy geri alındığında ekran o karta kendiliğinden döner.
-
-  ── ŞABLONDAN SAPMALAR ─────────────────────────────────────────────────────
-  1. **`pageIn`/`pop` animasyonları çizilmedi** — onay ekranının verdiği kararla aynı gerekçe
-     (`order-confirmed-screen`): tek giriş efekti için ekrana animasyon döngüsü bağlamak bu
-     etabın kazancından büyük; öğeler ilk kareden tam boyuyla durur.
-  2. **"Bulunamadı" durumu EKLENDİ** — şablonda yok (demo daveti hep çözülür) ama token'lı derin
-     bağlantı eskimiş/bozuk gelebilir; "yok" sessizce boş akış değildir (CLAUDE §1). Deseni talep
-     detayının `notFound`'u.
-  3. **Dış değerlendirme düğmesi GERÇEKTEN açar** (`Linking.openURL`) — şablon demo toast basıyor
-     ("açılıyor (demo)"); uygulamada toast katmanı yok (yeni-talep ekranının kararı) ve adres
-     fixture'da hazır. Platform adı cevaptan gelir; "Google" ekrana gömülmez.
-  4. **Yazı/ölçü duraklara çekildi** (ölçü katmanının ±yuvarlama kuralı): ürün adı 27→26
-     (`page-title-sm`), teşekkür başlığı 22→24 (`card-title` — 20 ile eşit uzaklıkta, aşama-1
-     başlığından büyük kalması için üste), puan 32→30 (`h1-sm`), rozet 11.5→12.5 (`badge`),
-     oy/CTA etiketi 14→14.5 (`button`), yorum alanı 100→110 (kitin `controlMultiline`ı),
-     eyebrow harf aralığı .16em→.18em (uygulama token'ı).
-  5. **Oy düğmeleri yerel** — kit düğmelerinde ikon yuvası yok ve 56'lık boy kitin `controlLg`
-     durağından bilerek büyük (şablonun kendi vurgusu); basılı geri bildirim kitin kuralından
-     (gölgeli yüzey kayar, gölgesiz küçülür).
-  6. **Yükleme ve bağlantı hatası durumları EKLENDİ** — şablon ağı olmayan bir demoydu (envanter
-     §5: "ilk yükleme skeleton'ları yok · ağ hatası hiçbir ekranda yok"). Yükleme `feedback-skeleton`,
-     hata ise kitin `EmptyState`i + "Tekrar dene": tarif/paket detaylarının cümleleriyle BİREBİR
-     aynı sözlük — aynı arıza iki ekranda iki türlü anlatılmaz.
-  7. **"Zaten tamamlanmış davet" durumu EKLENDİ** — şablonda yok ama sözleşmede var
-     (`completedAt`) ve web davet sayfasının kendi kutusu (`AlreadyDone`). Kartları göstermek,
-     puanı ikinci kez kazanılabilirmiş gibi okuturdu; cümleler web'inkinin aynısı.
-  8. **Yorum aşamasındaki metin ÜRÜNE yazılır** — sözleşme yorumu ürüne bağlıyor (`productId`
-     zorunlu) ve tasarımın tek kutusu bir sadeleştirme. Hedefi seçen kural hook'ta
-     (`reviewTargetOf`), gerekçesiyle birlikte.
+  Sipariş sonrası değerlendirme, e-postadaki belirteçli bağlantıyla açılır: ürün ürün oy, oylar bitince tek yorum, sonunda teşekkür
+  ve puan. Aşama istemcide türetilir ve ekran kural hesaplamaz; veri ve yazımlar `use-feedback.hook`ta.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/*
-  v3'te ölçülmüş, ölçü katmanlarında (`theme/metrics` + `customer-kit/customer-metrics`) henüz
-  olmayan duraklar. İki katman da bu etapta yazıya kapalı — customer-metrics'in kendi kuralıyla
-  ham değerler komponent gövdesine DAĞITILMADI, ekranın tek yerine kondu; katman yazıya açılınca
-  buradakiler oraya terfi eder (raporlandı).
-*/
+/* Yalnız bu ekranın ölçüsü; ölçü katmanlarında karşılığı yok. */
 const feedbackMetrics = {
-  /* SAPMA — tasarımda teşekkür işareti 88'lik bir daire + 38'lik kalpti (v3:1035) ve o ölçü
-     KARTLI yerleşimindi: dar bir etiketin üstünde duran küçük rozet. Kutu kalkıp sayfa
-     bütünleşince (kullanıcı kararı 15.08) hiyerarşiyi taşıyan tek şey ÖLÇEK kaldı.
-     İki adımda ölçüldü: 148'e büyütülen daire solgun kaldı ve leke gibi okundu; kullanıcı
-     *"daha da büyütülebilir ve daha farklı bir görsel de seçilebilir"* dedi. Sonuç: daire ve
-     kalp kalktı, yerine tek ve dolu bir işaret geldi. */
   /** Puan yıldızı — sayfanın kahraman işareti, doğrudan zemin üstünde. */
   sparkIcon: 120,
 } as const;
 
-/*
-  Fotoğraf bloğu (380) ve oy düğmesi (56) `customerMetrics`e TERFİ ETTİ: skeleton da aynı ölçüleri
-  istiyor ve bu dosyadan import etmesi dairesel bağımlılık, kopyalaması duplikasyon olurdu (tarif
-  ve paket detaylarının aynı gerekçesi).
-*/
-
 /**
- * Yazım retlerinin cümlesi — tanınmayan anahtar jenerik cümleye düşer (web'in `errorText` kuralı:
- * ekranda hiçbir hâlde boş bir kırmızı satır durmaz).
- *
- * `review_empty` LİSTEDE YOK ve olmamalı: bu ekran yorumu yalnız boş DEĞİLKEN gönderiyor (hook'un
- * `trim` kapısı), yıldız alanı da tasarımda yok — yani o ret buradan doğamaz. Sözlüğe yazsaydık
- * müşteriye hiç göremeyeceği bir cümleyi vaat etmiş olurduk; gelirse jenerik cümleye düşer.
+ * Yazım retlerinin cümlesi; tanınmayan anahtar jenerik cümleye düşer ki ekranda boş kırmızı satır durmasın. `review_empty` yok,
+ * çünkü bu ekran yorumu yalnız boş değilken gönderir ve yıldız alanı yoktur.
  */
 function writeErrorText(t: Messages, key: string): string {
   if (key === CLIENT_ERROR.network) return t.errors.network;
@@ -129,22 +64,20 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
   const { status, invite, votes, errorKey, finishing, completion, retry, vote, finish } = useFeedback(token, locale);
   const [comment, setComment] = useState('');
 
-  /* Aşama TÜRETİLİR, ayrıca saklanmaz (şablon `stage` tutuyor; tek kaynak yeter): oysuz kart
-     varken oy, kartlar bitince yorum, tamamlama cevabı gelince sonuç. Kartın SIRASI da türetilir —
-     hook'un oy haritasındaki ilk boşluk (dosya künyesi). */
+  /* Aşama türetilir: oysuz kart varken oy, kartlar bitince yorum, tamamlama cevabı gelince sonuç; kart sırası oy haritasındaki ilk boşluk. */
   const cards = invite?.cards ?? [];
   const index = cards.findIndex((entry) => votes[entry.productId] === undefined);
   const card = index === -1 ? null : (cards[index] ?? null);
-  /* Davet zaten tamamlanmış: akış HİÇ kurulmaz (sapma 7) — puan ikinci kez verilmez. */
+  /* Davet zaten tamamlanmışsa akış kurulmaz, çünkü puan ikinci kez verilmez. */
   const alreadyDone = invite !== null && invite.completedAt !== null;
-  /** Sonuç aşaması — kaydırıcı yalnız BURADA ekranı doldurur (`contentFill` künyesi). */
+  /** Sonuç aşaması; kaydırıcı yalnız burada ekranı doldurur. */
   const showDone = completion !== null || alreadyDone;
 
   const bar = (
     <AppBar
       title={t.title}
       left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="feedback-back" />}
-      /* Sayaç yalnız oy aşamasında (şablon: `sc-if fv.stage0`) — `min(idx+1, toplam)` kuralı. */
+      /* Sayaç yalnız oy aşamasında. */
       right={
         card !== null && !alreadyDone ? (
           <Text style={styles.progress} testID="feedback-progress">
@@ -156,8 +89,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
     />
   );
 
-  /* İLK YÜK: oy aşamasının yerini skeleton tutar (neyin çizilip neyin çizilmediği o dosyanın
-     künyesinde). Başlık çubuğu GERÇEK basılır — içindeki geri düğmesi beklerken de çalışmalı. */
+  /* İlk yükte oy aşamasının yerini iskelet tutar; başlık çubuğu gerçek basılır ki geri düğmesi beklerken de çalışsın. */
   if (status === 'loading') {
     return (
       <View style={styles.screen}>
@@ -167,9 +99,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
     );
   }
 
-  /* Geçersiz/eskimiş bağlantı (uç 404 `invalid_link`): davet yok. Şablonda karşılığı yok — sapma 2.
-     Ağ arızasından AYRI hâl: "bağlantını kontrol et" demek, eskimiş bir linki tel arızası gibi
-     gösterirdi (tarif detayının aynı ayrımı). */
+  /* Eskimiş ya da bozuk bağlantı ağ arızasından ayrı çizilir: "bağlantını kontrol et" demek onu tel arızası gibi gösterirdi. */
   if (status === 'missing') {
     return (
       <View style={styles.screen}>
@@ -186,7 +116,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
     );
   }
 
-  /* Telin arızası — davet duruyor olabilir, o yüzden çıkış değil TEKRAR DENE (sapma 6). */
+  /* Telin arızasında davet duruyor olabilir, bu yüzden çıkış değil tekrar dene. */
   if (status === 'error' || invite === null) {
     return (
       <View style={styles.screen}>
@@ -202,8 +132,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
     );
   }
 
-  /* Talep akışını SİPARİŞE bağlayarak açar (şablon: `openTalepNew(o.ref)`); kargosuz senaryoda
-     referans yoksa genel talep kapısına düşer. */
+  /* Talep akışını siparişe bağlayarak açar; referans yoksa genel talep kapısına düşer. */
   const reportIssue = () => {
     const reference = invite.orderReferenceNo;
     router.push(reference === null ? '/support/new' : { pathname: '/support/new', params: { order: reference } });
@@ -220,19 +149,16 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
   return (
     <View style={styles.screen} testID="feedback-screen">
       {bar}
-      {/* Kaydırıcı KİTTEN (`form-scroll`): klavye açıkken "Değerlendirmeyi tamamla"ya ilk dokunuş
-          yalnız klavyeyi kapatıyor ve yorum GÖNDERİLMİYORDU — müşteri yazdığını sanıp çıkıyordu
-          (cihazda ölçüldü 11.08). Aynı kap yorum alanını da klavyenin üstünde tutar. */}
+      {/* Kaydırıcı kitten: klavye açıkken "Değerlendirmeyi tamamla"ya ilk dokunuş klavyeyi kapatıp yorumu göndermezdi; aynı kap
+          yorum alanını klavyenin üstünde tutar. */}
       <FormScroll
         contentContainerStyle={[styles.content, showDone ? styles.contentFill : undefined]}
         testID="feedback-scroll"
       >
         {card !== null && !alreadyDone ? (
-          /* ── Oy aşaması: fotoğraf + rozet + künye, iki oy düğmesi, alt not (v3:1014-1030) ── */
           <View testID="feedback-vote">
             <View style={styles.photo}>
-              {/* Kadraj (operatörün odak + zoom'u) CDN türevinde UYGULANMIŞ gelir ve kutuya en yakın
-                  çerçeve seçilir (`FrameImage`, 21.303) — ekran başına yazılmaz. */}
+              {/* Kadraj CDN türevinde uygulanmış gelir ve kutuya en yakın çerçeve seçilir; ekran başına yazılmaz. */}
               {card.image.url === null ? (
                 <View style={styles.photoFallback}>
                   <Text style={styles.photoInitial}>{card.name.slice(0, 1)}</Text>
@@ -287,7 +213,6 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
             <Text style={styles.voteHint}>{t.vote.hint}</Text>
           </View>
         ) : completion === null && !alreadyDone ? (
-          /* ── Yorum aşaması: başlık + açıklama + serbest alan + tamamla (v3:1032-1038) ── */
           <View style={styles.commentBlock} testID="feedback-comment">
             <Text style={styles.commentTitle} accessibilityRole="header">
               {t.comment.title}
@@ -307,61 +232,26 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
               disabled={finishing}
               testID="feedback-finish"
             />
-            {/* Tamamlama düştüyse metin KUTUDA KALIR (talep ekranının kuralı: düşen gönderim
-                taslağı silmez) — tek dokunuşla tekrarlanır. */}
+            {/* Tamamlama düştüyse metin kutuda kalır, tek dokunuşla tekrarlanır. */}
             {errorLine}
           </View>
         ) : (
-          /* ── Sonuç: teşekkür + puan bloğu + akış-sonu köprüsü ──
-             ÜST PAY, bloğu optik merkeze çeker (kullanıcı bulgusu 16.08). Blok `flexGrow: 1` ile
-             kalan alanı alıp ORTALIYORDU; hesabı doğruydu ama göz sayfaya bakıyor ve başlık
-             çubuğunun yüksekliği bloğu yarısı kadar aşağı itiyordu. Kural `EmptyState`inkiyle aynı,
-             tek yerde yazılı (`design/KARARLAR.md`): kalan boşluk **4:6** — üstte %40, altta %60. */
+          /* Sonuç: kalan boşluk 4:6 paylaşılır ki blok sayfanın optik merkezinde dursun (`EmptyState` ile aynı oran). */
           <>
             <View style={styles.spacerTop} />
           <View style={styles.doneBlock} testID="feedback-done">
-            {/* SONUÇ SAYFASI KUTUSUZ — kullanıcı kararı 15.08: *"kart görmek istemiyorum… tüm
-                sayfayı kullanan… sayfa ekran ile bütünleşik olsun, bölüm bölüm görünmesini
-                istemiyorum."* Eskiden puanlar kum zeminli, eğik, sert gölgeli bir ETİKETİN
-                içindeydi (v3:1040-1060) ve ekran üç ayrı parçaya bölünüyordu: kalp, başlık, kutu.
-
-                Şimdi hiyerarşi KUTUYLA değil ÖLÇEK ve BOŞLUKLA kuruluyor — zemin ekranın kendi
-                zemini, renk kırılması yok, çerçeve yok. Blok ekranın kalan yüksekliğini doldurup
-                içeriği dikey ortalıyor (`doneBlock` + `contentFill`), yani sayfa "bir kutunun
-                durduğu ekran" değil, teşekkürün kendisi oluyor. */}
-            {/* KAHRAMAN İŞARET — daire YOK (kullanıcı kararı 15.08). Solgun zeytin daire 148'e
-                büyüyünce şekil değil LEKE gibi okunuyordu ve içindeki kalp boş bir halkanın
-                ortasında kalıyordu; ölçek büyüdükçe düşük karşıtlık kusura dönüştü. Artık tek,
-                güvenli bir şekil var: puan yıldızı, doğrudan sayfanın zemini üstünde. */}
+            {/* Sonuç sayfası kutusuz: hiyerarşi kutuyla değil ölçek ve boşlukla kurulur. */}
+            {/* Kahraman işaret dairesiz, doğrudan zeminde, çünkü büyük solgun daire leke gibi okunur. */}
             <PointsSpark size={feedbackMetrics.sparkIcon} color={theme.colors.terracotta} />
             <Text style={styles.doneTitle} accessibilityRole="header">
               {completion === null ? t.already.title : t.done.title}
             </Text>
 
-            {/* ZATEN TAMAMLANMIŞ davet (sapma 7): puanın daha önce eklendiği söylenir, sonuç
-                kutuları çizilmez — bu turda kazanılan bir şey yok ve akış hiç kurulmadı. */}
+            {/* Zaten tamamlanmış davette puanın daha önce eklendiği söylenir; bu turda kazanılan bir şey olmadığı için sonuç blokları çizilmez. */}
             {completion === null ? <Text style={styles.doneBody}>{t.already.body}</Text> : null}
 
-            {/* Puan TAMAMLAMAYA bağlıdır, beğeniye değil (DOMAIN §14); 0 → kart çizilmez
-                (B2B'de puan yok — şablonun `sc-if fv.ptsF` kapısı).
-
-                YAZILAN SAYI TURUN TOPLAMIDIR (`invitePointsTotal`), tamamlama primi değil (MB-17).
-                Ölçüldü 11.08: ekran "+5 puan" diyordu, deftere `feedback_purchase 5` + `review 20`
-                + `feedback_purchase 5` = 30 yazılmıştı. Üç kaydın üçü de doğruydu (kart oyu · yorum ·
-                tamamlama primi — `packages/application/src/feedback/invite.ts`), eksik olan
-                SÖZLEŞMEYDİ: `/vote` ve `/review` yalnız `{ recorded: true }` dönüyor, `/complete`in
-                `pointsAwarded`ı da yalnız primi taşıyor. Toplam istemcide HESAPLANAMAZ (günlük tavan ·
-                B2B · aynı kayda ikinci puan hep motorun kararı), o yüzden uç açıldı: motor kendi
-                defterini toplayıp `invitePointsTotal` olarak dönüyor.
-
-                KAPI DA TOPLAMA BAĞLANDI, prime değil. Eskiden kart `pointsAwarded > 0` kapısındaydı
-                ve bunun ölçülmüş bir bedeli vardı: günlük tavan dolduysa ya da davet İKİNCİ kez
-                tamamlandıysa prim 0'a düşüyor, müşteri o turda yorum için 20 puan kazanmış olsa bile
-                HİÇBİR puan bilgisi görmüyordu. Toplam o hâllerde de doludur.
-
-                BLOK ARTIK KİTİN (kullanıcı isteği 15.08): üç satırın biçimi ve metni
-                `customer-kit/points-award.tsx`te — keşif turunun bitişi de aynısını çiziyor. Burada
-                kalan tek şey hangi SAYININ geçileceği, ve o bu ekranın bilgisi. */}
+            {/* Yazılan sayı turun toplamıdır (`invitePointsTotal`), tamamlama primi değil: oy, yorum ve prim ayrı kayıtlardır ve toplamı
+                yalnız motor bilir. */}
             {completion === null ? null : (
               <PointsAward points={completion.invitePointsTotal} balance={completion.balance} testID="feedback-points" />
             )}
@@ -407,7 +297,7 @@ interface ReviewInviteProps {
   copy: Messages;
 }
 
-/** Dış değerlendirme daveti — yalnız `review_invite` sonucunda (sapma 3: bağlantı gerçekten açılır). */
+/** Dış değerlendirme daveti, yalnız `review_invite` sonucunda; bağlantı cihazın tarayıcısında açılır. */
 function ReviewInvite({ url, platform, copy }: ReviewInviteProps) {
   return (
     <>
@@ -431,14 +321,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     /* Yatay dolgu YOK: fotoğraf kenardan kenara, blokların dolgusu kendi üstlerinde. */
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
   },
-  /** Başlık çubuğundaki sayaç (v3:1012 — `700 12.5px`, sessiz ton). */
+  /** Başlık çubuğundaki sayaç, sessiz ton. */
   progress: {
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
     fontSize: theme.text.badge,
     color: theme.colors.muted,
   },
 
-  /** Yazım reddi — talep ekranının `sendError` deseni (hata rengi + `micro`), akışın ortalanmışı. */
+  /** Yazım reddi: talep ekranındaki gönderim hatasının ortalı hâli. */
   errorLine: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
@@ -448,7 +338,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingBottom: theme.space.md,
   },
 
-  /* ── Oy aşaması ── */
   photo: {
     height: customerMetrics.feedbackPhoto,
   },
@@ -537,7 +426,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['8xl'],
   },
 
-  /* ── Yorum aşaması ── */
   commentBlock: {
     paddingVertical: theme.space['5xl'],
     paddingHorizontal: theme.space['6xl'],
@@ -555,7 +443,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.body,
   },
 
-  /* ── Sonuç aşaması — SAYFANIN TAMAMI, kutusuz ── */
   /** Kaydırıcının içeriği ekranın kalan yüksekliğini DOLDURUR; yalnız sonuç aşamasında eklenir
       (öteki aşamalar içerikleri kadar uzun, zorlanan yükseklik onlarda boşluk üretirdi). */
   contentFill: { flexGrow: 1 },
@@ -563,9 +450,7 @@ const styles = StyleSheet.create((theme, rt) => ({
      Sayılar ölçü durağı değil ORAN, o yüzden `theme.space`ten gelmez. */
   spacerTop: { flex: 4 },
   spacerBottom: { flex: 6 },
-  /* Blok BÜYÜMEZ (16.08): kalan boşluğu artık iki pay paylaşıyor (`spacerTop` 4 / `spacerBottom` 6)
-     ve blok tam ortalarında duruyor. Eskiden `flexGrow: 1` + `justifyContent: 'center'` vardı;
-     bu, bloğu BAŞLIĞIN ALTINDA kalan alanın ortasına koyuyordu — sayfanın değil. Künye üstte. */
+  /* Blok büyümez: kalan boşluğu iki pay paylaşır ve blok tam ortalarında durur. */
   doneBlock: {
     alignItems: 'center',
     gap: theme.space['2xl'],
@@ -585,8 +470,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.body,
     textAlign: 'center',
   },
-  /** "Sorun bildir" — kitin ikincil hap düğmesi TERRACOTTA metin varyantı taşımıyor (v3:1057);
-      yüzey ve ölçüler `SecondaryButton`ın hap durağıyla bire bir, yalnız metin rengi ekranın. */
+  /** "Sorun bildir": kitin ikincil hap düğmesinde terracotta metin yok; yüzey ve ölçüler o düğmenin hap durağıyla aynı. */
   issueButton: {
     height: theme.size.controlSm,
     paddingHorizontal: theme.space['6xl'],

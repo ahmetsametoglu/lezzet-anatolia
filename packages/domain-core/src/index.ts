@@ -98,6 +98,7 @@ export * from './feedback/feedback-score';
 export * from './feedback/points';
 export * from './feedback/trust';
 export * from './feedback/invite';
+export * from './feedback/flow';
 export * from './feedback/signal-quality';
 export * from './catalog/barcode';
 export * from './catalog/publish';

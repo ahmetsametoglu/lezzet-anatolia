@@ -211,6 +211,10 @@ export const ICON_PATHS = {
 export const POINTS_SPARK_PATH =
   'M12 2c.6 5.2 4.2 8.8 9.4 9.4C16.2 12 12.6 16.2 12 22c-.6-5.8-4.2-10-9.4-10.6C7.8 10.8 11.4 7.2 12 2z';
 
+/** Değerlendirmenin başparmağı; "beğenmedim" aynı yolun 180° dönmüşü olduğu için sözlüğün dışında, çizici döndürür. */
+export const THUMB_PATH =
+  'M7 11v9H4v-9h3zm3 9h7.5a2 2 0 0 0 2-1.6l1.3-6A2 2 0 0 0 18.8 10H14l.8-4.2A1.8 1.8 0 0 0 11.3 4L8 10.5V20z';
+
 /**
  * Google'ın resmî renkli "G"si (24×24 kutu). Google'ın düğme kuralı rengini ve oranını sabit tutar; iki yüzeyin çizicisi parçaları kendi
  * renkleriyle basar, yerine harf ya da tek renk çizilmez.

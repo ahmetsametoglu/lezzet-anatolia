@@ -3,18 +3,11 @@ import { Linking } from 'react-native';
 
 import { FeedbackScreen } from './feedback-screen';
 import { feedbackCard, feedbackCompletion, feedbackInvite } from './feedback-fixture';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/feedback';
 
 /*
-  GERİ BİLDİRİM EKRANI — tel cevabı fixture'dan gelir (fetch mock'u): ekran GERÇEK istemci yolunu
-  (`lib/api/feedback` → şema doğrulaması) katederek çizilir, hook ayrıca test edilmez (ürün ve
-  tarif ekranı testlerinin birebir deseni).
-
-  Doğrulananlar: akışın ilerleyişi ve sayaç · oyun UCA yazılması · yazma reddinde oyun GERİ
-  ALINMASI · yorumun tamamlamadan ÖNCE gitmesi · sonucun cevaptan okunması · üç açılış hâli
-  (bulunamadı · bağlantı hatası · zaten tamamlanmış).
-
-  Cihaz dili tr-TR'ye sabitlenir ki assert edilen metinler koşulan makinenin diline bağlı olmasın.
+  Tel cevabı sahte `fetch`ten gelir ve ekran gerçek istemci yolunu (şema doğrulaması dahil) katederek çizilir, bu yüzden kanca ayrıca
+  sınanmaz. Cihaz dili tr-TR'ye sabitlenir ki beklenen metinler koşulan makinenin diline bağlı olmasın.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
@@ -202,14 +195,11 @@ describe('FeedbackScreen', () => {
     await fireEvent.press(screen.getByTestId('feedback-finish'));
 
     await waitFor(() => expect(screen.getByText(t.done.title)).toBeOnTheScreen());
-    /* MB-17: yazılan sayı TURUN TOPLAMIDIR (`invitePointsTotal` = 40), tamamlama primi (15) değil.
-       Fixture ikisini bilerek ayrı tutuyor — eşit olsalardı bu iddia hiçbir şeyi kanıtlamazdı ve
-       ekran primi yazmaya geri dönse test yine yeşil kalırdı. Cihazda ölçülen arıza tam buydu:
-       ekran "+5" derken deftere 30 yazılmıştı. */
+    /* Yazılan sayı turun toplamıdır (`invitePointsTotal` = 40), tamamlama primi (15) değil; ikisi bilerek ayrı tutulur, eşit
+       olsalardı ekran primi yazsa da test yeşil kalırdı. */
     expect(screen.getByText('✦ +40 puan')).toBeOnTheScreen();
     expect(screen.queryByText('✦ +15 puan')).toBeNull();
-    /* Not satırı 15.08'de bağlamı bıraktı ("bu değerlendirme için…" → "hesabınıza eklendi"): blok
-       artık keşif turunun bitişiyle ORTAK ve bağlamı üstündeki başlık söylüyor. */
+    /* Not satırı bağlamsızdır, çünkü blok keşif turunun bitişiyle ortak ve bağlamı üstündeki başlık söylüyor. */
     expect(screen.getByText('hesabınıza eklendi')).toBeOnTheScreen();
     expect(screen.getByText('Toplam ✦ 255 puan')).toBeOnTheScreen();
     expect(screen.queryByTestId('feedback-issue')).toBeNull();
@@ -219,10 +209,8 @@ describe('FeedbackScreen', () => {
     openURL.mockRestore();
   });
 
-  /* MB-17'nin İKİNCİ yarısı. Kart eskiden `pointsAwarded > 0` kapısındaydı ve bunun ölçülmüş bir
-     bedeli vardı: günlük tavan dolduğunda ya da davet İKİNCİ kez tamamlandığında prim 0'a düşüyor,
-     müşteri o turda yorum için puan kazanmış olsa bile hiçbir puan bilgisi görmüyordu. Kapı artık
-     toplamda; bu test o gerilemeyi kilitliyor. */
+  /* Kart prime bağlansaydı günlük tavan dolduğunda ya da davet ikinci kez tamamlandığında prim 0'a düşer ve müşteri o turda
+     kazandığı puanı göremezdi; bu test o hâlde kırmızıya döner. */
   it('prim 0 olsa da TURUN TOPLAMI varsa puan kartı çizilir — tavan dolduğunda kart kaybolmaz', async () => {
     wire({ complete: ok(feedbackCompletion({ pointsAwarded: 0, invitePointsTotal: 20 })) });
     await renderFeedback();

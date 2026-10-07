@@ -74,13 +74,11 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [~] (08.58) ~~**MOBİL WEB v1 — kabuk birebir, ekranlar sırayla**~~ → **MOBİL WEB — telefon görünümü native uygulamanın tasarımına (kullanıcı kararı 14.09)** *(kullanıcı isteği 13.09: öteki şerit masaüstünü `Musteri Web v1.dc.html`'e taşırken mobil web `Musteri Mobil v1.dc.html`'e; sıra ve dosya ayrımı kullanıcıyla konuşuldu)*
   - Kalan ekranlar — kare adı `design/01-musteri/Musteri Mobil.dc.html`'in `data-screen-label`'ı; biten satır silinir:
     - [ ] Checkout + Ödeme `checkout` ↔ native `checkout` — yalnız ödeme bölümü: kart ödemesi Revolut'a geçti
-    - [ ] Geri Bildirim `feedback/[token]` ↔ native `feedback`
     - [ ] Professionnels `professionals` ↔ native `professionals`
   - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): çekmece başı (native tutamak, web ×) ·
     sepette alıcı telefonu · vitrin konum satırı · vitrin konum çekmecesinde gel-al · misafir posta kodu çekmecesi · yalnız bir
     yüzeyde olanlar: indirimliler süzgeci, paket kartı ayrıntıları, misafire bildirim zili, çözülmüş talep notu, kaydırınca küçük
     başlık, puan bakiyesi satırı, misafire dil kartı, misafir Siparişlerim, K.33.
-  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `feedback/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 - [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, katalog ~0,54 sn (DB'siz yasal sayfa ~0,16 sn).
   Supabase istekleri Cloudflare'in Paris düğümünden geçiyor (açık bağlantıda istek ~45–55 ms) ve sıralı her okuma bir tur ekliyor.
@@ -400,3 +398,5 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.52) [hedef: müşteri] Web telefon görünümünde titreşim cihazda hissedilerek doğrulanmadı: iPhone'da kitin eylem düğmeleri
   gizli anahtarı saran şeffaf etiketle tıklar (`phone-kit/haptic-target`), kartlarda tık yok çünkü `Link` tıklamayı iptal ediyor.
   Android'de süreler native'inkiyle aynı (dokunuş 50 ms); Chrome sessiz modda hiç titreşmez.
+- [ ] (K.68) [hedef: müşteri] Telefonda ürün puanlama ve satın alma sonrası yorum bölümleri native'in tasarım desenine uymuyor
+  (kullanıcı gözlemi) — ürün sayfasının yorum bölümü, yorum yazma ve değerlendirme akışı ekran ekran, görselle incelenecek.

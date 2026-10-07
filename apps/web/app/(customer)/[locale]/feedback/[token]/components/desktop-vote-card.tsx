@@ -7,31 +7,23 @@ import { FramedImage } from '@/components/media/framed-image';
 import { Button } from '@/components/customer/ui/button';
 import { Icon, type IconName } from '@/components/customer/ui/icons';
 import { errorText } from '@/lib/customer-error-text';
-import type { Messages } from '../feedback-types';
+import type { FeedbackCopy, Messages } from '../feedback-types';
 
 /**
- * Değerlendirme kartı — akışın tek birimi (tasarım: "Geri Bildirim Kart").
- *
- * **👍/👎 seçimi kartın ASIL işi, yorum isteğe bağlı bir derinleşme.** Tasarımın sözleşmesi:
- * "seçim karta işler ve otomatik sonrakine geçer" · "yorum akışı bölmez, atlanabilir". O yüzden
- * oy verilince kart hemen ilerliyor; yorum ise kartın ALTINDA açılıyor ve açıkken ilerleme
- * durduruluyor — müşteri yazarken ekranın altından kayması, yazdığını kaybetmesi demekti.
- *
- * **Ödül tamamlamaya bağlı, beğeniye değil** (DOMAIN §14 · tasarım §6): bu yüzden iki düğme de
- * eşit ağırlıkta çiziliyor ve hiçbir metin "beğenirseniz puan" ima etmiyor. 👍'nın zeytin dolgusu
- * bir teşvik değil, seçili hâlin göstergesi — seçilmemişken ikisi de aynı boş daire.
+ * Masaüstü akışının tek birimi: oy kartın asıl işi, yorum isteğe bağlı bir derinleşme; oy verilince kart ilerler, yorum açıkken durur
+ * ki müşteri yazarken ekran altından kaymasın. İki düğme eşit ağırlıkta, çünkü ödül beğeniye değil tamamlamaya bağlı (DOMAIN §14).
  */
-interface VoteCardProps {
+interface DesktopVoteCardProps {
+  copy: FeedbackCopy;
   t: Messages;
   card: FeedbackCard;
   /** Seçili oy — kart geri dönüldüğünde önceki cevabı gösterir (akış kaldığı yerden sürer). */
   vote: FeedbackVote | null;
   onVote: (vote: FeedbackVote) => void;
   onReview: (rating: number | null, comment: string | null) => Promise<string | null>;
-  compact?: boolean;
 }
 
-export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: VoteCardProps) {
+export function DesktopVoteCard({ copy, t, card, vote, onVote, onReview }: DesktopVoteCardProps) {
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState<number | null>(card.existing?.rating ?? null);
   const [comment, setComment] = useState(card.existing?.comment ?? '');
@@ -50,29 +42,23 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-col overflow-hidden rounded-[24px] bg-card shadow-lg">
-        {/* Görsel oranı 3/2 (tasarım). Görselsiz üründe alan yine ayrılıyor: kart yüksekliği
-            karttan karta değişseydi akış her geçişte zıplardı.
-            `next/image` DEĞİL, `FramedImage` (05.37 · ölçüldü 10.09): `next/image` uzak adresi
-            Next'in kendi görsel ucundan geçiriyordu ve projede uzak kaynak izni tanımlı olmadığı için
-            o uç `400 "url" parameter is not allowed` dönüyordu — kart görseli hiç çizilmiyordu.
-            Kadrajı da artık operatörün odağından (CDN kesiyor); eskisi merkezden `cover`dı. Kart
-            masaüstünde 460, mobilde 390 px'lik sütunda (`feedback-client`). */}
+        {/* Görselsiz üründe de alan ayrılır: kart yüksekliği karttan karta değişseydi akış her geçişte zıplardı. */}
         <FramedImage
           src={card.image.url}
           alt=""
           ratio={RATIO_SOURCE}
           crop={card.image.crop}
           frames={card.image.frames}
-          sizes={compact ? '100vw' : '460px'}
+          sizes="460px"
           className="!rounded-none !bg-sand-50"
         />
 
-        <div className={`flex flex-col items-center gap-3 text-center ${compact ? 'px-5 pb-5 pt-4' : 'px-5 pb-5 pt-4'}`}>
-          <span className={`font-serif ${compact ? 'text-h2-sm' : 'text-card-title'} text-ink`}>{card.name}</span>
+        <div className="flex flex-col items-center gap-3 px-5 pt-4 pb-5 text-center">
+          <span className="font-serif text-card-title text-ink">{card.name}</span>
 
           <div className="flex gap-4">
-            <VoteButton icon="thumbDown"label={t.disliked} active={vote === 'dislike'} onClick={() => onVote('dislike')} compact={compact} />
-            <VoteButton icon="thumbUp"label={t.liked} active={vote === 'like'} onClick={() => onVote('like')} compact={compact} />
+            <VoteButton icon="thumbDown" label={copy.vote.dislike} active={vote === 'dislike'} onClick={() => onVote('dislike')} />
+            <VoteButton icon="thumbUp" label={copy.vote.like} active={vote === 'like'} onClick={() => onVote('like')} />
           </div>
 
           {!open && (
@@ -87,9 +73,7 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
         </div>
       </div>
 
-      {/* Yorum kartın ALTINDA açılıyor, içinde değil (tasarım: "kart altında açılır"): kartın
-          kendisi büyüseydi görsel ve oy düğmeleri yukarı kayar, müşteri az önce bastığı yeri
-          kaybederdi. */}
+      {/* Yorum kartın altında açılır: kart büyüseydi görsel ve oy düğmeleri yukarı kayar, müşteri az önce bastığı yeri kaybederdi. */}
       {open && (
         <div className="flex flex-col gap-2.5 rounded-card border border-sand-200 bg-card px-4 py-3.5">
           <StarRow value={rating} onChange={setRating} />
@@ -100,15 +84,16 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
             placeholder={t.reviewPlaceholder}
             className="resize-none rounded-soft border border-sand-300 px-3 py-2.5 font-sans text-body-sm leading-relaxed text-ink outline-none transition-colors placeholder:text-sand-600 focus:border-olive"
           />
-          {/* Yayın beklentisi SADE söyleniyor (içerik envanteri §2): müşteri yorumunun anında
-              görünmediğini bilmeli, yoksa ürün sayfasına bakıp kaybolduğunu sanır. */}
+          {/* Müşteri yorumunun anında görünmediğini bilmeli, yoksa ürün sayfasına bakıp kaybolduğunu sanır. */}
           <span className="font-sans text-micro leading-relaxed text-muted">{t.reviewNote}</span>
-          {errorKey && <span className="font-sans text-note font-semibold text-terracotta">{errorText(t.errors, errorKey)}</span>}
+          {errorKey && (
+            <span className="font-sans text-note font-semibold text-terracotta">{errorText({ ...copy.errors, ...t.errors }, errorKey)}</span>
+          )}
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" compact={compact} disabled={busy} onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setOpen(false)}>
               {t.reviewSkip}
             </Button>
-            <Button size="sm" compact={compact} disabled={busy} onClick={save}>
+            <Button size="sm" disabled={busy} onClick={save}>
               {busy ? t.reviewSaving : t.reviewSave}
             </Button>
           </div>
@@ -118,19 +103,13 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
   );
 }
 
-/**
- * Oy düğmesi — tasarımda 64px daire (mobil) / 58px (web).
- *
- * İkisi de envanterin 44px dokunma tabanının çok üstünde; bu ekranın tek elle ve hızlı
- * tamamlanması isteniyor (tasarım §7), hedef bilerek büyük.
- */
-function VoteButton({ icon, label, active, onClick, compact }: { icon: IconName; label: string; active: boolean; onClick: () => void; compact: boolean }) {
+/** Oy düğmesi 58 px'lik daire: dokunma tabanının çok üstünde, çünkü ekranın hızlı tamamlanması isteniyor. */
+function VoteButton({ icon, label, active, onClick }: { icon: IconName; label: string; active: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="flex cursor-pointer flex-col items-center gap-1">
       <span
         className={[
-          'grid place-items-center rounded-full transition-colors',
-          compact ? 'size-16' : 'size-[58px]',
+          'grid size-[58px] place-items-center rounded-full transition-colors',
           active ? 'bg-olive text-white' : 'border-2 border-sand-400 bg-card text-ink hover:border-olive',
         ].join(' ')}
       >
@@ -141,13 +120,7 @@ function VoteButton({ icon, label, active, onClick, compact }: { icon: IconName;
   );
 }
 
-/**
- * Yıldız satırı — beşi de dokunulabilir; seçili olanın soluna kadar dolar.
- *
- * `button` çünkü yıldız bir SEÇİM; `span`la çizip tıklama dinlemek klavye kullanıcısını dışarıda
- * bırakırdı ve bu ekran zaten tek elle kullanılmak üzere tasarlanmış — erişilebilirlik burada
- * ekstra değil, aynı ihtiyacın devamı.
- */
+/** Yıldız satırı: yıldız bir seçim olduğu için düğmedir, böylece klavye kullanıcısı da seçebilir. */
 function StarRow({ value, onChange }: { value: number | null; onChange: (n: number) => void }) {
   return (
     <div className="flex gap-1">

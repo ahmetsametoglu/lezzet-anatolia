@@ -1,20 +1,20 @@
-import type { LocalizedCopy } from '@lezzet/i18n';
-// `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import messages from './messages.json';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import type feedbackCopy from '@lezzet/i18n/customer/feedback';
+import type { FeedbackInviteView } from '@/lib/feedback/invite';
+import type messages from './messages.json';
 
-// Değerlendirme akışının tip modülü (view DEĞİL — gerçek view `feedback-client`).
-
+/** Ekranın native'le ortak metni. */
+export type FeedbackCopy = LocalizedCopy<typeof feedbackCopy>;
+/** Yalnız web'in metni: masaüstü akışının karşılama, yıldızlı yorum ve sonuç cümleleri. */
 export type Messages = LocalizedCopy<typeof messages>;
 
-/**
- * Akışın adımı — ekranın hangi yüzü çizildiğini söyleyen TEK durum.
- *
- * Ayrı ayrı `showWelcome`/`showDone` bayrakları yerine tek bir birleşim, çünkü bunlar birbirini
- * dışlıyor: ikisi birden açık olamaz ve iki bayrak tam da bunu mümkün kılardı.
- *
- * `cards` adımında hangi kartta olunduğu ayrı bir sayaçta durur — adımın kendisi değil, içindeki
- * konum. `done` adımı motorun döndürdüğü sonucu taşır (memnun / değil), çünkü o karar istemcide
- * verilmiyor.
- */
+/** Masaüstü akışının adımı: karşılama, kartlar ve sonuç birbirini dışlar, bu yüzden iki bayrak değil tek durum. */
 export type FeedbackStep = 'welcome' | 'cards' | 'done';
+
+export interface FeedbackViewProps {
+  locale: Locale;
+  token: string;
+  invite: FeedbackInviteView;
+  copy: FeedbackCopy;
+  t: Messages;
+}

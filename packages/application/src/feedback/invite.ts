@@ -17,21 +17,8 @@ import type { StorefrontImage } from '../catalog/storefront-types';
 import { awardPoints, feedbackCompletionPoints, getPointsBalance, sumInvitePoints } from './points';
 
 /*
-  ALIM-SONRASI DAVET AKIŞI (17.2 · 17.6) — web `lib/feedback/invite.ts`in paket hâli (terfi;
-  kopya değil). Ölçüt karşılandı: daveti artık İKİ yüzey açıyor — web davet sayfası
-  (`/feedback/[token]`) ve mobil vFb ekranı (token'lı derin bağlantı). Web dosyası köprü olarak
-  duruyor; benimsemesi web şeridinin işi (profile.ts terfisinin aynı sözleşmesi).
-
-  Web'den İKİ bilinçli şekil farkı (kural farkı DEĞİL):
-  · Kart görseli `StorefrontImage` (`imageOf`) — çıplak URL değil. Katalog/vitrin kartlarının
-    indirgemesiyle AYNI kapı; mobil sözleşme (`CatalogImageSchema`) bu şekli okuyor. Web köprüsü
-    benimseme günü `image.url` okur — ikinci bir görsel çözümü yaşamaz.
-  · Dil `PreferredLanguage` (`@lezzet/types`) — paket `@lezzet/i18n`ın `Locale`ına bağlanmaz;
-    katalog orkestrasyonunun aynı kararı.
-
-  **Token oturum yerine geçer.** Geçersiz ya da süresi dolmuş token `null` döner — "böyle bir davet
-  var ama senin değil" demek, olmayan bir kaydın varlığını doğrulamaktır. Süre süzgeci servisin
-  içinde (`findByToken`), tek yerde.
+  Alım sonrası değerlendirme daveti: web sayfası ve native ekran aynı akışı buradan açar. Belirteç oturum yerine geçer; geçersiz ya da
+  süresi dolmuş belirteç `null` döner, çünkü "var ama senin değil" demek olmayan bir kaydı doğrulamak olurdu.
 */
 
 /** Değerlendirme akışındaki tek kart — müşterinin aldığı bir ürün. */
@@ -47,6 +34,8 @@ export interface FeedbackCard {
 export interface FeedbackInviteView {
   requestId: string;
   customerId: string;
+  /** Talep akışının siparişe bağlanması için (`/support/new?order=`). */
+  orderId: string;
   /** Karşılama ve teşekkür ekranı adla hitap ediyor ("Teşekkürler Ayşe Hanım!"). Yoksa genel cümle. */
   customerName: string | null;
   /** vFb başlık rozeti ("LZA-2417") ve web karşılaması bunu basıyor. */
@@ -56,11 +45,7 @@ export interface FeedbackInviteView {
   cards: FeedbackCard[];
   /** "2 / 5" — türetilir, saklanmaz (`feedback_request_progress` görünümü). */
   progress: { rated: number; total: number };
-  /**
-   * Tamamlamanın kazandıracağı puan — **AYARDAN** (`points_feedback_purchase`), ekrana gömülmez.
-   * Tasarımdaki `+15` bir maket sayısı; kodlanmış olsaydı ayar değiştiği gün ekran müşteriye
-   * sistemin vermeyeceği bir sayı söylerdi (29.07 denetiminin 300/500 dersi).
-   */
+  /** Tamamlamanın kazandıracağı puan ayardan gelir (`points_feedback_purchase`); ekran sayı uydurmaz, ayar değişince yanlış söz verirdi. */
   completionPoints: number;
   /** Tamamlanmış davet tekrar açılırsa: teşekkür durumu, puan ikinci kez verilmez. */
   completedAt: string | null;
@@ -101,6 +86,7 @@ export async function openFeedbackInvite(
   return {
     requestId: request.id,
     customerId: request.customerId,
+    orderId: request.orderId,
     customerName: customer?.name ?? null,
     orderReferenceNo: order?.referenceNo ?? null,
     orderedOn: order?.createdAt ?? null,
@@ -125,11 +111,8 @@ export interface FeedbackCompletion {
   /** Bu ÇAĞRININ yazdığı puan (tamamlama primi); ikinci kez tamamlamada 0. Turun toplamı bu değil. */
   pointsAwarded: number;
   /**
-   * Bu davete yazılmış TOPLAM puan — oylar + yorum + tamamlama primi (`sumInvitePoints`).
-   *
-   * Ölçüldü (11.08): yazım uçları puanı geri söylemediği için ekran "+5" derken deftere 5+20+5 = 30
-   * yazılıyordu. İstemcide toplamak motoru taklit etmek olurdu; toplamı defter söyler.
-   * İkinci tamamlamada `pointsAwarded` 0'a düşer, bu alan turun gerçeğini söylemeye devam eder.
+   * Bu davete yazılmış toplam puan: oylar, yorum ve tamamlama primi (`sumInvitePoints`). İstemci toplamaz, çünkü motoru taklit etmek
+   * olurdu; ikinci tamamlamada prim 0'a düşse de bu alan turun toplamını söyler.
    */
   invitePointsTotal: number;
   balance: number;
@@ -139,13 +122,8 @@ export interface FeedbackCompletion {
 }
 
 /**
- * **Akışın tamamlanması** — puan burada verilir ve akış sonu belirlenir.
- *
- * **Puan tamamlamaya bağlıdır, beğeniye değil** (DOMAIN §14): müşteri her ürüne "beğenmedim" dese
- * de ödülünü alır. Arayüz bunun tersini ima bile etmemeli.
- *
- * İkinci çağrı puan vermez: `completedAt` damgası bunu söyler, defterdeki tekillik de ikinci bir
- * emniyet olarak durur.
+ * Akışın tamamlanması: puan burada verilir ve akış sonu belirlenir; puan beğeniye değil tamamlamaya bağlıdır (DOMAIN §14). İkinci
+ * çağrı puan vermez: `completedAt` damgası ve defterdeki tekillik bunu korur.
  */
 export async function completeFeedbackInvite(db: SupabaseClient, token: string): Promise<FeedbackCompletion | null> {
   const requests = new FeedbackRequestService(db);
@@ -202,21 +180,8 @@ export interface OrderFeedbackInvite {
 }
 
 /**
- * **Siparişten davete giden yol** (27.08 · kullanıcı kararı) — sipariş ekranındaki yorum teşviki.
- *
- * Bu yol BİLEREK yoktu ve yokluğu kayıtlıydı: sipariş detayı künyesi *"sipariş numarasından
- * token'a giden bir yol YOK"* diyerek tasarımın "★ Ürünleri değerlendir" düğmesini çizmemişti —
- * düğmeyi çizip hiçbir yere götürmemek verilmiş bir sözü tutmamaktır. Yol şimdi açılıyor çünkü
- * yorum daveti bildirimi artık SİPARİŞ sayfasına götürüyor (kullanıcı kararı): götürülen yerde
- * yorum yazacak bir kapı yoksa bildirim de boş bir vaat olurdu.
- *
- * **`null` ÜÇ HÂLİ birden kapsar ve ayrımı ekran BİLMEZ:** davet hiç yok (sipariş henüz teslim
- * edilmedi — davet 10. günde doğar) · zaten tamamlandı · token'ın 90 günlük ömrü doldu. Üçünde de
- * söylenecek bir şey yoktur ve blok çizilmez; "davetiniz sona erdi" demek, müşterinin hiç görmediği
- * bir şeyin kaybını duyurmak olurdu.
- *
- * **Token'ı sipariş cevabında taşımanın sakıncası yok:** uç zaten kimlik süzüyor (müşteri kendi
- * siparişini okuyor) ve aynı token davet e-postasında düz metin bağlantı olarak zaten gidiyor.
+ * Siparişten açık davete giden yol: sipariş ekranındaki yorum teşviki bununla bağlanır, çünkü yorum daveti bildirimi sipariş
+ * sayfasına götürür. `null` davetin hiç olmadığını, tamamlandığını ya da süresinin dolduğunu söyler; ekran üçünde de blok çizmez.
  */
 export async function readOrderFeedbackInvite(db: SupabaseClient, orderId: string): Promise<OrderFeedbackInvite | null> {
   const request = await new FeedbackRequestService(db).findByOrder(orderId);

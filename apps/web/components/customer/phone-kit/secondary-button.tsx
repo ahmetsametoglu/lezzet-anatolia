@@ -11,6 +11,8 @@ interface SecondaryButtonProps {
   label: string;
   onClick?: () => void;
   href?: ComponentProps<typeof Link>['href'];
+  /** Sitenin dışındaki adres (dış değerlendirme sayfası); yeni sekmede `noopener` ile açılır ki açılan sekme bu sayfaya erişemesin. */
+  externalHref?: string;
   /** `terracotta` yıkıcı onay içindir (hesap silme). */
   tone?: 'sand' | 'olive' | 'terracotta';
   shape?: 'block' | 'pill';
@@ -37,7 +39,16 @@ const PRESS: Record<NonNullable<SecondaryButtonProps['shape']>, string> = {
 
 const BASE = 'relative items-center justify-center border-[1.5px] px-5 text-center font-sans text-button';
 
-export function SecondaryButton({ label, onClick, href, tone = 'sand', shape = 'block', disabled = false, type = 'button' }: SecondaryButtonProps) {
+export function SecondaryButton({
+  label,
+  onClick,
+  href,
+  externalHref,
+  tone = 'sand',
+  shape = 'block',
+  disabled = false,
+  type = 'button',
+}: SecondaryButtonProps) {
   // Pasif hâl bir durumdur, bu yüzden bağ olarak değil düğme olarak çizilir.
   if (disabled) {
     return (
@@ -47,6 +58,13 @@ export function SecondaryButton({ label, onClick, href, tone = 'sand', shape = '
     );
   }
   const className = `${BASE} ${SHAPE[shape]} ${TONE[tone]} ${PRESS[shape]} cursor-pointer transition-[translate,box-shadow,background-color,scale] hover:bg-sand-150`;
+  if (externalHref !== undefined) {
+    return (
+      <a href={externalHref} target="_blank" rel="noopener noreferrer" className={className}>
+        {label}
+      </a>
+    );
+  }
   if (href !== undefined) {
     return (
       <Link href={href} className={className}>
