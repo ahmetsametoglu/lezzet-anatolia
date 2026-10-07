@@ -1,13 +1,17 @@
 import 'server-only';
 
+import { describeIntegrationSecrets, type ResolvedSecret } from '@lezzet/application';
 import { IntegrationSecretLogService, IntegrationSecretService, UserProfileService, serviceDb } from '@lezzet/database';
 import type { IntegrationSecretName } from '@lezzet/types';
 
-/** Kurulum'daki bağlantı anahtarları: hangisi Vault'ta kayıtlı, son değişiklik ve defter. Değerin kendisi bu dosyadan hiç geçmez. */
-export interface IntegrationKeyView {
+/**
+ * Kurulum'daki bağlantı anahtarları: her anahtarın geçerli değeri ve kaynağı, son değişiklik ve defter. Değer yalnız bu yönetici
+ * sayfasına gider; ortam değeri web sürecininkidir, sunucuda bütün süreçler aynı ortam dosyasını okur.
+ */
+export interface IntegrationKeyView extends ResolvedSecret {
   name: IntegrationSecretName;
   label: string;
-  /** Vault'ta kayıtlıysa son değişiklik; değilse `null` ve süreçler sunucu ortamındaki değeri kullanır. */
+  /** Vault'ta kayıtlıysa son değişiklik; değilse `null`. */
   stored: { at: string; byName: string | null } | null;
 }
 
@@ -57,7 +61,11 @@ const labelOf = (name: IntegrationSecretName): string => {
 
 export async function readIntegrationKeysPanel(): Promise<IntegrationKeysPanelData> {
   const db = serviceDb();
-  const [stored, log] = await Promise.all([new IntegrationSecretService(db).list(), new IntegrationSecretLogService(db).listRecent()]);
+  const [resolved, stored, log] = await Promise.all([
+    describeIntegrationSecrets(db),
+    new IntegrationSecretService(db).list(),
+    new IntegrationSecretLogService(db).listRecent(),
+  ]);
   const actorIds = [...new Set([...stored.map((row) => row.updatedBy), ...log.map((row) => row.actor)].filter((id): id is string => !!id))];
   const people = actorIds.length > 0 ? await new UserProfileService(db).listByIds(actorIds) : [];
   const nameOf = new Map(people.map((person) => [person.id, person.name]));
@@ -71,6 +79,8 @@ export async function readIntegrationKeysPanel(): Promise<IntegrationKeysPanelDa
         return {
           name,
           label,
+          value: resolved.get(name)?.value ?? null,
+          source: resolved.get(name)?.source ?? null,
           stored: row ? { at: row.updatedAt, byName: row.updatedBy ? (nameOf.get(row.updatedBy) ?? null) : null } : null,
         };
       }),

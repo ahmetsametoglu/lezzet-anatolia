@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { IntegrationSecretName } from '@lezzet/types';
-import { secretCache } from './secrets';
+import { resolveSecret, secretCache } from './secrets';
 
 const vault = (entries: Array<[IntegrationSecretName, string]>) => {
   const calls = { count: 0 };
@@ -27,6 +27,15 @@ describe('entegrasyon anahtarı okuyucusu', () => {
     expect(secret('hiboutik_api_key')).toBe('vault-hiboutik');
     expect(secret('pennylane_api_token')).toBe('ortam-pennylane');
     expect(secret('resend_api_key')).toBeNull();
+  });
+
+  it('Kurulum ekranı geçerli değeri kaynağıyla gösterir: Kurulum değeri ortamdakinin önünde, ikisi de yoksa tanımsız', () => {
+    const stored = new Map<IntegrationSecretName, string>([['hiboutik_api_key', 'vault-hiboutik']]);
+    const env = { HIBOUTIK_API_KEY: 'ortam-hiboutik', PENNYLANE_API_TOKEN: 'ortam-pennylane' };
+
+    expect(resolveSecret('hiboutik_api_key', stored, env)).toEqual({ value: 'vault-hiboutik', source: 'vault' });
+    expect(resolveSecret('pennylane_api_token', stored, env)).toEqual({ value: 'ortam-pennylane', source: 'env' });
+    expect(resolveSecret('resend_api_key', stored, env)).toEqual({ value: null, source: null });
   });
 
   it('değerler ömrü boyunca bellekten okunur, ömür dolunca Vault yeniden okunur', async () => {

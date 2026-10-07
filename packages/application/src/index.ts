@@ -643,7 +643,14 @@ export { checkRegisterDay, REGISTER_CHECK_JOB, registerDayEnd } from './register
 export { hiboutikFromSecrets } from './register/hiboutik/client';
 export { kickOrderRegister, requeueRegisterStore, syncRegisterQueue } from './register/sync';
 export { ensureShippingCategory } from './register/products';
-export { forgetIntegrationSecrets, installEmailKeySource, integrationSecrets, type SecretLookup } from './integration/secrets';
+export {
+  describeIntegrationSecrets,
+  forgetIntegrationSecrets,
+  installEmailKeySource,
+  integrationSecrets,
+  type ResolvedSecret,
+  type SecretLookup,
+} from './integration/secrets';
 export { pennylaneFromSecrets } from './accounting/pennylane/client';
 export {
   BANK_FEED_QUIET_JOB,

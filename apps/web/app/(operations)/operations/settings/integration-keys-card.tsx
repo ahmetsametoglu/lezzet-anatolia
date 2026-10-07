@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
+import { CopyInline } from '@/components/operation/ui/copy-text';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { shortDateTime } from '@/components/operation/ui/format';
 import { FieldShell } from '@/components/operation/form/field-shell';
@@ -13,8 +14,8 @@ import { DialogError, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
 
 /**
- * Bağlantı anahtarları: Revolut, Pennylane, Hiboutik ve e-posta anahtarları Vault'ta şifreli durur ve buradan değişir. Değer bir
- * kez yazılır, bir daha gösterilmez; kayıtlı olmayan anahtar için süreçler sunucu ortamındaki değeri kullanır.
+ * Bağlantı anahtarları: Revolut, Pennylane, Hiboutik ve e-posta anahtarları Vault'ta şifreli durur ve buradan değişir. Geçerli değer
+ * sağlayıcının sayfasındakiyle karşılaştırılabilsin diye kaynağıyla görünür; Kurulum'da kayıtlı olmayan anahtar ortamdan okunur.
  */
 interface IntegrationKeysCardProps {
   data: IntegrationKeysPanelData;
@@ -28,7 +29,7 @@ export function IntegrationKeysCard({ data }: IntegrationKeysCardProps) {
     <SettingsCard
       title="Bağlantı anahtarları"
       count={storedCount}
-      hint="Ödeme, muhasebe, kasa ve e-posta bağlantılarının anahtarları şifreli saklanır. Yazılan değer bir daha gösterilmez; değişiklik en geç bir dakikada bütün süreçlerde geçerli olur ve deftere kimle, ne zaman yazıldığı düşer."
+      hint="Ödeme, muhasebe, kasa ve e-posta bağlantılarının anahtarları; değeri sağlayıcının sayfasındakiyle karşılaştırmak için kopyalayın. Buradan yazılan anahtar şifreli saklanır, en geç bir dakikada bütün süreçlerde geçerli olur ve deftere kimle, ne zaman yazıldığı düşer."
     >
       {data.groups.map((group) => (
         <div key={group.title} className="border-t border-ops-line-soft">
@@ -36,15 +37,14 @@ export function IntegrationKeysCard({ data }: IntegrationKeysCardProps) {
             {group.title}
           </span>
           {group.keys.map((key) => (
-            <KeyRow key={key.name} row={key} onEdit={() => setEditing({ group, key })} />
+            <KeyRow key={key.name} row={key} what={`${group.title} ${key.label}`} onEdit={() => setEditing({ group, key })} />
           ))}
         </div>
       ))}
 
-      {/* Uyarı koşulsuz: sunucu ortamı web sürecinin ortamı değildir ve bu panel orada değer olup olmadığını ölçemez. */}
       <p className="border-t border-ops-amber-line bg-ops-amber-bg px-4 py-2.5 font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
-        Kayıtlı olmayan anahtarda süreçler sunucu ortamındaki değeri kullanır; bu panel o değeri göremez. Anahtarı buraya yazınca ortamdaki
-        değer devreden çıkar.
+        Kurulum'da kayıtlı olmayan anahtarda süreçler ortam dosyasındaki değeri kullanır. Anahtarı buraya yazınca ortamdaki değer devreden
+        çıkar.
       </p>
 
       <span className="border-t border-ops-line-soft px-4 pb-1.5 pt-2.5 font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-body">
@@ -72,27 +72,39 @@ export function IntegrationKeysCard({ data }: IntegrationKeysCardProps) {
 
 interface KeyRowProps {
   row: IntegrationKeyView;
+  /** Kopyalama düğmesinin erişilebilir adı; aynı etiket ("API anahtarı") birden çok grupta geçer. */
+  what: string;
   onEdit: () => void;
 }
 
-function KeyRow({ row, onEdit }: KeyRowProps) {
+function KeyRow({ row, what, onEdit }: KeyRowProps) {
   return (
-    <div className="flex items-center gap-3 px-4 py-2">
+    <div className="flex items-start gap-3 px-4 py-2">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-ops-body text-ops-base font-semibold text-ops-ink">{row.label}</span>
-          {row.stored ? (
+          {row.source === 'vault' ? (
             <Badge tone="olive" dot>
-              Kayıtlı
+              Kurulum'da kayıtlı
             </Badge>
+          ) : row.source === 'env' ? (
+            <Badge tone="neutral">Ortamdan</Badge>
           ) : (
-            <Badge tone="neutral">Kayıtlı değil</Badge>
+            <Badge tone="amber">Tanımlı değil</Badge>
           )}
         </div>
+        {row.value ? (
+          <span className="flex items-start gap-1.5">
+            <span className="min-w-0 break-all font-ops-mono text-ops-xs text-ops-strong">{row.value}</span>
+            <CopyInline text={row.value} what={what} />
+          </span>
+        ) : null}
         <span className="font-ops-body text-ops-xs text-ops-body">
           {row.stored
             ? `Son değişiklik ${shortDateTime(row.stored.at)} · ${row.stored.byName ?? 'kim yazdığı bilinmiyor'}`
-            : 'Süreçler sunucu ortamındaki değeri kullanır.'}
+            : row.source === 'env'
+              ? 'Ortam dosyasındaki değer kullanılıyor.'
+              : 'Bu anahtar olmadan bağlantı kurulmaz.'}
         </span>
       </div>
       <Button variant="secondary" size="sm" onClick={onEdit}>
@@ -107,7 +119,7 @@ interface KeyDialogProps {
   onClose: () => void;
 }
 
-/** Değer alanı gizli yazılır ve pencere kapanınca silinir; kaydedilen değer bir daha hiçbir yerde gösterilmez. */
+/** Değer alanı pencere kapanınca boşalır; yarıda bırakılan yazım bir sonraki anahtarın penceresine taşınmasın. */
 function KeyDialog({ target, onClose }: KeyDialogProps) {
   const [value, setValue] = useState('');
   const close = () => {
@@ -122,7 +134,7 @@ function KeyDialog({ target, onClose }: KeyDialogProps) {
       open={target !== null}
       onClose={close}
       title={target ? `${target.group.title} · ${target.key.label}` : ''}
-      subtitle="Yazılan değer şifreli saklanır ve bir daha gösterilmez. En geç bir dakika içinde bütün süreçler yeni değeri kullanır."
+      subtitle="Yazılan değer şifreli saklanır; en geç bir dakika içinde bütün süreçler yeni değeri kullanır."
       footer={
         <>
           {target?.key.stored && name ? (
@@ -153,7 +165,6 @@ function KeyDialog({ target, onClose }: KeyDialogProps) {
         <FieldShell fieldId="integration-key-value" label="Yeni değer" required>
           <Input
             id="integration-key-value"
-            type="password"
             autoComplete="off"
             spellCheck={false}
             value={value}

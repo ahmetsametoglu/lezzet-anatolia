@@ -8,7 +8,8 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 
 Sağlayıcı anahtarları (Revolut gizli anahtarı ve bildirim imza anahtarı, Pennylane, Hiboutik, Resend) Ayarlar › Kurulum › Bağlantı
 anahtarları'ndan Supabase Vault'a şifreli yazılır; süreçler onları `integrationSecrets` okuyucusundan alır (süreç başına 60 sn önbellek,
-değişiklik en geç bu sürede geçer). Kurulum'da tanımlı olmayan anahtar için ortam değişkeni okunur. Kip değişkenleri (`*_MODE`),
+değişiklik en geç bu sürede geçer). Kurulum'da tanımlı olmayan anahtar için ortam değişkeni okunur. Kurulum ekranı her anahtarın geçerli değerini
+kaynağıyla (Kurulum ya da ortam) yöneticiye gösterir ve kopyalatır; sağlayıcının sayfasındakiyle karşılaştırmak içindir. Kip değişkenleri (`*_MODE`),
 veritabanı adresi, servis anahtarı ve Vault'un ana anahtarı ortamda kalır.
 
 ---
