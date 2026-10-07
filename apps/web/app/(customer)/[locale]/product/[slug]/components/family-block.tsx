@@ -72,7 +72,7 @@ function FamilyCard({ member, size, subLine }: FamilyCardProps) {
       <span className="font-sans text-micro leading-tight font-bold text-ink">{member.label}</span>
       {/* Bakılan çeşitte satır YEŞİL ("Bakıyorsunuz" bir durum), ötekilerde soluk (fiyat bir bilgi). */}
       {subLine && (
-        <span className={['font-sans text-micro', member.isCurrent ? 'text-olive' : 'text-muted'].join(' ')}>{subLine}</span>
+        <span className={['font-sans text-micro', member.isCurrent ? 'text-olive' : 'text-body'].join(' ')}>{subLine}</span>
       )}
     </span>
   );
@@ -170,10 +170,10 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
         <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body-sm'].join(' ')}>
           {currentUnavailable ? t.titleUnavailable : t.title}
         </span>
-        <span className="font-sans text-field-label font-normal text-muted">{t.count.replace('{n}', String(members.length))}</span>
+        <span className="font-sans text-field-label font-normal text-body">{t.count.replace('{n}', String(members.length))}</span>
         {/* İpucu YALNIZ masaüstünde: dar ekranda başlık satırını ikinci satıra taşırıyor ve
             "sayfa değişir" bilgisini zaten ilk tıklama veriyor. */}
-        {!compact && !crowded && <span className="font-sans text-field-label font-normal text-muted">· {t.hint}</span>}
+        {!compact && !crowded && <span className="font-sans text-field-label font-normal text-body">· {t.hint}</span>}
         {crowded && (
           <button
             type="button"

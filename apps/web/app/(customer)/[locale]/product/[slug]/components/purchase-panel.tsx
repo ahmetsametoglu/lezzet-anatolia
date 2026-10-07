@@ -125,7 +125,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   )}
                 </span>
                 {v.comparisonCents !== null && v.comparisonUnit !== null && (
-                  <span className={['font-sans text-micro text-muted', compact ? '' : 'leading-tight'].join(' ')}>
+                  <span className={['font-sans text-micro text-body', compact ? '' : 'leading-tight'].join(' ')}>
                     {formatComparison(v.comparisonCents, v.comparisonUnit, locale)}
                   </span>
                 )}
@@ -143,7 +143,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
               </Badge>
             )}
           </span>
-          {unitLine && <span className="font-sans text-micro text-muted">{unitLine}</span>}
+          {unitLine && <span className="font-sans text-micro text-body">{unitLine}</span>}
         </div>
       )}
 
@@ -180,7 +180,7 @@ export function PriceBox({ t, locale, selected, children }: { t: Messages; local
             </Badge>
           )}
         </span>
-        {unitLine && <span className="font-sans text-field-label font-normal text-muted">{unitLine}</span>}
+        {unitLine && <span className="font-sans text-field-label font-normal text-body">{unitLine}</span>}
       </span>
       {children && <div className="min-w-0 flex-1">{children}</div>}
     </div>

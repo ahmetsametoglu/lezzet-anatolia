@@ -23,7 +23,7 @@ export function DesktopNotifyCard({ t }: DesktopNotifyCardProps) {
       ) : (
         <ConsentSwitch label={t.notifyLabel} icon={<Icon name="bell" size={17} />} on={on} onLabel={t.consentOn} offLabel={t.consentOff} onToggle={toggle} />
       )}
-      <span className="font-sans text-micro leading-relaxed text-muted">{t.notifyBody}</span>
+      <span className="font-sans text-micro leading-relaxed text-body">{t.notifyBody}</span>
     </Card>
   );
 }

@@ -138,7 +138,7 @@ export function RecipeListCard({ recipe, locale, labels, compact = false }: Reci
             compact ? '' : 'mt-1 border-t border-sand-100 pt-3',
           ].join(' ')}
         >
-          <span className="font-sans text-note font-semibold text-muted">
+          <span className="font-sans text-note font-semibold text-body">
             {/* Ev malzemesi sayısı yalnız masaüstünde: dar kartta satır sarıp fiyatı aşağı iter. Tükendiğinde sayı yerine tek cümle
                 kalır, alınamayan tarifte fiyat yazmak yanlış söz olurdu. */}
             {recipe.soldOut ? (

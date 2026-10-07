@@ -149,7 +149,7 @@ export function PhoneCodeStep({ email, copy, onVerify, onResend }: PhoneCodeStep
 /** Girişin gizlilik cümlesi; hangi yoldan girilirse girilsin aynı bilgilendirme gösterilir. */
 export function LoginLegal({ copy }: { copy: LoginCopy }) {
   return (
-    <p className="mt-2.5 font-sans text-micro leading-normal text-muted">
+    <p className="mt-2.5 font-sans text-micro leading-normal text-body">
       {copy.legalPrefix}
       <Link href="/legal/privacy" className="cursor-pointer text-olive-dark underline transition-colors hover:text-ink">
         {copy.privacyInline}

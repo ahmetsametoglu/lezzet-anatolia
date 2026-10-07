@@ -38,7 +38,7 @@ export function DiscoverDesktop({
           <div className="flex max-w-[520px] flex-1 flex-col gap-1.75">
             <div className="flex items-baseline gap-2.5">
               <span className="font-sans text-note font-semibold tracking-[0.12em] text-olive-dark uppercase">{t.title}</span>
-              <span className="font-sans text-field-label font-bold text-muted">{counter(t.progress)}</span>
+              <span className="font-sans text-field-label font-bold text-body">{counter(t.progress)}</span>
             </div>
             <div className="flex gap-1">
               {cards.map((c, i) => (
@@ -88,7 +88,7 @@ export function DiscoverDesktop({
               <span className="font-sans text-caps-label tracking-[0.14em] text-olive-dark uppercase">{counter(t.candidate)}</span>
               <h1 className="font-serif text-page-title leading-tight text-ink">{card.name}</h1>
               {card.description && <p className="max-w-[520px] font-sans text-copy leading-relaxed text-body">{card.description}</p>}
-              <p className="max-w-[520px] rounded-soft border border-olive-line bg-card px-4 py-3.25 font-sans text-control leading-normal font-normal text-muted">
+              <p className="max-w-[520px] rounded-soft border border-olive-line bg-card px-4 py-3.25 font-sans text-control leading-normal font-normal text-body">
                 {t.notice}
               </p>
 
@@ -102,7 +102,7 @@ export function DiscoverDesktop({
                   {t.dislikeLong}
                 </button>
               </div>
-              <span className="flex items-center gap-2 font-sans text-field-label font-normal text-muted">
+              <span className="flex items-center gap-2 font-sans text-field-label font-normal text-body">
                 <kbd className="rounded-md border border-sand-400 bg-card px-1.75 py-0.75 font-sans text-micro font-bold text-body">←</kbd>
                 {t.keySkip}
                 <kbd className="rounded-md border border-sand-400 bg-card px-1.75 py-0.75 font-sans text-micro font-bold text-body">→</kbd>

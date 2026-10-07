@@ -43,7 +43,7 @@ function DeclarationCard({ title, note, warn = false, compact = false, children 
         <h2 className={['font-serif text-ink', compact ? 'text-copy font-bold' : 'text-card-title-sm'].join(' ')}>{title}</h2>
         {warn && <Icon name="warning" size={16} className="self-center text-terracotta" />}
       </span>
-      {note && <span className="font-sans text-field-label font-normal text-muted">{note}</span>}
+      {note && <span className="font-sans text-field-label font-normal text-body">{note}</span>}
     </>
   );
 
@@ -117,7 +117,7 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
           {traces.length > 0 && (
             <span
               className={[
-                'font-sans text-field-label font-normal leading-relaxed text-muted',
+                'font-sans text-field-label font-normal leading-relaxed text-body',
                 // Kartın DİBİNE yapışır ve ayraçla ayrılır: beyan değil dipnot, kartın gövdesiyle
                 // aynı ağırlıkta okunmamalı. Mobil akordeonda yer yok, orada akışta kalır.
                 compact ? '' : 'mt-auto border-t border-sand-50 pt-2.5',
@@ -146,7 +146,7 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
             ))}
           </dl>
           {netQuantity !== null && netUnit !== null && (
-            <span className={['font-sans text-field-label font-normal text-muted', compact ? '' : 'mt-auto'].join(' ')}>
+            <span className={['font-sans text-field-label font-normal text-body', compact ? '' : 'mt-auto'].join(' ')}>
               {t.declaration.netQuantity.replace('{quantity}', formatNetQuantity(netQuantity, netUnit, locale))}
             </span>
           )}

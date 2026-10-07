@@ -86,11 +86,11 @@ export function DesktopPackageCard({ pack, locale, labels, compact = false, wide
             anlam taşır. Mobilde düşer — yarı genişlikteki kartta beş satır sığmıyor. */}
         {!(compact && pack.soldOut) && (
           <>
-            <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>
+            <span className={['font-sans text-body', compact ? 'text-micro' : 'text-note'].join(' ')}>
               {labels.items.replace('{n}', String(pack.itemCount))}
             </span>
             {pack.totalWeightG !== null && (
-              <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>
+              <span className={['font-sans text-body', compact ? 'text-micro' : 'text-note'].join(' ')}>
                 {labels.weight.replace('{weight}', formatWeight(pack.totalWeightG, locale))}
               </span>
             )}
@@ -148,7 +148,7 @@ export function DesktopPackageCard({ pack, locale, labels, compact = false, wide
             className={[
               'font-sans font-bold',
               compact ? 'text-copy' : 'text-card-title',
-              pack.soldOut ? 'text-muted' : 'text-ink',
+              pack.soldOut ? 'text-body' : 'text-ink',
             ].join(' ')}
           >
             {formatPrice(pack.priceCents, locale)}
@@ -230,7 +230,7 @@ function WidePackageCard({ pack, locale, labels }: Omit<DesktopPackageCardProps,
           )}
         </div>
         <div className="mt-auto flex items-center justify-between gap-3 pt-1">
-          <span className={['font-sans text-card-title font-bold', pack.soldOut ? 'text-muted' : 'text-ink'].join(' ')}>
+          <span className={['font-sans text-card-title font-bold', pack.soldOut ? 'text-body' : 'text-ink'].join(' ')}>
             {formatPrice(pack.priceCents, locale)}
           </span>
           <span

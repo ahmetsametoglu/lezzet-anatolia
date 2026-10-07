@@ -87,7 +87,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
         {/* Teslimat vaadi: satış cümlesi değil, KARAR bilgisi — "sipariş verirsem nasıl gelir".
             Masaüstünde düğmelerin altında ince bir ayraçla, mobilde ekranın sonunda kendi kutusunda. */}
         {!compact && (
-          <span className="mt-1.5 flex items-start gap-2 border-t border-sand-200 pt-3 font-sans text-note leading-relaxed text-muted">
+          <span className="mt-1.5 flex items-start gap-2 border-t border-sand-200 pt-3 font-sans text-note leading-relaxed text-body">
             <Icon name="snowflake" size={14} className="mt-0.75" />
             {t.empty.delivery}
           </span>

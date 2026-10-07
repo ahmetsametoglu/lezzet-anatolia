@@ -90,7 +90,7 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
       ].join(' ')}
     >
       <Icon name="pin" size={16} className="flex-none text-olive-dark" />
-      <span className={['truncate', place || address ? 'text-ink' : 'text-muted'].join(' ')}>{label}</span>
+      <span className={['truncate', place || address ? 'text-ink' : 'text-body'].join(' ')}>{label}</span>
       {channel && <span className="flex-none font-sans text-field-label font-semibold whitespace-nowrap text-olive-dark">· {channel}</span>}
       <span aria-hidden className="text-micro font-semibold text-muted">
         ▾

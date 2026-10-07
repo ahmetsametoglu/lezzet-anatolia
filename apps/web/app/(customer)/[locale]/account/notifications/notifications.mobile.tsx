@@ -27,9 +27,9 @@ export function NotificationsMobile({ t, locale, rows, hasMore, loadingMore, onL
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-px">
                 <span className="font-sans text-helper font-bold text-ink">{notificationTitle(row, locale)}</span>
-                <span className="font-sans text-micro leading-[1.4] text-muted">{notificationSentence(row, locale)}</span>
+                <span className="font-sans text-micro leading-[1.4] text-body">{notificationSentence(row, locale)}</span>
                 {/* Göreli zaman sunucu ile tarayıcı arasında dakika sınırında ayrışabilir. */}
-                <span suppressHydrationWarning className="mt-0.5 font-sans text-[10.5px] font-semibold text-sand-600">
+                <span suppressHydrationWarning className="mt-0.5 font-sans text-[10.5px] font-semibold text-body">
                   {notificationTime(row.createdAt, locale, now)}
                 </span>
               </span>
@@ -65,7 +65,7 @@ export function NotificationsMobile({ t, locale, rows, hasMore, loadingMore, onL
 
       <LoadMore hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} label={shared.loadMore} loadingLabel={t.loading} />
 
-      {rows.length > 0 && <p className="px-3 py-1.5 text-center font-sans text-micro leading-normal text-muted">{shared.prefsNote}</p>}
+      {rows.length > 0 && <p className="px-3 py-1.5 text-center font-sans text-micro leading-normal text-body">{shared.prefsNote}</p>}
     </div>
   );
 }

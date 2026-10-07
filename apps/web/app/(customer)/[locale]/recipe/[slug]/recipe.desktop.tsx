@@ -18,7 +18,7 @@ export function RecipeDesktop({ t, locale, recipe }: RecipeViewProps) {
     <div className="flex flex-col gap-6 px-12 pt-5 pb-11">
       {/* Ayırıcı `›` tasarımdandır, ürün ve paket detayları `·` kullanır; birleştirme kararı tasarımındır. Telefonda kabuğun başlık
           çubuğu geri bağını taşıdığı için breadcrumb yoktur. */}
-      <nav className="flex gap-1.5 font-sans text-body-sm text-muted">
+      <nav className="flex gap-1.5 font-sans text-body-sm text-body">
         <Link href="/recipes" className="font-bold text-olive hover:text-olive-dark">
           {t.back}
         </Link>

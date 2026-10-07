@@ -56,7 +56,7 @@ export function PreferencesDesktop({ t, locale, view, token, zoneNotices, zoneBu
               offLabel={t.off}
               onToggle={(next) => setCampaignConsentAction('whatsapp', next, token)}
             />
-            <span className="font-sans text-micro leading-relaxed text-muted">{t.campaignNote}</span>
+            <span className="font-sans text-micro leading-relaxed text-body">{t.campaignNote}</span>
           </Card>
 
           <Card compact={false}>
@@ -68,7 +68,7 @@ export function PreferencesDesktop({ t, locale, view, token, zoneNotices, zoneBu
               offLabel={t.off}
               onToggle={(next) => setKindConsentAction('feedbackInvite', next, token)}
             />
-            <span className="font-sans text-micro leading-relaxed text-muted">{t.reviewNote}</span>
+            <span className="font-sans text-micro leading-relaxed text-body">{t.reviewNote}</span>
           </Card>
         </>
       )}
@@ -76,7 +76,7 @@ export function PreferencesDesktop({ t, locale, view, token, zoneNotices, zoneBu
       <Card compact={false}>
         <CardHead title={t.zoneTitle} compact={false} />
         {zoneNotices.length === 0 ? (
-          <span className="font-sans text-body-sm text-muted">{t.zoneEmpty}</span>
+          <span className="font-sans text-body-sm text-body">{t.zoneEmpty}</span>
         ) : (
           <>
             {zoneNotices.map((notice) => (
@@ -90,7 +90,7 @@ export function PreferencesDesktop({ t, locale, view, token, zoneNotices, zoneBu
             </Button>
           </>
         )}
-        {view.visitorOnly && <span className="font-sans text-micro leading-relaxed text-muted">{t.visitorNote}</span>}
+        {view.visitorOnly && <span className="font-sans text-micro leading-relaxed text-body">{t.visitorNote}</span>}
       </Card>
 
       <Card compact={false}>

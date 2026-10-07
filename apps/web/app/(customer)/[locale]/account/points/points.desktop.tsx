@@ -22,7 +22,7 @@ export function PointsDesktop({ t, locale, rules, entries, hasMore, loading, loa
             <div key={entry.id} className="flex items-baseline justify-between gap-3 py-3">
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate font-sans text-body-sm font-semibold text-ink">{reasonLabel(t, entry)}</span>
-                <span className="font-sans text-micro text-muted">{dateOf.format(new Date(entry.createdAt))}</span>
+                <span className="font-sans text-micro text-body">{dateOf.format(new Date(entry.createdAt))}</span>
               </div>
               <span
                 className={['flex-none font-sans text-body-sm font-bold', entry.points >= 0 ? 'text-olive-dark' : 'text-terracotta'].join(

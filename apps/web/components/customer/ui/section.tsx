@@ -139,7 +139,7 @@ export function InviteBand({ title, body, cta, compact = false }: InviteBandProp
     >
       <span className="flex flex-col gap-1">
         <span className={['font-sans font-bold text-ink', compact ? 'text-copy' : 'text-lead leading-tight'].join(' ')}>{title}</span>
-        <span className={['font-sans text-muted', compact ? 'text-note' : 'text-body-sm'].join(' ')}>{body}</span>
+        <span className={['font-sans text-body', compact ? 'text-note' : 'text-body-sm'].join(' ')}>{body}</span>
       </span>
       <span className={['font-sans font-bold text-olive transition-colors group-hover:text-olive-dark', compact ? 'mt-0.5 text-body-sm' : 'text-copy'].join(' ')}>
         {cta.label}

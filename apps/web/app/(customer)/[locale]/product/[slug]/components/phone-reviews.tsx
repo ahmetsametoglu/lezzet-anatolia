@@ -98,7 +98,7 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
       ))}
 
       {score.average === null ? (
-        <p className="rounded-card bg-sand-150 px-3 py-2.5 font-sans text-note leading-[1.6] text-muted">
+        <p className="rounded-card bg-sand-150 px-3 py-2.5 font-sans text-note leading-[1.6] text-body">
           {productMessages[locale].reviews.empty}
         </p>
       ) : (

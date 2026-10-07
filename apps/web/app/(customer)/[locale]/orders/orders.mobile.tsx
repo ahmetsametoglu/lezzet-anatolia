@@ -58,7 +58,7 @@ export function OrdersMobile({ t, locale, orders, nextCursor, loadingMore, onLoa
                 >
                   {reference}
                 </Link>
-                <span className="font-sans text-helper text-muted">
+                <span className="font-sans text-helper text-body">
                   {(order.itemCount === 1 ? copy.row.metaOne : copy.row.meta)
                     .replace('{date}', formatOrderDate(order.createdAt, locale, true))
                     .replace('{count}', String(order.itemCount))}
@@ -86,7 +86,7 @@ export function OrdersMobile({ t, locale, orders, nextCursor, loadingMore, onLoa
       })}
 
       {nextCursor === null ? (
-        <p className="pt-2.5 text-center font-sans text-body-sm text-muted">{copy.list.end}</p>
+        <p className="pt-2.5 text-center font-sans text-body-sm text-body">{copy.list.end}</p>
       ) : (
         // Nöbetçi her hâlde yerinde kalır: gözlemci bir kez kurulur (`useLoadMore` künyesi).
         <div ref={ref} className="flex justify-center pt-2.5">

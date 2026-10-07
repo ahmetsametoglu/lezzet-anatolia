@@ -23,7 +23,7 @@ export function RecipesMobile({ locale, recipes }: RecipesViewProps) {
           <BackButton label={copy.back} fallback="/" />
           <h1 className="min-w-0 flex-1 font-serif text-screen-title text-ink">{copy.title}</h1>
         </div>
-        <p className="font-sans text-note leading-[1.6] text-muted">{copy.body}</p>
+        <p className="font-sans text-note leading-[1.6] text-body">{copy.body}</p>
       </header>
 
       {recipes.length === 0 ? (

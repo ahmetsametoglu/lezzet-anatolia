@@ -24,7 +24,7 @@ export function DesktopEarnWays({ t, locale, rules }: DesktopEarnWaysProps) {
           </div>
         ))}
       </div>
-      <p className="font-sans text-note text-muted">
+      <p className="font-sans text-note text-body">
         {t.earnNote
           .replace('{points}', String(rules.redeem.minimumPoints))
           .replace('{amount}', formatPrice(rules.redeem.valueCents, locale))}

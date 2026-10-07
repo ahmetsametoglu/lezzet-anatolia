@@ -18,7 +18,7 @@ interface DesktopCandidateStripProps {
 export function DesktopCandidateStrip({ title, cards, current, decisions }: DesktopCandidateStripProps) {
   return (
     <div className="flex flex-col gap-2.75 border-t border-olive-line pt-4.5">
-      <span className="font-sans text-eyebrow-sm font-bold text-muted uppercase">{title}</span>
+      <span className="font-sans text-eyebrow-sm font-bold text-body uppercase">{title}</span>
       <div className="flex gap-3 overflow-x-auto pb-1">
         {cards.map((c, i) => {
           const decision = decisions[i];

@@ -121,7 +121,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
     return (
       <SettingsCard title={phoneCopy.title}>
         {/* Adres yokken çizilmez: olmayan rozetin açıklaması gürültüdür. */}
-        {addresses.length > 0 && <p className="font-sans text-helper text-muted">{phoneCopy.note}</p>}
+        {addresses.length > 0 && <p className="font-sans text-helper text-body">{phoneCopy.note}</p>}
         {addresses.map((address, index) => {
           const title = addressTitle(address);
           /* Rol eylemleri çekmecenin üstünde tek şerit; rolü taşıyan adreste hiç çizilmezler, çekmece kısa kalsın. */
@@ -158,7 +158,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
                   {/* İki rol ayrı rozet ve ayrı tonda: bir adres ikisi birden olabilir. */}
                   {billing && address.isBilling && <span className={`${BADGE} bg-sand-300 text-ink`}>{phoneCopy.billing}</span>}
                 </span>
-                <span className="font-sans text-body-sm text-muted">{addressLine(address)}</span>
+                <span className="font-sans text-body-sm text-body">{addressLine(address)}</span>
               </span>
               {/* Ok, satırın bir kapı olduğunu söyler; eylem adı yazılsaydı kalkan eylemler geri gelirdi. */}
               <Icon name="arrowRight" size={16} className="flex-none text-muted" />
@@ -198,7 +198,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
         }
       />
 
-      {addresses.length === 0 && editing !== 'new' && <span className="font-sans text-note text-muted">{t.addressEmpty}</span>}
+      {addresses.length === 0 && editing !== 'new' && <span className="font-sans text-note text-body">{t.addressEmpty}</span>}
 
       {addresses.map((address) =>
         editing === address.id ? (
@@ -235,7 +235,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-3 font-sans text-note text-muted">
+              <div className="flex flex-wrap items-center gap-3 font-sans text-note text-body">
                 {/* Varsayılan olmayanda çıkar; varsayılana konan düğme hiçbir şey yapmazdı. */}
                 {!address.isDefault && (
                   <button

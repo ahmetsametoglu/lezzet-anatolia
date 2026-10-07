@@ -66,7 +66,7 @@ export function CartMobile({ t, locale }: CartViewProps) {
       <BackButton label={copy.back} fallback="/catalog" />
       <h1 className="min-w-0 flex-1 font-serif text-screen-title text-ink">{copy.title}</h1>
       {ready && !failed && (
-        <span className="font-sans text-note font-semibold text-muted">
+        <span className="font-sans text-note font-semibold text-body">
           {view.itemCount === 1 ? copy.countOne : copy.count.replace('{n}', String(view.itemCount))}
         </span>
       )}

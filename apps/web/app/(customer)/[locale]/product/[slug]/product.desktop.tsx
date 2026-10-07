@@ -74,7 +74,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
 
   return (
     <div className="flex flex-col">
-      <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">
+      <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-body">
         <Link href="/catalog" className="font-bold text-olive hover:text-olive-dark">
           {t.back}
         </Link>
@@ -162,7 +162,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
       <Band surface="border-t border-sand-300 bg-sand-100" className="flex flex-col gap-4.5 px-12 py-8.5">
         <div className="flex items-baseline gap-3">
           <h2 className="font-serif text-page-title-sm text-ink">{t.declaration.title}</h2>
-          <span className="font-sans text-note text-muted">{t.declaration.note}</span>
+          <span className="font-sans text-note text-body">{t.declaration.note}</span>
         </div>
         <Declaration
           t={t}

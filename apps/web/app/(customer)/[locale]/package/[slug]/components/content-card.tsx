@@ -40,7 +40,7 @@ export function ContentCard({ t, item, compact = false }: ContentCardProps) {
       />
       <div className="flex flex-col gap-0.5">
         <span className="font-sans text-note font-bold text-ink">{item.name}</span>
-        <span className="font-sans text-micro text-muted">{qty}</span>
+        <span className="font-sans text-micro text-body">{qty}</span>
         {!compact && <span className="font-sans text-micro font-semibold text-olive">{t.contents.link}</span>}
       </div>
       {compact && <span className="ml-auto font-sans text-micro font-semibold text-olive">{t.contents.linkShort}</span>}

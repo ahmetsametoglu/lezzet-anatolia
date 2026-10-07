@@ -59,7 +59,7 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
       <section className="flex flex-col gap-4 px-12 pb-11">
         <div className="flex items-baseline gap-3">
           <h2 className="font-serif text-h1-sm text-ink">{t.listTitle}</h2>
-          <span className="font-sans text-body-sm text-muted">{t.listNote}</span>
+          <span className="font-sans text-body-sm text-body">{t.listNote}</span>
         </div>
 
         {packages.length === 0 ? (

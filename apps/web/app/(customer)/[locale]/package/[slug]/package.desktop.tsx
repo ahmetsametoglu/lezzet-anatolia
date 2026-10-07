@@ -23,7 +23,7 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
   const stockStatus = packageRouteStatusOf(pack.route);
   return (
     <div className="flex flex-col">
-      <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">
+      <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-body">
         <Link href="/packages" className="font-bold text-olive hover:text-olive-dark">
           {t.back}
         </Link>
@@ -92,7 +92,7 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
 
           <PackageFacts t={t} locale={locale} pack={pack} />
 
-          <span className="font-sans text-note leading-relaxed text-muted">{t.fixedNote}</span>
+          <span className="font-sans text-note leading-relaxed text-body">{t.fixedNote}</span>
         </div>
       </section>
 

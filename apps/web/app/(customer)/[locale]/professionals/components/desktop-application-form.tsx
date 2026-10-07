@@ -209,7 +209,7 @@ export function DesktopApplicationForm({ t, locale, signedIn, defaults }: Deskto
       <Button fullWidth onClick={() => void submit()} disabled={form.pending}>
         {form.pending ? t.form.submitting : t.form.submit}
       </Button>
-      <p className="text-center font-sans text-micro leading-relaxed text-muted">{signedIn ? t.form.noteSignedIn : t.form.note}</p>
+      <p className="text-center font-sans text-micro leading-relaxed text-body">{signedIn ? t.form.noteSignedIn : t.form.note}</p>
     </div>
   );
 }

@@ -18,7 +18,7 @@ interface DesktopCouponsCardProps {
 }
 
 export function DesktopCouponsCard({ t, locale, coupons }: DesktopCouponsCardProps) {
-  if (coupons.length === 0) return <span className="font-sans text-note text-muted">{t.couponsEmpty}</span>;
+  if (coupons.length === 0) return <span className="font-sans text-note text-body">{t.couponsEmpty}</span>;
 
   return (
     <div className="flex flex-col gap-2.5">

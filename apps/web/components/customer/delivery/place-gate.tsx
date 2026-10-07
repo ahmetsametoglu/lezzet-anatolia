@@ -32,7 +32,7 @@ export function PlaceGate({ locale }: PlaceGateProps) {
       >
         {t.gateCta}
       </button>
-      <span className="font-sans text-micro leading-relaxed text-muted">{t.gateHint}</span>
+      <span className="font-sans text-micro leading-relaxed text-body">{t.gateHint}</span>
     </div>
   );
 }

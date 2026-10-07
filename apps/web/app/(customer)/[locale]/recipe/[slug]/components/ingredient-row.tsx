@@ -91,7 +91,7 @@ function RowFace({ item, locale, compact }: { item: StorefrontRecipeItem; locale
       </div>
       <div className="flex flex-1 flex-col gap-0.5">
         <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body-sm'].join(' ')}>{item.name}</span>
-        <span className="font-sans text-micro text-muted">
+        <span className="font-sans text-micro text-body">
           {/* Adet YALNIZ birden çoksa yazılır: "1 ×" her satıra gürültü ekler ve tarifin çoğu
               malzemesi tektir. Fiyat çözülemediyse satır boyla yetinir — 0,00 € yazmak kalemi
               bedava gösterirdi (`CLAUDE §1`). */}

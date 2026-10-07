@@ -31,7 +31,7 @@ export function PhoneIngredientRow({ item, copy, locale }: PhoneIngredientRowPro
       <CirclePhoto image={item.image} initial={item.name.slice(0, 1)} size={46} initialClassName="text-screen-title text-muted" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate font-sans text-control text-ink">{item.name}</span>
-        <span className="truncate font-sans text-micro text-muted">
+        <span className="truncate font-sans text-micro text-body">
           {recipeRowMetaOf({ qty: item.qty, label: item.unitLabel, priceCents: item.unitPriceCents }, locale)}
         </span>
       </span>

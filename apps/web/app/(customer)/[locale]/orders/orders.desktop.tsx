@@ -52,7 +52,7 @@ export function OrdersDesktop({
                   <span className="font-sans text-body-sm font-bold leading-tight text-ink">{order.referenceNo ?? t.pendingTitle}</span>
                   <OrderStatusBadge t={t} status={order.status} />
                 </div>
-                <span className="truncate font-sans text-note leading-relaxed text-muted">{summaryOf(order, t, locale)}</span>
+                <span className="truncate font-sans text-note leading-relaxed text-body">{summaryOf(order, t, locale)}</span>
               </div>
 
               <span

@@ -112,7 +112,7 @@ export function SiteFrame({
             <BrandLogo />
           </Link>
           {account.nav ? (
-            <nav className="flex gap-6 font-sans text-body-sm font-semibold text-muted">
+            <nav className="flex gap-6 font-sans text-body-sm font-semibold text-body">
               <Link href="/account" className={tabClass('account', account.nav, 'cursor-pointer transition-colors hover:text-olive')}>
                 {t.accountNav.account}
               </Link>

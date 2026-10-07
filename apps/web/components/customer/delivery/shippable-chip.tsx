@@ -33,7 +33,7 @@ export function ShippableChip({ mode, label, askLabel, href, active, compact = f
         type="button"
         onClick={() => setPanelOpen(true)}
         className={[
-          'inline-flex cursor-pointer items-center gap-1.5 rounded-pill border-[1.5px] border-dashed border-sand-400 bg-card font-sans font-bold text-muted transition-colors hover:border-olive hover:text-olive',
+          'inline-flex cursor-pointer items-center gap-1.5 rounded-pill border-[1.5px] border-dashed border-sand-400 bg-card font-sans font-bold text-body transition-colors hover:border-olive hover:text-olive',
           compact ? 'px-3 py-1.5 text-micro' : 'px-4 py-2 text-note',
         ].join(' ')}
       >

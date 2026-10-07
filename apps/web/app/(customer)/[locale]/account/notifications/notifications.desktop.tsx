@@ -48,7 +48,7 @@ export function NotificationsDesktop({ t, locale, rows, unread, hasMore, loading
                     <span className={['font-sans text-micro font-bold uppercase tracking-[0.05em]', TONE_TEXT[visual.tone]].join(' ')}>
                       {visual.label(locale)}
                     </span>
-                    <span className="font-sans text-micro text-muted">{dateOf.format(new Date(row.createdAt))}</span>
+                    <span className="font-sans text-micro text-body">{dateOf.format(new Date(row.createdAt))}</span>
                     {/* Okunmamış nokta: okununca söner, satır kalır. */}
                     {row.readAt === null && <span aria-hidden className="h-1.5 w-1.5 flex-none rounded-full bg-olive" />}
                   </span>

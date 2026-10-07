@@ -50,7 +50,7 @@ export function ChannelsCard({ t, locale, channels, compact }: ChannelsCardProps
           <div className="flex items-center gap-2.5">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="font-sans text-note font-bold text-ink">{name}</span>
-              <span className={['font-sans text-helper', channel.linked ? 'font-bold text-olive-dark' : 'text-muted'].join(' ')}>
+              <span className={['font-sans text-helper', channel.linked ? 'font-bold text-olive-dark' : 'text-body'].join(' ')}>
                 {statusOf(channel)}
               </span>
               {channel.numbers.map((number) => (
@@ -107,7 +107,7 @@ export function ChannelsCard({ t, locale, channels, compact }: ChannelsCardProps
   return (
     <Card compact={compact}>
       <CardHead title={copy.title} compact={compact} />
-      <span className="font-sans text-note leading-relaxed text-muted">{copy.body}</span>
+      <span className="font-sans text-note leading-relaxed text-body">{copy.body}</span>
       <div className="flex flex-col gap-2.5">{rows}</div>
       {failure}
     </Card>

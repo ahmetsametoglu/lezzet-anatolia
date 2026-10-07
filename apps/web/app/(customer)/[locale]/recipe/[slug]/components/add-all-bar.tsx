@@ -70,7 +70,7 @@ export function AddAllBar({ items, totalCents, locale, t, compact = false }: Add
       </Button>
       {added !== null && <Confirmation count={added} t={t} />}
       {/* Not her hâlde durur: tükenme kuralını ve fiyat sözünü müşteri bir malzeme tükenmeden önce okumalı. */}
-      <span className="font-sans text-micro leading-relaxed text-muted">{t.note}</span>
+      <span className="font-sans text-micro leading-relaxed text-body">{t.note}</span>
     </div>
   );
 }

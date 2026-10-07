@@ -49,7 +49,7 @@ export function PreferencesMobile({ t, view, token, zoneNotices, zoneBusy, faile
                 onToggle={(next) => setCampaignConsentAction('whatsapp', next, token)}
               />
             </div>
-            <p className="font-sans text-body-sm leading-[1.6] text-sand-600">{t.campaignNote}</p>
+            <p className="font-sans text-body-sm leading-[1.6] text-body">{t.campaignNote}</p>
           </SettingsCard>
 
           <SettingsCard title={t.reviewTitle}>
@@ -62,14 +62,14 @@ export function PreferencesMobile({ t, view, token, zoneNotices, zoneBusy, faile
               failedText={t.saveFailed}
               onToggle={(next) => setKindConsentAction('feedbackInvite', next, token)}
             />
-            <p className="font-sans text-body-sm leading-[1.6] text-sand-600">{t.reviewNote}</p>
+            <p className="font-sans text-body-sm leading-[1.6] text-body">{t.reviewNote}</p>
           </SettingsCard>
         </>
       )}
 
       <SettingsCard title={t.zoneTitle}>
         {zoneNotices.length === 0 ? (
-          <p className="font-sans text-body-sm text-muted">{t.zoneEmpty}</p>
+          <p className="font-sans text-body-sm text-body">{t.zoneEmpty}</p>
         ) : (
           <>
             {zoneNotices.map((notice) => (
@@ -80,7 +80,7 @@ export function PreferencesMobile({ t, view, token, zoneNotices, zoneBusy, faile
             <SecondaryButton label={t.zoneCancel} onClick={onCancelZone} disabled={zoneBusy} />
           </>
         )}
-        {view.visitorOnly && <p className="font-sans text-body-sm leading-[1.6] text-sand-600">{t.visitorNote}</p>}
+        {view.visitorOnly && <p className="font-sans text-body-sm leading-[1.6] text-body">{t.visitorNote}</p>}
       </SettingsCard>
 
       <SettingsCard title={t.alwaysTitle}>

@@ -22,7 +22,7 @@ export function CardHead({ title, compact, action, note }: { title: string; comp
     <div className="flex items-baseline justify-between gap-3">
       <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
         {title}
-        {note && !compact && <span className="ml-2 font-sans text-micro font-normal text-muted">{note}</span>}
+        {note && !compact && <span className="ml-2 font-sans text-micro font-normal text-body">{note}</span>}
       </span>
       {action}
     </div>
@@ -33,7 +33,7 @@ export function CardHead({ title, compact, action, note }: { title: string; comp
 export function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 font-sans text-body-sm">
-      <span className="flex-none text-muted">{label}</span>
+      <span className="flex-none text-body">{label}</span>
       <span className="min-w-0 truncate font-bold text-ink">{value}</span>
     </div>
   );
@@ -252,7 +252,7 @@ export function InviteCard({ t, points, compact }: { t: Messages; points: NonNul
       <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{t.inviteTitle}</span>
       <p className="font-sans text-note leading-relaxed text-body">{t.inviteBody.replace('{points}', String(points.referralPoints))}</p>
       <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate rounded-soft border border-sand-200 bg-cream px-3 py-2 font-sans text-note text-muted">{url}</span>
+        <span className="min-w-0 flex-1 truncate rounded-soft border border-sand-200 bg-cream px-3 py-2 font-sans text-note text-body">{url}</span>
         <button type="button" onClick={copy} className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none whitespace-nowrap' })}>
           {copied ? (
             <span className="inline-flex items-center gap-1.5">
@@ -289,7 +289,7 @@ export function SavedList({
     <div className="flex flex-col gap-2">
       {/* Kaydedilenler sepetle AYNI veridir; taşıma da aynı kapıdan geçer (`restoreToCart`).
           İkinci bir yol yazmak, aynı listenin iki farklı biçimde boşalabildiği bir sistem olurdu. */}
-      {saved.length === 0 && <span className="font-sans text-note text-muted">{copy.empty}</span>}
+      {saved.length === 0 && <span className="font-sans text-note text-body">{copy.empty}</span>}
       {saved.map((line) => (
         <div
           key={line.kind === 'bundle' ? line.bundleId : line.variantId}

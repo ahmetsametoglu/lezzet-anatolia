@@ -182,7 +182,7 @@ function TabBar({ locale, route, tabs, menuLabel, cartLabel, fab }: TabBarProps)
             aria-current={active ? 'page' : undefined}
             className={[
               'flex flex-1 cursor-pointer flex-col items-center gap-0.5 py-1.5 transition-opacity',
-              active ? 'text-terracotta-dark' : 'text-muted hover:opacity-70',
+              active ? 'text-terracotta-dark' : 'text-body hover:opacity-70',
             ].join(' ')}
           >
             <span className={['flex', active ? '-translate-y-0.5 scale-[1.12]' : ''].join(' ')}>

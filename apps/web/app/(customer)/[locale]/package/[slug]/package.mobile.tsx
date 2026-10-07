@@ -50,7 +50,7 @@ export function PackageMobile({ locale, pack }: PackageViewProps) {
       <div className="flex flex-col gap-2.5 px-4.5 py-4">
         <h1 className="font-serif text-h1-sm text-ink">{pack.name}</h1>
         <p className="font-sans text-card-title font-bold text-ink">
-          {formatPrice(pack.priceCents, locale)} <span className="text-helper font-normal text-muted">{copy.priceSuffix}</span>
+          {formatPrice(pack.priceCents, locale)} <span className="text-helper font-normal text-body">{copy.priceSuffix}</span>
         </p>
         {showsNoShipChip(!pack.inRouteOnly, placeMark?.tone ?? null) && (
           <span className="self-start rounded-badge bg-olive-bg px-2 py-1 font-sans text-micro font-semibold text-olive-dark">{copy.noShip}</span>
@@ -87,7 +87,7 @@ export function PackageMobile({ locale, pack }: PackageViewProps) {
                 <span className="min-w-0 flex-1 font-sans text-note font-bold text-ink">
                   {item.unitLabel ? `${item.name} · ${item.unitLabel}` : item.name}
                 </span>
-                <span className="font-sans text-helper font-bold text-muted">{`×${item.qty}`}</span>
+                <span className="font-sans text-helper font-bold text-body">{`×${item.qty}`}</span>
                 <span aria-hidden className="font-sans text-copy text-sand-600">
                   ›
                 </span>
@@ -95,7 +95,7 @@ export function PackageMobile({ locale, pack }: PackageViewProps) {
             </li>
           ))}
         </ul>
-        <p className="font-sans text-body-sm leading-[1.5] text-muted">{copy.contents.note}</p>
+        <p className="font-sans text-body-sm leading-[1.5] text-body">{copy.contents.note}</p>
       </div>
 
       {/* Yapışkan barın payı (native `productBarSpace` 108). */}

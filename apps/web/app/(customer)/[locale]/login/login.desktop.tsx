@@ -56,7 +56,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, isSend
                 <GoogleIcon /> {t.googleCta}
               </Button>
 
-              <div className="flex items-center gap-3 font-sans text-note text-sand-600">
+              <div className="flex items-center gap-3 font-sans text-note text-body">
                 <span className="h-px flex-1 bg-sand-300" />
                 {t.orEmail}
                 <span className="h-px flex-1 bg-sand-300" />
@@ -81,7 +81,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, isSend
 
               {error && <p className="text-center font-sans text-note font-semibold text-terracotta-bright">{error}</p>}
 
-              <p className="text-center font-sans text-micro leading-relaxed text-muted">
+              <p className="text-center font-sans text-micro leading-relaxed text-body">
                 {t.consentBefore}
                 <span className="text-olive">{t.consentLink}</span>
                 {t.consentAfter}

@@ -70,7 +70,7 @@ export function PhoneApplicationForm({ copy, t, form, accountEmail, companyOpen,
 
       {isSiret ? (
         <div className="flex flex-col gap-2.5">
-          <p className="font-sans text-body-sm leading-[1.6] text-muted">{copy.form.siretNote}</p>
+          <p className="font-sans text-body-sm leading-[1.6] text-body">{copy.form.siretNote}</p>
           {/* Düğme alanın yanında, etiketin içinde değil: `<label htmlFor>` içindeki düğme tıklamayı girdiye yönlendirirdi. */}
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
@@ -122,7 +122,7 @@ export function PhoneApplicationForm({ copy, t, form, accountEmail, companyOpen,
               </span>
             )}
           </div>
-          <p className="font-sans text-body-sm leading-[1.6] text-muted">{copy.form.vatNote}</p>
+          <p className="font-sans text-body-sm leading-[1.6] text-body">{copy.form.vatNote}</p>
         </div>
       )}
 
@@ -154,7 +154,7 @@ export function PhoneApplicationForm({ copy, t, form, accountEmail, companyOpen,
             variant="pill"
           />
           {/* Gönderilen adres müşterinin adres defterine de yazılır; söylenmezse bir sonraki siparişte tanımadığı bir satır görürdü. */}
-          <p className="font-sans text-body-sm leading-[1.6] text-muted">{copy.form.addressNote}</p>
+          <p className="font-sans text-body-sm leading-[1.6] text-body">{copy.form.addressNote}</p>
         </div>
       )}
 
@@ -171,7 +171,7 @@ export function PhoneApplicationForm({ copy, t, form, accountEmail, companyOpen,
         {/* Sonucun gideceği adres söylenir: söylenmezse müşteri gelen kutusunu tahmin etmek zorunda kalırdı. */}
         {accountEmail !== undefined && (
           <div className="flex flex-col gap-1">
-            <p className="font-sans text-body-sm leading-[1.6] text-muted">{accountEmail === null ? copy.form.resultToGuest : copy.form.resultTo}</p>
+            <p className="font-sans text-body-sm leading-[1.6] text-body">{accountEmail === null ? copy.form.resultToGuest : copy.form.resultTo}</p>
             {accountEmail !== null && <p className="font-sans text-note font-semibold text-ink">{accountEmail}</p>}
           </div>
         )}

@@ -194,12 +194,12 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           className={[
             'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
             compact ? 'text-note' : 'text-copy leading-tight',
-            product.soldOut ? 'text-muted' : 'text-ink',
+            product.soldOut ? 'text-body' : 'text-ink',
           ].join(' ')}
         >
           {product.name}
         </Link>
-        <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note leading-tight'].join(' ')}>
+        <span className={['font-sans text-body', compact ? 'text-micro' : 'text-note leading-tight'].join(' ')}>
           {[
             product.unitLabel,
             product.comparisonCents !== null ? formatComparison(product.comparisonCents, product.comparisonUnit ?? 'kg', locale) : null,
@@ -231,7 +231,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
         {/* "başlangıç fiyatı" notu tasarımda YALNIZ masaüstü kartında var: mobilde kart zaten dar,
             iki satırlık bir açıklama ızgarayı düzensizleştirir ve "Seçenekler →" aynı şeyi söyler. */}
         {!compact && labels.priceFrom && product.purchaseMode === 'options' && !product.soldOut && (
-          <span className="font-sans text-micro text-muted">{labels.priceFrom}</span>
+          <span className="font-sans text-micro text-body">{labels.priceFrom}</span>
         )}
       </div>
     </div>
@@ -345,7 +345,7 @@ export function OfferCard({ offer, locale, limitLabel, actionLabels }: OfferCard
         >
           {offer.name}
         </Link>
-        <span className="font-sans text-note leading-tight text-muted">
+        <span className="font-sans text-note leading-tight text-body">
           {[
             offer.unitLabel,
             offer.comparisonCents !== null ? formatComparison(offer.comparisonCents, offer.comparisonUnit ?? 'kg', locale) : null,

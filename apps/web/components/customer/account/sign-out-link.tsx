@@ -35,7 +35,7 @@ export function SignOutLink({ locale, variant = 'link' }: SignOutLinkProps) {
       type="button"
       disabled={busy}
       onClick={() => void signOut()}
-      className="flex-none cursor-pointer font-sans text-body-sm font-semibold text-muted transition-colors hover:text-terracotta disabled:opacity-60"
+      className="flex-none cursor-pointer font-sans text-body-sm font-semibold text-body transition-colors hover:text-terracotta disabled:opacity-60"
     >
       {t.signOut}
     </button>

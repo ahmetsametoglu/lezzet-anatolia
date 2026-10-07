@@ -71,7 +71,7 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
 export function ColdChainMark({ label }: { label: string }) {
   return (
     // Ölçü yer işaretiyle ORTAK — gerekçesi orada (`band`), ikisi birlikte değişir.
-    <span className="inline-flex w-max items-center gap-1.5 rounded-soft border border-sand-300 bg-sand-100 px-2.5 py-1 font-sans text-note font-semibold text-muted">
+    <span className="inline-flex w-max items-center gap-1.5 rounded-soft border border-sand-300 bg-sand-100 px-2.5 py-1 font-sans text-note font-semibold text-body">
       <Icon name="snowflake" size={14} />
       {label}
     </span>

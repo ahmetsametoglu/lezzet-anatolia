@@ -48,7 +48,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
               />
               <Row label={t.companyLegalName} value={account.company.legalName} />
               {account.company.siret && <Row label={t.companySiret} value={account.company.siret} />}
-              <span className="font-sans text-micro leading-relaxed text-muted">{t.companyNote}</span>
+              <span className="font-sans text-micro leading-relaxed text-body">{t.companyNote}</span>
             </Card>
           )}
 
@@ -81,7 +81,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
               offLabel={t.consentOff}
               onToggle={setConsentAction.bind(null, 'whatsapp')}
             />
-            <span className="font-sans text-micro leading-relaxed text-muted">{t.consentNote}</span>
+            <span className="font-sans text-micro leading-relaxed text-body">{t.consentNote}</span>
           </Card>
 
           <Card compact={compact}>
@@ -101,7 +101,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
 
           <Card compact={compact}>
             <CardHead title={saved.title} compact={compact} action={<SavedAddAll label={saved.addAll} saved={account.saved} />} />
-            <span className="font-sans text-micro leading-relaxed text-muted">{saved.note}</span>
+            <span className="font-sans text-micro leading-relaxed text-body">{saved.note}</span>
             <SavedList copy={saved} locale={locale} saved={account.saved} compact={compact} />
 
             {/* Bölge haberi ayrı kart değil, kaydedilenlerin alt bloğu: ikisi de "bugün alamadığım şey". */}

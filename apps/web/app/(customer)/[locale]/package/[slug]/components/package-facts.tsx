@@ -33,7 +33,7 @@ export function PackageFacts({ t, locale, pack, compact = false }: PackageFactsP
         )}
         {allergens.length > 0 && (
           <div className="flex flex-col gap-1.5 px-3.5 py-2.5">
-            <span className="font-sans text-note text-muted">{t.facts.allergens}</span>
+            <span className="font-sans text-note text-body">{t.facts.allergens}</span>
             <AllergenChips names={allergens} />
           </div>
         )}
@@ -51,9 +51,9 @@ export function PackageFacts({ t, locale, pack, compact = false }: PackageFactsP
       )}
       {allergens.length > 0 && (
         <div className="col-span-full flex flex-col gap-1 bg-card px-4 py-3.5">
-          <span className="font-sans text-note text-muted">{t.facts.allergens}</span>
+          <span className="font-sans text-note text-body">{t.facts.allergens}</span>
           <AllergenChips names={allergens} />
-          <span className="font-sans text-note text-muted">{t.facts.allergensNote}</span>
+          <span className="font-sans text-note text-body">{t.facts.allergensNote}</span>
         </div>
       )}
     </div>
@@ -63,7 +63,7 @@ export function PackageFacts({ t, locale, pack, compact = false }: PackageFactsP
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5 bg-card px-4 py-3.5">
-      <span className="font-sans text-note text-muted">{label}</span>
+      <span className="font-sans text-note text-body">{label}</span>
       <span className="font-sans text-body-sm font-bold text-ink">{value}</span>
     </div>
   );
@@ -72,7 +72,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 function FactRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3 border-b border-sand-100 px-3.5 py-2.5 last:border-b-0">
-      <span className="font-sans text-note text-muted">{label}</span>
+      <span className="font-sans text-note text-body">{label}</span>
       <span className="font-sans text-note font-bold text-ink">{value}</span>
     </div>
   );
