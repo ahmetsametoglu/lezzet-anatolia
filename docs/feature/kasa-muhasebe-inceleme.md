@@ -111,7 +111,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 ## 5. Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor
 
-**Durum:** Yapıldı (07.10); Revolut bildirim aboneliğine iki olay eklenmeli · **Ağırlık:** orta
+**Durum:** Yapıldı (07.10) · **Ağırlık:** orta
 
 - **Mevcut durum:** Revolut kart iadesini ayrı bir "iade siparişi" olarak açar ve sonucunu sonradan bildirir. Biz iade açıldığı
   anda deftere "iade yapıldı" yazıyor, Hiboutik'e iade fişi gönderiyoruz; iadenin başarısız olduğunu bildiren olayları yok
@@ -141,7 +141,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
     tahsilat koruması gereği silinmez). Sipariş yeniden "iade bekliyor" olur, iz hata kaydına düşer, operatör iadeyi yeniden
     dener; Hiboutik'e de aynı ters kayıt gider.
   - Bunun için Revolut bildirim aboneliğinde `ORDER_PAYMENT_DECLINED` ve `ORDER_PAYMENT_FAILED` olmalı; test sunucusunun
-    kaydında bu iki olay yok.
+    kaydına 07.10'da eklendi (imza anahtarı değişmedi), canlı kayıt altı olayla yapılır.
   - "İade tamamlanınca yazılsın" yolu seçilmedi: bekleyen iade kavramı ve kayıp bildirime karşı yedek zamanlayıcı isterdi.
 - **Kanıt:** `apps/web/lib/order/revolut-event.ts:55-58, 72` · `packages/application/src/order/revolut.ts:151-169` ·
   `order/refund.ts:325-345` · `kasa-muhasebe.md` §6 Revolut İade satırı.
