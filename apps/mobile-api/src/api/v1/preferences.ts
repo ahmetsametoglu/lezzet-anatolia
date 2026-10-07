@@ -32,7 +32,13 @@ preferences.patch('/', async (c) => {
   const profile = await new UserProfileService(db).findByAuthUserId(c.get('authUser').id);
   if (!profile) return fail(c, 'profile_not_found', 404);
 
-  const outcome = await updateCustomerPreferences(db, { profileId: profile.id, source: CONSENT_SOURCE, ...body.data });
+  // Bilgi e-postası yanıtı bekletmez; süreç uzun ömürlü olduğu için iş yanıttan sonra da tamamlanır.
+  const outcome = await updateCustomerPreferences(db, {
+    profileId: profile.id,
+    source: CONSENT_SOURCE,
+    ...body.data,
+    runLater: (task) => void task(),
+  });
   if (outcome.status !== 'ok') return fail(c, outcome.status, outcome.status === 'profile_not_found' ? 404 : 400);
   return ok(c, MeSchema.parse(outcome.profile));
 });

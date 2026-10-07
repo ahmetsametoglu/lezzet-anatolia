@@ -60,7 +60,7 @@ export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
 }
 
 /** Mail her ülkede gönderenin adresini taşımak zorundadır; ülke adı her dilde "France", çünkü alt satır tek dilli. */
-const POSTAL_ADDRESS = `${brand.name} · ${companyAddressLine}, France`;
+export const POSTAL_ADDRESS = `${brand.name} · ${companyAddressLine}, France`;
 
 /**
  * Sürücü sırasının tek kaynağı: web istekten, backend saatten doğan bildirimleri buradan yollar ki aynı olay iki yüzeyden farklı

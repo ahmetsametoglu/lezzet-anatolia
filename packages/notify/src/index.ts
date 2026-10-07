@@ -11,7 +11,7 @@ export type {
 } from './types';
 // Olay → sınıf (HABER/BELGE) + uygulama içi satır kararı; sınıf bilgisinin tek yeri.
 export { DEVICE_CHANNELS, NOTIFY_EVENT_META, WRITTEN_CHANNELS } from './types';
-export { createNotifier, defaultNotifier, type Notifier } from './notifier';
+export { createNotifier, defaultNotifier, POSTAL_ADDRESS, type Notifier } from './notifier';
 export { formatMessageDate } from './format';
 export { emailDriver } from './drivers/email.driver';
 export { pushDriver, sendExpoPush, type DevicePushMessage, type PushDriverOptions } from './drivers/push.driver';

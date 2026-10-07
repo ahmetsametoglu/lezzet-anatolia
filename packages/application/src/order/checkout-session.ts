@@ -1,10 +1,11 @@
 import { brand } from '@lezzet/brand';
 import { OrderService, UserProfileService, type Db } from '@lezzet/database';
-import { apportionShippingVat, nextMarketingConsent } from '@lezzet/domain-core';
+import { apportionShippingVat, nextMarketingConsent, startsEmailSubscription } from '@lezzet/domain-core';
 import { vatPortion } from '@lezzet/helper';
 import { DEFAULT_LOCALE } from '@lezzet/i18n';
 import checkoutCopy from '@lezzet/i18n/customer/checkout';
 import { resolveLocalizedText, type Order, type OrderItem, type PreferredLanguage } from '@lezzet/types';
+import { announceEmailSubscription } from '../customer/email-subscription';
 import { resolveOrderLines } from './customer-orders';
 import type { BackgroundRunner } from './effects';
 import { reserveOrderStock } from './reserve';
@@ -70,7 +71,7 @@ export interface CheckoutSessionInput {
   acquisitionSource?: Record<string, unknown> | null;
   /** Bu istekte az önce yazılıp geri okunmuş sipariş ve kalemleri; verilirse yeniden okunmaz. */
   placed?: { order: Order; items: OrderItem[] };
-  /** Stok eşiği uyarısını yanıttan sonra koşturan kapı. */
+  /** Stok eşiği uyarısını ve kampanya bilgi e-postasını yanıttan sonra koşturan kapı. */
   runLater?: BackgroundRunner;
   locale?: PreferredLanguage;
 }
@@ -135,6 +136,7 @@ async function recordCustomerContext(db: Db, customerId: string, input: Checkout
   if (input.acquisitionSource && !customer.acquisitionSource) patch.acquisitionSource = input.acquisitionSource;
 
   if (Object.keys(patch).length > 0) await profiles.update({ id: customerId, ...patch });
+  if (startsEmailSubscription(customer.marketingConsent, consent)) await announceEmailSubscription(db, customerId, input.runLater);
 }
 
 /**

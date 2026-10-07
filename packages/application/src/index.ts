@@ -46,8 +46,8 @@ export {
 } from './customer/addresses';
 export type { CustomerAddressOutcome, CustomerAddressWrite } from './customer/addresses';
 // ── Müşteri tercihleri (dil + kampanya izinleri) ──
-export { updateCustomerPreferences } from './customer/preferences';
-export type { UpdateCustomerPreferencesOutcome } from './customer/preferences';
+export { readEmailSubscription, unsubscribeEmail, updateCustomerPreferences } from './customer/preferences';
+export type { EmailSubscriptionState, UpdateCustomerPreferencesOutcome } from './customer/preferences';
 // ── Puan cüzdanı: bakiye, eşik, kuponlar, puan→kupon çevirme ──
 export {
   listCustomerCoupons,

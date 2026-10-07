@@ -212,3 +212,12 @@ export const B2bApplicationResultNotificationSchema = z.object({
   notificationPreferencesUrl: z.string(),
 });
 export type B2bApplicationResultNotification = z.infer<typeof B2bApplicationResultNotificationSchema>;
+
+/** Kampanya e-postası açılınca abone olana giden bilgi; düğmesi aboneliği tek tıkla sonlandırır. */
+export const MarketingSubscribedNotificationSchema = z.object({
+  customerName: z.string().nullable(),
+  locale: PreferredLanguageEnum,
+  unsubscribeUrl: z.string(),
+  notificationPreferencesUrl: z.string(),
+});
+export type MarketingSubscribedNotification = z.infer<typeof MarketingSubscribedNotificationSchema>;

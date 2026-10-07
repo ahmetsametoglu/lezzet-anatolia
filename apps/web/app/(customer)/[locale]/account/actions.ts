@@ -4,6 +4,7 @@ import { startWhatsappLink, updateCustomerPreferences, updateCustomerProfile } f
 import { UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { currentCustomerId } from '@/lib/guard';
 import { addAddress, deleteAddress, setBillingAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
 import type { AddressPointCandidate } from '@lezzet/application';
@@ -74,6 +75,7 @@ export async function setConsentAction(channel: 'email' | 'whatsapp', granted: b
       profileId: customerId,
       source: 'account',
       marketingConsent: { [channel]: granted },
+      runLater: after,
     });
     if (sonuc.status !== 'ok') throw new CustomerError('session_expired');
     revalidateAccount();

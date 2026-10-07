@@ -1,0 +1,86 @@
+{
+  "tr": {
+    "meta": {
+      "title": "Kampanya e-postaları — Lezzet Anatolie",
+      "description": "Kampanya e-postalarından çıkış."
+    },
+    "eyebrow": "Kampanya e-postaları",
+    "loading": "Yükleniyor…",
+    "pending": {
+      "title": "Aboneliği sonlandırın",
+      "body": "Düğmeye bastığınızda bu adrese kampanya e-postası gönderilmez.",
+      "action": "Aboneliği sonlandır"
+    },
+    "done": {
+      "title": "Aboneliğiniz sonlandı",
+      "body": "Bu adrese artık kampanya e-postası göndermeyeceğiz. Sipariş e-postalarınız bundan etkilenmez; istediğiniz an hesabınızdan yeniden abone olabilirsiniz.",
+      "home": "Ana sayfaya dön"
+    },
+    "invalid": {
+      "title": "Bu bağlantı geçerli değil",
+      "body": "Kampanya e-postalarını hesabınızdaki bildirim tercihlerinden de kapatabilirsiniz.",
+      "preferences": "Bildirim tercihleri",
+      "home": "Ana sayfa"
+    },
+    "errors": {
+      "unexpected": "Abonelik şu an sonlandırılamadı; yeniden deneyin.",
+      "session_expired": "Bu bağlantı artık geçerli değil."
+    }
+  },
+  "fr": {
+    "meta": {
+      "title": "Communications commerciales — Lezzet Anatolie",
+      "description": "Désinscription des communications commerciales par e-mail."
+    },
+    "eyebrow": "Communications commerciales",
+    "loading": "Chargement…",
+    "pending": {
+      "title": "Mettre fin à l’abonnement",
+      "body": "Après avoir appuyé sur le bouton, cette adresse ne recevra plus de communications commerciales.",
+      "action": "Me désinscrire"
+    },
+    "done": {
+      "title": "Votre désinscription est enregistrée",
+      "body": "Nous n’enverrons plus de communications commerciales à cette adresse. Les e-mails liés à vos commandes ne sont pas concernés ; vous pouvez vous réinscrire à tout moment depuis votre compte.",
+      "home": "Retour à l’accueil"
+    },
+    "invalid": {
+      "title": "Ce lien n’est pas valide",
+      "body": "Vous pouvez aussi désactiver les communications commerciales dans les préférences de votre compte.",
+      "preferences": "Préférences de notification",
+      "home": "Accueil"
+    },
+    "errors": {
+      "unexpected": "La désinscription n’a pas abouti pour le moment ; réessayez.",
+      "session_expired": "Ce lien n’est plus valide."
+    }
+  },
+  "de": {
+    "meta": {
+      "title": "Werbenachrichten – Lezzet Anatolie",
+      "description": "Abmeldung von Werbenachrichten per E-Mail."
+    },
+    "eyebrow": "Werbenachrichten",
+    "loading": "Wird geladen…",
+    "pending": {
+      "title": "Abonnement beenden",
+      "body": "Nach dem Klick erhält diese Adresse keine Werbenachrichten mehr.",
+      "action": "Abmelden"
+    },
+    "done": {
+      "title": "Sie sind abgemeldet",
+      "body": "An diese Adresse senden wir keine Werbenachrichten mehr. E-Mails zu Ihren Bestellungen sind davon nicht betroffen; Sie können sich jederzeit in Ihrem Konto wieder anmelden.",
+      "home": "Zur Startseite"
+    },
+    "invalid": {
+      "title": "Dieser Link ist ungültig",
+      "body": "Sie können Werbenachrichten auch in den Einstellungen Ihres Kontos abschalten.",
+      "preferences": "Benachrichtigungseinstellungen",
+      "home": "Startseite"
+    },
+    "errors": {
+      "unexpected": "Die Abmeldung hat gerade nicht geklappt – bitte erneut versuchen.",
+      "session_expired": "Dieser Link ist nicht mehr gültig."
+    }
+  }
+}

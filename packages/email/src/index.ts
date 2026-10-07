@@ -33,3 +33,8 @@ export {
   b2bApplicationResultSubject,
   type B2bApplicationResultEmailProps,
 } from './templates/b2b-application-result';
+export {
+  MarketingSubscribedEmail,
+  marketingSubscribedSubject,
+  type MarketingSubscribedEmailProps,
+} from './templates/marketing-subscribed';

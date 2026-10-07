@@ -40,6 +40,8 @@ export const PATHNAMES = {
   '/invite/[code]': { fr: '/parrainage/[code]', de: '/einladung/[code]', tr: '/davet/[code]' },
   // Getiren davetinden ayrı rota: bu belirteç bir sefere bağlı ve kesim saatinde ölür, iki ömür tek adreste gizlenmesin.
   '/neighbor/[token]': { fr: '/voisin/[token]', de: '/nachbarn/[token]', tr: '/komsu/[token]' },
+  // Yalnız kampanya bilgi e-postasının düğmesinden açılır; `[token]` bildirim tercihlerinin jetonudur.
+  '/unsubscribe/[token]': { fr: '/desinscription/[token]', de: '/abmelden/[token]', tr: '/abonelikten-cik/[token]' },
   // Ziyaretçi "keşfet" diye arar, "aday ürün" diye değil.
   '/discover': { fr: '/decouverte', de: '/entdecken', tr: '/kesfet' },
   '/professionals': { fr: '/professionnels', de: '/geschaeftskunden', tr: '/profesyoneller' },

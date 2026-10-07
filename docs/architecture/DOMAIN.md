@@ -564,7 +564,8 @@ E-posta bağlamak istemeyen müşteriye, **aynı konuşmada**, sistemin üretti�
 
 İzin **geriye dönük üretilemez**; bu yüzden toplama ilk günden başlar, gönderim liste biriktikçe:
 
-- **Toplama (Faz 1, ilk günden):** kayıt/checkout'ta **işaretlenmemiş** kutu ("kampanyalardan haberdar olmak istiyorum") + sitede küçük bülten kayıt kutusu → `Customer.marketing_consent` (kanal bazlı: e-posta/WhatsApp; verildiği an + kaynak = GDPR kanıtı). **Hiçbir kampanya gönderimi yapılmaz** — yalnız liste birikir. Kutu baştan işaretli gelemez (AB'de açık eylem şartı).
+- **Toplama (Faz 1, ilk günden):** yalnız oturum açmış müşteriden — checkout'ta **işaretlenmemiş** kutu ("kampanyalardan haberdar olmak istiyorum") ve hesap sayfasındaki kanal anahtarı → `Customer.marketing_consent` (kanal bazlı: e-posta/WhatsApp; verildiği an + kaynak = GDPR kanıtı). Sitede ziyaretçiye açık bülten kutusu yoktur. **Hiçbir kampanya gönderimi yapılmaz** — yalnız liste birikir. Kutu baştan işaretli gelemez (AB'de açık eylem şartı).
+- **Abonelik bilgisi:** e-posta izni nereden açılırsa açılsın abone olana bilgi e-postası gider; onay istemez, içindeki düğme aboneliği giriş istemeden tek tıkla sonlandırır (`/unsubscribe/[token]`, bildirim tercihlerinin jetonuyla).
 - **Gönderim (Faz 1, elle):** izinli listeye elle hazırlanan kampanya e-postası; WhatsApp ajanı canlıyken sohbet sonunda izni sorup kaydeder.
 - **Faz 2:** kampanya otomasyonu + WhatsApp broadcast (double opt-in, yukarıdaki kural).
 - **Edinim kaynağı:** ilk siparişte `Customer.acquisition_source` bir kez yazılır (UTM + order_source snapshot) — "bu kampanyadan gelen müşteri tekrar alıyor mu" (kohort/LTV) raporu ancak bununla mümkündür; oturum verisi geçicidir, sonradan kurulamaz.

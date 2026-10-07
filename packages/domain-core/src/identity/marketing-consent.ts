@@ -27,3 +27,8 @@ export function nextMarketingConsent(
 
   return changed ? next : null;
 }
+
+/** Kampanya e-postası bu yazımla mı açıldı; bilgi e-postası yalnız o an gider, aynı değerin yeniden kaydı ya da kapatma göndermez. */
+export function startsEmailSubscription(previous: MarketingConsent, next: MarketingConsent | null): boolean {
+  return next?.email?.granted === true && previous.email?.granted !== true;
+}

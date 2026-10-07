@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { serviceDb } from '@lezzet/database';
 import {
   cancelZoneNotices,
@@ -48,6 +49,7 @@ export async function setCampaignConsentAction(
       profileId: subject.profile.id,
       source: token ? 'email-link' : 'account',
       marketingConsent: { [channel]: granted },
+      runLater: after,
     });
     if (sonuc.status !== 'ok') throw new CustomerError('session_expired');
     revalidate();
