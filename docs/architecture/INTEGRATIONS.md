@@ -130,8 +130,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
   `HIBOUTIK_API_KEY`); anında yazım ödemeyi yazan süreçte koştuğu için anahtar backend'in yanında web ve mobil API'de de durur.
 - Kurulum kartı mağaza listesini Hiboutik'ten okur (`GET /stores/`); eşleme kaydedilirken numaranın açık bir mağazaya ait olduğu
   denetlenir.
-- Kargo ürünü Hiboutik'te "Livraison" kategorisindedir (`ensureCategory`, dış referansla bulunur, yoksa açılır): Pennylane'in
-  Hiboutik bağlantısı satış hesabını kategoriden seçer, faturalanan kargo ürün satışından ayrı hesaba gider.
+- Kargo ürünü Hiboutik'te "Livraison" kategorisindedir (`ensureCategory`, dış referansla bulunur, yoksa açılır; mağaza eşlenirken
+  de açılır): Pennylane'in Hiboutik bağlantısı satış hesabını kategoriden seçer, faturalanan kargo ürün satışından ayrı hesaba gider.
 - Yazım yolu: `money_movement` tetikleyicisi siparişi ya da eşlenmiş kasanın hareketini, kalem ve durum tetikleyicisi fişi olan
   siparişi kuyruğa işaretler, backend cron'u
   (`register_sync`, dakikada bir) sipariş başına durum farkını fiş ve ödeme satırı olarak, fiş dışı nakdi kasa giriş/çıkışı

@@ -642,6 +642,7 @@ export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParce
 export { checkRegisterDay, REGISTER_CHECK_JOB, registerDayEnd } from './register/day-end';
 export { hiboutikFromEnv } from './register/hiboutik/client';
 export { kickOrderRegister, requeueRegisterStore, syncRegisterQueue } from './register/sync';
+export { ensureShippingCategory } from './register/products';
 export { pennylaneFromEnv } from './accounting/pennylane/client';
 export {
   BANK_FEED_QUIET_JOB,

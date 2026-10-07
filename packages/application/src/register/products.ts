@@ -71,6 +71,11 @@ export async function ensureItemProducts(
  */
 const SHIPPING_CATEGORY = { name: 'Livraison', refExt: 'livraison' };
 
+/** Kasa eşlenirken de açılır ki muhasebe bağlantısında ilk kargolu satıştan önce eşlenebilsin. */
+export function ensureShippingCategory(register: CashRegister): Promise<number> {
+  return register.ensureCategory(SHIPPING_CATEGORY);
+}
+
 /** Kargo oran başına ayrı üründür; fiyatı satışta yazılır, katalog fiyatı yoktur. */
 export async function ensureShippingProduct(db: Db, register: CashRegister, vatRate: number): Promise<RegisterProduct> {
   const mirror = new RegisterProductService(db);
@@ -78,7 +83,7 @@ export async function ensureShippingProduct(db: Db, register: CashRegister, vatR
   if (have) return have;
   const name = `Frais de livraison ${String(vatRate).replace('.', ',')} %`;
   const refExt = `livraison-${vatRate}`;
-  const categoryId = await register.ensureCategory(SHIPPING_CATEGORY);
+  const categoryId = await ensureShippingCategory(register);
   const found = await register.findProductByRef(refExt);
   // Ayna sıfırlanınca ürün kasada bulunur; kategori kuralından önce açılmışsa kategorisi boştur.
   if (found !== null) await register.updateProduct(found, { categoryId });

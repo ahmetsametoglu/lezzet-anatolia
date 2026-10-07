@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { AccountService, JobRunService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { checkRegisterDay, hiboutikFromEnv, REGISTER_CHECK_JOB, requeueRegisterStore } from '@lezzet/application';
+import { checkRegisterDay, ensureShippingCategory, hiboutikFromEnv, REGISTER_CHECK_JOB, requeueRegisterStore } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -32,7 +32,7 @@ export async function saveRegisterStoreAction(input: {
       return { data: null, error: 'Kasa yalnız bir tesise eşlenir; araç satışı tesisinin kasasına yazılır.' };
     if (!account || account.type !== 'cash' || !account.isActive)
       return { data: null, error: 'Çekmecenin hesabı açık bir nakit hesabı olmalı.' };
-    const refusal = await externalStoreRefusal(input.externalStoreId);
+    const refusal = await registerSetupRefusal(input.externalStoreId);
     if (refusal) return { data: null, error: refusal };
 
     const store = await new RegisterStoreService(db).save(input);
@@ -77,17 +77,19 @@ export async function checkRegisterDayAction(): Promise<ActionResult> {
 }
 
 /**
- * Numara kasa yazılımında açık bir mağazaya ait olmalı, yoksa satış başka mağazanın Z'sine yazılırdı. Anahtarsız ortamda kasaya hiçbir şey
- * yazılmadığı için numara denetlenmez.
+ * Numara kasa yazılımında açık bir mağazaya ait olmalı, yoksa satış başka mağazanın Z'sine yazılırdı. Kargo kategorisi de burada açılır ki
+ * Pennylane bağlantısında ilk kargolu satıştan önce eşlenebilsin; anahtarsız ortamda kasaya hiçbir şey yazılmadığı için ikisi de atlanır.
  */
-async function externalStoreRefusal(externalStoreId: number): Promise<string | null> {
+async function registerSetupRefusal(externalStoreId: number): Promise<string | null> {
   const register = hiboutikFromEnv();
   if (!register) return null;
   try {
     const stores = await register.listStores();
-    return stores.some((store) => store.externalStoreId === externalStoreId) ? null : 'Bu numarada açık bir Hiboutik mağazası yok.';
+    if (!stores.some((store) => store.externalStoreId === externalStoreId)) return 'Bu numarada açık bir Hiboutik mağazası yok.';
+    await ensureShippingCategory(register);
+    return null;
   } catch (err) {
-    logger.warn({ err: err instanceof Error ? err.message : String(err) }, 'kasa: mağaza listesi okunamadı, eşleme kaydedilmedi');
+    logger.warn({ err: err instanceof Error ? err.message : String(err) }, 'kasa: Hiboutik okunamadı, eşleme kaydedilmedi');
     return "Hiboutik'e ulaşılamadı; mağaza doğrulanamadığı için eşleme kaydedilmedi. Biraz sonra yeniden deneyin.";
   }
 }

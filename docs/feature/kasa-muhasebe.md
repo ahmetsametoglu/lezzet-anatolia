@@ -331,8 +331,9 @@ kalem varsa. Hiboutik kalemi:
 - Paket kalemleri zaten ayrı `order_item`, ayrı yazılır.
 - Kargo, ücretlenen kalem tutarlarına göre KDV oranlarına bölünür (`apportionShippingVat`); oran başına
   bir "Frais de livraison" kalemi. Kalem değişince kargonun oran payı da değişir, fark iade fişinde
-  düzeltilir. Kargo ürünü Hiboutik'te "Livraison" kategorisindedir (dış referans `livraison`, 22. karar); ayna
-  sıfırlanınca kasada bulunan kargo ürünü de bu kategoriye alınır. Ücretsiz kargoda kargo kalemi yoktur.
+  düzeltilir. Kargo ürünü Hiboutik'te "Livraison" kategorisindedir (dış referans `livraison`, 22. karar); kategori
+  kasa mağazası eşlenirken açılır ki Pennylane bağlantısında ilk kargolu satıştan önce eşlenebilsin. Ayna sıfırlanınca
+  kasada bulunan kargo ürünü de bu kategoriye alınır. Ücretsiz kargoda kargo kalemi yoktur.
 - Kalemler türetilen borcu tutmazsa plan bunu işaretler ve uyarı yazılır; fark fişin bakiyesinde görünür.
   İndirimin kalemlere tam dağıtıldığını veritabanı zaten zorluyor (`assert_order_discount_balance`).
 
