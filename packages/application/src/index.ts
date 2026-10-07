@@ -583,6 +583,7 @@ export {
   type DocumentUploadOutcome,
 } from './accounting/document';
 export { addMovementTag, setMovementTagActive, tagMovement, type TagMovementOutcome, type TagOutcome } from './accounting/tags';
+export { linkAwaitingTransfers } from './accounting/transfer-link';
 export {
   addMovementNature,
   natureProblemOf,
@@ -648,6 +649,7 @@ export {
   bankFeedStatus,
   checkBankFeedQuiet,
   mapPennylaneBankAccount,
+  openMappedBankAccount,
   pennylaneConnectionOf,
   pennylaneFeedFrom,
   syncBankFeed,

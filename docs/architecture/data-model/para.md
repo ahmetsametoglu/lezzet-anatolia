@@ -99,7 +99,7 @@ Her banka satırının bir karşılığı olmalı. Kuyruk satıra şu hedefleri 
 
 ### Kart ödemesi: brüt tahsilat · komisyon · aktarım
 
-Revolut Merchant bir hesaptır ve üç satır tutar: **tahsilat brüt** (`order_payment`, künye `providerRef`, yazım kimliği `card-payment:<ödeme>`), **komisyon ödeme başına** (`expense` + `kart-komisyonu`, yazım kimliği `card-fee:<ödeme>`; sipariş bağı künyede — `order_id` yazılsaydı siparişin tahsilat toplamı kayardı) ve **aktarım** (`transfer`, Merchant → ana hesap, yazım kimliği `card-payout:<aktarım>`). Aktarım bakiyenin tamamını taşır; hedef hesap `card_payout_account_id` ayarıdır ve yalnız banka hesabı seçilir. Yazım kimliği tekil olduğu için tekrar gelen olay ikinci satır doğurmaz (`insertOnce`). Ekstre aktarımı getirince satır transferin karşı satırı olur (`counterpart_movement_id`).
+Revolut Merchant bir hesaptır ve üç satır tutar: **tahsilat brüt** (`order_payment`, künye `providerRef`, yazım kimliği `card-payment:<ödeme>`), **komisyon ödeme başına** (`expense` + `kart-komisyonu`, yazım kimliği `card-fee:<ödeme>`; sipariş bağı künyede — `order_id` yazılsaydı siparişin tahsilat toplamı kayardı) ve **aktarım** (`transfer`, Merchant → ana hesap, yazım kimliği `card-payout:<aktarım>`). Aktarım bakiyenin tamamını taşır; hedef hesap `card_payout_account_id` ayarıdır ve yalnız banka hesabı seçilir. Yazım kimliği tekil olduğu için tekrar gelen olay ikinci satır doğurmaz (`insertOnce`). Ekstre aktarımı getirince satır transferin karşı satırı olur (`counterpart_movement_id`); satır ve transfer birbirinin tek adayıysa bu bağ kendiliğinden kurulur.
 
 ### Ortak cari hesabı (`account.type = partner`, 13.09)
 

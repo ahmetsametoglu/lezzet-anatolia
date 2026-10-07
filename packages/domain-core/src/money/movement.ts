@@ -8,6 +8,9 @@ import { CAPITAL_NATURE, type MovementDirection, type MovementType } from '@lezz
  * tedarikçisi belli olmalıdır. İhlali bozuk veri değil, YANLIŞ veridir — raporu sessizce kaydırır.
  */
 
+/** Transferin karşı hesaptaki yönü: yön gönderenin gözünden yazılır, gönderenin çıkışı karşı hesabın girişidir. */
+export const counterDirectionOf = (direction: MovementDirection): MovementDirection => (direction === 'out' ? 'in' : 'out');
+
 /**
  * Sebep yönü belirler mi? Çoğu tipte evet: sipariş tahsilatı hep giriş, iade hep çıkış. `transfer`
  * ve `misc` serbesttir — transfer iki hesabı birden ilgilendirir (yön gönderenin gözünden yazılır),

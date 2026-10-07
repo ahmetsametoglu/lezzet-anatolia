@@ -7,7 +7,7 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { shortDate } from '@/components/operation/ui/format';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Select } from '@/components/operation/form/select';
-import { removePennylaneAccountAction, savePennylaneAccountAction } from './pennylane-actions';
+import { openPennylaneAccountAction, removePennylaneAccountAction, savePennylaneAccountAction } from './pennylane-actions';
 import type { PennylaneAccountRowView, PennylanePanelData } from './pennylane-read';
 import { CardItem, CardLine, DialogError, JobText, QueueText, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
@@ -65,8 +65,34 @@ export function PennylaneCard({ data }: PennylaneCardProps) {
         <JobText job={data.quietCheck} />
       </CardLine>
 
+      {data.freeOptions.map((option) => (
+        <CardItem
+          key={option.value}
+          title={option.label}
+          detail="Pennylane'de var, bizde eşlenmedi — hareketleri okunmuyor. Bizdeki bir hesaba eşlemek için o hesabın satırındaki Eşle."
+          action={<OpenAccountButton pennylaneId={Number(option.value)} />}
+        />
+      ))}
+
       <AccountDialog row={editing} options={data.freeOptions} onClose={() => setEditing(null)} />
     </SettingsCard>
+  );
+}
+
+interface OpenAccountButtonProps {
+  pennylaneId: number;
+}
+
+/** Bizde banka hesabını Pennylane'deki adıyla açar ve eşler; ret düğmenin yanında yazar. */
+function OpenAccountButton({ pennylaneId }: OpenAccountButtonProps) {
+  const { busy, error, run } = useDialogAction(() => undefined);
+  return (
+    <span className="flex items-center gap-2">
+      {error ? <span className="max-w-[260px] font-ops-body text-ops-xs text-ops-red">{error}</span> : null}
+      <Button variant="secondary" size="sm" disabled={busy} onClick={() => void run(() => openPennylaneAccountAction({ pennylaneId }))}>
+        Bizde aç ve eşle
+      </Button>
+    </span>
   );
 }
 

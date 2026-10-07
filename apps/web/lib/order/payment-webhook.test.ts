@@ -33,6 +33,7 @@ let categoryId: string;
 let providerAccount: string;
 /** Aktarımın gittiği banka; ayar bu hesabı gösterir. */
 let bankAccount: string;
+let cashAccount: string;
 const createdProfiles: string[] = [];
 
 /** Geç ödeme dalının iadesi ağa çıkmaz: kök `.env`teki deneme anahtarı sahte ödeme kimliğiyle sağlayıcıya giderdi. */
@@ -71,6 +72,7 @@ beforeAll(async () => {
   createdProfiles.push(profile.id);
   providerAccount = (await new AccountService(db).insert({ name: `Revolut Merchant ${stamp}`, type: 'provider' })).id;
   bankAccount = (await new AccountService(db).insert({ name: `Aktarım bankası ${stamp}`, type: 'bank' })).id;
+  cashAccount = (await new AccountService(db).insert({ name: `Aktarım kasası ${stamp}`, type: 'cash' })).id;
 });
 
 beforeEach(async () => {
@@ -92,7 +94,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [providerAccount, bankAccount],
+    accountIds: [providerAccount, bankAccount, cashAccount],
     warehouseIds: [warehouseId],
   });
 });
@@ -313,5 +315,46 @@ describe('kart muhasebesi — komisyon ve aktarım', () => {
 
     expect(outcome).toMatchObject({ status: 'error' });
     expect(await transferRows()).toEqual([]);
+  });
+
+  it('aktarım hesabı banka değilse olay işlenmemiş kalır — kart parası bankadan başka hesaba yazılmaz', async () => {
+    await settings.override('card_payout_account_id', cashAccount);
+
+    const outcome = await handlePaymentEvent(payoutEvent('po4', 500), providerAccount);
+
+    expect(outcome).toMatchObject({ status: 'error' });
+    expect(await transferRows()).toEqual([]);
+  });
+
+  it('aktarımdan önce düşen banka satırı, aktarım yazılınca ona kendiliğinden bağlanır — para bankada bir kez sayılır', async () => {
+    await settings.override('card_payout_account_id', bankAccount);
+    const [statement] = await movements.insertImported([
+      {
+        accountId: bankAccount,
+        direction: 'in',
+        amountCents: 2500,
+        type: 'misc',
+        description: 'REVOLUT PAYOUT',
+        valueDate: dayOffset(0),
+        source: 'bank_import',
+        reconciled: false,
+        importFingerprint: `test:${stamp}:payout`,
+      },
+    ]);
+    const event: PaymentEvent = {
+      key: `PAYOUT_COMPLETED:${stamp}_po5`,
+      kind: 'payout_completed',
+      payout: { id: `po_${stamp}_once`, amountCents: 2500, currency: 'EUR', valueDate: dayOffset(0) },
+    };
+
+    expect(await handlePaymentEvent(event, providerAccount)).toMatchObject({ status: 'ok', action: 'payout_recorded' });
+
+    const [transfer] = await transferRows();
+    expect(await movements.getById(statement!.id)).toMatchObject({
+      type: 'transfer',
+      counterpartMovementId: transfer!.id,
+      reconciled: true,
+    });
+    expect(await movements.listTransferLegsAwaiting(bankAccount)).toEqual([]);
   });
 });

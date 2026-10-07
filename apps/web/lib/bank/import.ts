@@ -1,5 +1,5 @@
 import { bankColumnsTask, runTask, type AiModel } from '@lezzet/ai';
-import { pennylaneFeedFrom } from '@lezzet/application';
+import { linkAwaitingTransfers, pennylaneFeedFrom } from '@lezzet/application';
 import {
   BankImportProfileService, BankImportService, MoneyMovementService, serviceDb,
 } from '@lezzet/database';
@@ -70,6 +70,8 @@ interface ImportWritten {
   inserted: number;
   /** Zaten var olduğu için atlanan — mükerrer korumasının görünür yüzü. */
   duplicates: number;
+  /** Bekleyen transfere kendiliğinden bağlanan satırlar; kuyrukta izah beklemezler. */
+  linked: number;
   /** Okunamayan satırlar; sayısı ve sebebi ekranda gösterilir, dosya sessizce eksik alınmaz. */
   failures: RowParseFailure[];
 }
@@ -123,8 +125,9 @@ export async function importBankRows(input: {
     insertedCount: insertedRows.length,
     duplicateCount: duplicates,
   });
+  const linked = await linkAwaitingTransfers(db, input.accountId);
 
-  return { status: 'ok', batch: updated, inserted: insertedRows.length, duplicates, failures };
+  return { status: 'ok', batch: updated, inserted: insertedRows.length, duplicates, linked, failures };
 }
 
 /**

@@ -1,5 +1,6 @@
 import {
   acceptsNature,
+  counterDirectionOf,
   pennylaneDocumentStatus,
   type MatchKind,
   type MatchSuggestion,
@@ -381,7 +382,7 @@ export function toMatchTargets(targets: MatchTargets, natureLabels: ReadonlyMap<
         // Ucun yönü gönderenin gözünden: uç `out` ise para o hesaptan BU hesaba geliyor.
         title: leg.direction === 'out' ? `${leg.accountName} → bu hesap` : `bu hesap → ${leg.accountName}`,
         detail: `${money(leg.amountCents)} · ${dayMonth(leg.valueDate)}${leg.description ? ` · ${leg.description}` : ''}`,
-        direction: leg.direction === 'out' ? 'in' : 'out',
+        direction: counterDirectionOf(leg.direction),
       }),
     ),
     ...targets.provisional.map(

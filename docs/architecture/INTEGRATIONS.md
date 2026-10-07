@@ -164,7 +164,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
   dosya satırı o güne ya da sonrasına düşen hesap da eşlenmez. Hareketler sipariş/alımlarla eşleştirilir.
 - Pennylane anahtarı yalnız backend'dedir (`PENNYLANE_API_TOKEN`, `PENNYLANE_MODE`); kurulum kartı eşlemeyi eşitleme turunun yazdığı
   hesap listesinden kurar, bağlantıyı ve kipi turun izinden okur.
-- Eşleştirme: **öneri + elle onay.** Tam otomatik değil (toplu ödeme, kısmi ödeme, iade eşleşmeyi bozar).
+- Eşleştirme: **öneri + elle onay.** Tam otomatik değil (toplu ödeme, kısmi ödeme, iade eşleşmeyi bozar). İstisna transferin banka
+  ucudur: satır, birbirinin tek adayı olan bekleyen transfere kendiliğinden bağlanır (`linkAwaitingTransfers`).
 
 ## Bildirim
 

@@ -73,6 +73,7 @@
 | 17 | **Kapıda kart Revolut Tap to Pay on iPhone ile alınır** (06.10) | Ödemeyi kuryenin uygulaması başlatır, ayrı cihazda tutar yazılmaz. Kurye iPhone taşır (XS ve üstü, iOS 16.4+); Android'de bu yol yok. |
 | 18 | **Kasa yazımı ödemenin hemen arkasından, kimseyi bekletmeden** (06.10) | Ödeme kaydı ve kasa kuyruğu satırı aynı işlemde yazılır; işlem biter bitmez o siparişin satışı Hiboutik'te açılıp kapanır, müşteri ve kurye beklemez. Yazılamazsa satır bekler, dakikalık iş ilk fırsatta yazar (yeniden deneme tavanı 5 dk). Bekleme süresince ödemenin kaydını bizim yazılım tutar: B2C tahsilat hareketinin tutarı, yöntemi, hesabı ve siparişi değişmez, hareket silinmez, düzeltme ters harekettir (SSS 22, BOFiP §90). Satırı işleyen onu kilitler; satış Hiboutik'e iki kez yazılmaz. Kasa ve Revolut Merchant sabit hesaplardır: migration açar, pasifleşmez; kapı nakdi Kasa'ya, kapıda kart ve online ödeme Revolut Merchant'a yazılır. Ödemenin yazılacağı hesap yoksa ödeme başlamaz. Ödemeden önce Hiboutik'te taslak satış açılmaz: açık satış mali kayıt değildir (silinir, Z'ye girmez) ve yalnız beklemeyi uzatır. |
 | 19 | **Kasa ve muhasebede canlıya geçiş günü yok; eşleme yeter** (07.10) | Tarih ayarı yalnız bir kez kullanılacak bir tetikti, testte de kasayı ve muhasebeyi kapalı tutuyordu. Bağlantıyı backend'deki anahtarlar kurar. Tesis kurulum kartında kasa mağazasına eşlendiği an kuyrukta bekleyen satışı ve çekmecenin önceki hareketleri kasaya yazılır; satış hiçbir tarihe göre atlanmaz, gün sonu eşleme gününden başlar. Banka hesabının hareketleri Pennylane'deki hesaba eşlendiği günden okunur, öncesi Excel'le girilir; eşleme başka Pennylane hesabına taşınınca ilk gün korunur. Alış belgesi girildiği güne bakılmadan yüklenir; Pennylane'de aynı tedarikçide aynı numara varsa belge bekler. |
+| 20 | **Transferin banka ucu kendiliğinden bağlanır** (07.10) | Kasadan yatırmayı operatör o gün transfer olarak yazar, kart ödemeleri aktarımını Revolut'un bildirimi yazar; transfer iki hesabı hemen etkiler, bankadaki ucu yolda olan paradır. Pennylane'den (ya da dosyadan) gelen banka satırı, yönü ve tutarı birebir, günü 7 gün içinde tutan ve birbirinin tek adayı olan bekleyen transfere kendiliğinden bağlanır; banka parayı bir kez sayar. Hangisi önce gelirse gelsin bağlanır: satır gelince de transfer yazılınca da bakılır. Aday yoksa ya da birden fazlaysa satır öneri olarak bekler, tahmin yapılmaz. Öteki eşleştirmeler öneri + elle onay kalır. |
 
 ## 3. Veri akışı
 
@@ -507,6 +508,8 @@ gösterir.
    da açıklaması değişen satır bizde henüz izah edilmemişse güncellenir. İzahlı satıra dokunulmaz: parası (tutar, gün,
    yön) değişirse ya da hareket Pennylane'de silinirse muhasebeye ve yönetime bildirim gider. Eşlenmiş hesaba eşleme gününden sonrası için Excel yüklemesi
    reddedilir, çünkü iki kaynak aynı satırı iki kez yazardı; eşlenmemiş hesapta Excel yüklemesi bugünkü gibi kalır.
+   Yazılan satır, karşı ucunu bekleyen transferin (kasadan yatırma, kart ödemeleri aktarımı) tek adayıysa ona kendiliğinden
+   bağlanır (20. karar).
    Aynı kural öbür yönden de işler: dosyadan yüklenen son satırı eşleme gününe ya da sonrasına düşen hesap eşlenmez.
    Eşleme başka Pennylane hesabına taşınınca ilk gün korunur ve liste o günden yeniden okunur: önceki hesaptan gelen
    izahsız satırlar silinir, izahlı olanlar için muhasebe uyarılır.
@@ -592,7 +595,8 @@ var.
 
 **Ekranlar:**
 - Ayarlar › Kurulum: Pennylane kartı (bağlantı ve kip, hesap eşlemesi, kuyruk özeti, son eşitleme, hareket gelmeyen
-  hesap); Hiboutik kartının deseni.
+  hesap); Hiboutik kartının deseni. Pennylane'de olup bizde eşi olmayan banka hesabı kartta listelenir; "Bizde aç ve eşle" onu
+  Pennylane'deki adıyla banka hesabı olarak açar ve eşler.
 - Belge formu: tek KDV alanı yerine oran başına satırlar.
 - Belge satırı: Pennylane durumu alt satırın sonunda (yüklendi ✓ · sırada · gitmedi ve sebebi · yazılamadı · Pennylane'de farklı
   ve oradaki açık kalan); eşitleme Pennylane'e bağlanamadıysa yazılmaz. E-fatura durumu ve itiraz 7. adımla.

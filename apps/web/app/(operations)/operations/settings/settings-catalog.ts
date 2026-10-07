@@ -333,7 +333,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   {
     key: 'card_payout_account_id',
     label: 'Kart ödemeleri aktarım hesabı',
-    help: 'Revolut Merchant hesabındaki kart ödemelerinin aktarıldığı banka hesabı. Aktarım tamamlanınca havuz → bu hesap transferi kendiliğinden yazılır.',
+    help: "Revolut Merchant hesabındaki kart ödemelerinin aktarıldığı banka hesabı. Aktarım tamamlanınca havuz → bu hesap transferi kendiliğinden yazılır, Pennylane'den gelen banka satırı ona kendiliğinden bağlanır.",
     section: 'accounts',
     kind: 'account',
     accountType: 'bank',

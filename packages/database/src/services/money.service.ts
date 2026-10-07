@@ -422,6 +422,36 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return legs.filter((leg) => !taken.has(leg.id));
   }
 
+  /** Hesabın izah bekleyen, bağsız ekstre satırları; transferin kendiliğinden bağlanacağı adaylar. */
+  listUnlinkedStatementRows(accountId: string, from: string, to: string): Promise<MoneyMovement[]> {
+    return this.getAll(
+      { accountId, source: 'bank_import', explained: false },
+      {
+        isNullFields: ['counterpartMovementId'],
+        rangeFilters: [
+          { field: 'valueDate', operator: 'gte', value: from },
+          { field: 'valueDate', operator: 'lte', value: to },
+        ],
+      },
+    );
+  }
+
+  /**
+   * Ekstre satırını bekleyen transferin karşı ucu yapar: satır transfer olur ve transferin bankadaki aynası susar
+   * (`account_movement`). Bağla açıklanan satırda tür ve cari anlamsızdır, temizlenir.
+   */
+  linkToTransferLeg(statementId: string, leg: Pick<MoneyMovement, 'id' | 'accountId'>): Promise<MoneyMovement> {
+    return this.update({
+      id: statementId,
+      type: 'transfer',
+      counterAccountId: leg.accountId,
+      counterpartMovementId: leg.id,
+      reconciled: true,
+      nature: null,
+      counterpartyId: null,
+    });
+  }
+
   /** Bu hesaba ekstre dışından (elle ya da sistem) yazılmış hareketler — "bunu zaten yazmıştım" adayları; pencere çağıranındır. */
   listProvisional(accountId: string, from: string, to: string): Promise<MoneyMovement[]> {
     return this.getAll(

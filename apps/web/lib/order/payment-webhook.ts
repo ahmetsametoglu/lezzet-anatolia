@@ -1,5 +1,13 @@
-import { confirmOnlinePayment, kickOrderRegister, type PaymentGateway } from '@lezzet/application';
-import { MoneyMovementService, OrderService, ReservationService, SettingsService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { confirmOnlinePayment, kickOrderRegister, linkAwaitingTransfers, type PaymentGateway } from '@lezzet/application';
+import {
+  AccountService,
+  MoneyMovementService,
+  OrderService,
+  ReservationService,
+  SettingsService,
+  WebhookEventService,
+  serviceDb,
+} from '@lezzet/database';
 import { validateMovement } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { CARD_FEE_NATURE, type MoneyMovementInsert } from '@lezzet/types';
@@ -170,13 +178,17 @@ async function reconcileRefund(
 
 /**
  * Aktarım: havuzdaki para ana hesaba geçer; ekstre aynı tutarı getirince bu ucun karşı satırı olur. Hedef hesap ayardır
- * (`card_payout_account_id`), yoksa olay işlenmemiş kalır ve sağlayıcı yeniden dener.
+ * (`card_payout_account_id`) ve banka hesabı olmalı; değilse olay işlenmemiş kalır ve sağlayıcı yeniden dener.
  */
 async function recordPayout(event: Extract<PaymentEvent, { kind: 'payout_completed' }>, accountId: string | null): Promise<WebhookOutcome> {
   if (!accountId) return { status: 'not_found' };
   const db = serviceDb();
   const bankAccountId = await new SettingsService(db).get<string | null>('card_payout_account_id', null);
-  if (!bankAccountId) throw new Error('aktarım hesabı ayarı yok — aktarım ana hesaba yazılamadı (Ayarlar → Ödeme)');
+  if (!bankAccountId) throw new Error('aktarım hesabı ayarı yok — aktarım yazılamadı (Ayarlar › Para › Kart ödemeleri aktarım hesabı)');
+  const bank = await new AccountService(db).getById(bankAccountId);
+  if (bank?.type !== 'bank') {
+    throw new Error(`aktarım hesabı banka hesabı değil (${bank?.name ?? bankAccountId}) — Ayarlar › Para › Kart ödemeleri aktarım hesabı`);
+  }
 
   const movement: MoneyMovementInsert & { idempotencyKey: string } = {
     accountId,
@@ -193,5 +205,7 @@ async function recordPayout(event: Extract<PaymentEvent, { kind: 'payout_complet
   const verdict = validateMovement(movement);
   if (!verdict.valid) throw new Error(`aktarım hareketi geçersiz: ${verdict.reason}`);
   await new MoneyMovementService(db).insertOnce(movement);
+  // Pennylane'in banka satırı aktarımdan önce düşmüş olabilir; bekliyorsa şimdi bağlanır.
+  await linkAwaitingTransfers(db, bankAccountId);
   return { status: 'ok', action: 'payout_recorded' };
 }

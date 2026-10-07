@@ -11,7 +11,7 @@ import { mustDelete, purgeTestData } from '@lezzet/database/testing';
 import type { AccountType, PennylaneCursor } from '@lezzet/types';
 import { setMovementNature } from '../natures';
 import { parisDateOf } from '@lezzet/helper';
-import { checkBankFeedQuiet, mapPennylaneBankAccount, syncBankFeed } from './bank-feed';
+import { checkBankFeedQuiet, mapPennylaneBankAccount, openMappedBankAccount, syncBankFeed } from './bank-feed';
 import { memoryPennylane } from './memory-pennylane.testkit';
 
 /*
@@ -227,6 +227,43 @@ describe('Pennylane banka hareketi okuması', () => {
   });
 });
 
+describe('bekleyen transfere kendiliğinden bağlama', () => {
+  /** Kasadan bu bankaya yatırma: gönderenin gözünden `out`, banka satırı `in` gelir. */
+  const deposit = async (amountCents: number, valueDate: string) => {
+    const cash = await accountOf('cash');
+    return movements.insert({
+      accountId: cash,
+      counterAccountId: accountId,
+      direction: 'out',
+      amountCents,
+      type: 'transfer',
+      valueDate,
+      description: 'Kasadan yatırma',
+    });
+  };
+
+  it('Pennylane satırı bekleyen tek transferin karşı ucu olur; banka parayı bir kez sayar', async () => {
+    const transfer = await deposit(50_000, '2026-10-02');
+    twin.add({ bankAccountId: bank, date: '2026-10-03', label: 'VERSEMENT ESPECES', direction: 'in', amountCents: 50_000 });
+
+    expect(await sync()).toMatchObject({ inserted: 1, linked: 1 });
+
+    const [row] = (await movements.listTouchingAccount(accountId)).filter((movement) => movement.source === 'bank_import');
+    expect(row).toMatchObject({ type: 'transfer', counterpartMovementId: transfer.id, reconciled: true });
+    expect((await new AccountService(db).balance(accountId)).balanceCents).toBe(50_000);
+  });
+
+  it('aynı tutarda iki bekleyen transfer varsa satır tahminle bağlanmaz, öneri olarak bekler', async () => {
+    await deposit(30_000, '2026-10-02');
+    await deposit(30_000, '2026-10-04');
+    twin.add({ bankAccountId: bank, date: '2026-10-03', label: 'VERSEMENT ESPECES', direction: 'in', amountCents: 30_000 });
+
+    expect(await sync()).toMatchObject({ inserted: 1, linked: 0 });
+    const [row] = (await movements.listTouchingAccount(accountId)).filter((movement) => movement.source === 'bank_import');
+    expect(row).toMatchObject({ type: 'misc', counterpartMovementId: null, reconciled: false });
+  });
+});
+
 describe('Pennylane eşlemesi', () => {
   /** Dosyadan yüklenmiş banka satırı: yükleme kaydına bağlıdır. */
   const fileRow = async (account: string, valueDate: string) => {
@@ -276,6 +313,18 @@ describe('Pennylane eşlemesi', () => {
     expect(await mapPennylaneBankAccount(db, { accountId, pennylaneId: livret })).toEqual({ status: 'ok' });
     expect(await bankAccounts.findByPennylaneId(bank)).toMatchObject({ accountId: null, mappedAt: null, listedAt: null });
     expect(await bankAccounts.findByPennylaneId(livret)).toMatchObject({ accountId, mappedAt: first?.mappedAt, listedAt: null });
+  });
+
+  it("Pennylane'deki eşsiz hesap bizde Pennylane adıyla açılıp eşlenir; eşli hesap için ikinci hesap açılmaz", async () => {
+    const livret = addBank('Livret');
+    await bankAccounts.saveSeen(await twin.port.listBankAccounts(), twin.now());
+
+    expect(await openMappedBankAccount(db, { pennylaneId: livret }, { now: new Date(twin.now()) })).toEqual({ status: 'ok' });
+    const opened = (await bankAccounts.findByPennylaneId(livret))?.accountId;
+    expect(opened).toBeTruthy();
+    created.push(opened!);
+    expect(await new AccountService(db).getById(opened!)).toMatchObject({ name: 'Livret', type: 'bank' });
+    expect(await openMappedBankAccount(db, { pennylaneId: livret })).toEqual({ status: 'invalid', reason: 'pennylane_account_taken' });
   });
 
   it('dosyadan yüklenen satırı eşleme gününe ya da sonrasına düşen hesap eşlenmez; satırı önceki güne düşen eşlenir', async () => {

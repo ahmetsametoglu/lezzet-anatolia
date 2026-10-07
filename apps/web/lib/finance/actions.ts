@@ -40,6 +40,7 @@ import {
   attachDocumentFile,
   createMoneyDocument,
   documentFileUrl,
+  linkAwaitingTransfers,
   removeAllocation,
   requestDocumentUploadUrl,
   setMovementCounterparty,
@@ -228,6 +229,8 @@ export async function recordTransferAction(input: TransferInput, proposalId?: st
       },
       (result) => ({ moneyMovementId: result.movement.id }),
     );
+    // Yatırmanın banka satırı transferden önce gelmiş olabilir; bekliyorsa şimdi bağlanır.
+    await linkAwaitingTransfers(serviceDb(), input.toAccountId);
 
     revalidatePath(FINANCE_PATH);
     revalidatePath('/operations/assistant');
@@ -773,7 +776,7 @@ interface BankFileInput {
  */
 export async function importBankFileAction(
   input: BankFileInput,
-): Promise<ActionResult<{ inserted: number; duplicates: number; failures: RowParseFailure[] }>> {
+): Promise<ActionResult<{ inserted: number; duplicates: number; linked: number; failures: RowParseFailure[] }>> {
   try {
     await requireFinance();
     const { mapping, amountMode } = input.profile;
@@ -797,7 +800,10 @@ export async function importBankFileAction(
       };
     }
     revalidatePath(FINANCE_PATH);
-    return { data: { inserted: outcome.inserted, duplicates: outcome.duplicates, failures: outcome.failures }, error: null };
+    return {
+      data: { inserted: outcome.inserted, duplicates: outcome.duplicates, linked: outcome.linked, failures: outcome.failures },
+      error: null,
+    };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

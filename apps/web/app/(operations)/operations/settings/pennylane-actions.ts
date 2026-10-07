@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { AccountService, PennylaneBankAccountService, serviceDb, type Db } from '@lezzet/database';
-import { mapPennylaneBankAccount, type PennylaneSetupOutcome } from '@lezzet/application';
+import { mapPennylaneBankAccount, openMappedBankAccount, type PennylaneSetupOutcome } from '@lezzet/application';
 import { addDays } from '@lezzet/helper';
 import { shortDate } from '@/components/operation/ui/format';
 import { requireAdmin } from '@/lib/guard';
@@ -19,6 +19,20 @@ export async function savePennylaneAccountAction(input: { accountId: string; pen
     await requireAdmin();
     const db = serviceDb();
     const outcome = await mapPennylaneBankAccount(db, input);
+    if (outcome.status === 'invalid') return { data: null, error: await refusalOf(db, outcome) };
+    revalidatePath(SETTINGS_PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Pennylane'de görünen ve bizde eşi olmayan banka hesabı tek adımda bizde açılır ve eşlenir. */
+export async function openPennylaneAccountAction(input: { pennylaneId: number }): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const db = serviceDb();
+    const outcome = await openMappedBankAccount(db, input);
     if (outcome.status === 'invalid') return { data: null, error: await refusalOf(db, outcome) };
     revalidatePath(SETTINGS_PATH);
     return { data: null, error: null };

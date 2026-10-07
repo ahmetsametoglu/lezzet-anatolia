@@ -20,6 +20,7 @@ import {
   type PennylaneTransactionMirrorInsert,
 } from '@lezzet/types';
 import { notifyBankFeedChanged, notifyBankFeedQuiet } from '../../notification/staff-events';
+import { linkAwaitingTransfers } from '../transfer-link';
 import { readChanges, STREAM_RETENTION_MS } from './changes';
 import { PennylaneError } from './errors';
 import { readMovementMatches } from './matches';
@@ -86,6 +87,22 @@ export async function mapPennylaneBankAccount(
   return { status: 'ok' };
 }
 
+/**
+ * Pennylane'de görünen ve bizde eşi olmayan banka hesabını bizde banka hesabı olarak açar ve eşler; ad Pennylane'deki addır. Eşli
+ * Pennylane hesabı için yeni hesap açılmaz.
+ */
+export async function openMappedBankAccount(
+  db: Db,
+  input: { pennylaneId: number },
+  opts: { now?: Date } = {},
+): Promise<PennylaneSetupOutcome> {
+  const target = await new PennylaneBankAccountService(db).findByPennylaneId(input.pennylaneId);
+  if (!target) return { status: 'invalid', reason: 'unknown_pennylane_account' };
+  if (target.accountId !== null) return { status: 'invalid', reason: 'pennylane_account_taken' };
+  const account = await new AccountService(db).insert({ name: target.name, type: 'bank' });
+  return mapPennylaneBankAccount(db, { accountId: account.id, pennylaneId: input.pennylaneId }, opts);
+}
+
 /** Hesaba dosyadan yüklenmiş satır okumanın ilk gününe ya da sonrasına düşüyorsa ret: Pennylane aynı banka satırını ikinci kez yazardı. */
 async function fileRowsFrom(db: Db, accountId: string, feedFrom: string): Promise<PennylaneSetupOutcome | null> {
   const lastFileDate = await new MoneyMovementService(db).lastFileRowDate(accountId);
@@ -96,6 +113,8 @@ async function fileRowsFrom(db: Db, accountId: string, feedFrom: string): Promis
 
 interface FeedCounts {
   inserted: number;
+  /** Bekleyen transfere kendiliğinden bağlanan satırlar (kasadan yatırma, kart ödemeleri aktarımı). */
+  linked: number;
   updated: number;
   removed: number;
   alerted: number;
@@ -130,7 +149,7 @@ export async function syncBankFeed(db: Db, pennylane: PennylanePort, opts: { now
     accounts = await mappedNow();
   }
 
-  const counts: FeedCounts = { inserted: 0, updated: 0, removed: 0, alerted: 0 };
+  const counts: FeedCounts = { inserted: 0, linked: 0, updated: 0, removed: 0, alerted: 0 };
   const apply = applier(db, pennylane, counts);
   let listed = 0;
   for (const account of accounts.filter((row) => row.listedAt === null)) {
@@ -163,6 +182,7 @@ export async function syncBankFeed(db: Db, pennylane: PennylanePort, opts: { now
     if (account) await apply(account, id, transaction);
   }
   await cursors.save(STREAM, changes.last ?? since);
+  for (const account of accounts) counts.linked += await linkAwaitingTransfers(db, account.accountId, now);
 
   return { ...connection, listed, changes: changes.ids.size, ...counts };
 }

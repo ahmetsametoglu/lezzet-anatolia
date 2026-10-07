@@ -245,7 +245,9 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
                 icon: <TransferIcon />,
                 label: 'Transfer',
                 hint:
-                  writableAccountCount >= 2 ? 'hesaptan hesaba — kasadan bankaya, kart ödemeleri aktarımı' : 'en az iki açık hesap gerekir',
+                  writableAccountCount >= 2
+                    ? 'hesaptan hesaba — kasadan bankaya yatırma; banka satırı gelince ona bağlanır'
+                    : 'en az iki açık hesap gerekir',
                 disabled: writableAccountCount < 2,
                 onSelect: () => onOpenDialog('transfer'),
               },

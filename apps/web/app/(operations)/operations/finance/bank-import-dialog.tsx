@@ -105,6 +105,7 @@ function importBlock(values: ImportForm, sheet: SheetRows | null, readable: numb
 interface ImportResult {
   inserted: number;
   duplicates: number;
+  linked: number;
   failures: RowParseFailure[];
 }
 
@@ -236,8 +237,13 @@ export function BankImportDialog({ accounts, defaultAccountId, onClose, onSaved 
       >
         <ul className="flex flex-col gap-2 font-ops-body text-ops-sm text-ops-ink">
           <li>
-            <span className="font-ops-mono">{result.inserted}</span> satır hesabın hareketi oldu — eşleştirme kuyruğunda.
+            <span className="font-ops-mono">{result.inserted}</span> satır hesabın hareketi oldu; izah bekleyenler eşleştirme kuyruğunda.
           </li>
+          {result.linked > 0 ? (
+            <li className="text-ops-muted">
+              <span className="font-ops-mono">{result.linked}</span> satır bekleyen transferin karşı ucu olarak kendiliğinden bağlandı.
+            </li>
+          ) : null}
           {result.duplicates > 0 ? (
             <li className="text-ops-muted">
               <span className="font-ops-mono">{result.duplicates}</span> satır zaten vardı, atlandı (mükerrer koruması).

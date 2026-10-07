@@ -319,31 +319,82 @@ describe('eşleştirme hedefleri (12.13)', () => {
     expect(await applyMatch(row.movement.id, { kind: 'document', documentId: belge.id })).toEqual({ status: 'invalid', reason: 'direction_mismatch' });
   });
 
-  it('TRANSFERİN ÖTEKİ YAKASI — ayna susar, para iki kez sayılmaz', async () => {
+  it('TRANSFERİN ÖTEKİ YAKASI — satır bekleyen tek transfere kendiliğinden bağlanır, ayna susar, para iki kez sayılmaz', async () => {
     // Kasadan bankaya 50 € yatırıldı, kasa tarafından elle yazıldı: banka görünümde +50 (ayna).
     const leg = await movements.insert({
-      accountId: cashAccount, counterAccountId: bankAccount, direction: 'out', amountCents: 5000, type: 'transfer', valueDate: dayOffset(-1), description: 'Kasa fazlası',
+      accountId: cashAccount,
+      counterAccountId: bankAccount,
+      direction: 'out',
+      amountCents: 5000,
+      type: 'transfer',
+      valueDate: dayOffset(-1),
+      description: 'Kasa fazlası',
     });
     expect((await accounts.balance(bankAccount)).balanceCents).toBe(5000);
-    // Ekstre aynı yatırmayı getirdi: ayna + ekstre satırı = aynı para iki kez.
-    await importStatement([{ Date: frDate(-1), 'Libellé': 'VERSEMENT ESPECES', Montant: '50,00', Solde: '0,00' }], 'yatirma.csv');
-    expect((await accounts.balance(bankAccount)).balanceCents).toBe(10_000);
+
+    // Ekstre aynı yatırmayı getirdi; satır transferin karşı ucu olur, kuyrukta beklemez.
+    const outcome = await importStatement(
+      [{ Date: frDate(-1), Libellé: 'VERSEMENT ESPECES', Montant: '50,00', Solde: '0,00' }],
+      'yatirma.csv',
+    );
+    expect(outcome).toMatchObject({ inserted: 1, linked: 1 });
+    // Banka +50, kasa −50: iki gerçek satır kendi hesabında, ayna yok.
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(5000);
+    expect((await accounts.balance(cashAccount)).balanceCents).toBe(-5000);
+    const [row] = (await movements.listTouchingAccount(bankAccount)).filter((movement) => movement.source === 'bank_import');
+    expect(row).toMatchObject({
+      type: 'transfer',
+      counterAccountId: cashAccount,
+      counterpartMovementId: leg.id,
+      reconciled: true,
+      explained: true,
+    });
+    // Uç bekleyen olmaktan çıktı; ikinci bir ekstre satırı onu sahiplenemez.
+    expect(await movements.listTransferLegsAwaiting(bankAccount)).toEqual([]);
+    expect((await matchQueue(bankAccount)).rows).toEqual([]);
+  });
+
+  it('iki eş transfer bekliyorsa satır tahminle bağlanmaz; öneriden elle bağlanır', async () => {
+    const leg = await movements.insert({
+      accountId: cashAccount,
+      counterAccountId: bankAccount,
+      direction: 'out',
+      amountCents: 5000,
+      type: 'transfer',
+      valueDate: dayOffset(-1),
+      description: 'Kasa fazlası',
+    });
+    await movements.insert({
+      accountId: cashAccount,
+      counterAccountId: bankAccount,
+      direction: 'out',
+      amountCents: 5000,
+      type: 'transfer',
+      valueDate: dayOffset(-3),
+      description: 'Önceki yatırma',
+    });
+    const outcome = await importStatement(
+      [{ Date: frDate(-1), Libellé: 'VERSEMENT ESPECES', Montant: '50,00', Solde: '0,00' }],
+      'yatirma.csv',
+    );
+    expect(outcome).toMatchObject({ inserted: 1, linked: 0 });
+    // İki ayna + ekstre satırı: bağlanana kadar para çift görünür, satır kuyrukta izah bekler.
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(15_000);
 
     const { rows, targets } = await matchQueue(bankAccount);
     expect(targets.transferLegs.map((l) => l.id)).toContain(leg.id);
     expect(rows[0]!.suggestions[0]).toMatchObject({ kind: 'transfer', id: leg.id });
 
     expect(await applyMatch(rows[0]!.movement.id, { kind: 'transfer', legId: leg.id })).toMatchObject({ status: 'ok' });
-    // Banka +50, kasa −50: iki gerçek satır kendi hesabında, ayna yok.
-    expect((await accounts.balance(bankAccount)).balanceCents).toBe(5000);
-    expect((await accounts.balance(cashAccount)).balanceCents).toBe(-5000);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(10_000);
     expect(await movements.getById(rows[0]!.movement.id)).toMatchObject({
-      type: 'transfer', counterAccountId: cashAccount, counterpartMovementId: leg.id, reconciled: true, explained: true,
+      type: 'transfer',
+      counterAccountId: cashAccount,
+      counterpartMovementId: leg.id,
+      reconciled: true,
+      explained: true,
     });
-    // Uç bekleyen olmaktan çıktı; ikinci bir ekstre satırı onu sahiplenemez.
-    expect(await movements.listTransferLegsAwaiting(bankAccount)).toEqual([]);
   });
-
   it('"ZATEN YAZMIŞTIM" — elle yazılan silinir, ekstre satırı bağlarını devralır (kullanıcı kararı 13.09)', async () => {
     // Tutar bu dosyanın öteki fikstürlerinden AYRI (137,25): `beforeEach` yalnız hareketleri siler,
     // önceki testlerin belgeleri AÇIK kalabilir ve aynı tutar + gün ile eş puanlı aday olurdu.

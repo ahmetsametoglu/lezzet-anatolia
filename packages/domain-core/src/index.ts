@@ -63,6 +63,7 @@ export * from './register/split';
 export * from './register/reconcile';
 export * from './queue/retry';
 export * from './money/movement';
+export * from './money/transfer-link';
 export * from './money/dictionary-slug';
 export * from './money/pinpoint';
 export * from './money/document-terms';

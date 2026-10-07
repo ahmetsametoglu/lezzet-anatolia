@@ -12,7 +12,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { linkMovementToDocument, setMovementCounterparty, type AllocationOutcome } from '@lezzet/application';
-import { acceptsNature, isUnambiguous, suggestMatches, type MatchCandidate, type MatchSuggestion } from '@lezzet/domain-core';
+import { acceptsNature, counterDirectionOf, isUnambiguous, suggestMatches, type MatchCandidate, type MatchSuggestion } from '@lezzet/domain-core';
 import type {
   Account,
   Counterparty,
@@ -267,7 +267,7 @@ async function loadTargets(
         referenceNo: null,
         amountCents: leg.amountCents,
         date: leg.valueDate,
-        direction: leg.direction === 'out' ? 'in' : 'out',
+        direction: counterDirectionOf(leg.direction),
         nameHints: [leg.description, leg.accountName],
       }),
     ),
@@ -426,10 +426,9 @@ export async function applyMatch(movementId: string, target: MatchTarget): Promi
     case 'transfer': {
       const leg = await movements.getById(target.legId);
       if (!leg || leg.type !== 'transfer' || leg.counterAccountId !== found.accountId) return invalid('target_not_found');
-      // Ucun yönü gönderenin gözünden: uç `out` ise para bu hesaba GİRER.
-      if ((leg.direction === 'out' ? 'in' : 'out') !== found.direction) return invalid('direction_mismatch');
+      if (counterDirectionOf(leg.direction) !== found.direction) return invalid('direction_mismatch');
       if (!(await movements.listTransferLegsAwaiting(found.accountId)).some((awaiting) => awaiting.id === leg.id)) return invalid('target_taken');
-      await movements.update({ id: movementId, type: 'transfer', counterAccountId: leg.accountId, counterpartMovementId: leg.id, reconciled: true, ...BOUND });
+      await movements.linkToTransferLeg(movementId, leg);
       return ok;
     }
     case 'transfer_to': {
