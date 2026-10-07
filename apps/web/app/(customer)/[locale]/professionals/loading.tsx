@@ -33,12 +33,12 @@ export default async function ProfessionalsLoading() {
             <div className="flex flex-col gap-2.5">
               <PhoneSkeleton tone="soft" className="h-3.5 w-full" />
               <PhoneSkeleton tone="soft" className="h-3.5 w-3/5" />
-              <PhoneSkeleton className="mt-6 h-13.5 w-full" />
+              <PhoneSkeleton className="mt-6 h-12.5 w-full" />
             </div>
             <div className="flex flex-col gap-2.5">
               <PhoneSkeleton tone="soft" className="h-4.5 w-1/3" />
-              <PhoneSkeleton className="mt-6 h-13.5 w-full" />
-              <PhoneSkeleton className="mt-6 h-13.5 w-full" />
+              <PhoneSkeleton className="mt-6 h-12.5 w-full" />
+              <PhoneSkeleton className="mt-6 h-12.5 w-full" />
             </div>
             <PhoneSkeleton radius="control" className="h-13 w-full" />
           </div>

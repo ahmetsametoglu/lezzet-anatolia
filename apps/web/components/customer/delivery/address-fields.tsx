@@ -72,7 +72,7 @@ interface AddressFieldsProps {
   cityInvalid?: boolean;
   /** Sokak ile posta kodu arasına giren alan (adres formunun kapı/katı): alan sırası sabit ve başvuru formunda o alan yok. */
   afterLine1?: React.ReactNode;
-  /** Telefon forku: posta kodu ve şehir aynı satırda orana göre bölüşür (%35/%65), çünkü dar ekranda sabit genişlik şehri ezer. */
+  /** Telefon forku: satır native adres bloğunun ölçüsünde (posta kodu 120 px, aralık 8 px), ki iki yüzeyde aynı alan aynı genişlikte dursun. */
   compact?: boolean;
   /** Alanların çizimi; telefondaki başvuru formu native gibi hap alan ister. */
   variant?: FieldVariant;
@@ -197,9 +197,9 @@ export function AddressFields({
 
       {afterLine1}
 
-      <div className="flex gap-3">
-        {/* Posta kodu dar (beş hane): masaüstünde sabit 150 px, telefonda oran, çünkü dar kapta sabit genişlik şehir alanını ezer. */}
-        <div className={compact ? 'basis-[35%]' : 'w-[150px] flex-none'}>
+      <div className={compact ? 'flex gap-2' : 'flex gap-3'}>
+        {/* Posta kodu beş hane olduğu için dar ve sabit; şehir kalan genişliği alır. */}
+        <div className={compact ? 'w-30 flex-none' : 'w-[150px] flex-none'}>
           <FormInputField
             label={copy.postalCode}
             placeholder={copy.postalCodePlaceholder}

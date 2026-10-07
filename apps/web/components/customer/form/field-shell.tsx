@@ -3,33 +3,17 @@
 import type { ReactNode } from 'react';
 
 /**
- * Alanın çizimi (13.09):
- *   `form`   — K34 · Form Alanı: 48px gövde, beyaz zemin, üstte 12,5px etiket. Formların alanı.
- *   `inline` — v1 başlığının yer panelindeki satır içi alan: büyük harfli küçük künye (11px, 0.1em),
- *              krem zemin, 12px köşe, 14px kalın metin, 42px gövde; yanındaki düğmeyle aynı satırda
- *              durur. Hap girdiden (`pill-input`) ayrı çizim: etiket kabuğu var, köşe hap değil.
- *   `sheet`  — Mobil v1'in yer çekmecesindeki aynı alan: künye ve kutu `inline` ile aynı, zemin
- *              BEYAZ, metin 13,5px — çekmecenin zemini krem, alan ondan ayrılmalı.
- *   `pill`   — telefon tasarımının hap alanı (15.09, "Hızlı Doğrulama" karesinin e-postası; native
- *              `TextField`ın `shape="pill"`i): 54px gövde, hap köşe, beyaz zemin, 15px metin, 22px yan
- *              dolgu. Künye kabuğu `form`unki — karede etiket yok, çağıran `hideLabel` verir.
+ * `form` formların alanı; `inline` ve `sheet` yer panelinin ve çekmecesinin satır içi alanı (çekmecede zemin beyaz, çünkü çekmece
+ * kremdir); `pill` telefonun hap alanı, native `TextField`ın `shape="pill"` ölçüsüyle.
  */
 export type FieldVariant = 'form' | 'inline' | 'sheet' | 'pill';
 
-/**
- * Form alanlarının ortak iskeleti = **K34 · Form Alanı** (envanter): etiket → kontrol → yardım/hata.
- * Tüm `*Field` primitifleri (input/textarea/select) bunu sarar → etiket/hata markup'ı tek kaynak.
- * `hideLabel` etiketi görsel gizler (sr-only) — placeholder-yalnız tasarımlar için (ör. login).
- */
+/** Alanların ortak iskeleti (etiket → kontrol → hata), ki etiket ve hata işaretlemesi tek yerde dursun; `hideLabel` etiketi yalnız görselden gizler. */
 interface FieldShellProps {
   fieldId: string;
   label: string;
   hideLabel?: boolean;
-  /**
-   * Alan İSTEĞE BAĞLI mı — K32 zorunluluğu yıldızla anlatmıyor, tersini işaretliyor. `required`
-   * yerine bu alanın olması bilinçli: yıldız kullanmadığımız için `required` bayrağının görünür
-   * bir karşılığı kalmıyordu ve "var ama hiçbir şey yapmıyor" bir prop'a dönüşüyordu.
-   */
+  /** İsteğe bağlı alanı işaretler; zorunluluk yıldızla anlatılmadığı için `required` bayrağının görünür bir karşılığı olmazdı. */
   optional?: boolean;
   /** "(isteğe bağlı)" metni — sayfanın kendi dilinden gelir, primitif metin taşımaz. */
   optionalLabel?: string;
@@ -45,9 +29,7 @@ export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel,
     <div className="flex flex-col gap-1.5">
       <label
         htmlFor={fieldId}
-        // K34: etiket 12,5px/600, gövde renginde. Girdiden bir punto küçük — etiket künye, girdi içerik.
-        // Ölçü artık token (`text-field-label`); ham `text-[12.5px]` yazmak envanter §0.4'ün ölçü
-        // kuralını çiğniyordu (renk kuralının ölçü karşılığı: kademe yoksa kodlanmaz, eklenir).
+        // Etiket girdiden bir punto küçük, çünkü etiket künye, girdi içeriktir.
         className={
           hideLabel
             ? 'sr-only'
@@ -58,9 +40,8 @@ export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel,
       >
         <span>
           {label}
-          {/* K32: **zorunluluk yıldızla anlatılmaz**, İSTEĞE BAĞLI olan işaretlenir. Yıldız,
-              formdaki alanların çoğu zorunlu olduğu için gürültüye dönüşüyor ve müşteriye
-              hiçbir şey öğretmiyordu; asıl merak edilen "hangisini boş bırakabilirim". */}
+          {/* Zorunluluk yıldızla anlatılmaz: alanların çoğu zorunlu olduğu için yıldız gürültüye dönüşür, merak edilen hangisinin boş
+              bırakılabileceğidir. */}
           {optional && <span className="font-normal text-muted"> {optionalLabel}</span>}
         </span>
         {labelAside && <span className="text-note font-normal text-muted">{labelAside}</span>}
@@ -83,66 +64,27 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
 }
 
 /**
- * Çizime göre değişen gövde: yükseklik, köşe, zemin, punto ve YAN DOLGU (gerisi bütün çizimlerde ortak). Yan dolgu
- * 15.09'da ortak satırdan buraya indi: hap alanın 22'si ortak `px-4`ün üstüne yazılamazdı — Tailwind çakışan iki
- * sınıfı kaynak sırasına göre çözer, dizgideki sıraya göre değil (`pill-input` künyesinin aynı tuzağı).
+ * Çizime göre değişen gövde; yan dolgu da burada, çünkü Tailwind çakışan iki sınıfı dizgideki sıraya göre değil kaynak sırasına göre
+ * çözer ve ortak satırdaki dolgu ezilemezdi.
  */
 const CONTROL: Record<FieldVariant, string> = {
   form: 'h-12 rounded-soft bg-card px-4 text-copy',
   inline: 'h-10.5 rounded-xl bg-cream px-4 text-body-sm font-semibold',
   sheet: 'h-10.5 rounded-xl bg-card px-4 text-control font-semibold',
-  pill: 'h-13.5 rounded-pill bg-card px-5.5 text-copy',
+  pill: 'h-12.5 rounded-pill bg-card px-4 text-body-sm',
 };
 
 /**
- * Input/textarea/select ortak görünümü (Lezzet token'ları). `invalid` çerçeveyi kırmızıya çeker.
- *
- * Parametre METİN değil BAYRAK (03.08): kırmızı çerçevenin şartı "bir hata cümlesi var" değil,
- * "bu alan geçersiz". İkisi her zaman aynı şey değil — bazı formlar alan alan cümle yazmaz,
- * kırmızıları işaretleyip altına tek bir "işaretli alanları tamamlayın" satırı koyar
- * (Professionnels başvurusu böyle). Metin beklendiğinde o formlar boş dizgi geçirmek zorunda
- * kalıyordu ve ekranda **içi boş bir `role="alert"`** doğuyordu: ekran okuyucu duyurur, kullanıcı
- * hiçbir şey duymaz.
- */
-/**
- * Girdi gövdesi = **K34 · Form Alanı** (envanter). Çizili künye:
- *   `48px` gövde (mobil 52) · yarıçap `14px` · odakta `2px zeytin` · hata `2px terracotta`
- *   etiket üstte `12,5px kalın` · altta yardım ya da hata satırı · salt-okunur hâl krem zemin.
- *
- * Önce ölçü K4'ten (Arama Hapı) türetilmişti — yanlıştı: K4 bir arama hapıdır (44px, yarıçap 24),
- * form alanı değil. Envanter ikisini AYRI bileşen olarak çiziyor ve dokunma hedefi tablosunda ayrı
- * satır veriyor. Ondan önce de ölçü giriş sayfasının BUTONUNDAN alınmıştı; üç turda üç yanlış
- * kaynak — kural envanterdeydi, aranmadığı için bulunamadı.
- *
- * **Yükseklik SABİT (`h-12` = 48px), ped hesabı değil.** Butonlarda olduğu gibi: ped aritmetiğiyle
- * "yaklaşık" tutturmak punto ya da satır aralığı değiştiğinde yüksekliği kaydırıyor ve alan komşu
- * düğmeyle hizasını kaybediyordu (üç turda üç farklı sonuç). `leading-tight` yine şart — tip
- * token'ları satır yüksekliği taşımıyor, kontrol o zaman gövde metninin 1.5 aralığını miras alıp
- * uzuyor (aynı tuzak K19 adet seçicide de yaşandı). Çok satırlı alanda `min-h-*` bu yüksekliği ezer.
- *
- * **Metin 15px** (`text-copy`): tasarım `400 15px/20px`. 14px'e çekilmişti ve alan sitenin geri
- * kalanından bir punto küçük kalıyordu.
- *
- * **Kenar `sand-400`** (#d8cfb6) — tasarımın verdiği ton. `sand-300` (#e0d8c2) kullanılıyordu; o ton
- * envanterde salt-okunur alanın kenarı, dolayısıyla dolu alanla pasif alan aynı görünüyordu.
- *
- * **Odakta kutu ZIPLAMAZ:** kenar 1,5 → 2px'e çıkmak yerine `ring-inset` eklenir; ped hiç değişmez,
- * kenar iki katı görünür. Sonuç envanterin çizdiğiyle aynı, hesap tek.
- *
- * **Mobil 52px KALAN İŞ:** primitif cihazı bilmiyor ve `md:` akışkan responsive yasak (ADR Sapma 3).
- * 48px zaten erişilebilirlik tabanının (44px) üstünde; `size` desteği ayrı iş → `design/BACKLOG`.
- *
- * `inline` çizimi (v1 yer paneli) yalnız gövdeyi değiştirir — kenar, odak, hata ve salt-okunur hâl
- * iki çizimde aynı (`CONTROL`).
+ * Girdinin ortak görünümü. `invalid` metin değil bayrak, çünkü alan alan cümle yazmayan form boş dizgi geçirip içi boş bir
+ * `role="alert"` doğururdu; yükseklik ped hesabıyla değil sabitle verilir ki punto değişince alan komşu düğmeyle hizasını kaybetmesin.
  */
 export function controlClass(invalid?: boolean, extra?: string, variant: FieldVariant = 'form'): string {
   return [
     'w-full border-[1.5px] font-sans leading-tight text-ink outline-none transition-colors placeholder:text-sand-600',
     CONTROL[variant],
+    // Odakta kenar kalınlaşmaz, iç halka eklenir: kalınlaşan kenar kutunun içeriğini kaydırırdı.
     'focus:border-olive focus:ring-[0.5px] focus:ring-inset focus:ring-olive disabled:cursor-not-allowed disabled:opacity-60',
-    // Salt-okunur (ülke gibi sabit değerler): krem zemin + soluk kenar ve metin — K34'ün beşinci hâli.
-    // YALNIZ metin kontrollerine: tarayıcı düzenlenemeyen HER öğeyi `:read-only` sayar, düğme dahil —
-    // seçim alanının tetiği (bir düğme) bu yüzden soluk çiziliyordu (13.09, kullanıcının ekran görüntüsü).
+    // Salt-okunur hâl yalnız metin kontrollerine: tarayıcı düğmeyi de `:read-only` sayar ve seçim alanının tetiği soluk çizilirdi.
     '[&:read-only:not(button)]:bg-sand-50 [&:read-only:not(button)]:border-sand-300 [&:read-only:not(button)]:text-muted',
     invalid ? 'border-terracotta-bright ring-[0.5px] ring-inset ring-terracotta-bright' : 'border-sand-400',
     extra,

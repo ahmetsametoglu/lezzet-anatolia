@@ -88,7 +88,7 @@ export function PhoneApplicationForm({ copy, t, form, accountEmail, companyOpen,
               type="button"
               onClick={onLookup}
               disabled={form.lookingUp}
-              className="relative flex h-13.5 flex-none cursor-pointer items-center rounded-pill bg-ink px-5 font-sans text-control text-sand-50 transition-[scale,opacity] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+              className="relative flex h-12.5 flex-none cursor-pointer items-center rounded-pill bg-ink px-5 font-sans text-control text-sand-50 transition-[scale,opacity] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {form.lookingUp ? copy.form.fetching : copy.form.fetch}
               <HapticTarget />
@@ -114,7 +114,7 @@ export function PhoneApplicationForm({ copy, t, form, accountEmail, companyOpen,
               <span
                 role="status"
                 className={[
-                  'flex h-13.5 flex-none items-center font-sans text-helper font-semibold',
+                  'flex h-12.5 flex-none items-center font-sans text-helper font-semibold',
                   form.vatValid === false ? 'text-terracotta-bright' : 'text-olive-dark',
                 ].join(' ')}
               >
