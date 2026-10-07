@@ -114,6 +114,7 @@ sale.post('/on-site', async (c) => {
     lines: parsed.data.lines,
     paymentMethod: parsed.data.paymentMethod,
     collectedAmountCents: parsed.data.collectedAmountCents,
+    idempotencyKey: parsed.data.idempotencyKey,
   });
 
   if (

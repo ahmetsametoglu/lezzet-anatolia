@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CatalogImage, SaleCatalogProduct, SalePlace, SaleVariant } from '@lezzet/types';
 
 import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite } from '@/lib/api/sale';
+import { newRequestKey } from '@/lib/request-key';
 /* Çevrimdışı sinyali deponunkiyle aynıdır: yerinde satış da depo kapsamlı bir yazmadır, iki ayrı sinyal bir gün ayrışır ve iki ekran
    aynı hat için farklı şey söylerdi. */
 import { trackWarehouse } from '@/screens/warehouse/warehouse-status';
@@ -117,6 +118,12 @@ export function useSale(place: SalePlace) {
   */
   const [payment, setPayment] = useState<'cash' | 'card' | null>(null);
   const [sending, setSending] = useState(false);
+  /* Cevabı kaybolan satış aynı sepetle yeniden gönderildikçe aynı kimliği taşır ve sunucu ikinci satış açmaz. Sepet ya da tahsilat
+     türü değişince başka bir satıştır, kimlik düşer. */
+  const saleKey = useRef<string | null>(null);
+  useEffect(() => {
+    saleKey.current = null;
+  }, [lines, payment]);
   /* Sonuç toast'ta: başarılı satışın kendi ekranı (fiş) olduğu için bu kanaldan yalnız olumsuz cevaplar geçer (yetersiz stok, kapanmayan
      satış, hat). */
   const setNotice = useCallback((notice: SaleNotice | null) => {
@@ -318,6 +325,7 @@ export function useSale(place: SalePlace) {
     if (lines.length === 0 || payment === null || sending) return;
     setSending(true);
     setNotice(null);
+    const idempotencyKey = (saleKey.current ??= newRequestKey('sale'));
 
     void (async () => {
       const result = await trackWarehouse(
@@ -328,6 +336,7 @@ export function useSale(place: SalePlace) {
             ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
           })),
           paymentMethod: payment,
+          idempotencyKey,
         }, place),
       );
       setSending(false);

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, DiscountService, OrderItemService, OrderService, PriceService, ProductService,
-  StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, DiscountService, MoneyMovementService, OrderItemService, OrderService, PriceService,
+  ProductService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, sellOnSite } from './on-site-sale';
@@ -157,6 +157,46 @@ describe('yerinde satış', () => {
 
   it('kalemsiz satış yazılmaz', async () => {
     expect(await sale({ lines: [] })).toEqual({ status: 'empty' });
+  });
+
+  it('AYNI KİMLİKLE tekrar gelen satış ikinci sipariş ve ikinci tahsilat açmaz — yazılmış satış aynen döner', async () => {
+    const key = `sale-test-${stamp}-tekrar`;
+
+    const first = await sale({ idempotencyKey: key });
+    const again = await sale({ idempotencyKey: key });
+
+    expect(first.status).toBe('ok');
+    expect(again).toEqual(first);
+    if (first.status !== 'ok') return;
+    expect((await db.from('order').select('id').eq('idempotency_key', key)).data).toHaveLength(1);
+    const payments = (await new MoneyMovementService(db).listByOrder(first.orderId)).filter((m) => m.type === 'order_payment');
+    expect(payments).toHaveLength(1);
+    expect((await stocks.listByVariant(facilityId, variantId)).reduce((s, b) => s + b.physicalQty, 0)).toBe(8);
+  });
+
+  it('kapanıştan önce düşen satış aynı kimlikle gelince AYNI taslak kapanır — yeni sipariş açılmaz', async () => {
+    const key = `sale-test-${stamp}-taslak`;
+    const { order: draft } = await orders.create(
+      {
+        customerId,
+        warehouseId: facilityId,
+        channel: 'b2c',
+        orderSource: 'door',
+        deliveryType: 'pickup',
+        status: 'draft',
+        paymentMethod: 'cash',
+        shippingFeeCents: 0,
+        orderedTotalCents: 2 * LISTE,
+        idempotencyKey: key,
+      },
+      [{ variantId, qty: 2, unitPriceCents: LISTE, vatRate: 5.5 }],
+    );
+
+    const result = await sale({ idempotencyKey: key });
+
+    expect(result).toMatchObject({ status: 'ok', orderId: draft.id, totalCents: 2 * LISTE, paymentRecorded: true });
+    expect((await orders.getById(draft.id))?.status).toBe('completed');
+    expect((await db.from('order').select('id').eq('idempotency_key', key)).data).toHaveLength(1);
   });
 
   it('ANONİM ALICI müşteri değildir — listede, sayaçta ve segmentte GÖRÜNMEZ', async () => {

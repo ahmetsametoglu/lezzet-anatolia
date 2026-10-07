@@ -83,7 +83,7 @@
     "insufficientLine": "{name} (kalan {n})",
     "blockedIntro": "Satışa kapalı kalem — satış yazılmadı: {lines}",
     "failed": "Satış kapanmadı — bir daha deneyin; sürerse yöneticiye haber verin.",
-    "network": "Bağlantı yok — satış yazılmadı."
+    "network": "Bağlantı koptu. Hat gelince aynı sepetle yeniden tamamlayın; satış iki kez yazılmaz."
   },
   "receipt": {
     "title": "Satış Tamam",

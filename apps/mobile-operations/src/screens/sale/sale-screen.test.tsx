@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { SaleCatalogProduct, SalePlace, SaleVariant, StaffWarehouse } from '@lezzet/types';
 
 import { SaleScreen } from './sale-screen';
@@ -141,7 +141,11 @@ function withScan(scanResult: unknown, saleResult: unknown = { status: 'ok' }) {
   );
 }
 
-function postBody(): { lines: { variantId: string; qty: number; negotiatedUnitPriceCents?: number }[]; paymentMethod: string } {
+function postBody(): {
+  lines: { variantId: string; qty: number; negotiatedUnitPriceCents?: number }[];
+  paymentMethod: string;
+  idempotencyKey?: string;
+} {
   const call = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
 }
@@ -581,6 +585,59 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     expect(screen.getByTestId('sale-drawer-confirm')).toHaveTextContent('Sepete ekleme kapalı');
     // Kapalı GÖRÜNMEK yetmez, kapalı OLMALI: etiketi değişip basılabilen bir düğme, en kötü hâl.
     expect(screen.getByTestId('sale-drawer-confirm')).toBeDisabled();
+  });
+
+  /** Satış isteği ağa çıkar ama cevap telefona ulaşmaz; öteki istekler geçer. */
+  function losePostAnswer(hat: NonNullable<ReturnType<typeof fetchMock.getMockImplementation>>) {
+    fetchMock.mockImplementation((url, init) => (init?.method === 'POST' ? Promise.reject(new Error('network down')) : hat(url, init)));
+  }
+
+  it('cevabı kaybolan satış aynı sepetle yeniden tamamlanınca AYNI kimliği taşır; sonraki satış yeni kimlikle gider', async () => {
+    withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: 'SP-26-0010', paymentRecorded: true });
+    const hat = fetchMock.getMockImplementation()!;
+    await renderSale();
+    await addSimit();
+    await pickCash();
+
+    losePostAnswer(hat);
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await waitFor(() => expect(screen.getByTestId('sale-offline-hint')).toBeTruthy());
+    const ilk = postBody().idempotencyKey;
+
+    fetchMock.mockImplementation(hat);
+    await act(async () => resetWarehouseStatus());
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
+    expect(ilk).toEqual(expect.any(String));
+    expect(postBody().idempotencyKey).toBe(ilk);
+
+    // Yazılmış satışın kimliğini taşıyan yeni satış, sunucudan eski satışın cevabını alır ve kendisi yazılmazdı.
+    await addSimit();
+    await pickCash();
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await waitFor(() => expect(fetchMock.mock.calls.filter((entry) => entry[1]?.method === 'POST')).toHaveLength(3));
+    expect(postBody().idempotencyKey).not.toBe(ilk);
+  });
+
+  it('bağlantı koptuktan sonra sepet değişirse yeni kimlik doğar — değişen sepet eski satışın cevabını almaz', async () => {
+    withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 900, referenceNo: 'SP-26-0011', paymentRecorded: true });
+    const hat = fetchMock.getMockImplementation()!;
+    await renderSale();
+    await addSimit();
+    await pickCash();
+
+    losePostAnswer(hat);
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await waitFor(() => expect(screen.getByTestId('sale-offline-hint')).toBeTruthy());
+    const ilk = postBody().idempotencyKey;
+
+    fetchMock.mockImplementation(hat);
+    await act(async () => resetWarehouseStatus());
+    await addSimit();
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
+    expect(postBody().lines).toEqual([{ variantId: TEK_VARYANT, qty: 2 }]);
+    expect(postBody().idempotencyKey).not.toBe(ilk);
   });
 });
 

@@ -28,6 +28,8 @@ export const OnSiteSaleRequestSchema = z.object({
   paymentMethod: PaymentMethodEnum,
   /** Tahsil edilen tutar (**cent**). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
   collectedAmountCents: z.number().int().nonnegative().optional(),
+  /** Cevabı kaybolan satış aynı sepetle yeniden gönderilince aynı kimlikle gelir; sunucu ikinci satış açmaz. */
+  idempotencyKey: z.string().min(1).max(64).nullish(),
 });
 export type OnSiteSaleRequest = z.infer<typeof OnSiteSaleRequestSchema>;
 

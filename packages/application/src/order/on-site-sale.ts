@@ -1,6 +1,14 @@
-import { OrderItemService, OrderService, OrderStatusLogService, UserProfileService, WarehouseService, type Db } from '@lezzet/database';
+import {
+  MoneyMovementService,
+  OrderItemService,
+  OrderService,
+  OrderStatusLogService,
+  UserProfileService,
+  WarehouseService,
+  type Db,
+} from '@lezzet/database';
 import type { CreateOrderItemInput } from '@lezzet/database';
-import type { PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type { Order, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView } from '../cart/read';
 import { discountAmountOf, discountIdOf, discountLabelOf, discountSharesOf } from '../cart/cart-types';
 import { readDoorAccountId } from './door-account';
@@ -46,6 +54,8 @@ export interface OnSiteSaleInput {
   paymentAccountId?: string;
   /** Satır adlarının dili — ret mesajları müşterinin değil PERSONELİN dilinde okunur. */
   locale?: PreferredLanguage;
+  /** Cevabı kaybolan satış aynı kimlikle yeniden gelir; kimlik siparişe yazılır ki ikinci istek ikinci satış açmasın. */
+  idempotencyKey?: string | null;
 }
 
 export type OnSiteSaleOutcome =
@@ -70,6 +80,11 @@ export type OnSiteSaleOutcome =
 
 export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSiteSaleOutcome> {
   if (input.lines.length === 0) return { status: 'empty' };
+
+  if (input.idempotencyKey) {
+    const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
+    if (already && already.status !== 'cancelled') return repeatedSale(db, already, input);
+  }
 
   const warehouse = await new WarehouseService(db).getById(input.warehouseId);
   if (!warehouse) return { status: 'warehouse_not_found' };
@@ -161,6 +176,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
       discountId: discountIdOf(view.discount),
       discountLabel: discountLabelOf(view.discount),
       locale,
+      idempotencyKey: input.idempotencyKey ?? null,
     },
     items,
   );
@@ -181,6 +197,38 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     totalCents: view.totalCents,
     referenceNo: outcome.referenceNo,
     paymentRecorded: outcome.paymentRecorded,
+  };
+}
+
+/**
+ * Aynı kimlikle gelen tekrar: yazılmış satış olduğu gibi döner, ilk istek kapanıştan önce düştüyse aynı taslak kapatılır. Eşzamanlı
+ * iki tekrarda geçişi biri kazanır; öteki ret alır ve sonraki deneme yazılmış satışı görür.
+ */
+async function repeatedSale(db: Db, order: Order, input: OnSiteSaleInput): Promise<OnSiteSaleOutcome> {
+  if (order.status === 'draft') {
+    const outcome = await quickSale(db, {
+      orderId: order.id,
+      actorId: input.staffId,
+      paymentMethod: input.paymentMethod,
+      collectedAmountCents: input.collectedAmountCents,
+      paymentAccountId: input.paymentAccountId,
+    });
+    if (outcome.status !== 'ok') return { status: 'sale_failed', outcome };
+    return {
+      status: 'ok',
+      orderId: order.id,
+      totalCents: order.orderedTotalCents,
+      referenceNo: outcome.referenceNo,
+      paymentRecorded: outcome.paymentRecorded,
+    };
+  }
+  const movements = await new MoneyMovementService(db).listByOrder(order.id);
+  return {
+    status: 'ok',
+    orderId: order.id,
+    totalCents: order.orderedTotalCents,
+    referenceNo: order.referenceNo,
+    paymentRecorded: movements.some((movement) => movement.type === 'order_payment'),
   };
 }
 
