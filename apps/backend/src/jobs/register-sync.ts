@@ -1,5 +1,5 @@
 import { serviceDb } from '@lezzet/database';
-import { hiboutikFromEnv, syncRegisterQueue } from '@lezzet/application';
+import { hiboutikFromSecrets, syncRegisterQueue } from '@lezzet/application';
 
 export const REGISTER_SYNC = 'register_sync';
 
@@ -8,7 +8,8 @@ export const REGISTER_SYNC = 'register_sync';
  * söyler, sessiz bir no-op "kasa eşitleniyor" diye okunurdu.
  */
 export async function registerSyncJob(): Promise<Record<string, unknown>> {
-  const register = hiboutikFromEnv();
+  const db = serviceDb();
+  const register = await hiboutikFromSecrets(db);
   if (!register) return { skipped: 'not_configured' };
-  return syncRegisterQueue(serviceDb(), register);
+  return syncRegisterQueue(db, register);
 }

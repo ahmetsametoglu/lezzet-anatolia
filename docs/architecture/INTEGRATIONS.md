@@ -6,6 +6,11 @@ Genel ilke: her dış servis bir **agnostik arayüzün** arkasında yaşar. Sağ
 
 Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK §7): web uygulamasının yeniden dağıtımından bağımsız olurlar.
 
+Sağlayıcı anahtarları (Revolut gizli anahtarı ve bildirim imza anahtarı, Pennylane, Hiboutik, Resend) Ayarlar › Kurulum › Bağlantı
+anahtarları'ndan Supabase Vault'a şifreli yazılır; süreçler onları `integrationSecrets` okuyucusundan alır (süreç başına 60 sn önbellek,
+değişiklik en geç bu sürede geçer). Kurulum'da tanımlı olmayan anahtar için ortam değişkeni okunur. Kip değişkenleri (`*_MODE`),
+veritabanı adresi, servis anahtarı ve Vault'un ana anahtarı ortamda kalır.
+
 ---
 
 ## Ödeme
@@ -13,7 +18,7 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 - **Faz 1:** online kart ödemesi — **Revolut Merchant** (`STACK` §Ödeme) + kapıda ödeme (nakit/kart, sistem içinde kaydedilir).
 - Kapıda kart için basit bir cihaz (ör. SumUp) kullanılabilir; sistem yalnızca sonucu kaydeder ve parayı nakit kasadan ayrı, kapıda kart hesabına (`door_card_account_id`) yazar.
 - Ödeme sağlayıcı bir arayüz arkasında; kapıda ödeme zaten iç mantık.
-- Webhook (ödeme onayı) `apps/web/app/api/webhooks/revolut` — `apps/backend` yerine, gerekçesi `ARCHITECTURE_DECISIONS` Sapma 5. Webhook kaydında dinlenecek olaylar: `ORDER_COMPLETED` · `ORDER_CANCELLED` · `ORDER_FAILED` · `ORDER_PAYMENT_DECLINED` · `ORDER_PAYMENT_FAILED` · `PAYOUT_COMPLETED` (düşen iade son ikisiyle gelir); gövde yalnız olay ve kimlik taşır, tutar ve komisyon siparişi okuyarak alınır. İmza anahtarı `REVOLUT_WEBHOOK_SECRET`. Muhasebe modeli (brüt tahsilat · ödeme başına komisyon · aktarım transferi) `data-model/para.md`'de.
+- Webhook (ödeme onayı) `apps/web/app/api/webhooks/revolut` — `apps/backend` yerine, gerekçesi `ARCHITECTURE_DECISIONS` Sapma 5. Webhook kaydında dinlenecek olaylar: `ORDER_COMPLETED` · `ORDER_CANCELLED` · `ORDER_FAILED` · `ORDER_PAYMENT_DECLINED` · `ORDER_PAYMENT_FAILED` · `PAYOUT_COMPLETED` (düşen iade son ikisiyle gelir); gövde yalnız olay ve kimlik taşır, tutar ve komisyon siparişi okuyarak alınır. İmza anahtarı bağlantı anahtarlarından okunur (yoksa `REVOLUT_WEBHOOK_SECRET`). Muhasebe modeli (brüt tahsilat · ödeme başına komisyon · aktarım transferi) `data-model/para.md`'de.
 
 ## Kargo
 
@@ -126,8 +131,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 
 - B2C satış NF525 sertifikalı kasaya yazılır: Hiboutik. Ayrıntı ve ölçümler `docs/feature/kasa-muhasebe.md` §6–§7.
 - Port `CashRegister` (`packages/application/src/register/port.ts`), uyarlama `register/hiboutik/client.ts`; cevap biçimi
-  `packages/types` sözleşmesinde (`hiboutik.schema.ts`). Anahtar yoksa port yoktur (`HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`,
-  `HIBOUTIK_API_KEY`); anında yazım ödemeyi yazan süreçte koştuğu için anahtar backend'in yanında web ve mobil API'de de durur.
+  `packages/types` sözleşmesinde (`hiboutik.schema.ts`). Anahtar yoksa port yoktur (bağlantı anahtarları, yoksa `HIBOUTIK_ACCOUNT`,
+  `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`); anında yazım ödemeyi yazan süreçte koştuğu için anahtarı backend'in yanında web ve mobil API de okur.
 - Kurulum kartı mağaza listesini Hiboutik'ten okur (`GET /stores/`); eşleme kaydedilirken numaranın açık bir mağazaya ait olduğu
   denetlenir.
 - Kargo ürünü Hiboutik'te "Livraison" kategorisindedir (`ensureCategory`, dış referansla bulunur, yoksa açılır; mağaza eşlenirken
@@ -167,7 +172,7 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Pennylane'e eşlenen hesabın hareketleri Pennylane'den okunur (`pennylane_sync`, beş dakikada bir); eşlenmemiş hesapta bankanın
   Excel/CSV dosyası içe alınır. Hareketler hesabın eşlendiği günden okunur; eşlenen hesaba o günden sonrası için dosya yüklenmez,
   dosya satırı o güne ya da sonrasına düşen hesap da eşlenmez. Hareketler sipariş/alımlarla eşleştirilir.
-- Pennylane anahtarı yalnız backend'dedir (`PENNYLANE_API_TOKEN`, `PENNYLANE_MODE`); kurulum kartı eşlemeyi eşitleme turunun yazdığı
+- Pennylane'e yalnız backend bağlanır (anahtar bağlantı anahtarlarından, yoksa `PENNYLANE_API_TOKEN`; kip `PENNYLANE_MODE`); kurulum kartı eşlemeyi eşitleme turunun yazdığı
   hesap listesinden kurar, bağlantıyı ve kipi turun izinden okur.
 - Eşleştirme: **öneri + elle onay.** Tam otomatik değil (toplu ödeme, kısmi ödeme, iade eşleşmeyi bozar). İstisna transferin banka
   ucudur: satır, birbirinin tek adayı olan bekleyen transfere kendiliğinden bağlanır (`linkAwaitingTransfers`).

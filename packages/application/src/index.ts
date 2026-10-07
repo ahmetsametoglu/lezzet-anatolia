@@ -517,7 +517,7 @@ export {
   readRevolutPayout,
   refundRevolutOrder,
   revolutClient,
-  revolutConfigFromEnv,
+  revolutConfigFromSecrets,
   revolutFeeOf,
   revolutGateway,
   revolutSessionCreator,
@@ -640,10 +640,11 @@ export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParce
 
 // ── Sertifikalı kasa (Hiboutik) ──
 export { checkRegisterDay, REGISTER_CHECK_JOB, registerDayEnd } from './register/day-end';
-export { hiboutikFromEnv } from './register/hiboutik/client';
+export { hiboutikFromSecrets } from './register/hiboutik/client';
 export { kickOrderRegister, requeueRegisterStore, syncRegisterQueue } from './register/sync';
 export { ensureShippingCategory } from './register/products';
-export { pennylaneFromEnv } from './accounting/pennylane/client';
+export { forgetIntegrationSecrets, installEmailKeySource, integrationSecrets, type SecretLookup } from './integration/secrets';
+export { pennylaneFromSecrets } from './accounting/pennylane/client';
 export {
   BANK_FEED_QUIET_JOB,
   PENNYLANE_SYNC_JOB,

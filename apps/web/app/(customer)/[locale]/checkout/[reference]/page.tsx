@@ -37,6 +37,14 @@ interface ConfirmationPageProps {
   params: Promise<{ locale: string; reference: string }>;
 }
 
+/**
+ * Ödemenin sağlayıcıdaki hâli; okunamazsa `null`, çünkü canlı bağın eylemi aynı soruyu saniyeler sonra sorar ve orada iz bırakır.
+ */
+async function readPaymentQuietly(paymentRef: string) {
+  const gateway = await revolutPaymentGateway().catch(() => null);
+  return gateway ? gateway.read(paymentRef).catch(() => null) : null;
+}
+
 export default async function ConfirmationPage({ params }: ConfirmationPageProps) {
   const { locale, reference } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
@@ -73,13 +81,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     /* Komşu daveti okuması yazabilir: ekran "komşunu çağır" diyecekse paylaşılacak bağlantı var olmalı, yazım idempotent. Yalnız
        kesinleşmiş rota siparişinde denenir; kargoda sefer, taslakta gün yok. */
     placed && order.deliveryType === 'route' ? tryOpenNeighborInvite(db, { orderId: order.id, customerId: profile.id, order }) : null,
-    /* Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında sorulur; okuma yan etkisizdir. Hata burada `null`a düşer, çünkü
-       canlı bağın eylemi aynı soruyu saniyeler sonra sorar ve orada iz bırakır. */
-    awaitingCard && order.paymentRef
-      ? (revolutPaymentGateway()
-          ?.read(order.paymentRef)
-          .catch(() => null) ?? null)
-      : null,
+    // Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında sorulur; okuma yan etkisizdir.
+    awaitingCard && order.paymentRef ? readPaymentQuietly(order.paymentRef) : null,
     awaitingCard ? paymentDeadlineOf(db, order.id) : null,
   ]);
 

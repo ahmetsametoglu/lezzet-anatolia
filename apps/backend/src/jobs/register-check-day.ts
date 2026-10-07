@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { serviceDb } from '@lezzet/database';
-import { checkRegisterDay, hiboutikFromEnv } from '@lezzet/application';
+import { checkRegisterDay, hiboutikFromSecrets } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
 
 /** İş saatlerinde iki saatte bir: her tur kasaya mağaza başına dört çağrı yapar ve kasanın aylık çağrı kotası satış yazımıyla ortaktır. */
@@ -16,7 +16,8 @@ export function registerCheckCron(value = process.env.REGISTER_CHECK_CRON): stri
 
 /** Bugünün kasa karşılaştırması; günü kapatmaz, fark gece kapanışından önce Pano'da görünür. */
 export async function registerCheckDayJob(): Promise<Record<string, unknown>> {
-  const register = hiboutikFromEnv();
+  const db = serviceDb();
+  const register = await hiboutikFromSecrets(db);
   if (!register) return { skipped: 'not_configured' };
-  return checkRegisterDay(serviceDb(), register, { now: new Date() });
+  return checkRegisterDay(db, register, { now: new Date() });
 }

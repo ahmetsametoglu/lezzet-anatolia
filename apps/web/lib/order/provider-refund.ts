@@ -9,7 +9,7 @@ import { webRevolutClient } from '../revolut';
  */
 export function revolutRefunder(): ProviderRefunder {
   return async (input) => {
-    const client = webRevolutClient();
+    const client = await webRevolutClient();
     if (!client) return { status: 'unavailable' };
 
     try {

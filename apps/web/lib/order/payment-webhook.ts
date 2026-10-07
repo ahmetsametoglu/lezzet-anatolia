@@ -59,7 +59,7 @@ export async function handlePaymentEvent(
   event: PaymentEvent,
   accountId: string | null,
   raw?: Record<string, unknown>,
-  gateway: PaymentGateway | null = revolutPaymentGateway(),
+  gateway?: PaymentGateway | null,
 ): Promise<WebhookOutcome> {
   const db = serviceDb();
   const events = new WebhookEventService(db);
@@ -68,7 +68,7 @@ export async function handlePaymentEvent(
   if (!claim.fresh) return { status: 'duplicate' };
 
   try {
-    const outcome = await route(event, accountId, gateway);
+    const outcome = await route(event, accountId, gateway === undefined ? await revolutPaymentGateway() : gateway);
     await events.markProcessed(claim.event.id);
     return outcome;
   } catch (error) {

@@ -153,7 +153,7 @@ checkout.get('/order/:orderId/status', async (c) => {
   const status = await readCheckoutOrderStatus(
     db,
     { orderId: orderId.data, customerId: c.get('customerId') },
-    { gateway: paymentGateway(), effects: mobilePaymentEffects(db) },
+    { gateway: await paymentGateway(), effects: mobilePaymentEffects(db) },
   );
   if (!status) return fail(c, 'order_not_found', 404);
   return ok(c, CheckoutOrderStatusSchema.parse(status));
@@ -168,7 +168,7 @@ checkout.post('/order/:orderId/resume', async (c) => {
   const outcome = await resumePendingPayment(
     db,
     { orderId: orderId.data, customerId: c.get('customerId') },
-    { gateway: paymentGateway(), effects: mobilePaymentEffects(db) },
+    { gateway: await paymentGateway(), effects: mobilePaymentEffects(db) },
   );
   if (outcome.status === 'not_found') return fail(c, 'order_not_found', 404);
   if (outcome.status === 'provider_unavailable') return fail(c, 'payment_unavailable', 503);
@@ -188,7 +188,7 @@ checkout.post('/order/:orderId/cancel', async (c) => {
   const outcome = await cancelPendingOrder(
     db,
     { orderId: orderId.data, customerId: c.get('customerId') },
-    { gateway: paymentGateway(), effects: mobilePaymentEffects(db) },
+    { gateway: await paymentGateway(), effects: mobilePaymentEffects(db) },
   );
   if (outcome.status === 'not_found') return fail(c, 'order_not_found', 404);
   if (outcome.status === 'provider_unavailable') return fail(c, 'payment_unavailable', 503);
@@ -217,8 +217,8 @@ checkout.post('/order', async (c) => {
     ...body.data,
     // Paket kapısı `db`yi ilk parametreden alır; bağlama burada, sarmalayıcı yazmadan.
     bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
-    createPaymentSession: paymentSessionCreator(),
-    paymentGateway: paymentGateway(),
+    createPaymentSession: await paymentSessionCreator(),
+    paymentGateway: await paymentGateway(),
     // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider.
     effects: mobilePaymentEffects(db),
     // Haberler ve stok eşiği uyarısı yanıttan sonra gider; süreç uzun yaşadığı için yanıt gönderildikten sonra da tamamlanır.

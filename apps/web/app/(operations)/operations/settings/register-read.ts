@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { AccountService, JobRunService, RegisterQueueService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { hiboutikFromEnv, REGISTER_CHECK_JOB } from '@lezzet/application';
+import { hiboutikFromSecrets, REGISTER_CHECK_JOB } from '@lezzet/application';
 import { registerBlockReasonLabel } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
 import { RegisterDayCheckSchema, SYSTEM_ACCOUNT_IDS, type JobRun, type RegisterExternalStore } from '@lezzet/types';
@@ -123,7 +123,7 @@ function checkDifferences(run: JobRun, facilityName: ReadonlyMap<string, string>
 
 /** Kasa yazılımındaki mağazalar her açılışta okunur; okunamazsa eşleme numarayla sürer ve sebebi pencerede yazar. */
 async function readExternalStores(): Promise<{ stores: RegisterExternalStore[] | null; note: string | null }> {
-  const register = hiboutikFromEnv();
+  const register = await hiboutikFromSecrets(serviceDb());
   if (!register) return { stores: null, note: 'Hiboutik anahtarları tanımlı değil; mağaza listesi okunamıyor.' };
   try {
     return { stores: await register.listStores(), note: null };

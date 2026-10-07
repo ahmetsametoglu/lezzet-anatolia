@@ -10,7 +10,7 @@ import { paymentGateway } from './revolut';
  */
 export async function settlePendingPaymentsQuietly(db: Db, customerId: string): Promise<void> {
   try {
-    await settlePendingPayments(db, customerId, { gateway: paymentGateway(), effects: mobilePaymentEffects(db) });
+    await settlePendingPayments(db, customerId, { gateway: await paymentGateway(), effects: mobilePaymentEffects(db) });
   } catch (error) {
     await captureError(error, { source: SOURCES.mobileApiHttp, context: { customerId, step: 'settle_pending_payments' } });
   }

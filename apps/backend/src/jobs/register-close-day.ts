@@ -1,5 +1,5 @@
 import { serviceDb } from '@lezzet/database';
-import { hiboutikFromEnv, registerDayEnd } from '@lezzet/application';
+import { hiboutikFromSecrets, registerDayEnd } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
 
 export const REGISTER_CLOSE_DAY = 'register_close_day';
@@ -17,7 +17,8 @@ export function registerCloseCron(value = process.env.REGISTER_CLOSE_AT): string
 
 /** Kasanın gün sonu; kapanış yalnız `HIBOUTIK_MODE=live` iken yapılır, çünkü mali kayıttır ve geri alınmaz. */
 export async function registerCloseDayJob(): Promise<Record<string, unknown>> {
-  const register = hiboutikFromEnv();
+  const db = serviceDb();
+  const register = await hiboutikFromSecrets(db);
   if (!register) return { skipped: 'not_configured' };
-  return registerDayEnd(serviceDb(), register, { now: new Date(), close: process.env.HIBOUTIK_MODE === 'live' });
+  return registerDayEnd(db, register, { now: new Date(), close: process.env.HIBOUTIK_MODE === 'live' });
 }

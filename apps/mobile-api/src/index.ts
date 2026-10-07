@@ -4,11 +4,15 @@
  */
 import './env';
 import { serve } from '@hono/node-server';
+import { installEmailKeySource } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import { installSupabaseKeepAlive } from '@lezzet/database/keep-alive';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { app } from './app';
 
 installSupabaseKeepAlive();
+// Giriş kodu e-postasının anahtarı Kurulum'dan okunur; takılmasaydı yalnız ortam değişkeni okunurdu.
+installEmailKeySource(serviceDb());
 
 /**
  * Hono `onError` isteğin dışında doğan promise reddini görmez ve Node böyle bir ret yüzünden süreci iz bırakmadan öldürür;

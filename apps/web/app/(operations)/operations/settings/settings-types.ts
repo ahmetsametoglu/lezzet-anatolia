@@ -14,6 +14,7 @@ import type { SiteImageView } from './site-images-read';
 import type { McpPanelData } from './mcp-read';
 import type { RegisterPanelData } from './register-read';
 import type { PennylanePanelData } from './pennylane-read';
+import type { IntegrationKeysPanelData } from './integration-keys-read';
 import type { SettingsTab, SettingsUrlState } from './settings-url';
 
 // Ayarlar ekranının tipleri; giriş şemaları `packages/types`teki `Setting`/`UserProfile` şemalarından türer.
@@ -134,6 +135,7 @@ export interface SetupData {
   mcp: McpPanelData;
   register: RegisterPanelData;
   pennylane: PennylanePanelData;
+  integrationKeys: IntegrationKeysPanelData;
 }
 
 /** Bir konu kartı ve içinde çizilecek satırlar. */

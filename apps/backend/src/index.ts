@@ -8,7 +8,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
 import { setAiUsageRecorder } from '@lezzet/ai';
-import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB, REGISTER_CHECK_JOB } from '@lezzet/application';
+import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB, REGISTER_CHECK_JOB, installEmailKeySource } from '@lezzet/application';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
 import { serviceDb } from '@lezzet/database';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
@@ -65,6 +65,8 @@ process.on('uncaughtException', (error) => {
   bu süreçteki koşular bedava görünürdü.
 */
 setAiUsageRecorder(aiUsageRecorder(serviceDb()));
+// E-posta anahtarı Kurulum'dan okunur; takılmasaydı yalnız ortam değişkeni okunurdu.
+installEmailKeySource(serviceDb());
 
 const app = new Hono<AppEnv>();
 

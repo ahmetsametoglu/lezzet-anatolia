@@ -10,6 +10,7 @@ import { SiteImagesCard } from './site-images-card';
 import { McpCard } from './mcp-card';
 import { RegisterCard } from './register-card';
 import { PennylaneCard } from './pennylane-card';
+import { IntegrationKeysCard } from './integration-keys-card';
 import type { SettingsViewProps } from './settings-types';
 
 /**
@@ -92,6 +93,9 @@ export function SettingsDesktop({
               </GridCell>
               <GridCell>
                 <McpCard data={data.setup.mcp} />
+              </GridCell>
+              <GridCell>
+                <IntegrationKeysCard data={data.setup.integrationKeys} />
               </GridCell>
             </CardGrid>
           ) : null

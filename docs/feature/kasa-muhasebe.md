@@ -448,8 +448,8 @@ denemede düşen yazım hata kaydı olarak.
 - `apps/backend/src/jobs/`: `register-sync` (dakikalık) ve `register-close-day` (günlük kapanış ve mutabakat).
 - Ödemenin hemen arkasından yazım `register/sync.ts`'teki `kickOrderRegister`'dır; tahsilat ya da iade yazan akış (online onay,
   kapıda ve gel-al teslimi, kapı önü satış, iade) sonunda çağırır. Kuyruk satırının kilidi `register_queue_claim`.
-- Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`), `REGISTER_CLOSE_AT`,
-  `REGISTER_CHECK_CRON`.
+- Ortam: `HIBOUTIK_MODE` (`demo` | `live`), `REGISTER_CLOSE_AT`, `REGISTER_CHECK_CRON`; hesap, kullanıcı ve API anahtarı bağlantı
+  anahtarlarından, yoksa `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`.
 
 **Testler:**
 - Motorun her dalı birim testte: kuruş bölmesi, kargo payı, iptal, müşteride kalan, eksik ve fazla ödeme,
@@ -624,7 +624,7 @@ var.
   uyarısı. Cevap biçimi ölçülen alanlarla `packages/types` sözleşmesindedir. Fotoğraf çevrilmez, yeni bağımlılık
   yok: Pennylane JPEG ve PNG eki alıyor.
 - `apps/backend/src/jobs/`: `pennylane-sync` (birkaç dakikada bir; akışlar ve kuyruk), `bank-feed-quiet` (günlük).
-- Ortam: `PENNYLANE_API_TOKEN`, `PENNYLANE_MODE` (`sandbox` | `live`).
+- Ortam: `PENNYLANE_MODE` (`sandbox` | `live`); anahtar bağlantı anahtarlarından, yoksa `PENNYLANE_API_TOKEN`.
 
 **Testler:** motorun dalları birim testte; tetikleyiciler ve eşitleme entegrasyon testinde, bellek içi Pennylane
 ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, betiklerle yapılır; test paketinde değil.

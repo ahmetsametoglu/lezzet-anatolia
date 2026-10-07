@@ -82,6 +82,8 @@ kullanıcının parolası ve kabuğu yoktur.
   `https://test.lezzetanatolie.com/api/webhooks/revolut`, olaylar `ORDER_COMPLETED` · `ORDER_CANCELLED` · `ORDER_FAILED` ·
   `ORDER_PAYMENT_DECLINED` · `ORDER_PAYMENT_FAILED` · `PAYOUT_COMPLETED`; düşen iade son ikisiyle bildirilir. Kaydın `signing_secret`i `app.env`'e `REVOLUT_WEBHOOK_SECRET` olarak yazılır; yanında
   `REVOLUT_SECRET_KEY` ve `REVOLUT_MODE` (`sandbox` / `live`). Anahtar yoksa uç 503, imzasız istek 400 döner.
+  İki anahtar Ayarlar › Kurulum › Bağlantı anahtarları'ndan da yazılabilir; yazılınca `app.env`'deki değer devreden çıkar,
+  `REVOLUT_MODE` ortamda kalır.
   Kayıt kip başınadır: canlıya geçişte canlı hesapta yeniden kaydedilir.
 
 ## Caddy

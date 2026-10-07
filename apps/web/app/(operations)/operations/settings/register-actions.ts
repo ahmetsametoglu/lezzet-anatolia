@@ -2,7 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { AccountService, JobRunService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { checkRegisterDay, ensureShippingCategory, hiboutikFromEnv, REGISTER_CHECK_JOB, requeueRegisterStore } from '@lezzet/application';
+import {
+  checkRegisterDay,
+  ensureShippingCategory,
+  hiboutikFromSecrets,
+  REGISTER_CHECK_JOB,
+  requeueRegisterStore,
+} from '@lezzet/application';
 import { logger } from '@lezzet/observability';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -59,9 +65,9 @@ export async function removeRegisterStoreAction(input: { warehouseId: string }):
 export async function checkRegisterDayAction(): Promise<ActionResult> {
   try {
     await requireAdmin();
-    const register = hiboutikFromEnv();
-    if (!register) return { data: null, error: 'Hiboutik anahtarları tanımlı değil; karşılaştırma yapılamaz.' };
     const db = serviceDb();
+    const register = await hiboutikFromSecrets(db);
+    if (!register) return { data: null, error: 'Hiboutik anahtarları tanımlı değil; karşılaştırma yapılamaz.' };
     const jobs = new JobRunService(db);
     try {
       await jobs.recordSuccess(REGISTER_CHECK_JOB, await checkRegisterDay(db, register, { now: new Date() }));
@@ -81,7 +87,7 @@ export async function checkRegisterDayAction(): Promise<ActionResult> {
  * Pennylane bağlantısında ilk kargolu satıştan önce eşlenebilsin; anahtarsız ortamda kasaya hiçbir şey yazılmadığı için ikisi de atlanır.
  */
 async function registerSetupRefusal(externalStoreId: number): Promise<string | null> {
-  const register = hiboutikFromEnv();
+  const register = await hiboutikFromSecrets(serviceDb());
   if (!register) return null;
   try {
     const stores = await register.listStores();

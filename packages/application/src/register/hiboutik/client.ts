@@ -21,6 +21,8 @@ import {
   type PaymentMethod,
   type RegisterSale,
 } from '@lezzet/types';
+import type { Db } from '@lezzet/database';
+import { integrationSecrets } from '../../integration/secrets';
 import type { CashRegister } from '../port';
 import { HiboutikError, classify } from './errors';
 
@@ -54,10 +56,13 @@ const vatFraction = (ratePercent: number): string => String(Math.round(ratePerce
 const percentOf = (fraction: number): number => Math.round(fraction * 10_000) / 100;
 
 /** Anahtar yoksa port yoktur: kasaya yazamayan eşitleme "yazdım" diyemesin. */
-export function hiboutikFromEnv(): CashRegister | null {
-  const { HIBOUTIK_ACCOUNT, HIBOUTIK_USER, HIBOUTIK_API_KEY } = process.env;
-  if (!HIBOUTIK_ACCOUNT || !HIBOUTIK_USER || !HIBOUTIK_API_KEY) return null;
-  return hiboutikRegister({ account: HIBOUTIK_ACCOUNT, user: HIBOUTIK_USER, apiKey: HIBOUTIK_API_KEY });
+export async function hiboutikFromSecrets(db: Db): Promise<CashRegister | null> {
+  const secret = await integrationSecrets(db);
+  const account = secret('hiboutik_account');
+  const user = secret('hiboutik_user');
+  const apiKey = secret('hiboutik_api_key');
+  if (!account || !user || !apiKey) return null;
+  return hiboutikRegister({ account, user, apiKey });
 }
 
 /** Kasa portunun Hiboutik uyarlaması; vergi kimlikleri ilk ihtiyaçta bir kez okunur. */

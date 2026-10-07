@@ -9,8 +9,7 @@ import { revolutWebhookSecret, webRevolutClient } from '@/lib/revolut';
  * yeniden göndersin; tekrar gelen olay 200 alır, yoksa sağlayıcı denemeyi sürdürür.
  */
 export async function POST(request: Request): Promise<Response> {
-  const client = webRevolutClient();
-  const secret = revolutWebhookSecret();
+  const [client, secret] = await Promise.all([webRevolutClient(), revolutWebhookSecret()]);
   // Anahtarsız ortamda uç açık kalmaz: doğrulanamayan gövde işlenmemeli.
   if (!client || !secret) return new Response('revolut not configured', { status: 503 });
 

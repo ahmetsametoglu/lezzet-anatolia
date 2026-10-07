@@ -6,8 +6,10 @@ import {
   type RevolutApiOrder,
   type RevolutMode,
 } from '@lezzet/types';
+import type { Db } from '@lezzet/database';
 import { vatPortion } from '@lezzet/helper';
 import { localizedUrl } from '@lezzet/i18n';
+import { integrationSecrets } from '../integration/secrets';
 import type { CheckoutSessionCreator, PaymentBreakdown } from './checkout-session';
 import type { PaymentGateway, PaymentSnapshot } from './payment-gateway';
 
@@ -51,10 +53,11 @@ export interface RevolutClient {
 }
 
 /** Anahtar ya da kip yoksa istemci yoktur: sağlayıcıya bağlanamayan akış "ödendi" ya da "ödenmedi" diyemesin. */
-export function revolutConfigFromEnv(env: Record<string, string | undefined> = process.env): RevolutConfig | null {
-  const mode = RevolutModeEnum.safeParse(env.REVOLUT_MODE);
-  if (!env.REVOLUT_SECRET_KEY || !mode.success) return null;
-  return { secretKey: env.REVOLUT_SECRET_KEY, mode: mode.data };
+export async function revolutConfigFromSecrets(db: Db): Promise<RevolutConfig | null> {
+  const secretKey = (await integrationSecrets(db))('revolut_secret_key');
+  const mode = RevolutModeEnum.safeParse(process.env.REVOLUT_MODE);
+  if (!secretKey || !mode.success) return null;
+  return { secretKey, mode: mode.data };
 }
 
 export function revolutClient(config: RevolutConfig): RevolutClient {

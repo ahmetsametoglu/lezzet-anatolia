@@ -1,5 +1,6 @@
 import { setAiUsageRecorder } from '@lezzet/ai';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
+import { installEmailKeySource } from '@lezzet/application/integration/secrets';
 import { serviceDb } from '@lezzet/database';
 import { installSupabaseKeepAlive } from '@lezzet/database/keep-alive';
 
@@ -9,4 +10,5 @@ import { installSupabaseKeepAlive } from '@lezzet/database/keep-alive';
   derlemelerinde modülleri ayrı grafiklerde yükler, kurulan kanca yine hepsinde görünür.
 */
 setAiUsageRecorder(aiUsageRecorder(serviceDb()));
+installEmailKeySource(serviceDb());
 installSupabaseKeepAlive();

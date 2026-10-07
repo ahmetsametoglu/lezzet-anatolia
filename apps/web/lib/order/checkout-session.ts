@@ -16,12 +16,12 @@ export type { CheckoutSessionCreator };
 
 export async function createCheckoutSession(
   input: CheckoutSessionInput,
-  createSession: CheckoutSessionCreator | null = webSessionCreator(),
+  createSession?: CheckoutSessionCreator | null,
 ): Promise<CheckoutSessionOutcome> {
-  return createCheckoutSessionFor(serviceDb(), input, createSession);
+  return createCheckoutSessionFor(serviceDb(), input, createSession === undefined ? await webSessionCreator() : createSession);
 }
 
 /** Portun web uygulaması; anahtar yoksa `null`, kapı `provider_unavailable` döner ve stok hiç ayrılmaz. */
-export function webSessionCreator(): CheckoutSessionCreator | null {
-  return revolutSessionCreator(webRevolutClient(), { hostedPage: true });
+export async function webSessionCreator(): Promise<CheckoutSessionCreator | null> {
+  return revolutSessionCreator(await webRevolutClient(), { hostedPage: true });
 }

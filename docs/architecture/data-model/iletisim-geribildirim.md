@@ -713,3 +713,30 @@ Oyunlaştırma (puan değerleri, puan→kupon eşiği) ve ödeme komisyon oranla
 > migration dosyalarını okuyup her anahtarı karşılaştırıyor, ayrışırsa test düşer ve hangi anahtar
 > olduğunu söyler. Yani migration'daki bir sayıyı değiştirmek serbest — testin söylediği yeri de
 > güncelleyin, yoksa ekran yalan bir "varsayılan" gösterir. Bu tablo nöbetin dışında; elle tutulur.
+
+## IntegrationSecret (entegrasyon anahtarı)
+
+Revolut, Pennylane, Hiboutik ve e-posta anahtarları Vault'ta şifreli durur; bu tablo yalnız hangi anahtarın tanımlı olduğunu
+ve son değişikliği taşır. Uygulama anahtarı `integration_secrets_read` ile okur ve süreç başına kısa süre bellekte tutar; tanımsız
+anahtarda ortam değişkenine düşer. Yazım ve temizleme Kurulum'dan, yalnız sunucu rolünün çağırabildiği fonksiyonlarla.
+
+<!-- alanlar:integration_secret -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `name` | text |  |  |
+| `vault_secret_id` | uuid |  |  |
+| `updated_at` | timestamptz |  | `now()` |
+| `updated_by` | uuid | • |  |
+<!-- /alanlar -->
+
+**Değişiklik defteri** (`integration_secret_log`): kim, ne zaman, hangi anahtar, yazıldı mı kaldırıldı mı; eski ve yeni değer yazılmaz.
+
+<!-- alanlar:integration_secret_log -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | text |  |  |
+| `action` | text |  |  |
+| `actor` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->

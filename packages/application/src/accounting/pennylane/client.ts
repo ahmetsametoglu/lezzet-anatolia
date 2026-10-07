@@ -28,6 +28,8 @@ import {
   type PennylaneSupplier,
   type PennylaneTransaction,
 } from '@lezzet/types';
+import type { Db } from '@lezzet/database';
+import { integrationSecrets } from '../../integration/secrets';
 import type { PennylaneCategoryTarget, PennylanePort } from './port';
 import { PennylaneError, classify } from './errors';
 
@@ -60,8 +62,8 @@ const INVOICE_PAGE_LIMIT = 20;
 const realClock = { now: () => Date.now(), sleep: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)) };
 
 /** Anahtar ya da kip yoksa port yoktur: Pennylane'e bağlanamayan eşitleme "okudum" diyemesin. */
-export function pennylaneFromEnv(): PennylanePort | null {
-  const token = process.env.PENNYLANE_API_TOKEN;
+export async function pennylaneFromSecrets(db: Db): Promise<PennylanePort | null> {
+  const token = (await integrationSecrets(db))('pennylane_api_token');
   const mode = PennylaneModeEnum.safeParse(process.env.PENNYLANE_MODE);
   if (!token || !mode.success) return null;
   return pennylanePort({ token, mode: mode.data });

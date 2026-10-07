@@ -1,5 +1,5 @@
 // E-posta istemcisi ve şablonları; giriş kodu dahil her e-posta buradan gider, Supabase'in kendi e-postası kullanılmaz.
-export { sendEmail, type SendEmailParams, type SendEmailResult } from './client';
+export { sendEmail, setEmailKeySource, type SendEmailParams, type SendEmailResult } from './client';
 export { OtpCodeEmail, otpSubject, type OtpCodeEmailProps, type OtpCodePurpose } from './templates/otp-code';
 
 // Sipariş bildirimleri (14.5) — üç şablon ortak iskeleti paylaşır.

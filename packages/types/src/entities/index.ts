@@ -50,6 +50,7 @@ export * from './pennylane.schema';
 export * from './revolut.schema';
 export * from './job-run.schema';
 export * from './webhook-event.schema';
+export * from './integration-secret.schema';
 export * from './ticket.schema';
 export * from './conversation.schema';
 // AI kullanım defteri — koşu başına jeton ve yaklaşık maliyet (USD).

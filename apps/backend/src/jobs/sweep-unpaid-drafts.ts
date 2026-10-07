@@ -2,7 +2,7 @@ import {
   notifyOrderException,
   notifyOrderStatus,
   revolutClient,
-  revolutConfigFromEnv,
+  revolutConfigFromSecrets,
   revolutGateway,
   sweepUnpaidDrafts,
   type OrderEffects,
@@ -16,11 +16,11 @@ export const SWEEP_UNPAID_DRAFTS = 'sweep_unpaid_drafts';
  * onaylar, bekler ya da kapatır. Anahtar yoksa tur sormadan biter, çünkü sorulamayan taslak "ödenmedi" sayılmaz.
  */
 export async function sweepUnpaidDraftsJob(): Promise<Record<string, unknown>> {
-  const config = revolutConfigFromEnv();
+  const db = serviceDb();
+  const config = await revolutConfigFromSecrets(db);
   const gateway = revolutGateway(config ? revolutClient(config) : null);
   if (!gateway) return { skipped: 'no_provider_key' };
 
-  const db = serviceDb();
   // Onayda sipariş haberi, ödeme geldiğinde mal kalmadıysa iptal haberi — web'in webhook'uyla aynı iki etki.
   const effects: OrderEffects = {
     notifyStatus: (orderId, status) => notifyOrderStatus(db, orderId, status),

@@ -33,7 +33,7 @@ import type {
 } from '@lezzet/types';
 import { notifyRegisterWriteStuck } from '../notification/staff-events';
 import { deferBlocked, deferFailed } from '../queue/defer';
-import { hiboutikFromEnv } from './hiboutik/client';
+import { hiboutikFromSecrets } from './hiboutik/client';
 import type { CashRegister } from './port';
 import { ensureItemProducts, ensureShippingProduct } from './products';
 
@@ -69,9 +69,11 @@ export async function syncRegisterQueue(db: Db, register: CashRegister, opts: { 
  * Ödeme yazılınca siparişin kasa satırı hemen işlenir; müşteri ve kurye bunu beklemez, yazılamayanı dakikalık iş tamamlar. Anahtarsız
  * ortamda kasa yoktur ve tetik bir şey yapmaz.
  */
-export function kickOrderRegister(db: Db, orderId: string, register: CashRegister | null = hiboutikFromEnv()): void {
-  if (!register) return;
-  void syncOrderNow(db, register, orderId).catch((err: unknown) => {
+export function kickOrderRegister(db: Db, orderId: string, register?: CashRegister | null): void {
+  void (async () => {
+    const port = register === undefined ? await hiboutikFromSecrets(db) : register;
+    if (port) await syncOrderNow(db, port, orderId);
+  })().catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);
     logger.warn({ orderId, err: message }, 'kasa: anında yazım düştü, dakikalık iş tamamlayacak');
   });

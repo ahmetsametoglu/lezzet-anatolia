@@ -118,6 +118,7 @@ export {
 export { BankImportProfileService, BankImportService } from './services/bank-import.service';
 export { JobRunService } from './services/job-run.service';
 export { WebhookEventService } from './services/webhook-event.service';
+export { IntegrationSecretLogService, IntegrationSecretService } from './services/integration-secret.service';
 export { ErrorLogService, errorFingerprint, type ListErrorLogsOptions } from './services/error-log.service';
 export { SystemHealthService } from './services/system-health.service';
 // MCP kapısı — anahtar doğrulaması ve çağrı izi. Gözlemleme servislerinin yanında:

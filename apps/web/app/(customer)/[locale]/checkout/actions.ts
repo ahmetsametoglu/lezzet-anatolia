@@ -197,8 +197,8 @@ export async function confirmCheckoutAction(input: {
       // Edinim kaynağı oturumun kampanya ÇEREZİNİ okur — taşıma ayrıntısı, pakette yaşayamaz.
       onCustomerAcquired: (id) => void rememberAcquisition(id),
       // Sağlayıcı istemcisi yüzeyin anahtarlarıyla kurulur ve porttan geçer.
-      createPaymentSession: webSessionCreator(),
-      paymentGateway: revolutPaymentGateway(),
+      createPaymentSession: await webSessionCreator(),
+      paymentGateway: await revolutPaymentGateway(),
       // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider.
       effects: webPaymentEffects,
       // Haberler ve stok eşiği uyarısı yanıttan sonra gider: müşteri onayı, kendi e-postasının gönderilmesini beklemeden görür.
@@ -216,7 +216,7 @@ export async function confirmCheckoutAction(input: {
     }
     if (outcome.status === 'payment_required') {
       // Sayfa adresi ödeme açan istemciyle aynı ayardan türer; ödeme açıldıysa vardır, yoksa sağlayıcı yok sayılır.
-      const checkoutUrl = revolutCheckoutUrl(outcome.paymentToken);
+      const checkoutUrl = await revolutCheckoutUrl(outcome.paymentToken);
       if (!checkoutUrl) return { data: { status: 'rejected', reason: 'provider_unavailable' }, errorKey: null };
       return {
         data: {

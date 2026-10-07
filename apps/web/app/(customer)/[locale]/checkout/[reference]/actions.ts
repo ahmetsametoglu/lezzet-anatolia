@@ -21,7 +21,7 @@ export async function verifyPaymentAction(orderId: string): Promise<CustomerResu
     const order = id ? await new OrderService(db).getById(id) : null;
     if (!order || order.customerId !== customerId) return { data: { settled: true }, errorKey: null };
 
-    const outcome = await reconcileDraftPayment(db, order.id, { gateway: revolutPaymentGateway(), effects: webPaymentEffects });
+    const outcome = await reconcileDraftPayment(db, order.id, { gateway: await revolutPaymentGateway(), effects: webPaymentEffects });
     // Sorulamayan hâllerde de (anahtar yok) sormayı sürdürmenin anlamı yok; tanınmayan sağlayıcı durumunda sorular sürer.
     const settled =
       outcome.status === 'confirmed' ||
@@ -45,12 +45,12 @@ export async function resumePaymentAction(orderId: string): Promise<CustomerResu
     const outcome = await resumePendingPayment(
       serviceDb(),
       { orderId: id, customerId },
-      { gateway: revolutPaymentGateway(), effects: webPaymentEffects },
+      { gateway: await revolutPaymentGateway(), effects: webPaymentEffects },
     );
     if (outcome.status === 'not_found') throw new CustomerError('not_found');
     if (outcome.status === 'provider_unavailable') throw new CustomerError('payment_unavailable');
     if (outcome.status !== 'payment_required') return { data: { status: 'settled' }, errorKey: null };
-    const checkoutUrl = revolutCheckoutUrl(outcome.paymentToken);
+    const checkoutUrl = await revolutCheckoutUrl(outcome.paymentToken);
     if (!checkoutUrl) throw new CustomerError('payment_unavailable');
     return { data: { status: 'payment_required', orderId: outcome.orderId, checkoutUrl }, errorKey: null };
   } catch (err) {
@@ -68,7 +68,7 @@ export async function cancelPendingOrderAction(orderId: string): Promise<Custome
     const outcome = await cancelPendingOrder(
       serviceDb(),
       { orderId: id, customerId },
-      { gateway: revolutPaymentGateway(), effects: webPaymentEffects },
+      { gateway: await revolutPaymentGateway(), effects: webPaymentEffects },
     );
     if (outcome.status === 'not_found') throw new CustomerError('not_found');
     if (outcome.status === 'provider_unavailable') throw new CustomerError('payment_unavailable');
