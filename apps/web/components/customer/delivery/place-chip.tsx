@@ -4,44 +4,18 @@ import type { Locale } from '@lezzet/i18n';
 import homeMessages from '@lezzet/i18n/customer/home';
 import { focusRingClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
+import { placeLineOf } from '@lezzet/address';
 import { Skeleton } from '@/components/customer/ui/skeleton';
 import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 
 /**
- * K30 · Teslimat Yeri Göstergesi — başlıkta duran kalıcı hap.
- *
- * ── MASAÜSTÜ v1'İN BİREBİR AYNISI (13.09, kullanıcı kararı) ────────────────────
- * Hap her durumda yeşil (`olive-bg` zemin, `olive-edge` çerçeve, iğne `olive-dark`) ve yerin yanında
- * teslim şeklini yazar: "67000 Strasbourg · kapıya teslim" / "· kargoyla". Önce (28.07) hap yalnız
- * yeri söylüyor, teslim şeklini RENKTEN veriyordu (bölge dışında kum rengi); v1 o karardan sonra
- * çizildi ve onun yerine geçti.
- *
- * Tek veri farkı: v1 bölge dışındaki kodda yer adı yazmıyor ("67380 · kargoyla"), çünkü taslak
- * yalnız "Strasbourg"u biliyor. Biz adı referanstan biliyoruz ve yazıyoruz (aşağıda, 19.8).
- *
- * ── ŞEHİR ADI HER KODDA YAZILIR (19.8) ───────────────────────────────────────
- * Ad `postal_code_place`tan gelir (16.878 satır, FR+DE), tahminden değil; kodun birden çok yerleşimi
- * varsa ad yazılmaz, yalnız kod. **Yazılan ad BÖLGEMİZİN adı değil, YERİN adı** (`placeName`,
- * `zoneName` değil): müşterinin zihninde "Strasbourg" var, "Strasbourg Merkez" bizim iç adımız.
- *
- * Hap **yalan söylememelidir**: başlık hiçbir zaman siparişten farklı bir yer göstermez.
- *
- * ── GİRİŞLİ VE ADRESLİ MÜŞTERİDE HAP ADRESİ GÖSTERİR (kullanıcı kararı 13.09) ──
- * Yerin kaynağı o müşteride kod değil seçili adres (`PlaceProvider` künyesi): hap adresin adını ve
- * kodunu yazar (v1: "Ev · 67000").
- *
- * ── MASAÜSTÜNDE HAP + PANEL, MOBİLDE KONUM SATIRI + ÇEKMECE (13.09 · 14.09) ────────
- * Masaüstünde hap başlığın ALTINDAKİ paneli açıp kapatır (`PlacePanel`). Mobil webde aynı bilgi
- * vitrin başlığında native'in konum satırı olarak durur (turuncu, harf aralıklı "67000 Strasbourg ▾")
- * ve basınca çekmece açılır (`PlaceSheet`). İki cihaz aynı açık/kapalı durumu (`panelOpen`) okuyor,
- * yalnız çizimleri ayrı.
- *
- * Odak halkası kitin (`focusRingClass`): yazılmayınca tarayıcının mavi halkası çiziliyordu.
+ * Teslimat yerinin göstergesi: masaüstünde başlıktaki hap paneli açar, telefonda vitrin başlığının konum satırı çekmeceyi açar. Yazılan
+ * ad bölgemizin değil yerin adıdır (`placeName`), çünkü müşterinin zihninde iç bölge adı değil şehir vardır.
  */
 interface PlaceChipProps {
   locale: Locale;
-  /** Mobil vitrin başlığının KONUM SATIRI (native vitrin: turuncu, harf aralıklı küçük metin + ▾). */
+  /** Telefon vitrin başlığının konum satırı. */
   line?: boolean;
 }
 
@@ -51,8 +25,7 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
   // Gel-al seçiliyken hap depoyu söyler: sepet o depoya göre okunuyor, adres yalnız fatura.
   const pickedWarehouse = pickup?.warehouses.find((w) => w.id === pickup.selectedWarehouseId) ?? null;
 
-  // `placeName` → `zoneName` → yalnız kod. İkinci basamak bir emniyet ağı: referansta olmayan ama
-  // kendi bölgemizde duran bir kodda (bkz. `19.16`) hap yine bir ad gösterebilsin.
+  // Yer adı yoksa bölge adı yazılır, ki referansta olmayan ama bölgemizde duran kodda da bir ad görünsün.
   const placeLabel = place?.placeName ?? place?.zoneName ?? null;
   const label = pickedWarehouse
     ? pickedWarehouse.name
@@ -67,20 +40,17 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
   const channel = pickedWarehouse ? t.channelPickup : place ? (place.inRoute ? t.channelDoor : t.channelShip) : null;
 
   if (line) {
-    // Satır ilk kareden çizilir (yer sunucudan geliyor); yer DEĞİŞİRKEN iskelet — hapın kuralı
-    // (kullanıcı isteği 13.09): eski yeri göstermek cevabın alınmadığı izlenimini veriyordu.
-    // CÜMLE NATIVE'LE ORTAK (14.09, `@lezzet/i18n/customer/home`): yer yoksa "bölgenizi seçin ▾", yer
-    // biliniyorsa "{kod} {ŞEHİR} ▾" — şehir native'deki gibi dilin kuralıyla büyük harf. Girişli ve
-    // adresli müşteride adres göstermek web'e özgü karar (13.09) ve aynen kalır.
+    // Yer değişirken iskelet çizilir, çünkü eski yeri göstermek cevabın alınmadığı izlenimini verir; satırın biçimi native'le ortaktır.
     const header = homeMessages[locale].header;
+    const zip = place
+      ? { postalCode: place.postalCode, placeName: placeLabel }
+      : address
+        ? { postalCode: address.postalCode, placeName: address.city }
+        : null;
     const postal = pickedWarehouse
       ? pickedWarehouse.name
-      : address
-      ? `${address.label || address.city} · ${address.postalCode}`
-      : place
-        ? placeLabel
-          ? `${place.postalCode} ${placeLabel.toLocaleUpperCase(locale)}`
-          : place.postalCode
+      : zip
+        ? placeLineOf({ label: address?.label, ...zip }).toLocaleUpperCase(locale)
         : null;
     return (
       <button
@@ -100,10 +70,7 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
     );
   }
 
-  // Masaüstü hapı da ilk kareden çizilir (yer sunucudan geliyor — satırın gerekçesiyle aynı); önce
-  // `ready`yi bekliyor ve başlıkta bir boşluk bırakıp sonradan beliriyordu. Yer DEĞİŞİRKEN (kod
-  // gönderilirken, adres seçilirken, sayfa tazelenirken) iskelet durur — kullanıcı isteği 13.09:
-  // eski yeri göstermek cevabın alınmadığı izlenimini veriyordu. Kabuk hapın boyunda, satır zıplamaz.
+  // Yer değişirken iskelet hapın boyunda durur, ki başlık zıplamasın.
   if (updating) {
     return (
       <span aria-hidden className="block h-10.5 w-[200px] flex-none overflow-hidden rounded-pill">

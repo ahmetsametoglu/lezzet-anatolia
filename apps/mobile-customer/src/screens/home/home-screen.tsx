@@ -37,6 +37,7 @@ import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-addr
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { PlaceSheet } from '@/screens/customer-kit/place-sheet';
 import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
+import { placeLineOf } from '@lezzet/address';
 import { useMe, useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
@@ -106,9 +107,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const liveOrder = homeOrders.live;
   const lastOrder = homeOrders.last;
 
-  /* Kod müşterinin yerinden gelir (girişlide teslimat adresi, değilse cihazın kodu), adı `/places`tan; kod hiç yoksa hap bir davet
-     olur, boş yer adı basılmaz. */
-  const { postalCode } = usePurchasePlace();
+  /* Kod müşterinin yerinden gelir (girişlide seçili teslimat adresi, değilse cihazın kodu), adı `/places`tan; satırın biçimi web ile
+     ortaktır (`placeLineOf`). Kod hiç yoksa hap bir davet olur, boş yer adı basılmaz. */
+  const { address: purchaseAddress, postalCode } = usePurchasePlace();
   /* Tam kanca (`place` + `refresh`), çünkü aşağı çekme kapsamı da tazeler; hareket çağıranın kaydırma alanına ait olduğu için buradan
      bağlanır. */
   const savedPlaceLookup = usePlaceLookup(postalCode ?? '');
@@ -119,7 +120,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const rememberedName = useRememberedPlaceName(postalCode);
   const savedPlaceName = resolvedName ?? rememberedName;
   const postalLabel =
-    postalCode === null ? null : savedPlaceName === null ? postalCode : `${postalCode} ${upperIn(savedPlaceName, locale)}`;
+    postalCode === null ? null : upperIn(placeLineOf({ label: purchaseAddress?.label, postalCode, placeName: savedPlaceName }), locale);
 
   /* Yazma YALNIZ canlı çözümden: hatırlanan adı geri yazmak kaydı hiç tazelemeden döngüye sokardı.
      `rememberPlaceName` aynı kaydı ikinci kez diske yazmıyor. */

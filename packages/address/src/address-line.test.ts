@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { addressLine } from './address-line';
+import { addressLine, placeLineOf } from './address-line';
 
-/*
-  ADRESİN TEK SATIRI — telefon görünümünde sepetin adres künyesi, ödeme ekranının adres kartı ve sipariş detayının özeti
-  aynı satırı okur (14.09). Kural: kat/daire (`line2`) boş değilse sokağın peşine girer; yutulursa teslimat adresi eksik
-  görünür, boşken arkasında virgül bırakmaz. Sipariş adresi anlık görüntüdür ve eksik parça taşıyabilir — atlanır.
-*/
+/* Sepet, ödeme ve sipariş detayı aynı satırı okur; yutulan kat/daire teslimat adresini eksik gösterir, sipariş kopyasının eksik parçası atlanır. */
 describe('addressLine', () => {
   const base = { line1: '8 rue de Bischwiller', postalCode: '67100', city: 'Strasbourg' };
 
@@ -23,5 +19,23 @@ describe('addressLine', () => {
 
   it('eksik parça atlanır, "undefined" basılmaz', () => {
     expect(addressLine({ line1: '8 rue de Bischwiller', city: 'Strasbourg' })).toBe('8 rue de Bischwiller, Strasbourg');
+  });
+});
+
+describe('placeLineOf', () => {
+  it('adres adı yoksa kod ve yer adı', () => {
+    expect(placeLineOf({ postalCode: '67100', placeName: 'Strasbourg' })).toBe('67100 Strasbourg');
+  });
+
+  it('seçili adresin adı başa yazılır', () => {
+    expect(placeLineOf({ label: 'Ev', postalCode: '67100', placeName: 'Strasbourg' })).toBe('Ev · 67100 Strasbourg');
+  });
+
+  it('boş ad satırı ayraçla başlatmaz', () => {
+    expect(placeLineOf({ label: '  ', postalCode: '67100', placeName: 'Strasbourg' })).toBe('67100 Strasbourg');
+  });
+
+  it('yer adı bilinmiyorsa yalnız kod', () => {
+    expect(placeLineOf({ label: 'Ev', postalCode: '67100', placeName: null })).toBe('Ev · 67100');
   });
 });

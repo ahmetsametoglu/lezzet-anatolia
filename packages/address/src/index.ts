@@ -8,7 +8,7 @@ export { MIN_QUERY_LENGTH } from './min-query-length';
 export { addressLineOf } from './fr/address';
 export type { AddressKind, AddressSuggestion } from './fr/address';
 export { hasHouseNumber } from './house-number';
-export { addressContact, addressLine } from './address-line';
+export { addressContact, addressLine, placeLineOf } from './address-line';
 export { addressDefaultsOf, addressLabelKind, addressTitle } from './address-label';
 export type { AddressLabelKind } from './address-label';
 export {
