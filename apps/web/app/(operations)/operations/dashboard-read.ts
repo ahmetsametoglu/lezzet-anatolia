@@ -1,7 +1,8 @@
 import { cutoffBelongsToPreviousDay } from '@lezzet/domain-core';
-import { ORDER_STATUS_LABELS, type OrderStatus, type PaymentMethod } from '@lezzet/types';
+import { ORDER_STATUS_LABELS, type OrderStatus, type PaymentMethod, type RegisterDayCheck } from '@lezzet/types';
 import { money, num } from '@/components/operation/ui/format';
 import type { OpsTone } from '@/components/operation/ui/tone';
+import { registerDifferenceText } from '@/lib/register/labels';
 import type {
   AlertBandView,
   DeliveryRouteView,
@@ -390,6 +391,54 @@ export function buildQueue(facts: QueueFact[]): QueueGroupView[] {
       };
     })
     .filter((g) => g.items.length > 0);
+}
+
+/** Kasanın son gün içi karşılaştırması; `check` tur atlandıysa ya da düştüyse yoktur. */
+export interface RegisterCheckRun {
+  /** Turun Paris günü ve saati. */
+  date: string;
+  time: string;
+  failed: boolean;
+  check: RegisterDayCheck | null;
+}
+
+/**
+ * Kasa farkı satırı: yalnız bugünün karşılaştırmasından ve kapsamdaki mağazalardan; gece kapanışından önce düzeltilsin diye "bugün
+ * içinde". Son deneme düştüyse fark bilinmez; satır bunu söyler ki önceki sonuç "fark yok" diye okunmasın.
+ */
+export function registerCheckFact(
+  run: RegisterCheckRun | null,
+  scope: { today: string; warehouseIds: readonly string[] | undefined; href: string },
+): QueueFact | null {
+  if (!run || run.date !== scope.today) return null;
+  const base = { key: 'register-check', group: 'today', tone: 'amber', link: { label: 'Kasa →', href: scope.href } } as const;
+  if (run.failed) {
+    return {
+      ...base,
+      count: 1,
+      title: 'Kasa karşılaştırılamadı',
+      stamp: `son deneme ${run.time}`,
+      detail: 'Hiboutik ile karşılaştırma son denemede yapılamadı; fark olup olmadığı bilinmiyor.',
+    };
+  }
+  const stores = (run.check?.stores ?? []).filter((store) => !scope.warehouseIds || scope.warehouseIds.includes(store.warehouseId));
+  const differences = stores.flatMap((store) => store.differences);
+  const [first] = differences;
+  if (!first) return null;
+  const waiting = stores.reduce((sum, store) => sum + store.waiting, 0);
+  return {
+    ...base,
+    count: differences.length,
+    title: 'Kasa farkı',
+    stamp: `son kontrol ${run.time}`,
+    detail: [
+      registerDifferenceText(first),
+      differences.length > 1 ? `${num(differences.length - 1)} fark daha` : null,
+      waiting > 0 ? `${num(waiting)} kayıt kasaya yazılmayı bekliyor` : null,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  };
 }
 
 /** Asistan önerileri — kuyruğun altında ayrı blok; sıfırsa hiç çizilmez. */

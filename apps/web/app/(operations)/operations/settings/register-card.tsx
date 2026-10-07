@@ -6,7 +6,7 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
-import { removeRegisterStoreAction, saveRegisterStoreAction } from './register-actions';
+import { checkRegisterDayAction, removeRegisterStoreAction, saveRegisterStoreAction } from './register-actions';
 import type { RegisterDayEndView, RegisterPanelData, RegisterStoreRowView } from './register-read';
 import { CardItem, CardLine, DialogError, JobText, QueueText, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
@@ -50,6 +50,9 @@ export function RegisterCard({ data }: RegisterCardProps) {
       <CardLine label="Gün sonu">
         <JobText job={data.dayEnd}>{data.dayEnd?.date ? <DayEndText dayEnd={data.dayEnd} /> : null}</JobText>
       </CardLine>
+      <CardLine label="Karşılaştırma">
+        <CheckLine check={data.check} />
+      </CardLine>
 
       <StoreDialog
         row={editing}
@@ -81,6 +84,36 @@ function DayEndText({ dayEnd }: { dayEnd: RegisterDayEndView & { date: string | 
         `fark yok${dayEnd.live ? '' : ' · canlı kip değil, kapatılmadı'}`
       )}
     </>
+  );
+}
+
+interface CheckLineProps {
+  check: RegisterPanelData['check'];
+}
+
+/** Bugün, kapatmadan; düğme de zamanlanmış tur da aynı ize yazar, satır en son sonucu gösterir. */
+function CheckLine({ check }: CheckLineProps) {
+  const { busy, error, run } = useDialogAction(() => undefined);
+  const differences = check?.differences ?? null;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <JobText job={check}>
+          {differences === null ? null : differences.length === 0 ? (
+            ' · fark yok'
+          ) : (
+            <span className="text-ops-red">
+              {` · ${differences.length} fark: `}
+              {differences.join(' · ')}
+            </span>
+          )}
+        </JobText>
+        <DialogError error={error} />
+      </div>
+      <Button variant="secondary" size="sm" loading={busy} onClick={() => void run(checkRegisterDayAction)}>
+        {busy ? 'Karşılaştırılıyor…' : 'Şimdi karşılaştır'}
+      </Button>
+    </div>
   );
 }
 

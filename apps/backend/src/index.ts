@@ -8,7 +8,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
 import { setAiUsageRecorder } from '@lezzet/ai';
-import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB } from '@lezzet/application';
+import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB, REGISTER_CHECK_JOB } from '@lezzet/application';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
 import { serviceDb } from '@lezzet/database';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
@@ -42,6 +42,7 @@ import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
 import { pennylaneSyncJob } from './jobs/pennylane-sync';
 import { bankFeedQuietJob } from './jobs/bank-feed-quiet';
 import { REGISTER_CLOSE_DAY, registerCloseCron, registerCloseDayJob } from './jobs/register-close-day';
+import { registerCheckCron, registerCheckDayJob } from './jobs/register-check-day';
 
 /**
  * Süreç düzeyi emniyet ağı: sarmalın dışında doğan bir promise reddi ne `runJob`a ne `onError`a düşer ve süreci kayıtsız
@@ -243,6 +244,15 @@ cron.schedule(
   registerCloseCron(),
   () => {
     void runJob(REGISTER_CLOSE_DAY, registerCloseDayJob);
+  },
+  { timezone: 'Europe/Paris' },
+);
+
+// Kasanın gün içi karşılaştırması: fark gece kapanışından önce görülüp düzeltilsin; günü kapatmaz.
+cron.schedule(
+  registerCheckCron(),
+  () => {
+    void runJob(REGISTER_CHECK_JOB, registerCheckDayJob);
   },
   { timezone: 'Europe/Paris' },
 );

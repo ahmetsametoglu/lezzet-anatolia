@@ -18,7 +18,7 @@ import {
 import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
 import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import type { PaymentMethod, RegisterQueue } from '@lezzet/types';
-import { closeRegisterDay } from './day-end';
+import { checkRegisterDay, closeRegisterDay } from './day-end';
 import { memoryRegister } from './memory-register.testkit';
 import { processQueueRow, requeueRegisterStore, syncOrderNow } from './sync';
 
@@ -804,6 +804,26 @@ describe('gün sonu', () => {
       days: [{ date: today(), differences: [] }],
     });
     closeDay.mockRestore();
+  });
+
+  it('gün içi karşılaştırma yalnız bugünü okur ve günü kapatmaz; önceki kapanmamış günler gece işinindir', async () => {
+    const own = await ownStore('KASA-GUN-ICI');
+    await mappedOn(own.warehouseId, daysBefore(3));
+    const closeDay = vi.spyOn(fake.register, 'closeDay');
+    const readDay = vi.spyOn(fake.register, 'readDay');
+
+    const result = await checkRegisterDay(db, fake.register, { now: new Date() });
+
+    expect(result.date).toBe(today());
+    expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toEqual({
+      warehouseId: own.warehouseId,
+      differences: [],
+      waiting: 0,
+    });
+    expect(readDay.mock.calls.filter(([id]) => id === own.storeId).map(([, date]) => date)).toEqual([today()]);
+    expect(closeDay).not.toHaveBeenCalled();
+    closeDay.mockRestore();
+    readDay.mockRestore();
   });
 
   it('kasa ekranından elle yapılan satış fark sayılır', async () => {

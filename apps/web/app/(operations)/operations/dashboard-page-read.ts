@@ -3,6 +3,7 @@ import {
   AssistantProposalService,
   DeliveryRunService,
   DeliveryZoneService,
+  JobRunService,
   OrderItemService,
   OrderService,
   OrderStatusLogService,
@@ -11,12 +12,13 @@ import {
   UserProfileService,
   type serviceDb,
 } from '@lezzet/database';
-import { countOverduePickups, readFacilityVanSummary } from '@lezzet/application';
+import { countOverduePickups, readFacilityVanSummary, REGISTER_CHECK_JOB } from '@lezzet/application';
 import { PICKUP_WAIT_DAYS_DEFAULT, PICKUP_WAIT_DAYS_KEY } from '@lezzet/domain-core';
 import { addDays, BUSINESS_TIME_ZONE, parisDateOf, parisMinutesOf } from '@lezzet/helper';
-import type { Order, OrderStatus, TicketStatus } from '@lezzet/types';
+import { RegisterDayCheckSchema, type Order, type OrderStatus, type TicketStatus } from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { stockLink } from './stock/stock-url';
+import { settingsLink } from './settings/settings-url';
 import { DAY_HOUR_FALLBACK, DAY_HOUR_KEYS, type DayHourKey } from '@/lib/settings/day-hours';
 import { money, num } from '@/components/operation/ui/format';
 import { toOrderRows } from './orders/orders-read';
@@ -27,9 +29,11 @@ import {
   buildProposals,
   buildQueue,
   buildRouteFlow,
+  registerCheckFact,
   toRoute,
   toStops,
   type QueueFact,
+  type RegisterCheckRun,
   type RouteFlowFact,
   type StopFact,
 } from './dashboard-read';
@@ -84,7 +88,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   const weekday = new Date(`${today}T00:00:00.000Z`).getUTCDay();
   const isoWeekday = weekday === 0 ? 7 : weekday;
 
-  const [times, todayCounts, yesterdayCounts, openCounts, dayPage, revenueRows, termDays, labels, ticketCounts, proposalCount] =
+  const [times, todayCounts, yesterdayCounts, openCounts, dayPage, revenueRows, termDays, labels, ticketCounts, proposalCount, checkRun] =
     await Promise.all([
       readThresholds(settings, zoneRefs),
       orderSvc.counts({ deliveryFrom: today, deliveryTo: today, warehouseIds }),
@@ -98,6 +102,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
       readWarehouseLabels(),
       new TicketService(db).countByStatus(),
       new AssistantProposalService(db).countPending(),
+      readRegisterCheck(db),
     ]);
 
   const dayOrders = dayPage.rows.filter((o) => !OUT_OF_DAY.has(o.status));
@@ -127,7 +132,8 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   const nowMinutes = parisMinutesOf(now);
   const flow = buildRouteFlow(routeFlowFacts(dayOrders, { zones, labels, times, isoWeekday }), { nowMinutes });
 
-  const queue = buildQueue(queueFacts({ overdue, openTickets: ticketCounts }));
+  const registerCheck = registerCheckFact(checkRun, { today, warehouseIds, href: settingsLink({ tab: 'setup' }) });
+  const queue = buildQueue([...queueFacts({ overdue, openTickets: ticketCounts }), ...(registerCheck ? [registerCheck] : [])]);
   // Süresi dolan gel-al: eşik ayardan, sayı kapıdan (`countOverduePickups`) — kapsam personelin depolarıdır.
   const overduePickups = await countOverduePickups(db, {
     warehouseIds,
@@ -505,6 +511,20 @@ function queueFacts(input: { overdue: readonly OrderRow[]; openTickets: Record<T
   }
 
   return facts;
+}
+
+/** Kasanın son gün içi karşılaştırması; düşen turun önceki sonucu okunmaz. */
+async function readRegisterCheck(db: Db): Promise<RegisterCheckRun | null> {
+  const run = await new JobRunService(db).findByName(REGISTER_CHECK_JOB);
+  if (!run) return null;
+  const at = new Date(run.lastRunAt);
+  const parsed = RegisterDayCheckSchema.safeParse(run.lastResult);
+  return {
+    date: parisDateOf(at),
+    time: at.toLocaleTimeString('tr-TR', { timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', minute: '2-digit' }),
+    failed: run.lastError !== null,
+    check: run.lastError === null && parsed.success ? parsed.data : null,
+  };
 }
 
 /** Bağlam adı: tek tesis seçiliyse onun adı, değilse "Tüm depolar". */

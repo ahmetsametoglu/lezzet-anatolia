@@ -1,4 +1,4 @@
-import type { PaymentMethod, RegisterDayMovement } from '@lezzet/types';
+import type { PaymentMethod, RegisterDayDifference, RegisterDayMovement } from '@lezzet/types';
 
 /**
  * Kasanın gün sonu mutabakatı (docs/feature/kasa-muhasebe.md §7): ayna ↔ kasa yazımın kendisini oran, yöntem, satış ve nakit düzeyinde
@@ -14,21 +14,6 @@ export interface RegisterDaySide {
   /** Çekmecenin günlük net değişimi: nakit ödemeler ve fiş dışı nakit. */
   cashNetCents: number;
 }
-
-export type RegisterDayDifference =
-  | { kind: 'vat'; vatRate: number; oursCents: number; registerCents: number }
-  | { kind: 'payment'; method: PaymentMethod | null; oursCents: number; registerCents: number }
-  | { kind: 'unknown_sale'; saleId: number }
-  | { kind: 'missing_sale'; saleId: number }
-  | { kind: 'cash'; oursCents: number; registerCents: number }
-  | {
-      kind: 'ledger';
-      movementId: string;
-      entry: RegisterDayMovement['kind'];
-      method: PaymentMethod | null;
-      expectedCents: number;
-      writtenCents: number;
-    };
 
 /** Defter ↔ ayna: gün içinde açılmış hareketin kasada beklenen etkisi aynada yazılanla tutmalı. */
 export function reconcileLedgerDay(rows: readonly RegisterDayMovement[]): RegisterDayDifference[] {

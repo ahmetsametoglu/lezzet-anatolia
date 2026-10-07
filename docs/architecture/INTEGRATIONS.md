@@ -138,6 +138,9 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Gün sonu `register_close_day` (gece yarısından sonra, önceki gün): kapanmamış günleri defter ↔ ayna ve ayna ↔ kasa olarak
   karşılaştırır; hepsi tutuyor ve mağazanın kuyruğu boşsa günü kasada kapatır (yalnız `HIBOUTIK_MODE=live`). Tutmayan gün
   kapanmaz, `error_log`a uyarı ve yönetime bildirim gider.
+- Gün içi karşılaştırma `register_check_day` (`REGISTER_CHECK_CRON`, varsayılan iş saatlerinde iki saatte bir): bugünü kapatmadan
+  aynı kurallarla karşılaştırır; sonuç `job_run`da, fark Pano'nun bekleyen işlerinde. Kurulum kartındaki düğme aynı karşılaştırmayı
+  hemen yapar.
 
 ## Muhasebe
 

@@ -639,7 +639,7 @@ export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParce
 
 
 // ── Sertifikalı kasa (Hiboutik) ──
-export { registerDayEnd } from './register/day-end';
+export { checkRegisterDay, REGISTER_CHECK_JOB, registerDayEnd } from './register/day-end';
 export { hiboutikFromEnv } from './register/hiboutik/client';
 export { kickOrderRegister, requeueRegisterStore, syncRegisterQueue } from './register/sync';
 export { pennylaneFromEnv } from './accounting/pennylane/client';

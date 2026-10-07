@@ -9,10 +9,10 @@ import {
   RegisterTicketService,
   type Db,
 } from '@lezzet/database';
-import { reconcileLedgerDay, reconcileRegisterDay, type RegisterDayDifference, type RegisterDaySide } from '@lezzet/domain-core';
+import { reconcileLedgerDay, reconcileRegisterDay, type RegisterDaySide } from '@lezzet/domain-core';
 import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { RegisterStore } from '@lezzet/types';
+import type { RegisterDayCheck, RegisterDayDifference, RegisterStore } from '@lezzet/types';
 import { notifyRegisterDayUnclosed } from '../notification/staff-events';
 import type { CashRegister } from './port';
 import { storeOf } from './sync';
@@ -102,12 +102,7 @@ export async function closeRegisterDay(db: Db, register: CashRegister, opts: { d
     const days = [];
     const unclosed = await unclosedDays(register, store, opts.date);
     for (const date of unclosed.days) {
-      const { from, to } = parisDayRange(date);
-      const differences = [
-        ...reconcileLedgerDay(await storeService.dayMovements(store, from, to)),
-        ...reconcileRegisterDay(await oursOf(db, store, date), await registerSideOf(register, store, date)),
-      ];
-      days.push({ date, differences });
+      days.push({ date, differences: await differencesOf(db, register, store, date) });
     }
     const storeWaiting = waiting.get(store.warehouseId) ?? 0;
     let closed = days.length === 0;
@@ -118,6 +113,37 @@ export async function closeRegisterDay(db: Db, register: CashRegister, opts: { d
     stores.push({ warehouseId: store.warehouseId, closed, days, waiting: storeWaiting, olderUnclosed: unclosed.older });
   }
   return { date: opts.date, stores };
+}
+
+/** Gün içi karşılaştırmanın izi; zamanlanmış tur da kurulum kartındaki düğme de buraya yazar ki Pano en son sonucu göstersin. */
+export const REGISTER_CHECK_JOB = 'register_check_day';
+
+/**
+ * Gün içi karşılaştırma: bugün kapatılmadan karşılaştırılır ki fark gece kapanışından önce görülüp düzeltilsin. Önceki günlere bakılmaz;
+ * onlar gece işinindir ve her tur kasanın aylık çağrı kotasından yer.
+ */
+export async function checkRegisterDay(db: Db, register: CashRegister, opts: { now: Date }): Promise<RegisterDayCheck> {
+  const date = parisDateOf(opts.now);
+  const all = await new RegisterStoreService(db).list();
+  const waiting = await waitingByWarehouse(db, all);
+  const stores = [];
+  for (const store of all) {
+    stores.push({
+      warehouseId: store.warehouseId,
+      differences: await differencesOf(db, register, store, date),
+      waiting: waiting.get(store.warehouseId) ?? 0,
+    });
+  }
+  return { date, stores };
+}
+
+/** Günün farkları: önce defter ↔ ayna, sonra ayna ↔ kasa. */
+async function differencesOf(db: Db, register: CashRegister, store: RegisterStore, date: string): Promise<RegisterDayDifference[]> {
+  const { from, to } = parisDayRange(date);
+  return [
+    ...reconcileLedgerDay(await new RegisterStoreService(db).dayMovements(store, from, to)),
+    ...reconcileRegisterDay(await oursOf(db, store, date), await registerSideOf(register, store, date)),
+  ];
 }
 
 /**

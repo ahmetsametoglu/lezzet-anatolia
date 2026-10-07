@@ -74,6 +74,7 @@
 | 18 | **Kasa yazımı ödemenin hemen arkasından, kimseyi bekletmeden** (06.10) | Ödeme kaydı ve kasa kuyruğu satırı aynı işlemde yazılır; işlem biter bitmez o siparişin satışı Hiboutik'te açılıp kapanır, müşteri ve kurye beklemez. Yazılamazsa satır bekler, dakikalık iş ilk fırsatta yazar (yeniden deneme tavanı 5 dk). Bekleme süresince ödemenin kaydını bizim yazılım tutar: B2C tahsilat hareketinin tutarı, yöntemi, hesabı ve siparişi değişmez, hareket silinmez, düzeltme ters harekettir (SSS 22, BOFiP §90). Satırı işleyen onu kilitler; satış Hiboutik'e iki kez yazılmaz. Kasa ve Revolut Merchant sabit hesaplardır: migration açar, pasifleşmez; kapı nakdi Kasa'ya, kapıda kart ve online ödeme Revolut Merchant'a yazılır. Ödemenin yazılacağı hesap yoksa ödeme başlamaz. Ödemeden önce Hiboutik'te taslak satış açılmaz: açık satış mali kayıt değildir (silinir, Z'ye girmez) ve yalnız beklemeyi uzatır. |
 | 19 | **Kasa ve muhasebede canlıya geçiş günü yok; eşleme yeter** (07.10) | Tarih ayarı yalnız bir kez kullanılacak bir tetikti, testte de kasayı ve muhasebeyi kapalı tutuyordu. Bağlantıyı backend'deki anahtarlar kurar. Tesis kurulum kartında kasa mağazasına eşlendiği an kuyrukta bekleyen satışı ve çekmecenin önceki hareketleri kasaya yazılır; satış hiçbir tarihe göre atlanmaz, gün sonu eşleme gününden başlar. Banka hesabının hareketleri Pennylane'deki hesaba eşlendiği günden okunur, öncesi Excel'le girilir; eşleme başka Pennylane hesabına taşınınca ilk gün korunur. Alış belgesi girildiği güne bakılmadan yüklenir; Pennylane'de aynı tedarikçide aynı numara varsa belge bekler. |
 | 20 | **Transferin banka ucu kendiliğinden bağlanır** (07.10) | Kasadan yatırmayı operatör o gün transfer olarak yazar, kart ödemeleri aktarımını Revolut'un bildirimi yazar; transfer iki hesabı hemen etkiler, bankadaki ucu yolda olan paradır. Pennylane'den (ya da dosyadan) gelen banka satırı, yönü ve tutarı birebir, günü 7 gün içinde tutan ve birbirinin tek adayı olan bekleyen transfere kendiliğinden bağlanır; banka parayı bir kez sayar. Hangisi önce gelirse gelsin bağlanır: satır gelince de transfer yazılınca da bakılır. Aday yoksa ya da birden fazlaysa satır öneri olarak bekler, tahmin yapılmaz. Öteki eşleştirmeler öneri + elle onay kalır. |
+| 21 | **Kasa gün içinde de karşılaştırılır** (07.10) | Gece kapanışının karşılaştırması bugün için gün içinde de yapılır, kapatmadan: iş saatlerinde zamanlanmış tur ve Kurulum'daki düğme. Fark Pano'nun bekleyen işlerinde görünür ki gece kapanışından önce düzeltilsin. |
 
 ## 3. Veri akışı
 
@@ -421,8 +422,14 @@ kapanışı önceki günleri de kapattığı için tutmayan gün düzelene kadar
 gerisinde kapanmamış gün kalmışsa da gün kapatılmaz ve bildirim gider, o gün elle incelenir. Fark `error_log`a
 uyarı olarak, özet `job_run`a yazılır.
 
+**Gün içi karşılaştırma** (`register_check_day`, 21. karar): aynı iki karşılaştırma yalnız bugün için, gün kapatılmadan;
+`REGISTER_CHECK_CRON`, varsayılan iş saatlerinde iki saatte bir (08:40–20:40 Paris). Tur mağaza başına kasaya dört çağrı yapar
+ve kasanın aylık çağrı kotası satış yazımıyla ortak olduğu için seyrektir. Kurulum kartındaki "Şimdi karşılaştır" aynı
+karşılaştırmayı hemen yapar ve sonucu aynı `job_run` satırına yazar. Bugünün sonucunda fark varsa Pano'nun "Bugün içinde"
+kümesinde satır açılır; son deneme düştüyse satır farkın bilinmediğini söyler.
+
 **Ekranlar:** yeni ekran yok. Ayarlar › Kurulum'un en üstünde, Pennylane kartıyla yan yana Hiboutik kartı (tesis ↔
-mağaza ↔ çekmece eşlemesi, kuyruk özeti, son eşitleme ve gün sonu turu); kuyruk özeti sistem ekranında değil kasanın yanında, çünkü çözümü (eşleme)
+mağaza ↔ çekmece eşlemesi, kuyruk özeti, son eşitleme, gün sonu turu ve gün içi karşılaştırma); kuyruk özeti sistem ekranında değil kasanın yanında, çünkü çözümü (eşleme)
 orada. Sipariş detayı: hareketin yöntemi, kasa fişinin günlük numarası,
 dijital fiş bağlantısı ve kasaya yazılmayı bekliyorsa sebebi. Sistem ekranı: gün sonu farkı ve beşinci
 denemede düşen yazım hata kaydı olarak.
@@ -438,7 +445,8 @@ denemede düşen yazım hata kaydı olarak.
 - `apps/backend/src/jobs/`: `register-sync` (dakikalık) ve `register-close-day` (günlük kapanış ve mutabakat).
 - Ödemenin hemen arkasından yazım `register/sync.ts`'teki `kickOrderRegister`'dır; tahsilat ya da iade yazan akış (online onay,
   kapıda ve gel-al teslimi, kapı önü satış, iade) sonunda çağırır. Kuyruk satırının kilidi `register_queue_claim`.
-- Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`), `REGISTER_CLOSE_AT`.
+- Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`), `REGISTER_CLOSE_AT`,
+  `REGISTER_CHECK_CRON`.
 
 **Testler:**
 - Motorun her dalı birim testte: kuruş bölmesi, kargo payı, iptal, müşteride kalan, eksik ve fazla ödeme,

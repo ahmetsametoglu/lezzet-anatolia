@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AccountService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { hiboutikFromEnv, requeueRegisterStore } from '@lezzet/application';
+import { AccountService, JobRunService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
+import { checkRegisterDay, hiboutikFromEnv, REGISTER_CHECK_JOB, requeueRegisterStore } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -48,6 +48,27 @@ export async function removeRegisterStoreAction(input: { warehouseId: string }):
   try {
     await requireAdmin();
     await new RegisterStoreService(serviceDb()).remove(input.warehouseId);
+    revalidatePath(SETTINGS_PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Bugünün kasa karşılaştırması, gün kapatılmadan; sonuç gün içi turun izine yazılır, düşen deneme de, ki Pano eski sonucu göstermesin. */
+export async function checkRegisterDayAction(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const register = hiboutikFromEnv();
+    if (!register) return { data: null, error: 'Hiboutik anahtarları tanımlı değil; karşılaştırma yapılamaz.' };
+    const db = serviceDb();
+    const jobs = new JobRunService(db);
+    try {
+      await jobs.recordSuccess(REGISTER_CHECK_JOB, await checkRegisterDay(db, register, { now: new Date() }));
+    } catch (error) {
+      await jobs.recordFailure(REGISTER_CHECK_JOB, getErrorMessage(error));
+      throw error;
+    }
     revalidatePath(SETTINGS_PATH);
     return { data: null, error: null };
   } catch (error) {

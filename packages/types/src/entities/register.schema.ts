@@ -107,6 +107,31 @@ export const RegisterDayMovementSchema = z.object({
 });
 export type RegisterDayMovement = z.infer<typeof RegisterDayMovementSchema>;
 
+/** Gün sonu karşılaştırmasının bir farkı (**cent**); `ledger` defter ↔ ayna, ötekiler ayna ↔ kasa. */
+export const RegisterDayDifferenceSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('vat'), vatRate: z.number(), oursCents: z.number().int(), registerCents: z.number().int() }),
+  z.object({
+    kind: z.literal('payment'),
+    method: PaymentMethodEnum.nullable(),
+    oursCents: z.number().int(),
+    registerCents: z.number().int(),
+  }),
+  z.object({ kind: z.literal('unknown_sale'), saleId: z.number().int() }),
+  z.object({ kind: z.literal('missing_sale'), saleId: z.number().int() }),
+  z.object({ kind: z.literal('cash'), oursCents: z.number().int(), registerCents: z.number().int() }),
+  RegisterDayMovementSchema.omit({ kind: true }).extend({ kind: z.literal('ledger'), entry: RegisterDayMovementSchema.shape.kind }),
+]);
+export type RegisterDayDifference = z.infer<typeof RegisterDayDifferenceSchema>;
+
+/** Günün kapatılmadan karşılaştırılması; sonuç `job_run`a yazılır, kurulum kartı ve Pano oradan okur. */
+export const RegisterDayCheckSchema = z.object({
+  date: z.string(),
+  stores: z.array(
+    z.object({ warehouseId: z.string().uuid(), differences: z.array(RegisterDayDifferenceSchema), waiting: z.number().int() }),
+  ),
+});
+export type RegisterDayCheck = z.infer<typeof RegisterDayCheckSchema>;
+
 /** `writing`: kasaya çağrı başladı ama sonucu aynaya geçmedi; yarıda kalan yazım bu satırdan tamamlanır. */
 export const RegisterWriteStatusEnum = z.enum(['writing', 'written']);
 export type RegisterWriteStatus = z.infer<typeof RegisterWriteStatusEnum>;
