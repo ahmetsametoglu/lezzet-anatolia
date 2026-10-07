@@ -9,15 +9,12 @@ import { lookupMessage, usePlaceLookup } from './place-lookup';
 import { useMyAddresses } from './use-my-addresses.hook';
 import messages from './place-messages.json';
 
-/**
- * "Nereye getirelim?" sorusunun iki CEVABI — masaüstü paneli (`PlacePanel`) ile mobil çekmecenin
- * (`PlaceSheet`) ortak davranışı (13.09). İkisi aynı soruyu aynı kurallarla soruyor: v1'de "Göster"
- * de, adres kartına dokunmak da soruyu KAPATIR ve bildirim çıkarır; cevap artık yer hapında /
- * satırında okunur. Bu adımlar iki kabukta ayrı yazılsaydı biri bir gün bildirimsiz kapanırdı.
- * Çizimler ayrı (ADR Sapma 3: mantık paylaşılır, sunum dallanır).
- */
+/*
+  Masaüstü yer panelinin iki cevabı: "Göster" de adres kartına dokunmak da soruyu kapatır ve bildirim çıkarır, cevap yer hapında okunur.
+  Telefon çekmecesi native'in akışını izlediği için ayrı kancadadır (`usePostalCodeDraft`).
+*/
 
-/** Ziyaretçinin cevabı: önce ÜLKE (kullanıcı kararı 13.09), sonra posta kodu; öneri listesi yok (v1). */
+/** Ziyaretçinin cevabı: önce ülke, sonra posta kodu; panel öneri listesi çekmez. */
 export function usePlaceCodeEntry(locale: Locale) {
   const t = messages[locale];
   const { place, setPanelOpen } = useDeliveryPlace();

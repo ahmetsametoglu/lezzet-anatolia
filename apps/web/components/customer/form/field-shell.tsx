@@ -4,9 +4,9 @@ import type { ReactNode } from 'react';
 
 /**
  * `form` formların alanı; `inline` ve `sheet` yer panelinin ve çekmecesinin satır içi alanı (çekmecede zemin beyaz, çünkü çekmece
- * kremdir); `pill` telefonun hap alanı, native `TextField`ın `shape="pill"` ölçüsüyle.
+ * kremdir); `pill` ve `soft` telefonun alanları, native `TextField`ın iki biçiminin (`shape`) ölçüsüyle.
  */
-export type FieldVariant = 'form' | 'inline' | 'sheet' | 'pill';
+export type FieldVariant = 'form' | 'inline' | 'sheet' | 'pill' | 'soft';
 
 /** Alanların ortak iskeleti (etiket → kontrol → hata), ki etiket ve hata işaretlemesi tek yerde dursun; `hideLabel` etiketi yalnız görselden gizler. */
 interface FieldShellProps {
@@ -72,6 +72,7 @@ const CONTROL: Record<FieldVariant, string> = {
   inline: 'h-10.5 rounded-xl bg-cream px-4 text-body-sm font-semibold',
   sheet: 'h-10.5 rounded-xl bg-card px-4 text-control font-semibold',
   pill: 'h-12.5 rounded-pill bg-card px-4 text-body-sm',
+  soft: 'h-12.5 rounded-control bg-card px-4 text-body-sm',
 };
 
 /**

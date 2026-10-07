@@ -13,8 +13,7 @@ import messages from './place-messages.json';
 type Copy = (typeof messages)['tr'];
 
 /*
-  Yer sorusunun mantığı tek yerde, kabuklar (masaüstü panel, mobil web çekmece) yalnız çizer. Müşteri öneriden seçerek onaylar,
-  çünkü elle yazılan kodda yanlış hane fark edilmez; ülke her satırda yazılıdır, çünkü aynı kod iki ülkede geçerli olabilir.
+  Masaüstü yer panelinin soru mantığı burada, panel yalnız çizer. Kod ülkeyle birlikte sorulur, çünkü aynı kod iki ülkede geçerli olabilir.
 */
 
 interface PlaceLookupOptions {

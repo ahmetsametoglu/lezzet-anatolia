@@ -8,9 +8,11 @@ interface ChipProps {
   label: string;
   selected: boolean;
   onClick: () => void;
+  /** Satırı paylaşan seçenek (ülke gibi): çipler eşit pay alır ve native'in alan boyuna oturur. */
+  grow?: boolean;
 }
 
-export function Chip({ label, selected, onClick }: ChipProps) {
+export function Chip({ label, selected, onClick, grow = false }: ChipProps) {
   return (
     <button
       type="button"
@@ -18,7 +20,8 @@ export function Chip({ label, selected, onClick }: ChipProps) {
       data-haptic="off"
       aria-pressed={selected}
       className={[
-        'flex-none cursor-pointer rounded-control border px-4 py-2 font-sans text-control whitespace-nowrap transition-[opacity,scale] active:scale-[0.97]',
+        'cursor-pointer rounded-control border py-2 font-sans text-control whitespace-nowrap transition-[opacity,scale] active:scale-[0.97]',
+        grow ? 'min-h-12.5 flex-1 px-2' : 'flex-none px-4',
         selected ? 'border-olive bg-olive text-card' : 'border-ink text-ink hover:opacity-70',
       ].join(' ')}
     >

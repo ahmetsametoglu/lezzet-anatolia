@@ -17,26 +17,8 @@ import messages from './place-messages.json';
 type Copy = (typeof messages)['tr'];
 
 /**
- * **Masaüstü başlığının yer paneli — görünümde v1'in birebir aynısı** (13.09, kullanıcı kararı):
- * hapa basınca başlık satırının ALTINDA açılan şerit; sayfa değişince kapanır (`PlaceProvider`).
- *
- * "Birebir" GÖRSELDİR: çizim v1'den, parçalar kitten — form kiti (`FormSelectField`,
- * `FormInputField`, `inline` çizimi), `cardClass`, `Badge`, `Button`; davranış mobil çekmeceyle ortak
- * (`use-place-answer.hook` — `usePlaceLookup` ve `useMyAddresses` üstüne; kapat + bildir adımı dahil).
- * Bir ara taslağın mock davranışı kopyalanmıştı
- * (ülke tıklayınca FR↔DE geçen düğme, elle input, kendi gönderme mantığı); kullanıcı düzeltti.
- *
- * Solda soru ("Nereye getirelim?") ve "şimdi değil"; sağda cevap — ayrım v1'deki gibi GİRİŞE göre
- * (`yerPanelAdres: girisli`), seçili adrese göre değil:
- *   · ziyaretçide ÜLKE + POSTA KODU + "Göster". Önce ülke (kullanıcı kararı 13.09): seçilen ülke
- *     kodu bağlar, kod orada yoksa "Posta kodu bulunamadı". "Göster" yeri yazar, paneli kapatır ve
- *     bildirim çıkarır ("Teslimat yeri güncellendi — kargoyla"); cevap hapta okunur.
- *   · girişli müşteride kayıtlı adres kartları ve "+ Yeni adres ekle" — adresi hiç yoksa yalnız ekleme
- *     kartı. Girişli müşterinin yeri adresinden gelir (kullanıcı kararı 13.09); kod sormak onu adres
- *     yerine çereze yönlendirirdi. Önce seçili adres yoksa kod formu çıkıyordu (kullanıcı sordu).
- *
- * v1'in çizmediği tek hâl sorun satırı: panel açık kalır, alan kırmızı çerçeve alır ve kartın içinde
- * tek bir satır belirir.
+ * Masaüstü başlığının yer paneli: hapa basınca başlık satırının altında açılır, sayfa değişince kapanır. Ziyaretçiye önce ülke sonra
+ * posta kodu sorulur; girişli müşteriye kayıtlı adres kartları gelir, çünkü onun yeri adresinden gelir ve kod sormak onu çereze yönlendirirdi.
  */
 interface PlacePanelProps {
   locale: Locale;
@@ -50,10 +32,8 @@ export function PlacePanel({ locale }: PlacePanelProps) {
   // dursaydı panel kapanınca onunla birlikte sökülürdü — durumu burada, panelin dışında.
   const [adding, setAdding] = useState(false);
 
-  /* Panel açılınca sayfanın TEPESİNE gidilir: panel yapışkan başlığın DIŞINDA, sayfa akışında
-     duruyor. Yer sorusu artık ürün, paket ve katalogdaki düğmelerden de açılıyor (kullanıcı kararı
-     14.09 — posta kodu tek yerden sorulur); sayfanın ortasından açılan panel ekranın dışında kalırdı.
-     Başlıktaki hapa aşağıdayken basılınca da aynısı oluyordu. */
+  /* Panel açılınca sayfanın tepesine gidilir, çünkü panel yapışkan başlığın dışında, sayfa akışında durur ve ürün, paket ya da
+     katalogdaki düğmelerden açılınca ekranın dışında kalırdı. */
   useEffect(() => {
     if (!panelOpen || window.scrollY === 0) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -129,9 +109,7 @@ function CodeEntry({ t, locale }: { t: Copy; locale: Locale }) {
         </Button>
         <span className="w-full max-w-[330px] font-sans text-note leading-normal text-muted">{t.panelHint}</span>
       </div>
-      {/* Sorun satırı KARTI GENİŞLETMEZ (`w-0 min-w-full`): genişliği kartın doğal genişliğine
-          katılsaydı kart panelin kalan yerine sığmaz ve alt satıra kayardı (13.09, kullanıcının
-          ekran görüntüsü). Kartın içinde, alanların altında tam genişlikte kırılır. */}
+      {/* Sorun satırı kartı genişletmez (`w-0 min-w-full`), çünkü genişliği karta katılsaydı kart panele sığmaz ve alt satıra kayardı. */}
       {problem && (
         <p role="alert" className="w-0 min-w-full font-sans text-note font-semibold text-terracotta-bright">
           {problem}
@@ -142,10 +120,8 @@ function CodeEntry({ t, locale }: { t: Copy; locale: Locale }) {
 }
 
 /**
- * Girişli müşterinin cevabı — kayıtlı adres kartları (v1 ızgarası). Liste ve seçim adres penceresiyle
- * ortak (`useMyAddresses`); seçmek = varsayılan yapmak, o yüzden seçili kart adının yanında
- * "· varsayılan" taşır (v1 "Ev · varsayılan"). Seçilince panel kapanır ve bildirim hangi adrese göre
- * gösterildiğini söyler (v1: "Ev adresine göre gösteriyoruz").
+ * Girişli müşterinin kayıtlı adres kartları; seçmek varsayılan yapmaktır, bu yüzden seçili kart "· varsayılan" taşır. Seçilince panel
+ * kapanır ve bildirim hangi adrese göre gösterildiğini söyler.
  */
 function AddressCards({ t, locale, onAdd }: { t: Copy; locale: Locale; onAdd: () => void }) {
   const { addresses, failed, busy, current, pick } = useAddressPick(locale);

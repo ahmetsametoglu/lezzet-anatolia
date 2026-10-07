@@ -11,12 +11,14 @@ import {
   type AddressLabelKind,
 } from '@lezzet/address';
 import { useSettled } from '@lezzet/address/react';
-import { CountryEnum, type Address, type Country } from '@lezzet/types';
+import type { Address, Country } from '@lezzet/types';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
 import { ChoiceChip } from '@/components/customer/ui/choice-chip';
+import { Chip } from '@/components/customer/phone-kit/chip';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { Icon } from '@/components/customer/ui/icons';
@@ -31,9 +33,10 @@ import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import { ChannelBadge } from './channel-badge';
 import { DeliveryStrip } from './delivery-strip';
+import { CountryChoice } from './country-choice';
 import { useDeliveryPlace } from './place-context';
 import messages from '@lezzet/i18n/customer/address';
-// Ülke adları yer hapıyla ortak sözlükten.
+// Kapat düğmesinin adı yer çekmecesiyle ortak sözlükten.
 import placeCopy from './place-messages.json';
 
 /*
@@ -347,9 +350,12 @@ export function AddressForm({
     }
   };
 
-  const saveButton = (
-    <Button disabled={!complete || busy} fullWidth={compact} onClick={() => void save()}>
-      {defaultChoice ? t.save : t.saveAndSelect}
+  const saveLabel = defaultChoice ? t.save : t.saveAndSelect;
+  const saveButton = compact ? (
+    <PrimaryButton label={saveLabel} shape="block" disabled={!complete || busy} onClick={() => void save()} />
+  ) : (
+    <Button disabled={!complete || busy} onClick={() => void save()}>
+      {saveLabel}
     </Button>
   );
 
@@ -374,19 +380,7 @@ export function AddressForm({
     <div className={frame && !compact ? cardClass({ className: 'w-full' }) : 'w-full'}>
       <div className="flex flex-col gap-4">
         {roleActions && <div className="flex flex-wrap items-center gap-x-5 gap-y-2">{roleActions}</div>}
-        {/* Önce ülke: öneri ve doğrulama seçilen ülkede yapılır. */}
-        {compact && <span className="-mb-2 font-sans text-eyebrow-xs text-terracotta uppercase">{t.countryLabel}</span>}
-        <div className="flex gap-2">
-          {CountryEnum.options.map((code) => (
-            <ChoiceChip
-              key={code}
-              size="segment"
-              label={code === 'DE' ? places.countryDE : places.countryFR}
-              active={country === code}
-              onSelect={() => changeCountry(code)}
-            />
-          ))}
-        </div>
+        <CountryChoice locale={locale} value={country} onChange={changeCountry} compact={compact} />
 
         {/* Menü DOM'da kutunun içinde: Tab alandan satırlara geçer ve "dışarı basınca kapan" kutuyu kapsar. */}
         <div
@@ -526,9 +520,14 @@ export function AddressForm({
         <div className="flex flex-col gap-2.25">
           <span className="font-sans text-note font-bold text-ink">{t.kindLabel}</span>
           <div className={compact ? 'flex gap-2' : 'flex flex-wrap gap-2'}>
-            <ChoiceChip size={compact ? 'segment' : 'choice'} label={t.kindHome} active={kind === 'home'} onSelect={() => setKind('home')} />
-            <ChoiceChip size={compact ? 'segment' : 'choice'} label={t.kindWork} active={kind === 'work'} onSelect={() => setKind('work')} />
-            <ChoiceChip size={compact ? 'segment' : 'choice'} label={t.kindOther} active={kind === 'other'} onSelect={() => setKind('other')} />
+            {(['home', 'work', 'other'] as const).map((option) => {
+              const label = option === 'home' ? t.kindHome : option === 'work' ? t.kindWork : t.kindOther;
+              return compact ? (
+                <Chip key={option} grow label={label} selected={kind === option} onClick={() => setKind(option)} />
+              ) : (
+                <ChoiceChip key={option} label={label} active={kind === option} onSelect={() => setKind(option)} />
+              );
+            })}
           </div>
           {kind === 'other' && (
             <div className="flex animate-fade-in flex-col gap-1.5 motion-reduce:animate-none">

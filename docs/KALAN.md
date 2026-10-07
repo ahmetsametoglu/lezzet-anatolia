@@ -74,9 +74,9 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [x] (08.44) **KAMPANYA VİTRİNDE VE FİLTRELENMİŞ KATALOGDA GÖRÜNSÜN — rozet ve cümle, FİYAT DEĞİL** *(kullanıcı kararı 19.08; ölçüm ve karşılaştırma aynı gün yapıldı)* · `touches (planlanan): packages/application/src/catalog/**, apps/web/lib/storefront/home.ts, apps/web/app/(customer)/[locale]/catalog/**, apps/mobile-api/src/lib/home.ts, apps/mobile-customer/src/screens/home/**`
   - Görev kapandı; koddaki `BEKLEYEN(08.44)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (08.58) ~~**MOBİL WEB v1 — kabuk birebir, ekranlar sırayla**~~ → **MOBİL WEB — telefon görünümü native uygulamanın tasarımına (kullanıcı kararı 14.09)** *(kullanıcı isteği 13.09: öteki şerit masaüstünü `Musteri Web v1.dc.html`'e taşırken mobil web `Musteri Mobil v1.dc.html`'e; sıra ve dosya ayrımı kullanıcıyla konuşuldu)*
-  - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): misafir posta kodu çekmecesi · yalnız bir
-    yüzeyde olanlar: indirimliler süzgeci, paket kartı ayrıntıları, misafire bildirim zili, çözülmüş talep notu, kaydırınca küçük
-    başlık, puan bakiyesi satırı, misafire dil kartı, misafir Siparişlerim, K.33.
+  - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): yalnız bir yüzeyde olanlar: indirimliler
+    süzgeci, paket kartı ayrıntıları, misafire bildirim zili, çözülmüş talep notu, kaydırınca küçük başlık, puan bakiyesi satırı,
+    misafire dil kartı, misafir Siparişlerim, teslimat bölgeleri sayfası (native'in "Nerelere gidiyorsunuz?"u), K.33.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 - [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, katalog ~0,54 sn (DB'siz yasal sayfa ~0,16 sn).
   Supabase istekleri Cloudflare'in Paris düğümünden geçiyor (açık bağlantıda istek ~45–55 ms) ve sıralı her okuma bir tur ekliyor.
