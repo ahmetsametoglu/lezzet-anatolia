@@ -47,6 +47,7 @@ export * from './delivery/bundle-warehouse';
 export * from './delivery/shipping-fee';
 export * from './delivery/shipping-choice';
 export * from './delivery/place-change';
+export * from './delivery/place-answer';
 export * from './delivery/checkout-amount';
 export * from './delivery/cart-totals';
 export * from './delivery/parcel-plan';

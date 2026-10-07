@@ -14,10 +14,12 @@ export type { AddressLabelKind } from './address-label';
 export {
   isPlaceNameQuery,
   isValidPostalCode,
+  maskPostalCode,
   MIN_PLACE_NAME_LENGTH,
   MIN_POSTAL_PREFIX_LENGTH,
   minPostalQueryLength,
   normalizePostalCode,
+  POSTAL_CODE_LENGTH,
   POSTAL_CODE_PATTERN,
 } from './postal-code';
 export { cityMatchesPlaces, normalizePlaceName, placeLabel } from './place-name';

@@ -1,6 +1,6 @@
 'use client';
 
-import { addressLineOf, type AddressKind } from '@lezzet/address';
+import { addressLineOf, maskPostalCode, type AddressKind } from '@lezzet/address';
 import type { Country, PlaceOption } from '@lezzet/types';
 import { useState } from 'react';
 
@@ -213,7 +213,7 @@ export function AddressFields({
               // Nokta da kodun peşinden gider: elle değiştirilen kodda önerinin koordinatı bu adresin cevabı değildir.
               onPointChange?.(null);
               setPlace(null);
-              onChange({ postalCode: e.target.value.replace(/\D/g, '').slice(0, 5) });
+              onChange({ postalCode: maskPostalCode(e.target.value) });
             }}
             onBlur={(e) => onPostalBlur?.(e.target.value)}
             error={postalError}

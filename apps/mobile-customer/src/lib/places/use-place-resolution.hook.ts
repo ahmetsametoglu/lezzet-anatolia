@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { POSTAL_CODE_LENGTH } from '@lezzet/address';
 import type { Country } from '@lezzet/types';
 
 import { resolvePostalCode, type PlaceResolution } from '@/lib/api/places';
@@ -8,14 +9,6 @@ import { useLiveRefresh } from '@/lib/app-state/use-live-refresh';
   Kod değişince eski cevap anında düşer, çünkü yarım kodun yanında önceki kodun şehri durursa ekran yanlış yeri söyler.
   Düşen istek cevap yazmaz ve hâl "bilinmiyor" kalır: soru zorunlu değil, mobilde log altyapısı da yok.
 */
-
-/** Yer sorusunun sorulduğu hane sayısı — Fransız/Alman kodları beş hanedir, eksiği sorulmaz. */
-export const POSTAL_CODE_LENGTH = 5;
-
-/** Yalnız rakam, en çok beş hane; girdi maskesi de tek yerde durur. */
-export function maskPostalCode(value: string): string {
-  return value.replace(/\D/g, '').slice(0, POSTAL_CODE_LENGTH);
-}
 
 export interface PlaceLookup {
   /** Aynı kodu yeniden sorar; aşağı çekme jesti çağıranın kaydırma alanına ait olduğu için kapı açık bırakılır. */

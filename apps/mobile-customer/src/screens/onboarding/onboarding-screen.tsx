@@ -1,3 +1,5 @@
+import { maskPostalCode } from '@lezzet/address';
+import { placeAnswerNote } from '@lezzet/domain-core';
 import { formatCompactEuro } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { Country, MePointsEarnWayKey } from '@lezzet/types';
@@ -14,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { setAppLocale, useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import placeMessages from '@lezzet/i18n/customer/place';
-import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
+import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@lezzet/mobile-kit/src/lib/settings/font-scale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { CountryChips } from '@/screens/customer-kit/country-chips';
@@ -133,20 +135,7 @@ export function OnboardingScreen() {
   const zipInside = place?.kind === 'resolved' && place.place.inRoute;
   const placeName = place?.kind === 'resolved' ? place.place.placeName : null;
   const zipCopy = placeMessages[locale].zip;
-  const zipNote =
-    place === null
-      ? null
-      : place.kind === 'resolved'
-        ? place.place.inRoute
-          ? zipCopy.insideNote
-          : zipCopy.shippingNote
-        : place.kind === 'ambiguous'
-          ? zipCopy.ambiguousNote
-          : place.kind === 'unknown'
-            ? zipCopy.unknownNote
-            : place.reason === 'outside_zones'
-              ? zipCopy.outsideNote
-              : zipCopy.unresolvedNote;
+  const zipNote = place === null ? null : zipCopy[`${placeAnswerNote(place)}Note`];
 
   /**
    * Her çıkış o ana dek yapılan seçimleri saklar ve onboarding'i bitmiş sayar. Son adımın iki çıkışı var: "Hesap aç" girişe,

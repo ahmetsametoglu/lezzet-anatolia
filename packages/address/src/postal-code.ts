@@ -15,6 +15,14 @@ export function isValidPostalCode(raw: string): boolean {
   return POSTAL_CODE_PATTERN.test(normalizePostalCode(raw));
 }
 
+/** Hizmet ülkelerinin kodu beş hanedir; yer sorusu ancak bu boyda sorulur. */
+export const POSTAL_CODE_LENGTH = 5;
+
+/** Alan yalnız rakam ve en çok beş hane taşır; yapıştırılan boşluklu kod da aynı biçime iner. */
+export function maskPostalCode(value: string): string {
+  return value.replace(/\D/g, '').slice(0, POSTAL_CODE_LENGTH);
+}
+
 /** Tek haneli önek hiçbir yeri işaret etmez. */
 export const MIN_POSTAL_PREFIX_LENGTH = 2;
 

@@ -2,6 +2,8 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { maskPostalCode, POSTAL_CODE_LENGTH } from '@lezzet/address';
+import { placeAnswerNote } from '@lezzet/domain-core';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { Country } from '@lezzet/types';
 
@@ -14,7 +16,7 @@ import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import messages from '@lezzet/i18n/customer/place';
-import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
+import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { CountryChips } from './country-chips';
@@ -92,20 +94,7 @@ export function PostalCodeSheet({ visible, code, country, onClose, showZonesLink
   const { theme } = useUnistyles();
   const inRoute = place?.kind === 'resolved' && place.place.inRoute;
   const placeName = place?.kind === 'resolved' ? place.place.placeName : null;
-  const note =
-    place === null
-      ? null
-      : place.kind === 'resolved'
-        ? place.place.inRoute
-          ? copy.insideNote
-          : copy.shippingNote
-        : place.kind === 'ambiguous'
-          ? copy.ambiguousNote
-          : place.kind === 'unknown'
-            ? copy.unknownNote
-            : place.reason === 'outside_zones'
-              ? copy.outsideNote
-              : copy.unresolvedNote;
+  const note = place === null ? null : copy[`${placeAnswerNote(place)}Note`];
 
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 

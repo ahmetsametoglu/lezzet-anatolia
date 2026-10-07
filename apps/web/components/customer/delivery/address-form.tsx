@@ -6,6 +6,7 @@ import {
   addressLineOf,
   hasHouseNumber,
   isValidPostalCode,
+  maskPostalCode,
   MIN_QUERY_LENGTH,
   type AddressLabelKind,
 } from '@lezzet/address';
@@ -473,7 +474,7 @@ export function AddressForm({
                 placeholder={t.postalCode}
                 value={manual.postalCode}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+                  const value = maskPostalCode(e.target.value);
                   setManual((prev) => prev && { ...prev, postalCode: value });
                 }}
                 inputMode="numeric"
