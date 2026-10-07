@@ -25,9 +25,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   resmî adıyla mı · "kenarları hafif yumuşamış olabilir" cümlesi (üretici teyidi).
 - [~] (21.310) **Operasyon uygulamasının (`apps/mobile-operations`, "Lezzet Operasyonu") kurulabilir sürümü** — personelin
   telefonuna kurulur; müşteri uygulamasıyla ortak çekirdek `packages/mobile-kit`.
-  - Eksik: operasyon ikonu (tasarım bekliyor; o gelene dek müşteri uygulamasının görselleri okunuyor) ·
-    Supabase panelindeki Redirect URLs (test projesi): `lezzetanatolie://**` ve `lezzetoperasyonu://**` olmalı; yerel
-    `supabase/config.toml`da var, panel ölçülmedi.
+  - Eksik: operasyon ikonu (tasarım bekliyor; o gelene dek müşteri uygulamasının görselleri okunuyor).
 - [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
 
 ## 00 · Monorepo İskeleti
