@@ -72,22 +72,16 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [x] (08.44) **KAMPANYA VİTRİNDE VE FİLTRELENMİŞ KATALOGDA GÖRÜNSÜN — rozet ve cümle, FİYAT DEĞİL** *(kullanıcı kararı 19.08; ölçüm ve karşılaştırma aynı gün yapıldı)* · `touches (planlanan): packages/application/src/catalog/**, apps/web/lib/storefront/home.ts, apps/web/app/(customer)/[locale]/catalog/**, apps/mobile-api/src/lib/home.ts, apps/mobile-customer/src/screens/home/**`
   - Görev kapandı; koddaki `BEKLEYEN(08.44)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (08.58) ~~**MOBİL WEB v1 — kabuk birebir, ekranlar sırayla**~~ → **MOBİL WEB — telefon görünümü native uygulamanın tasarımına (kullanıcı kararı 14.09)** *(kullanıcı isteği 13.09: öteki şerit masaüstünü `Musteri Web v1.dc.html`'e taşırken mobil web `Musteri Mobil v1.dc.html`'e; sıra ve dosya ayrımı kullanıcıyla konuşuldu)*
-  - Kalan ekranlar — kare adı `design/01-musteri/Musteri Mobil.dc.html`'in `data-screen-label`'ı; tur bu sırayla, biten satır silinir:
-    - [ ] Keşif `discover` ↔ native `discover`
-    - [ ] Sepet `cart` ↔ native `cart`
-    - [ ] Checkout + Ödeme `checkout` ↔ native `checkout`
-    - [ ] Sipariş Onayı `checkout/[reference]` ↔ native `checkout`
-    - [ ] Siparişler `orders` ↔ native `orders`
-    - [ ] Sipariş Detay `orders/[reference]` ↔ native `orders`
-    - [ ] Bildirimler `account/notifications` ↔ native `notifications`
-    - [ ] Tarifler `recipes` ↔ native `recipes-list`
-    - [ ] Tarif `recipe/[slug]` ↔ native `recipe`
+  - Kalan ekranlar — kare adı `design/01-musteri/Musteri Mobil.dc.html`'in `data-screen-label`'ı; biten satır silinir:
+    - [ ] Checkout + Ödeme `checkout` ↔ native `checkout` — yalnız ödeme bölümü: kart ödemesi Revolut'a geçti
     - [ ] Geri Bildirim `feedback/[token]` ↔ native `feedback`
     - [ ] Professionnels `professionals` ↔ native `professionals`
-    - [ ] Bilgi Sayfası `legal/*` ↔ native `legal`
-    - [ ] Tasarımda karesi yok, ölçü native ikizinden: `account/points` (native `points-history`) · `invite/[code]` (native `invite`) · `neighbor/[token]` (native `neighbor`)
-    - [ ] En son, kullanıcı inceler (müşteriyle yoğun etkileşen sayfalar): Talepler `support` · Talep Detay `support/[ticket]` · Yeni Talep `support/new` ↔ native `support`
-  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `support/new` · `feedback/[token]` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
+    - [ ] Tasarımda karesi yok, ölçü native ikizinden: `invite/[code]` (native `invite`) · `neighbor/[token]` (native `neighbor`)
+  - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): çekmece başı (native tutamak, web ×) ·
+    sepette alıcı telefonu · vitrin konum satırı · vitrin konum çekmecesinde gel-al · misafir posta kodu çekmecesi · yalnız bir
+    yüzeyde olanlar: indirimliler süzgeci, paket kartı ayrıntıları, misafire bildirim zili, çözülmüş talep notu, kaydırınca küçük
+    başlık, puan bakiyesi satırı, misafire dil kartı, misafir Siparişlerim, K.33.
+  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `feedback/[token]` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 - [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, katalog ~0,54 sn (DB'siz yasal sayfa ~0,16 sn).
   Supabase istekleri Cloudflare'in Paris düğümünden geçiyor (açık bağlantıda istek ~45–55 ms) ve sıralı her okuma bir tur ekliyor.
@@ -373,13 +367,8 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   native operasyon `use-batch-subject`; aynı ölçü, tek sabit olmalı.
 - [ ] (K.11) [hedef: web] Web adres araması iki yoldan gidiyor (Fransa tarayıcıdan, Almanya sunucu eylemiyle), native tek kapıya
   geçti ve Fransa'yı da sunucudan soruyor; BAN'ın IP başına kota gerekçesiyle çelişiyor, hangisinin doğru olduğu kullanıcı kararı.
-- [ ] (K.12) [hedef: mobil] Keşif ekranının ortak metni `@lezzet/i18n/customer/discover`tan okunsun — web telefon görünümü aynı
-  cümleleri oradan okuyor, native `screens/discover/messages.json` ikinci kopya olarak kaldı.
 - [~] (K.14) [hedef: web] Gerçek başlangıç beslemesi kuruldu (`scripts/seed-real.ts` + `seed-real/data.ts`, `pnpm db:seed:real`);
   eksikler: aracın geçici plakası (`AA-000-AA`), taslak ürünlerin künyesi ve yeni faturaların kalemleri.
-- [ ] (K.18) [hedef: mobil] Profesyoneller ekranının başlığı her dilin kendi sözcüğü olsun: TR "Profesyoneller", DE
-  "Geschäftskunden" (FR "Professionnels" kalır) — web menüsü ve sayfası bu sözcüklere geçti, native
-  `screens/professionals/messages.json` üç dilde hâlâ "Professionnels" diyor.
 - [ ] (K.27) [hedef: mobil] Müşteri uygulamasının sepeti ayarları ülkesiz ve bölgesiz okuyor: `mobile-api` `readCartView`
   yalnız depo kimliğini geçiyor (`api/v1/cart-view.ts`), istemci de yalnız posta kodu gönderiyor. Almanya'daki müşteri
   sepette FR kargo ücretini görür, checkout DE ücretini keser; bölge asgari sepeti sepette görünmez. Web `readPlaceScope`
