@@ -9,7 +9,7 @@ import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
 import { optionalCustomerId } from './auth';
 // Yer çözümü katalog ucunun kapısından (`readPlaceOrPickup`): posta kodu → depo eşlemesi TEK yerde durur.
-import { readPlaceOrPickup } from './catalog';
+import { placeQueryOf, readPlaceOrPickup } from './catalog';
 
 /**
  * Paket uçları oturumsuz gezilir ve fiyat kimliğe göre okunmaz, çünkü paket yalnız B2C'dedir ve tek fiyat taşır. Uç kural
@@ -28,7 +28,7 @@ packages.get('/packages', async (c) => {
 
   const db = serviceDb();
   const { place } = await readPlaceOrPickup(db, {
-    postalCode: c.req.query('postalCode'),
+    ...placeQueryOf(c),
     pickupWarehouseId: c.req.query('pickupWarehouseId'),
     customerId: await optionalCustomerId(db, c.req.header('authorization')),
   });
@@ -54,7 +54,7 @@ packages.get('/packages/:slug', async (c) => {
      ek sorgu doğmaz, `optionalCustomerId` kimliksizde erken döner. */
   const customerId = await optionalCustomerId(db, c.req.header('authorization'));
   const { place } = await readPlaceOrPickup(db, {
-    postalCode: c.req.query('postalCode'),
+    ...placeQueryOf(c),
     pickupWarehouseId: c.req.query('pickupWarehouseId'),
     customerId,
   });

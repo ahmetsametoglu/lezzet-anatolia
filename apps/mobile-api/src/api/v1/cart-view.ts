@@ -17,13 +17,14 @@ import {
   CartViewBodySchema,
   MeCartViewSchema,
   PreferredLanguageEnum,
+  type Country,
   type LocalizedText,
   type MeCartView,
   type PreferredLanguage,
 } from '@lezzet/types';
 import { readJsonBody } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
-import { readPlaceOrPickup } from './catalog';
+import { placeQueryOf, readPlaceOrPickup } from './catalog';
 
 /*
   Sepetin çözülmüş görünümü: aynı sepet web ve telefonda aynı tutarı göstermek zorunda, hesabın sahibi `getCartView`.
@@ -52,6 +53,8 @@ export async function readCartView(
     couponCode: string | null;
     /** Ham posta kodu; depoya çeviren `readPlace` — istemcinin yazdığı bir depo kimliği KABUL EDİLMEZ. */
     postalCode: string | undefined;
+    /** İstemcinin seçtiği ülke; aynı kod iki ülkede varsa yer ancak bununla çözülür. */
+    country?: Country;
     /**
      * Gel-al seçimi (adres seçicideki depo kartı). Kimlik olduğu gibi yazılmaz: teklif kapısından geçer
      * (`readPickupOffer` — müşteri izni × gel-al deposu); geçemeyen seçim yok sayılır ve sepet posta koduyla okunur.
@@ -62,6 +65,7 @@ export async function readCartView(
   // Gel-al'da sepet SEÇİLEN DEPONUN stoğuyla okunur ve kargo dolgusu yoktur: depoda olmayan kalem "burada yok"tur.
   const { place, pickup } = await readPlaceOrPickup(db, {
     postalCode: opts.postalCode,
+    country: opts.country,
     pickupWarehouseId: opts.pickupWarehouseId,
     customerId: opts.customerId,
   });
@@ -227,7 +231,7 @@ cartView.post('/view', async (c) => {
   const read = await readCartView(serviceDb(), locale.data, body.data.items.map(entryOfWrite), {
     customerId: null,
     couponCode: body.data.couponCode,
-    postalCode: c.req.query('postalCode'),
+    ...placeQueryOf(c),
   });
   /* YALNIZ `body` tele gider. `CartRead` künyesinin dediği gibi `source` ve `place` SUNUCUDA
      KALIR — `ok()` gevşek tiplidir ve tamamını göndermek derlemede HATA VERMEZDİ. */

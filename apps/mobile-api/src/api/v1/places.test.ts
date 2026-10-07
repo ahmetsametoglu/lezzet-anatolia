@@ -7,20 +7,16 @@ import { PlaceResolutionSchema, type PlaceResolution } from '@lezzet/types';
 import { app } from '../../app';
 
 /**
- * Yer ucu uçtan uca — `app.request()` ile PORT AÇMADAN.
- *
- * Karar dalları motorun birim testinde, kompozisyon paket testinde
- * (`@lezzet/application/delivery/place.test.ts`); burada TAŞIMA sınanır: biçim denetimi (400),
- * sözleşme şekli, depo kimliğinin zarfa sızmaması.
- *
- * Kod bandı `006xx` — FR/DE posta kodu referansında yok (FR 01000'den, DE 01067'den başlar);
- * çözüm yalnız bu dosyanın kurduğu bölge satırından etkilenir (CLAUDE §4b: kendi satırların).
+ * Yer ucunun taşıması sınanır (biçim denetimi, sözleşme şekli, depo kimliğinin sızmaması); karar dalları motorun testinde. Kod bantları
+ * `006xx` ve `007xx` posta kodu referansında yok, çözümü yalnız bu dosyanın kurduğu bölgeler belirler.
  */
 const stamp = Date.now();
 const db = serviceDb();
 
 const son2 = String(stamp).slice(-2);
 const rotaKodu = `006${son2}`;
+/** İki ülkede birden rota kodu: ülkesiz soru belirsiz, ülkeli soru o ülkenin yeri. */
+const ortakKod = `007${son2}`;
 let warehouseId: string;
 
 async function dataOf<T>(res: Response): Promise<T> {
@@ -33,7 +29,12 @@ beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'YERUC' })).id;
   const zones = new DeliveryZoneService(db);
   const zone = await zones.insert({ name: `Yer ucu bölgesi ${stamp}`, warehouseId, weekdays: [4] });
-  await zones.replacePostalCodes(zone.id, [{ country: 'FR', postalCode: rotaKodu }]);
+  await zones.replacePostalCodes(zone.id, [
+    { country: 'FR', postalCode: rotaKodu },
+    { country: 'FR', postalCode: ortakKod },
+  ]);
+  const zoneDe = await zones.insert({ name: `Yer ucu DE bölgesi ${stamp}`, warehouseId, weekdays: [4] });
+  await zones.replacePostalCodes(zoneDe.id, [{ country: 'DE', postalCode: ortakKod }]);
 });
 
 afterAll(async () => {
@@ -50,7 +51,7 @@ describe('GET /api/v1/places/by-postal-code', () => {
     expect(parsed.kind).toBe('resolved');
     if (parsed.kind !== 'resolved') return;
     expect(parsed.place).toEqual({ country: 'FR', postalCode: rotaKodu, placeName: null, places: [], inRoute: true });
-    // Güvenlik sınırı (19.9): motor depo çözer ama zarf taşımaz — istemci depo bilmez.
+    // Motor depo çözer ama zarf taşımaz, çünkü istemcinin depo bilmesi depo seçebilmesi demek olurdu.
     expect(parsed.place).not.toHaveProperty('warehouseId');
   });
 
@@ -66,6 +67,14 @@ describe('GET /api/v1/places/by-postal-code', () => {
       expect(res.status).toBe(400);
       expect(await res.json()).toEqual({ data: null, error: 'invalid_code' });
     }
+  });
+
+  it('aynı kod iki ülkede varsa ülkesiz soru belirsiz, ülkeli soru o ülkenin yeridir; tanınmayan ülke yok sayılır', async () => {
+    const sor = async (query: string) => PlaceResolutionSchema.parse(await dataOf(await app.request(`/api/v1/places/by-postal-code?${query}`)));
+    expect((await sor(`code=${ortakKod}`)).kind).toBe('ambiguous');
+    const almanya = await sor(`code=${ortakKod}&country=DE`);
+    expect(almanya.kind === 'resolved' ? almanya.place.country : almanya.kind).toBe('DE');
+    expect((await sor(`code=${ortakKod}&country=XX`)).kind).toBe('ambiguous');
   });
 
   it('beş haneli ama hiçbir kayıtta olmayan kod geçerli bir CEVAPTIR: unknown', async () => {

@@ -17,6 +17,7 @@ import { readJsonBody } from '../../lib/request';
 import { optionalCustomerId, optionalCustomerProfile } from './auth';
 import { recordNativeEvent } from '../../lib/analytics';
 import { localeOf } from './cart-view';
+import { placeQueryOf } from './catalog';
 
 /**
  * Oturumsuz açık uçlar (`bearerAuth`tan önce bağlanır): uygulamanın ilk sorusu posta kodu ve cevabı herkes için aynı. Depo kimliği
@@ -69,7 +70,8 @@ places.get('/places/by-postal-code', async (c) => {
   const db = serviceDb();
   const customerId = await optionalCustomerId(db, c.req.header('authorization'));
   // Girişli müşterinin yeri kendi işinin bölgelerinden çözülür; ziyaretçi Lezzet'tir.
-  const resolution = await resolvePlaceForPostalCode(db, code, await customerBusiness(db, customerId));
+  const { country } = placeQueryOf(c);
+  const resolution = await resolvePlaceForPostalCode(db, code, await customerBusiness(db, customerId), country);
 
   /* Huninin ilk adımı bu uçta sayılır, öneri ucunda sayılmaz: öneri her tuşta çağrılır ve paydayı şişirirdi. Katalog uçlarının
      `null` geçtiği ülke burada biliniyor (`BEKLEYEN(21.103)`); depo çözülmez, ölçüm için ikinci tur atılmaz. */

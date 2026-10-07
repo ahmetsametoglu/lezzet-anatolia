@@ -6,7 +6,7 @@ import { PreferredLanguageEnum, RecipeDetailSchema, RecipeListSchema } from '@le
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { readRecipeDetail } from '../../lib/recipe';
-import { readPlace, readViewer } from './catalog';
+import { placeQueryOf, readPlace, readViewer } from './catalog';
 
 /**
  * Tarif uçları katalogla aynı üç kararı uygular (gerekçeleri `catalog.ts` başlığında): oturumsuz gezilir, `locale` zorunludur ve yer
@@ -39,7 +39,8 @@ recipes.get('/recipes/:slug', async (c) => {
 
   const db = serviceDb();
   const viewer = await readViewer(db, c.req.header('authorization'));
-  const place = await readPlace(db, c.req.query('postalCode'), await customerBusiness(db, viewer.customerId));
+  const { postalCode, country } = placeQueryOf(c);
+  const place = await readPlace(db, postalCode, await customerBusiness(db, viewer.customerId), country);
   const detail = await readRecipeDetail(db, c.req.param('slug'), locale.data, place, viewer);
   if (!detail) return fail(c, 'recipe_not_found', 404);
 

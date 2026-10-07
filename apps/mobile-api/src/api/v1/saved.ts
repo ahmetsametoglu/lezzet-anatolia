@@ -6,6 +6,7 @@ import { MeSavedRestoreBodySchema, MeSavedViewSchema, type MeSavedView } from '@
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
 import { localeOf, readCartView } from './cart-view';
+import { placeQueryOf } from './catalog';
 
 /*
   `/me/saved` — hesaptaki "Sonraya kaydedilenler" kartı: web'de sonraya ayrılan kalemler ve bekleyen bölge haberleri. Kalemler
@@ -22,7 +23,7 @@ async function viewOf(c: Context<V1Env>, db: Db, customerId: string): Promise<Re
   const read = await readCartView(db, locale.data, cart.savedItems.map(entryOfItem), {
     customerId,
     couponCode: null,
-    postalCode: c.req.query('postalCode'),
+    ...placeQueryOf(c),
   });
   const body: MeSavedView = { saved: read.body.lines, zoneNotices: notices.map((notice) => ({ postalCode: notice.postalCode })) };
   return ok(c, MeSavedViewSchema.parse(body));

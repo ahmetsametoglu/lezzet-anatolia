@@ -27,12 +27,11 @@ async function readPlaceInputs(db: SupabaseClient, postalCode: string) {
 }
 
 /**
- * `country` bir seçimdir ve adayları süzer; kod o ülkede yoksa çözüm `unknown`a düşer. `business` müşterinin işidir, anonim ziyaretçi
- * Lezzet'tir (`customerBusinessOf`).
+ * `country` motora seçim olarak geçer, çünkü adaylar referanstan olduğu kadar bölge tablomuzdan da gelir; yalnız referansı süzmek
+ * iki ülkenin bölgesindeki kodu belirsiz bırakırdı. `business` müşterinin işidir, anonim ziyaretçi Lezzet'tir (`customerBusinessOf`).
  */
 function resolveFrom(inputs: Awaited<ReturnType<typeof readPlaceInputs>>, business: Business, country?: Country): PostalCodeResolution {
-  const scoped = country ? inputs.matches.filter((match) => match.country === country) : inputs.matches;
-  return resolvePlaceByPostalCode(inputs.code, scoped, inputs.zones, inputs.warehouses, business);
+  return resolvePlaceByPostalCode(inputs.code, inputs.matches, inputs.zones, inputs.warehouses, business, country);
 }
 
 export async function resolvePlaceForPostalCode(

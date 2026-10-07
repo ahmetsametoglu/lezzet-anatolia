@@ -23,8 +23,10 @@ import {
   CatalogProductDetailSchema,
   CatalogSortEnum,
   DEFAULT_PAGE_SIZE,
+  CountryEnum,
   PreferredLanguageEnum,
   type Business,
+  type Country,
   type UserProfile,
   type Warehouse,
 } from '@lezzet/types';
@@ -48,9 +50,26 @@ const MAX_PAGE_SIZE = 50;
  * hangi deponun stoğunun gösterileceğini belirleyemez. Kod yoksa ya da çözülemezse yer bilinmiyor bir hâldir, okuma işin depo-üstü
  * toplamına düşer.
  */
-export async function readPlace(db: SupabaseClient, postalCode: string | undefined, business: Business): Promise<PlaceWarehouses> {
+export async function readPlace(
+  db: SupabaseClient,
+  postalCode: string | undefined,
+  business: Business,
+  country?: Country,
+): Promise<PlaceWarehouses> {
   if (postalCode === undefined || postalCode.trim() === '') return unresolvedPlace(business);
-  return resolvePlaceWarehouses(db, postalCode, business);
+  return resolvePlaceWarehouses(db, postalCode, business, country);
+}
+
+/**
+ * İstemcinin yeri: posta kodu ve seçilen ülke, çünkü aynı kod iki ülkede varsa yer ancak ülkeyle çözülür. Tanınmayan ülke yok sayılır;
+ * uydurma bir ülke kodu başka ülkenin deposuna bağlardı.
+ */
+export function placeQueryOf(c: { req: { query: (name: string) => string | undefined } }): {
+  postalCode: string | undefined;
+  country: Country | undefined;
+} {
+  const country = CountryEnum.safeParse(c.req.query('country'));
+  return { postalCode: c.req.query('postalCode'), country: country.success ? country.data : undefined };
 }
 
 /**
@@ -60,14 +79,14 @@ export async function readPlace(db: SupabaseClient, postalCode: string | undefin
  */
 export async function readPlaceOrPickup(
   db: SupabaseClient,
-  opts: { postalCode: string | undefined; pickupWarehouseId: string | undefined; customerId: string | null },
+  opts: { postalCode: string | undefined; country?: Country; pickupWarehouseId: string | undefined; customerId: string | null },
 ): Promise<{ place: PlaceWarehouses; pickup: Warehouse | null }> {
   const pickup =
     opts.customerId && opts.pickupWarehouseId ? (await readPickupOffer(db, opts.customerId, opts.pickupWarehouseId)).warehouse : null;
   // Yer müşterinin işinin bölgelerinden çözülür, ziyaretçi Lezzet'tir; gel-al deposu teklif kapısından müşterinin işinde gelir.
   const place: PlaceWarehouses = pickup
     ? { warehouseId: pickup.id, shippingWarehouseId: null, business: pickup.business }
-    : await readPlace(db, opts.postalCode, await customerBusiness(db, opts.customerId));
+    : await readPlace(db, opts.postalCode, await customerBusiness(db, opts.customerId), opts.country);
   return { place, pickup };
 }
 
@@ -90,7 +109,7 @@ const ProductQuerySchema = z.object({
   locale: LocaleSchema,
   /** Ad araması — üç dilde birden (`ProductService` SQL'de çözer). */
   q: z.string().trim().min(1).optional(),
-  /** Kategori SLUG'ı (dil-bağımsız). Tanınmayan slug 400 alır — bkz. `/products` ucu. */
+  /** Kategori slug'ı, dilden bağımsız; tanınmayan slug 400 alır. */
   category: z.string().trim().min(1).optional(),
   /**
    * Koleksiyon slug'ı web'in `?collection=` kelimesiyle aynı; tanınmayan slug 400 alır. Mobilde koleksiyon görünümü kategori
@@ -123,10 +142,10 @@ export async function readViewer(db: SupabaseClient, authorization: string | und
 /** Yer ve fiyat görüşü aynı profil okumasını bekler; yerin işi profilden, gel-al izni kimlikten okunur. */
 async function readPlaceAlongside(
   db: SupabaseClient,
-  opts: { postalCode: string | undefined; pickupWarehouseId: string | undefined },
+  opts: { postalCode: string | undefined; country?: Country; pickupWarehouseId: string | undefined },
   profile: Promise<UserProfile | null>,
 ): Promise<PlaceWarehouses> {
-  if (!opts.pickupWarehouseId) return readPlace(db, opts.postalCode, customerBusinessOf(await profile));
+  if (!opts.pickupWarehouseId) return readPlace(db, opts.postalCode, customerBusinessOf(await profile), opts.country);
   const { place } = await readPlaceOrPickup(db, { ...opts, customerId: (await profile)?.id ?? null });
   return place;
 }
@@ -165,7 +184,7 @@ catalog.get('/products', async (c) => {
   const db = serviceDb();
   const viewer = await readViewer(db, c.req.header('authorization'));
   const { place } = await readPlaceOrPickup(db, {
-    postalCode: c.req.query('postalCode'),
+    ...placeQueryOf(c),
     pickupWarehouseId: c.req.query('pickupWarehouseId'),
     customerId: viewer.customerId,
   });
@@ -240,7 +259,7 @@ catalog.get('/products/:slug', async (c) => {
   const viewer = profile.then((row) => pricingViewerFor(db, row));
   const place = readPlaceAlongside(
     db,
-    { postalCode: c.req.query('postalCode'), pickupWarehouseId: c.req.query('pickupWarehouseId') },
+    { ...placeQueryOf(c), pickupWarehouseId: c.req.query('pickupWarehouseId') },
     profile,
   );
   const detail = await getProductDetail(db, { locale: locale.data, slug: c.req.param('slug'), place, viewer });

@@ -18,6 +18,7 @@ import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
 import type { V1Env } from './auth';
 import { entryOfWrite, localeOf, readCartView, type CartRead } from './cart-view';
+import { placeQueryOf } from './catalog';
 
 /*
   `/me/cart`: sunucu sepetinin mobil kapısı; sepet iki yüzeyde paylaşılır ve görünüm web ile aynı `getCartView` kuralından gelir.
@@ -110,7 +111,7 @@ async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<Ca
     // karşılaştırmasının referansıdır (DOMAIN §5). Geçilmezse "fiyat arttı" hiç doğmaz.
     previousPrices: storedPrices(stored.items),
     couponCode: c.req.query('coupon') ?? null,
-    postalCode: c.req.query('postalCode'),
+    ...placeQueryOf(c),
     // Gel-al seçimi: adres seçicideki depo kartı; kapı `readCartView`de (izin × gel-al deposu), geçemeyen yok sayılır.
     pickupWarehouseId: c.req.query('pickupWarehouseId'),
   });
@@ -235,7 +236,7 @@ cart.post('/reorder', async (c) => {
         await readCartView(db, c.get('locale'), entries, {
           customerId,
           couponCode: null,
-          postalCode: c.req.query('postalCode'),
+          ...placeQueryOf(c),
           pickupWarehouseId: c.req.query('pickupWarehouseId'),
         })
       ).source,
