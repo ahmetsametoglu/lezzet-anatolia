@@ -23,7 +23,7 @@ const TONE: Record<OpsTone, { fill: string; text: string }> = {
   neutral: { fill: 'bg-ops-gray-600', text: 'text-ops-ink' },
   amber: { fill: 'bg-ops-amber', text: 'text-ops-card' },
   red: { fill: 'bg-ops-red', text: 'text-ops-card' },
-  slate: { fill: 'bg-ops-slate', text: 'text-ops-slate' },
+  slate: { fill: 'bg-ops-slate', text: 'text-ops-card' },
   blue: { fill: 'bg-ops-blue', text: 'text-ops-card' },
   violet: { fill: 'bg-ops-violet', text: 'text-ops-card' },
 };
