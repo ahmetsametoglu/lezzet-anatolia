@@ -120,7 +120,10 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const rememberedName = useRememberedPlaceName(postalCode);
   const savedPlaceName = resolvedName ?? rememberedName;
   const postalLabel =
-    postalCode === null ? null : upperIn(placeLineOf({ label: purchaseAddress?.label, postalCode, placeName: savedPlaceName }), locale);
+    postalCode === null
+      ? null
+      : // Seçili adres varsa şehir onun kendisinden gelir; kodun yerleşim adı birden çok olabilir.
+        upperIn(placeLineOf({ label: purchaseAddress?.label, postalCode, placeName: purchaseAddress?.city ?? savedPlaceName }), locale);
 
   /* Yazma YALNIZ canlı çözümden: hatırlanan adı geri yazmak kaydı hiç tazelemeden döngüye sokardı.
      `rememberPlaceName` aynı kaydı ikinci kez diske yazmıyor. */

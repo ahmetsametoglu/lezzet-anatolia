@@ -42,10 +42,11 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
   if (line) {
     // Yer değişirken iskelet çizilir, çünkü eski yeri göstermek cevabın alınmadığı izlenimini verir; satırın biçimi native'le ortaktır.
     const header = homeMessages[locale].header;
-    const zip = place
-      ? { postalCode: place.postalCode, placeName: placeLabel }
-      : address
-        ? { postalCode: address.postalCode, placeName: address.city }
+    // Şehir seçili adresin kendisinden; misafirde yalnız yerin adı, çünkü bölge adı iç rota adıdır ve başka şehri gösterebilir.
+    const zip = address
+      ? { postalCode: address.postalCode, placeName: address.city }
+      : place
+        ? { postalCode: place.postalCode, placeName: place.placeName }
         : null;
     const postal = pickedWarehouse
       ? pickedWarehouse.name
