@@ -100,6 +100,11 @@ function safeJson(text: string): unknown {
   }
 }
 
+/** Düşmüş sipariş; iade siparişinde bu durum paranın müşteriye dönmediği demektir. */
+export function isFailedRevolutOrder(order: Pick<RevolutApiOrder, 'state'>): boolean {
+  return order.state === 'failed' || order.state === 'cancelled';
+}
+
 export async function readRevolutOrder(client: RevolutClient, orderRef: string): Promise<RevolutApiOrder> {
   const parsed = RevolutApiOrderSchema.safeParse(await client.request('GET', `/api/orders/${encodeURIComponent(orderRef)}`));
   if (!parsed.success) throw new RevolutError('parse', `Revolut siparişi beklenen biçimde değil: ${parsed.error.message}`);
@@ -165,6 +170,8 @@ export async function refundRevolutOrder(
     ),
   );
   if (!created.success) throw new RevolutError('parse', `Revolut iade cevabı beklenen biçimde değil: ${created.error.message}`);
+  // Açılışta düşen iade yapılmış sayılmaz: çağıran sağlayıcı hatası görür ve hareket yazılmaz.
+  if (isFailedRevolutOrder(created.data)) throw new RevolutError('provider', `Revolut iadeyi açılışta düşürdü (${created.data.state})`);
   return { refundOrderId: created.data.id };
 }
 

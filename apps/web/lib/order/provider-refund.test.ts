@@ -368,3 +368,30 @@ describe('yeniden deneme', () => {
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 });
+
+describe('düşen iade', () => {
+  const failedEvent = (refundRef: string, paymentRef: string, suffix: string) => ({
+    key: `ORDER_PAYMENT_FAILED:${stamp}_${suffix}`,
+    kind: 'refund_failed' as const,
+    refundRef,
+    paymentRef,
+  });
+
+  it('Revolut iadeyi sonradan düşürürse iade ters hareketle geri alınır, sipariş yeniden iade bekler; ikinci olay ikinci kez yazmaz', async () => {
+    const paymentRef = `rv_dusen_${stamp}`;
+    const refundRef = `re_dusen_${stamp}`;
+    const orderId = await paidOrder({ providerRef: paymentRef });
+    await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'ok', refundId: refundRef }) });
+
+    const outcome = await handlePaymentEvent(failedEvent(refundRef, paymentRef, 'dusen'), providerAccount);
+    await handlePaymentEvent(failedEvent(refundRef, paymentRef, 'dusen_ikinci'), providerAccount);
+
+    expect(outcome).toMatchObject({ status: 'ok', action: 'refund_reversed' });
+    const reversals = (await money.listByOrder(orderId)).filter((m) => m.type === 'order_payment' && m.meta?.['reversalOf']);
+    expect(reversals).toMatchObject([{ accountId: providerAccount, amountCents: 2000 }]);
+    // Para müşteriye dönmedi: iptal edilmiş siparişin 20 € iade borcu yeniden açıktır ve yeniden deneme onu iade eder.
+    const again = fakeRefunder({ status: 'ok', refundId: `re_dusen_tekrar_${stamp}` });
+    await retryRefund(orderId, { refunder: again });
+    expect(again.calls).toMatchObject([{ paymentRef, amountCents: 2000 }]);
+  });
+});

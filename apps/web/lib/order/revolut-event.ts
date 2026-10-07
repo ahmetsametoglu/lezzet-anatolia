@@ -1,11 +1,14 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { readRevolutOrder, readRevolutPayout, revolutFeeOf, type RevolutClient } from '@lezzet/application';
+import { isFailedRevolutOrder, readRevolutOrder, readRevolutPayout, revolutFeeOf, type RevolutClient } from '@lezzet/application';
 import type { RevolutWebhookEvent } from '@lezzet/types';
 import type { PaymentEvent } from './payment-webhook';
 
 /** İmzanın zaman toleransı; sağlayıcının önerisi, eski bir isteğin yeniden oynatılmasına karşı. */
 const TOLERANCE_MS = 5 * 60_000;
+
+/** Ödeme siparişinde de gelen olaylar; iade siparişinde iadenin düştüğünü bildirirler. */
+const FAILURE_EVENTS = new Set(['ORDER_CANCELLED', 'ORDER_FAILED', 'ORDER_PAYMENT_DECLINED', 'ORDER_PAYMENT_FAILED']);
 
 /**
  * Revolut imzası `v1=` + HMAC-SHA256(`v1.{zaman damgası}.{ham gövde}`); gövde ham hâliyle imzalanır, yeniden yazılan gövde imzayı
@@ -52,9 +55,17 @@ export async function toPaymentEvent(client: RevolutClient, webhook: RevolutWebh
     };
   }
 
-  if ((webhook.event === 'ORDER_CANCELLED' || webhook.event === 'ORDER_FAILED') && webhook.order_id) {
+  if (FAILURE_EVENTS.has(webhook.event) && webhook.order_id) {
     const order = await readRevolutOrder(client, webhook.order_id);
-    if (order.type !== 'payment') return { key, kind: 'ignored' };
+    // Düşen iade siparişin durumundan doğrulanır; iade ettiği ödeme bilinmiyorsa geri alınacak kayıt da bulunamaz.
+    if (order.type === 'refund') {
+      return isFailedRevolutOrder(order) && order.related_order_id
+        ? { key, kind: 'refund_failed', refundRef: order.id, paymentRef: order.related_order_id }
+        : { key, kind: 'ignored' };
+    }
+    if (order.type !== 'payment' || (webhook.event !== 'ORDER_CANCELLED' && webhook.event !== 'ORDER_FAILED')) {
+      return { key, kind: 'ignored' };
+    }
     return { key, kind: 'payment_released', orderId: order.metadata?.order_id ?? null, paymentRef: order.id };
   }
 

@@ -99,4 +99,21 @@ describe('toPaymentEvent', () => {
     });
     await expect(toPaymentEvent(client, { event: 'ORDER_FAILED', order_id: 'iade-2' })).resolves.toMatchObject({ kind: 'ignored' });
   });
+
+  it('düşen iade, iade ettiği ödemeyle eşlenir; sürmekte olan iadenin olayı hiçbir şey yaptırmaz', async () => {
+    const client = fakeClient({
+      'iade-3': { ...base, id: 'iade-3', type: 'refund', state: 'failed', amount: 300, related_order_id: 'rv-3' },
+      'iade-4': { ...base, id: 'iade-4', type: 'refund', state: 'processing', amount: 300, related_order_id: 'rv-3' },
+    });
+
+    await expect(toPaymentEvent(client, { event: 'ORDER_PAYMENT_FAILED', order_id: 'iade-3' })).resolves.toEqual({
+      key: 'ORDER_PAYMENT_FAILED:iade-3',
+      kind: 'refund_failed',
+      refundRef: 'iade-3',
+      paymentRef: 'rv-3',
+    });
+    await expect(toPaymentEvent(client, { event: 'ORDER_PAYMENT_DECLINED', order_id: 'iade-4' })).resolves.toMatchObject({
+      kind: 'ignored',
+    });
+  });
 });

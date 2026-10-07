@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RevolutApiOrder } from '@lezzet/types';
-import { revolutClient, revolutFeeOf, revolutGateway, revolutSessionCreator, snapshotOf } from './revolut';
+import {
+  RevolutError,
+  refundRevolutOrder,
+  revolutClient,
+  revolutFeeOf,
+  revolutGateway,
+  revolutSessionCreator,
+  snapshotOf,
+} from './revolut';
 
 /** Revolut uyarlamasının kararları; sağlayıcı sahte `fetch` ile taklit edilir, ağa çıkılmaz. */
 
@@ -163,6 +171,16 @@ describe('revolutGateway.refund', () => {
     expect(refunds).toHaveLength(1);
     expect(refunds[0]?.body).toMatchObject({ amount: 750, currency: 'EUR' });
     expect(refunds[0]?.headers['Idempotency-Key']).toBe('full:kismi');
+  });
+
+  it('açılışta düşen iade yapılmış sayılmaz — çağıran sağlayıcı hatası alır ve hareket yazmaz', async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ id: 'iade-d', type: 'refund', state: 'failed', amount: 500, currency: 'EUR', created_at: 'x' }), {
+        status: 201,
+      })) as typeof fetch;
+    const client = revolutClient({ secretKey: 'sk_test', mode: 'sandbox', fetchImpl });
+
+    await expect(refundRevolutOrder(client, { orderRef: 'rv-1', amountCents: 500, idempotencyKey: 'k' })).rejects.toThrow(RevolutError);
   });
 });
 

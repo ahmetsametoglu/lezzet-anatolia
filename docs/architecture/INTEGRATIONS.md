@@ -13,7 +13,7 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 - **Faz 1:** online kart ödemesi — **Revolut Merchant** (`STACK` §Ödeme) + kapıda ödeme (nakit/kart, sistem içinde kaydedilir).
 - Kapıda kart için basit bir cihaz (ör. SumUp) kullanılabilir; sistem yalnızca sonucu kaydeder ve parayı nakit kasadan ayrı, kapıda kart hesabına (`door_card_account_id`) yazar.
 - Ödeme sağlayıcı bir arayüz arkasında; kapıda ödeme zaten iç mantık.
-- Webhook (ödeme onayı) `apps/web/app/api/webhooks/revolut` — `apps/backend` yerine, gerekçesi `ARCHITECTURE_DECISIONS` Sapma 5. Webhook kaydında dinlenecek olaylar: `ORDER_COMPLETED` · `ORDER_CANCELLED` · `ORDER_FAILED` · `PAYOUT_COMPLETED`; gövde yalnız olay ve kimlik taşır, tutar ve komisyon siparişi okuyarak alınır. İmza anahtarı `REVOLUT_WEBHOOK_SECRET`. Muhasebe modeli (brüt tahsilat · ödeme başına komisyon · aktarım transferi) `data-model/para.md`'de.
+- Webhook (ödeme onayı) `apps/web/app/api/webhooks/revolut` — `apps/backend` yerine, gerekçesi `ARCHITECTURE_DECISIONS` Sapma 5. Webhook kaydında dinlenecek olaylar: `ORDER_COMPLETED` · `ORDER_CANCELLED` · `ORDER_FAILED` · `ORDER_PAYMENT_DECLINED` · `ORDER_PAYMENT_FAILED` · `PAYOUT_COMPLETED` (düşen iade son ikisiyle gelir); gövde yalnız olay ve kimlik taşır, tutar ve komisyon siparişi okuyarak alınır. İmza anahtarı `REVOLUT_WEBHOOK_SECRET`. Muhasebe modeli (brüt tahsilat · ödeme başına komisyon · aktarım transferi) `data-model/para.md`'de.
 
 ## Kargo
 

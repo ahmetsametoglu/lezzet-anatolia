@@ -512,6 +512,7 @@ export type { CancelPendingOutcome, ResumePaymentOutcome } from './order/pending
 export type { PaymentGateway, PaymentSnapshot } from './order/payment-gateway';
 export {
   RevolutError,
+  isFailedRevolutOrder,
   readRevolutOrder,
   readRevolutPayout,
   refundRevolutOrder,

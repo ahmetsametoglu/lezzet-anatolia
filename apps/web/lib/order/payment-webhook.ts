@@ -11,7 +11,7 @@ import {
 import { validateMovement } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { CARD_FEE_NATURE, type MoneyMovementInsert } from '@lezzet/types';
-import { recordOrderRefund } from '../money/order-payment';
+import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
 import { revolutPaymentGateway } from '../revolut';
 import { webPaymentEffects } from './transition';
 
@@ -22,7 +22,10 @@ import { webPaymentEffects } from './transition';
  */
 
 type WebhookOutcome =
-  | { status: 'ok'; action: 'confirmed' | 'reserved_again' | 'refunded' | 'released' | 'payout_recorded' | 'ignored' }
+  | {
+      status: 'ok';
+      action: 'confirmed' | 'reserved_again' | 'refunded' | 'refund_reversed' | 'released' | 'payout_recorded' | 'ignored';
+    }
   /** Aynı olay daha önce işlendi — sağlayıcıya yine 200 dönülür, yoksa sonsuza dek yeniden gönderir. */
   | { status: 'duplicate' }
   | { status: 'not_found' }
@@ -45,6 +48,8 @@ export type PaymentEvent =
   | { key: string; kind: 'payment_released'; orderId: string | null; paymentRef: string }
   /** İade tamamlandı; ödemenin sağlayıcıda bugüne kadar iade edilmiş TOPLAMI taşınır ki olay tekrar gelirse fark iki kez yazılmasın. */
   | { key: string; kind: 'refund_completed'; paymentRef: string; refundedTotalCents: number }
+  /** İade siparişi sağlayıcıda düştü: para müşteriye dönmedi; `paymentRef` iade ettiği ödemedir. */
+  | { key: string; kind: 'refund_failed'; refundRef: string; paymentRef: string }
   /** Merchant hesabından ana hesaba aktarım tamamlandı. */
   | { key: string; kind: 'payout_completed'; payout: { id: string; amountCents: number; currency: string; valueDate: string } }
   | { key: string; kind: 'ignored' };
@@ -85,6 +90,8 @@ async function route(event: PaymentEvent, accountId: string | null, gateway: Pay
       return { status: 'ok', action: 'released' };
     case 'refund_completed':
       return reconcileRefund(event, accountId);
+    case 'refund_failed':
+      return reverseFailedRefund(event);
     case 'payout_completed':
       return recordPayout(event, accountId);
     case 'ignored':
@@ -178,6 +185,43 @@ async function reconcileRefund(
   });
   kickOrderRegister(serviceDb(), order.id);
   return { status: 'ok', action: 'refunded' };
+}
+
+/**
+ * Düşen iade: bizim yazdığımız iade hareketi silinemez (tahsilat koruması), aynı tutarda giriş hareketiyle geri alınır; sipariş yeniden
+ * iade bekler ve iz hata kaydına düşer ki iade yeniden yapılsın. Bizde yazılmamış iadenin geri alınacak kaydı yoktur.
+ */
+async function reverseFailedRefund(event: Extract<PaymentEvent, { kind: 'refund_failed' }>): Promise<WebhookOutcome> {
+  const db = serviceDb();
+  const movements = new MoneyMovementService(db);
+  const payment = await movements.findByProviderRef(event.paymentRef);
+  if (!payment?.orderId) return { status: 'not_found' };
+  const orderId = payment.orderId;
+
+  const refunds = (await movements.listByOrder(orderId)).filter(
+    (movement) => movement.type === 'order_refund' && movement.meta?.['refundId'] === event.refundRef,
+  );
+  if (refunds.length === 0) return { status: 'ok', action: 'ignored' };
+
+  for (const refund of refunds) {
+    await recordOrderPayment({
+      orderId,
+      accountId: refund.accountId,
+      amountCents: refund.amountCents,
+      method: refund.paymentMethod ?? 'online',
+      description: 'Revolut iadeyi düşürdü — para müşteriye dönmedi, iade yeniden yapılmalı',
+      meta: { providerRef: event.paymentRef, refundId: event.refundRef, reversalOf: refund.id },
+      source: 'system',
+      // Aynı düşüş birden çok olayla bildirilebilir; ters kayıt iade hareketi başına bir kez yazılır.
+      idempotencyKey: `refund-failed:${refund.id}`,
+    });
+  }
+  kickOrderRegister(db, orderId);
+  await captureError(new Error('Revolut iadesi düştü; iade ters hareketle geri alındı'), {
+    source: SOURCES.webhook,
+    context: { provider: 'revolut', orderId, refundRef: event.refundRef },
+  });
+  return { status: 'ok', action: 'refund_reversed' };
 }
 
 /**

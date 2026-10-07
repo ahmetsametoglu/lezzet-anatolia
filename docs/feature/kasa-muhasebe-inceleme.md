@@ -12,7 +12,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 2 | Onaylı işletme müşterisinden KDV alınmıyor | Yüksek | Kabul, yapılacak |
 | 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Kabul, yapılacak |
 | 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
-| 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Ölçüldü |
+| 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
 | 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Konuşulacak |
 | 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Konuşulacak |
 | 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Konuşulacak |
@@ -111,7 +111,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 ## 5. Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor
 
-**Durum:** Ölçüldü (07.10), çözüm konuşulacak · **Ağırlık:** orta
+**Durum:** Yapıldı (07.10); Revolut bildirim aboneliğine iki olay eklenmeli · **Ağırlık:** orta
 
 - **Mevcut durum:** Revolut kart iadesini ayrı bir "iade siparişi" olarak açar ve sonucunu sonradan bildirir. Biz iade açıldığı
   anda deftere "iade yapıldı" yazıyor, Hiboutik'e iade fişi gönderiyoruz; iadenin başarısız olduğunu bildiren olayları yok
@@ -135,8 +135,14 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
     yazılır, sistem doğrulamaz.
   - Tamamlanmış ödemenin bankaca geri alınması (itiraz, chargeback) işlenmiyor; `kasa-muhasebe.md` §6 Revolut açık
     kalanlarında.
-- **Olması gereken:** İade Revolut'ta tamamlanınca kesinleşir; başarısız olursa defter ve kasa geri alınır, operatöre söylenir.
-  Konuşulacak iki yol: (a) iadeyi tamamlanınca yazmak, (b) hemen yazıp başarısızlıkta ters kayıt atmak.
+- **Çözüm (07.10, basit yol):** İade açıldığı anda yazılmaya devam eder; düşerse geri alınır.
+  - Revolut iadeyi açılışta düşürürse iade yazılmaz; operatör "iade yapılamadı" görür.
+  - İade sonradan düşerse Revolut'un bildirimi bizdeki iade kaydının karşısına aynı tutarda ters kayıt yazar (iade kaydı
+    tahsilat koruması gereği silinmez). Sipariş yeniden "iade bekliyor" olur, iz hata kaydına düşer, operatör iadeyi yeniden
+    dener; Hiboutik'e de aynı ters kayıt gider.
+  - Bunun için Revolut bildirim aboneliğinde `ORDER_PAYMENT_DECLINED` ve `ORDER_PAYMENT_FAILED` olmalı; test sunucusunun
+    kaydında bu iki olay yok.
+  - "İade tamamlanınca yazılsın" yolu seçilmedi: bekleyen iade kavramı ve kayıp bildirime karşı yedek zamanlayıcı isterdi.
 - **Kanıt:** `apps/web/lib/order/revolut-event.ts:55-58, 72` · `packages/application/src/order/revolut.ts:151-169` ·
   `order/refund.ts:325-345` · `kasa-muhasebe.md` §6 Revolut İade satırı.
 
