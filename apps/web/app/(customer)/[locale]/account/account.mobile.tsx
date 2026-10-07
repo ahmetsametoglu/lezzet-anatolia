@@ -117,7 +117,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
             onToggle={setConsentAction.bind(null, 'whatsapp')}
           />
         </div>
-        <p className="font-sans text-body-sm leading-[1.6] text-body">{copy.marketing.note}</p>
+        <p className="font-sans text-body-sm leading-[1.6] text-sand-600">{copy.marketing.note}</p>
         <PhoneZoneInterest copy={copy.marketing.zone} locale={locale} recorded={account.zoneNotices.map((notice) => notice.postalCode)} />
       </SettingsCard>
 
@@ -161,9 +161,9 @@ function ProfileSection({ t, copy, account }: ProfileSectionProps) {
         <CirclePhoto image={null} initial={avatarSource.slice(0, 1)} size={56} emptyClassName="bg-olive-bg" initialClassName="text-h2-sm text-olive-dark" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="font-sans text-step-sm text-ink">{nameMissing ? copy.profile.addName : profile.name}</span>
-          {profile.email && <span className="font-sans text-helper break-all text-body">{profile.email}</span>}
+          {profile.email && <span className="font-sans text-helper break-all text-muted">{profile.email}</span>}
           {/* Boş telefon için satır çizilmez; olmayan bilgiye yer ayırmak gürültüdür. */}
-          {profile.phone && <span className="font-sans text-helper text-body">{profile.phone}</span>}
+          {profile.phone && <span className="font-sans text-helper text-muted">{profile.phone}</span>}
         </div>
         <TextAction label={copy.profile.edit} ariaLabel={copy.profile.editLabel} onClick={() => setEditing(true)} />
       </section>
@@ -217,7 +217,7 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
     >
       <p className="font-sans text-body-sm leading-[1.6] text-body">{fill(copy.points.body)}</p>
       {!enough && (
-        <p className="font-sans text-helper font-semibold text-body">
+        <p className="font-sans text-helper font-semibold text-muted">
           {copy.points.gap.replace('{n}', String(minimumPoints - points.balance))}
         </p>
       )}

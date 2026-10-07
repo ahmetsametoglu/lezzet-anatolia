@@ -22,7 +22,7 @@ export function PhoneNotifyCard({ t, failedText }: PhoneNotifyCardProps) {
       ) : (
         <ConsentSwitch compact label={t.notifyLabel} on={on} onLabel={t.consentOn} offLabel={t.consentOff} failedText={failedText} onToggle={toggle} />
       )}
-      <p className="font-sans text-body-sm leading-[1.6] text-body">{t.notifyBody}</p>
+      <p className="font-sans text-body-sm leading-[1.6] text-sand-600">{t.notifyBody}</p>
     </SettingsCard>
   );
 }

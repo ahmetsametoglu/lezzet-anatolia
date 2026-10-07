@@ -9,7 +9,7 @@ import { Link } from '@/i18n/navigation';
 type InviteTone = 'terracotta' | 'olive';
 
 const TONE: Record<InviteTone, { border: string; ink: string }> = {
-  terracotta: { border: 'border-terracotta', ink: 'text-terracotta-dark' },
+  terracotta: { border: 'border-terracotta', ink: 'text-terracotta' },
   olive: { border: 'border-olive-line', ink: 'text-olive-dark' },
 };
 
@@ -32,7 +32,7 @@ export function DashedInvite(props: DashedInviteProps) {
       <div className={`flex flex-col gap-2 ${BOX} ${t.border}`}>
         <div className="flex flex-col gap-1">
           <span className={`font-sans text-control ${t.ink}`}>{title}</span>
-          <span className="font-sans text-body-sm leading-[1.6] text-body">{description}</span>
+          <span className="font-sans text-body-sm leading-[1.6] text-muted">{description}</span>
         </div>
         <span className="self-start">{props.action}</span>
       </div>
@@ -46,7 +46,7 @@ export function DashedInvite(props: DashedInviteProps) {
     >
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className={['font-sans text-control', t.ink].join(' ')}>{title}</span>
-        <span className="font-sans text-body-sm leading-[1.6] text-body">{description}</span>
+        <span className="font-sans text-body-sm leading-[1.6] text-muted">{description}</span>
       </span>
       <span aria-hidden className={['font-sans text-icon-sm leading-none', t.ink].join(' ')}>
         ›

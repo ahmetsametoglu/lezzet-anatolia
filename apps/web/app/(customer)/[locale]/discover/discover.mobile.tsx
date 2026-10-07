@@ -149,17 +149,17 @@ export function DiscoverMobile({
                   />
                 ))}
               </div>
-              <span className="font-sans text-micro font-bold text-body">
+              <span className="font-sans text-micro font-bold text-muted">
                 {copy.progress.replace('{current}', String(Math.min(current + 1, total))).replace('{total}', String(total))}
               </span>
             </div>
 
             <div className="flex flex-col items-center gap-2">
-              <p className="text-center font-sans text-helper text-body">{copy.framing}</p>
+              <p className="text-center font-sans text-helper text-muted">{copy.framing}</p>
               <div className="flex w-full items-stretch gap-2">
                 <div className="flex flex-1 items-center gap-2 rounded-soft bg-terracotta-bg px-3 py-2.25">
-                  <Icon name="arrowLeft" size={18} strokeWidth={2.4} className="text-terracotta-dark" />
-                  <span className="font-sans text-helper leading-[1.3] font-bold text-terracotta-dark">
+                  <Icon name="arrowLeft" size={18} strokeWidth={2.4} className="text-terracotta" />
+                  <span className="font-sans text-helper leading-[1.3] font-bold text-terracotta">
                     {copy.hint.passTitle}
                     <br />
                     <span className="font-normal text-muted">{copy.hint.passBody}</span>
@@ -169,7 +169,7 @@ export function DiscoverMobile({
                   <span className="text-right font-sans text-helper leading-[1.3] font-bold text-olive-dark">
                     {copy.hint.likeTitle}
                     <br />
-                    <span className="font-normal text-olive-dark">{copy.hint.likeBody}</span>
+                    <span className="font-normal text-olive">{copy.hint.likeBody}</span>
                   </span>
                   <Icon name="arrowRight" size={18} strokeWidth={2.4} className="text-olive-dark" />
                 </div>
@@ -187,7 +187,7 @@ export function DiscoverMobile({
               }}
             />
 
-            <p className="text-center font-sans text-micro text-muted">{likesLabel(copy, likes)}</p>
+            <p className="text-center font-sans text-micro text-sand-600">{likesLabel(copy, likes)}</p>
           </div>
         </>
       )}

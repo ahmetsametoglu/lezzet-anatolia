@@ -30,7 +30,7 @@ export function MessageScreen({ device, icon, eyebrow, title, description, actio
     <div className={screenClass(device)}>
       <Icon name={icon} size={isMobile ? 36 : 48} className="text-olive" />
       <div className="flex flex-col items-center gap-2.5">
-        <span className="font-sans text-eyebrow uppercase text-body">{eyebrow}</span>
+        <span className={['font-sans text-eyebrow uppercase', isMobile ? 'text-muted' : 'text-body'].join(' ')}>{eyebrow}</span>
         <h1
           className={[
             'max-w-[660px] text-balance font-serif font-semibold leading-tight text-ink',

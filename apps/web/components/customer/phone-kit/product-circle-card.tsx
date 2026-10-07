@@ -68,7 +68,7 @@ export function ProductCircleCard({
       </span>
       <span className="line-clamp-2 text-center font-serif text-body-sm leading-[1.15] font-semibold text-ink">{name}</span>
       {quantityLabel !== undefined && (
-        <span className="max-w-full truncate text-center font-sans text-helper text-body">{quantityLabel}</span>
+        <span className="max-w-full truncate text-center font-sans text-helper text-muted">{quantityLabel}</span>
       )}
     </Link>
   );

@@ -289,7 +289,7 @@ export function SavedList({
     <div className="flex flex-col gap-2">
       {/* Kaydedilenler sepetle AYNI veridir; taşıma da aynı kapıdan geçer (`restoreToCart`).
           İkinci bir yol yazmak, aynı listenin iki farklı biçimde boşalabildiği bir sistem olurdu. */}
-      {saved.length === 0 && <span className="font-sans text-note text-body">{copy.empty}</span>}
+      {saved.length === 0 && <span className={['font-sans text-note', compact ? 'text-muted' : 'text-body'].join(' ')}>{copy.empty}</span>}
       {saved.map((line) => (
         <div
           key={line.kind === 'bundle' ? line.bundleId : line.variantId}

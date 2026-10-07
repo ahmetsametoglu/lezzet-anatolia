@@ -59,7 +59,7 @@ export function FunnelHeader({ backLabel, fallback, eyebrow, title, right }: Fun
         {right && <div className="flex flex-none items-center gap-3.5">{right}</div>}
       </div>
       <div className="flex flex-col gap-1 px-4 pt-1">
-        {eyebrow && <span className="font-sans text-eyebrow-xs text-terracotta-dark uppercase">{eyebrow}</span>}
+        {eyebrow && <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{eyebrow}</span>}
         <h1 ref={heroRef} className="font-serif text-page-title-sm text-ink">
           {title}
         </h1>

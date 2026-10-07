@@ -22,7 +22,7 @@ export function EmptyState({ title, description, icon, action, fill = false }: E
     <div className="flex flex-col items-center gap-3 px-7.5 py-17.5 text-center">
       {icon}
       <h2 className="font-serif text-card-title-sm text-ink">{title}</h2>
-      {description !== undefined && <p className="font-sans text-note leading-[1.6] text-body">{description}</p>}
+      {description !== undefined && <p className="font-sans text-note leading-[1.6] text-muted">{description}</p>}
       {action}
     </div>
   );

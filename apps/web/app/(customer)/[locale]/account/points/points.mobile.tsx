@@ -47,7 +47,7 @@ export function PointsMobile({ t, locale, entries, hasMore, loading, failed, loa
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="font-sans text-note font-semibold text-ink">{reasonLabel(copy, group.reason, group.points)}</span>
                 {/* Sayı yalnız birden çoksa yazılır: "1 hareket" satırı bir şey söylemeden kalabalıklaştırırdı. */}
-                <span className="font-sans text-micro text-body">
+                <span className="font-sans text-micro text-muted">
                   {group.count === 1 ? group.date : `${group.date} · ${copy.count.replace('{n}', String(group.count))}`}
                 </span>
               </div>

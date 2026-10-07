@@ -58,7 +58,7 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
         type="button"
         onClick={() => setPanelOpen(true)}
         aria-label={postal === null ? header.locationEmptyLabel : header.locationLabel.replace('{postal}', postal)}
-        className={`w-max max-w-full cursor-pointer truncate text-left font-sans text-micro leading-normal font-bold tracking-[0.08em] text-terracotta-dark transition-colors hover:text-terracotta-bright ${focusRingClass}`}
+        className={`w-max max-w-full cursor-pointer truncate text-left font-sans text-micro leading-normal font-bold tracking-[0.08em] text-terracotta transition-colors hover:text-terracotta-bright ${focusRingClass}`}
       >
         {updating ? (
           <Skeleton className="inline-block h-3 w-32 rounded-full align-middle" />

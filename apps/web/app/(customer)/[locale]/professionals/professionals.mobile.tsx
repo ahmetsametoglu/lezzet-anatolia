@@ -131,7 +131,7 @@ export function ProfessionalsMobile({ t, copy, locale, status, rejection, signed
         href={whatsappHref}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex cursor-pointer items-center justify-center gap-2 py-1 font-sans text-note font-bold text-olive-dark transition-opacity hover:opacity-75"
+        className="flex cursor-pointer items-center justify-center gap-2 py-1 font-sans text-note font-bold text-olive transition-opacity hover:opacity-75"
       >
         <MobileIcon name="whatsapp" size={17} className="text-brand-whatsapp-pure" />
         {copy.whatsapp}

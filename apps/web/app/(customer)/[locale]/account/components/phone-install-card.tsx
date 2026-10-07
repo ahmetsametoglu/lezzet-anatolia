@@ -27,7 +27,7 @@ export function PhoneInstallCard({ t }: PhoneInstallCardProps) {
           <li className="flex flex-wrap items-center gap-x-1.5">
             1. {t.installStepShare}
             <MobileIcon name="share" size={17} className="text-muted" />
-            <span className="text-body">{t.installStepShareHint}</span>
+            <span className="text-muted">{t.installStepShareHint}</span>
           </li>
           <li>2. {t.installStepMore}</li>
           <li>3. {t.installStepAdd}</li>

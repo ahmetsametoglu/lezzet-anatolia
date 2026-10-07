@@ -96,7 +96,7 @@ export function PhonePackageCard({ pack, copy, locale, place }: PhonePackageCard
           </span>
         )}
         <span className="flex items-center gap-2.5 border-t-[1.5px] border-dashed border-sand-200 pt-2.75">
-          <span className="min-w-0 flex-1 font-sans text-micro text-body">{note}</span>
+          <span className="min-w-0 flex-1 font-sans text-micro text-muted">{note}</span>
           <span className={['flex-none font-sans text-note font-bold', pack.soldOut ? 'text-muted' : 'text-olive'].join(' ')}>{copy.cta}</span>
         </span>
       </span>

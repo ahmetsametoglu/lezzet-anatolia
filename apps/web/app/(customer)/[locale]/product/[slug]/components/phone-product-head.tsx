@@ -108,7 +108,7 @@ export function PhoneProductHead({
             {content ?? ' '}
           </span>
         )}
-        <p className="font-sans text-micro text-body">{metaLine}</p>
+        <p className="font-sans text-micro text-muted">{metaLine}</p>
         {selling?.limitLabel && (
           <span className="self-start rounded-badge bg-terracotta-bg px-2 py-0.5 font-sans text-micro font-semibold text-terracotta">
             {copy.limit.replace('{n}', selling.limitLabel)}

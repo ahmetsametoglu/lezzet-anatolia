@@ -50,7 +50,7 @@ export function ChannelsCard({ t, locale, channels, compact }: ChannelsCardProps
           <div className="flex items-center gap-2.5">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="font-sans text-note font-bold text-ink">{name}</span>
-              <span className={['font-sans text-helper', channel.linked ? 'font-bold text-olive-dark' : 'text-body'].join(' ')}>
+              <span className={['font-sans text-helper', channel.linked ? 'font-bold text-olive-dark' : compact ? 'text-muted' : 'text-body'].join(' ')}>
                 {statusOf(channel)}
               </span>
               {channel.numbers.map((number) => (

@@ -20,14 +20,14 @@ export async function DevLoginLinks({ customerOnly }: DevLoginLinksProps) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center pb-4">
       <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-soft bg-sand-50/95 px-4 py-2 shadow-md">
-        <span className="font-sans text-micro font-bold uppercase tracking-wide text-body">Hızlı giriş</span>
+        <span className="font-sans text-micro font-bold uppercase tracking-wide text-muted">Hızlı giriş</span>
         {accounts.map((account) => (
           <a
             key={account.email}
             href={`/auth/dev-login?email=${encodeURIComponent(account.email)}`}
             // Müşteri zeytin, operasyon terracotta: hangi yüzeye gidildiği renkten okunur.
             className={`cursor-pointer font-sans text-note font-bold hover:underline ${
-              account.operations ? 'text-terracotta-bright' : 'text-olive-dark'
+              account.operations ? 'text-terracotta-bright' : 'text-olive'
             }`}
           >
             {account.label}
