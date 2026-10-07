@@ -47,7 +47,7 @@ export {
 export type { CustomerAddressOutcome, CustomerAddressWrite } from './customer/addresses';
 // ── Müşteri tercihleri (dil + kampanya izinleri) ──
 export { updateCustomerPreferences } from './customer/preferences';
-export type { CustomerConsentToggles, UpdateCustomerPreferencesOutcome } from './customer/preferences';
+export type { UpdateCustomerPreferencesOutcome } from './customer/preferences';
 // ── Puan cüzdanı: bakiye, eşik, kuponlar, puan→kupon çevirme ──
 export {
   listCustomerCoupons,
@@ -98,7 +98,6 @@ export {
   preferencesSubjectOf,
   readNotificationPreferences,
   resolvePreferencesToken,
-  setMarketingConsent,
   setNotificationConsent,
 } from './customer/notification-preferences';
 export type { NotificationPreferencesView, PreferencesSubject } from './customer/notification-preferences';

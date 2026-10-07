@@ -1,6 +1,6 @@
 'use server';
 
-import { startWhatsappLink, updateCustomerProfile } from '@lezzet/application';
+import { startWhatsappLink, updateCustomerPreferences, updateCustomerProfile } from '@lezzet/application';
 import { UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
@@ -70,19 +70,12 @@ export async function setConsentAction(channel: 'email' | 'whatsapp', granted: b
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
 
-    const profiles = new UserProfileService(serviceDb());
-    const profile = await profiles.getById(customerId);
-    if (!profile) throw new CustomerError('session_expired');
-
-    // Öbür kanalın kaydı KORUNUR: nesne baştan yazılsaydı e-posta iznini açmak WhatsApp'ın
-    // "ne zaman verildi" izini siliyordu.
-    await profiles.update({
-      id: customerId,
-      marketingConsent: {
-        ...profile.marketingConsent,
-        [channel]: { granted, at: new Date().toISOString(), source: 'account' },
-      },
+    const sonuc = await updateCustomerPreferences(serviceDb(), {
+      profileId: customerId,
+      source: 'account',
+      marketingConsent: { [channel]: granted },
     });
+    if (sonuc.status !== 'ok') throw new CustomerError('session_expired');
     revalidateAccount();
     return { data: true, errorKey: null };
   } catch (err) {

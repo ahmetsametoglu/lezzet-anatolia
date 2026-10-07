@@ -79,28 +79,6 @@ export async function readNotificationPreferences(
   };
 }
 
-/**
- * Kampanya iznini yazar. Öbür kanalın kaydı KORUNUR — nesne baştan yazılsaydı bir kanalı açmak
- * ötekinin "ne zaman verildi" izini silerdi (hesap sayfasının aynı dersi).
- */
-export async function setMarketingConsent(
-  db: SupabaseClient,
-  input: { customerId: string; channel: MarketingChannel; granted: boolean; source: string },
-): Promise<boolean> {
-  const profiles = new UserProfileService(db);
-  const profile = await profiles.getById(input.customerId);
-  if (!profile) return false;
-
-  await profiles.update({
-    id: input.customerId,
-    marketingConsent: {
-      ...profile.marketingConsent,
-      [input.channel]: { granted: input.granted, at: new Date().toISOString(), source: input.source },
-    },
-  });
-  return true;
-}
-
 /** Tür bazlı reddi yazar (opt-out) — şekli izinle aynı, varsayılanı ters (`notificationAllowed`). */
 export async function setNotificationConsent(
   db: SupabaseClient,

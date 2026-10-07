@@ -6,8 +6,8 @@ import {
   cancelZoneNotices,
   preferencesSubjectOf,
   resolvePreferencesToken,
-  setMarketingConsent,
   setNotificationConsent,
+  updateCustomerPreferences,
   type PreferencesSubject,
 } from '@lezzet/application';
 import type { MarketingChannel, NotificationKind } from '@lezzet/types';
@@ -44,13 +44,12 @@ export async function setCampaignConsentAction(
     const subject = await subjectOf(token);
     // Ziyaretçinin kampanya tercihi yoktur, çünkü kampanya hesaba bağlıdır; sessiz başarı olmayan bir şeyi kapattığını sandırırdı.
     if (subject.kind !== 'profile') throw new CustomerError('session_expired');
-    const ok = await setMarketingConsent(serviceDb(), {
-      customerId: subject.profile.id,
-      channel,
-      granted,
+    const sonuc = await updateCustomerPreferences(serviceDb(), {
+      profileId: subject.profile.id,
       source: token ? 'email-link' : 'account',
+      marketingConsent: { [channel]: granted },
     });
-    if (!ok) throw new CustomerError('session_expired');
+    if (sonuc.status !== 'ok') throw new CustomerError('session_expired');
     revalidate();
     return { data: true, errorKey: null };
   } catch (err) {

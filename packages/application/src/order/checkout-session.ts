@@ -1,6 +1,6 @@
 import { brand } from '@lezzet/brand';
 import { OrderService, UserProfileService, type Db } from '@lezzet/database';
-import { apportionShippingVat } from '@lezzet/domain-core';
+import { apportionShippingVat, nextMarketingConsent } from '@lezzet/domain-core';
 import { vatPortion } from '@lezzet/helper';
 import { DEFAULT_LOCALE } from '@lezzet/i18n';
 import checkoutCopy from '@lezzet/i18n/customer/checkout';
@@ -128,12 +128,10 @@ async function recordCustomerContext(db: Db, customerId: string, input: Checkout
   if (!customer) return;
 
   const patch: Record<string, unknown> = {};
-  if (input.marketingConsent) {
-    patch.marketingConsent = {
-      ...(customer.marketingConsent ?? {}),
-      email: { granted: true, at: new Date().toISOString(), source: 'checkout' },
-    };
-  }
+  const consent = input.marketingConsent
+    ? nextMarketingConsent(customer.marketingConsent, { email: true }, 'checkout', new Date().toISOString())
+    : null;
+  if (consent) patch.marketingConsent = consent;
   if (input.acquisitionSource && !customer.acquisitionSource) patch.acquisitionSource = input.acquisitionSource;
 
   if (Object.keys(patch).length > 0) await profiles.update({ id: customerId, ...patch });

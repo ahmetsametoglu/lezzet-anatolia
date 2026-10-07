@@ -22,6 +22,7 @@ export * from './order/return-split';
 export * from './identity/anchor';
 export * from './identity/b2b-application';
 export * from './identity/b2b-approval';
+export * from './identity/marketing-consent';
 export * from './identity/professional';
 export * from './identity/profile-gaps';
 export * from './identity/resolve-identity';
