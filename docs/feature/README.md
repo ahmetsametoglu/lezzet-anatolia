@@ -26,3 +26,5 @@ dosya özelliğin tek kaydı olur: kararlar, yol haritası ve açık işler orad
 - `kasa-muhasebe.md` — sertifikalı kasa, e-fatura ve KDV yükümlülüklerinin Hiboutik · Pennylane ·
   Revolut ile karşılanması: **kararlar alındı 30.09–01.10**, entegrasyon başlıyor. Yasal zemin
   (BOFiP, DGFiP fişleri), dokuz karar, veri akışı, beş fazlı yol haritası, ölçülecekler, riskler.
+- `kasa-muhasebe-inceleme.md` — 13. kararın iki ajanlı incelemesinin 16 bulgusu (07.10): her madde mevcut durum, problem,
+  olması gereken ve kanıtla; kullanıcıyla tek tek konuşuluyor, karar ve sonuç maddenin altında.
