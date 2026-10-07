@@ -17,7 +17,8 @@ export class WebhookEventService extends BaseDbService<WebhookEvent, WebhookEven
 
   /**
    * Kontrol ile yazım tek ifadede: "önce sorgula, yoksa yaz" arasında ikinci webhook girerse iki işleyici birden "yeni" der ve
-   * tahsilat iki kez yazılır.
+   * tahsilat iki kez yazılır. Düşmüş olayın (damgasız, hatalı) tekrarı yeniden alınır, yoksa sağlayıcının yeniden denemesi olayı
+   * kaybettirirdi; işlenmiş ya da hâlâ işlenen olayın tekrarı alınmaz.
    */
   async claim(input: WebhookEventInsert): Promise<{ fresh: boolean; event: WebhookEvent }> {
     const inserted = await this.bulkUpsertIgnoring([input], 'provider,event_id');
@@ -25,7 +26,10 @@ export class WebhookEventService extends BaseDbService<WebhookEvent, WebhookEven
 
     const existing = await this.getOneBy({ provider: input.provider, eventId: input.eventId });
     if (!existing) throw new Error(`webhook_event: olay sahiplenilemedi (${input.provider}/${input.eventId})`);
-    return { fresh: false, event: existing };
+    if (existing.processedAt !== null || existing.error === null) return { fresh: false, event: existing };
+    // Hata koşullu silinir: aynı anda gelen iki tekrardan satırı yalnız biri alır.
+    const retaken = await this.updateIf(existing.id, { isNull: ['processedAt'], notNull: ['error'] }, { error: null });
+    return retaken ? { fresh: true, event: retaken } : { fresh: false, event: existing };
   }
 
   /** İşlem bitti damgası — "geldi ama işlenemedi" ile "işlendi" ayrımını korur. */

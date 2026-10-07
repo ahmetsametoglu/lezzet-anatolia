@@ -317,6 +317,20 @@ describe('kart muhasebesi — komisyon ve aktarım', () => {
     expect(await transferRows()).toEqual([]);
   });
 
+  it('düşen olay sağlayıcının yeniden göndermesiyle işlenir — tekrar "yinelenen" sayılıp atlanmaz, aktarım kaybolmaz', async () => {
+    await settings.remove('card_payout_account_id');
+    const event: PaymentEvent = {
+      key: `PAYOUT_COMPLETED:${stamp}_po6`,
+      kind: 'payout_completed',
+      payout: { id: `po_${stamp}_tekrar`, amountCents: 700, currency: 'EUR', valueDate: dayOffset(0) },
+    };
+    expect(await handlePaymentEvent(event, providerAccount)).toMatchObject({ status: 'error' });
+
+    await settings.override('card_payout_account_id', bankAccount);
+    expect(await handlePaymentEvent(event, providerAccount)).toMatchObject({ status: 'ok', action: 'payout_recorded' });
+    expect((await transferRows()).filter((row) => row.amountCents === 700)).toHaveLength(1);
+  });
+
   it('aktarım hesabı banka değilse olay işlenmemiş kalır — kart parası bankadan başka hesaba yazılmaz', async () => {
     await settings.override('card_payout_account_id', cashAccount);
 

@@ -67,7 +67,7 @@ export async function handlePaymentEvent(
     await events.markProcessed(claim.event.id);
     return outcome;
   } catch (error) {
-    // Damga atılmaz ki olay elle yeniden denenebilsin; iş kaydı sağlık ekranına düşmediği için teknik iz ayrıca bırakılır.
+    // Damga atılmaz, hata yazılır: sağlayıcının tekrarı olayı yeniden alır. İş kaydı sağlık ekranına düşmediği için teknik iz ayrıca bırakılır.
     const message = error instanceof Error ? error.message : String(error);
     await events.markFailed(claim.event.id, message);
     await captureError(error, { source: SOURCES.webhook, context: { provider: 'revolut', eventKey: event.key, kind: event.kind } });

@@ -144,7 +144,7 @@ Müşteriye GİTMEYEN satır (15.29 · kullanıcı kararı 10.09): operatör soh
 
 ## WebhookEvent (dış olay kaydı)
 
-Ödeme ve mesajlaşma webhook'ları için tekrar-işleme kilidi (idempotency): aynı olay ikinci kez gelirse no-op (bkz. `STACK.md §13`).
+Ödeme, mesajlaşma ve kargo webhook'ları için tekrar-işleme kilidi (idempotency): işlenmiş ya da hâlâ işlenen olay ikinci kez gelirse no-op; düşmüş olayın tekrarı yeniden alınır (bkz. `STACK.md §13`).
 
 <!-- alanlar:webhook_event -->
 | Kolon | Tip | Null | Varsayılan |

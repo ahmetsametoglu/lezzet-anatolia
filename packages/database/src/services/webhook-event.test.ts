@@ -48,6 +48,30 @@ describe('webhook olayı sahiplenme (02.4)', () => {
     expect(a.event.id).toBe(b.event.id);
   });
 
+  it('DÜŞMÜŞ olayın tekrarı yeniden alınır ve hatası silinir; işlendikten sonraki tekrarı alınmaz', async () => {
+    const dusenId = `evt_test_${stamp}_dusen`;
+    const ilk = await events.claim({ provider, eventId: dusenId, type: 'payout_completed' });
+    await events.markFailed(ilk.event.id, 'aktarım hesabı ayarı yok');
+
+    const tekrar = await events.claim({ provider, eventId: dusenId, type: 'payout_completed' });
+    expect(tekrar).toMatchObject({ fresh: true, event: { id: ilk.event.id, error: null } });
+
+    await events.markProcessed(tekrar.event.id);
+    expect((await events.claim({ provider, eventId: dusenId, type: 'payout_completed' })).fresh).toBe(false);
+  });
+
+  it('düşmüş olaya AYNI ANDA gelen iki tekrardan yalnız BİRİ alınır — olay iki kez işlenmez', async () => {
+    const ikizId = `evt_test_${stamp}_ikiz`;
+    const ilk = await events.claim({ provider, eventId: ikizId, type: 'refund_completed' });
+    await events.markFailed(ilk.event.id, 'geçici hata');
+
+    const [a, b] = await Promise.all([
+      events.claim({ provider, eventId: ikizId, type: 'refund_completed' }),
+      events.claim({ provider, eventId: ikizId, type: 'refund_completed' }),
+    ]);
+    expect([a.fresh, b.fresh].filter(Boolean)).toHaveLength(1);
+  });
+
   it('BAŞKA sağlayıcı aynı olay kimliğini kullanabilir — tekillik ÇİFTTEDİR', async () => {
     const ortakId = `evt_test_${stamp}_ortak`;
     const revolut = await events.claim({ provider: 'revolut', eventId: ortakId, type: 'x' });

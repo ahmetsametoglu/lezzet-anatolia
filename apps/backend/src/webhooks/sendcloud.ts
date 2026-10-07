@@ -85,11 +85,8 @@ export async function handleSendcloudWebhook(c: Context<AppEnv>, provider: Shipp
     payload: { parcelId: identity.parcelId, reportedCode: identity.reportedCode },
   });
 
-  /*
-    Tekrar gelen olay damgalıysa işlenmiştir ve 200 döner; damgasızsa önceki tur düşmüştür ve yeniden işlenir, çünkü en olası
-    düşüş geçicidir ve koşulsuz 200 yeniden deneme penceresini boşa harcardı.
-  */
-  if (!claim.fresh && claim.event.processedAt) return c.json({ duplicate: true }, 200);
+  // Tekrar gelen olay işlenmişse ya da hâlâ işleniyorsa 200 döner; önceki tur düştüyse sahiplenme onu yeniden verir.
+  if (!claim.fresh) return c.json({ duplicate: true }, 200);
 
   const box = await new OrderBoxService(serviceDb()).getByParcelRef(identity.parcelId);
   if (!box?.shipmentId) {

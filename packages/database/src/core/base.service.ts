@@ -636,14 +636,20 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    * Dönüş GÜNCEL SATIRDIR, boolean değil: çağıran çoğu zaman yazdığı satırı okumak zorunda
    * (ekranı tazelemek, sonucu doğrulamak) ve ikinci bir tur atmak aynı soruyu iki kez sormaktır.
    */
-  protected async updateIfNull(id: string, nullField: string, patch: Record<string, unknown>): Promise<TDb | null> {
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .update(this.toDbRow(patch))
-      .eq('id', id)
-      .is(this.column(nullField), null)
-      .select()
-      .maybeSingle();
+  protected updateIfNull(id: string, nullField: string, patch: Record<string, unknown>): Promise<TDb | null> {
+    return this.updateIf(id, { isNull: [nullField] }, patch);
+  }
+
+  /** `updateIfNull`in genel hâli: satır yalnız boş ve dolu olması istenen kolonların hepsi tutarsa güncellenir, tutmazsa `null` döner. */
+  protected async updateIf(
+    id: string,
+    conditions: { isNull?: readonly string[]; notNull?: readonly string[] },
+    patch: Record<string, unknown>,
+  ): Promise<TDb | null> {
+    let query = this.supabase.from(this.tableName).update(this.toDbRow(patch)).eq('id', id);
+    for (const field of conditions.isNull ?? []) query = query.is(this.column(field), null);
+    for (const field of conditions.notNull ?? []) query = query.not(this.column(field), 'is', null);
+    const { data, error } = await query.select().maybeSingle();
     if (error) throw error;
     return data ? this.dbSchema.parse(this.toApp(data)) : null;
   }
