@@ -15,7 +15,7 @@ export function registerDifferenceText(difference: RegisterDayDifference): strin
     case 'vat':
       return `${percent(difference.vatRate, Number.isInteger(difference.vatRate) ? 0 : 1)} KDV'li satış bizde ${money(difference.oursCents)}, kasada ${money(difference.registerCents)}`;
     case 'payment':
-      return `${difference.method ? PAYMENT_METHOD_LABELS[difference.method] : 'yöntemi bilinmeyen'} ödeme bizde ${money(difference.oursCents)}, kasada ${money(difference.registerCents)}`;
+      return `ödeme (${difference.method ? PAYMENT_METHOD_LABELS[difference.method] : 'yöntemi bilinmeyen'}) bizde ${money(difference.oursCents)}, kasada ${money(difference.registerCents)}`;
     case 'unknown_sale':
       return `kasada bizde olmayan satış #${difference.saleId}`;
     case 'missing_sale':
