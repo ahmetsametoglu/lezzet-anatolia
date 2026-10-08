@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { addressContact, addressTitle } from '@lezzet/address';
 import { brand } from '@lezzet/brand';
-import { pointAddress, pointText, shippingChoiceView, shippingNotice } from '@lezzet/helper';
+import { cartAddedVat, vatTotalOf } from '@lezzet/domain-core';
+import { pointAddress, pointText, shippingChoiceView, shippingNotice, vatSummaryOf } from '@lezzet/helper';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import type { PaymentMethod } from '@lezzet/types';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -586,8 +587,12 @@ export function OrderSummary(props: CheckoutViewProps) {
       : payment.shippingFeeCents > 0
         ? formatPrice(payment.shippingFeeCents, locale)
         : summary.free;
+  /* KDV hariç fiyatta (onaylı işletme) KDV oran başına ara toplamın altında, teslimat en altta. Satırlar adres seçilince ödeme
+     cevabından, öncesinde sepetten; toplam da aynı kaynaktan ve KDV dahildir. */
+  const vat = payment ? payment.goodsVat : cartAddedVat(cart.lines, cart);
+  const vatText = vatSummaryOf({ pricesIncludeVat: cart.pricesIncludeVat, vat, zeroRated: cart.zeroRated }, locale);
   // Adres seçilmeden yalnız kalem toplamı bilinir; kargo ücreti bilinmiyorsa toplam da bilinmez.
-  const totalCents = payment ? payment.orderTotalCents : cart.totalCents;
+  const totalCents = payment ? payment.orderTotalCents : cart.totalCents + vatTotalOf(vat);
   /*
     Döküm ve toplam aynı okumadan: özet varsa satırlar da indirim de ondan, yoksa ikisi de sepetten, asla karışık, çünkü sepet iki
     yüzeyde paylaşıldığı için liste ile toplam ayrışabilir. Adres seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur.
@@ -658,6 +663,17 @@ export function OrderSummary(props: CheckoutViewProps) {
             tone="olive"
           />
         )}
+        {settled && vatText.subtotalLabel !== null && (
+          <SummaryRow
+            label={vatText.subtotalLabel}
+            value={
+              summaryLines.some((line) => line.lineTotalCents === null)
+                ? UNKNOWN_AMOUNT
+                : formatPrice(summaryLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0) - discountCents, locale)
+            }
+          />
+        )}
+        {settled && vatText.vatRows.map((row) => <SummaryRow key={row.key} label={row.label} value={row.value} />)}
         {/* Ücretsizde yalnız tutar yeşil, çünkü ücretsizlik bir kazançtır; `payment` yokken ton nötr kalır, yoksa "—" yeşil çıkar
             ve iyi haber gibi okunurdu. */}
         <SummaryRow
@@ -668,7 +684,7 @@ export function OrderSummary(props: CheckoutViewProps) {
         {/* Toplam satırı tasarımda **Karla 700/18** — serif DEĞİL. Serif yapmak onu bir başlığa
             çeviriyor; oysa bu bir sayı satırı ve üstündeki satırlarla aynı ailede okunmalı. */}
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
-          <span className="font-sans text-card-title-sm font-bold text-ink">{summary.total}</span>
+          <span className="font-sans text-card-title-sm font-bold text-ink">{vatText.totalLabel ?? summary.total}</span>
           {/* Sepet okunmadan toplam yazılmaz: `formatPrice(0)` misafirde kalıcı olarak "0,00 €" gösterir ve sepet boş ya da bedava
               gibi okunurdu. */}
           {settled ? (
@@ -679,7 +695,7 @@ export function OrderSummary(props: CheckoutViewProps) {
             <Skeleton className="h-4 w-20" />
           )}
         </div>
-        <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
+        <span className="font-sans text-micro text-muted">{vatText.note}</span>
       </div>
 
       {/* Sepet okunamadıysa bu söylenir: boş sepet bir durum, ulaşılamayan sepet bir arızadır. */}

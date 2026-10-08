@@ -15,6 +15,7 @@ const payment: NonNullable<CheckoutSnapshot['payment']> = {
   shippingFeeCents: 0,
   shippingFreeReason: 'route',
   orderTotalCents: 4000,
+  goodsVat: [],
   minBasketOk: true,
   missingForMinBasketCents: 0,
   // Eşiğin dayandığı yer engel kararına girmez, yalnız cümlede geçer; gerçek değer boş metnin de geçtiği varsayımını önler.

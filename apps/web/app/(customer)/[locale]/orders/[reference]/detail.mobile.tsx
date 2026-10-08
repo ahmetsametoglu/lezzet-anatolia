@@ -1,7 +1,7 @@
 'use client';
 
 import { isCourierOnTheWay } from '@lezzet/domain-core';
-import { discountRowLabel } from '@lezzet/helper';
+import { discountRowLabel, vatSummaryOf } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import ordersMessages from '@lezzet/i18n/customer/orders';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
@@ -40,8 +40,10 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
 
   // Para satırları toplamı açıkladığı için önce gelir ve sıfır indirim indirim olmadığı için çizilmez. Koli sırası yalnız birden
   // çok kolide yazılır.
+  // KDV hariç fiyatta (onaylı işletme) KDV ara toplamın altında, teslimat en altta; toplam KDV dahildir.
+  const vatText = vatSummaryOf(order, locale);
   const rows: SummaryRow[] = [
-    { key: 'subtotal', label: d.subtotal, value: formatPrice(order.subtotalCents, locale) },
+    { key: 'subtotal', label: vatText.subtotalLabel ?? d.subtotal, value: formatPrice(order.subtotalCents, locale) },
     ...(order.discountCents > 0
       ? [
           {
@@ -52,6 +54,7 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
           },
         ]
       : []),
+    ...vatText.vatRows,
     { key: 'shipping', label: d.shipping, value: order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : d.shippingFree },
     ...(delivery === '' ? [] : [{ key: 'delivery', label: d.delivery, value: delivery }]),
     ...(address === '' ? [] : [{ key: 'address', label: d.address, value: address }]),
@@ -102,7 +105,7 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
         </ul>
       </section>
 
-      <SummaryPanel rows={rows} totalLabel={d.total} totalValue={formatPrice(order.totalCents, locale)} totalTone="terracotta" note={refundNote} />
+      <SummaryPanel rows={rows} totalLabel={vatText.totalLabel ?? d.total} totalValue={formatPrice(order.totalCents, locale)} totalTone="terracotta" note={refundNote} />
 
       <PhoneReorderButton locale={locale} orderId={order.id} />
 

@@ -153,6 +153,8 @@ const CartLineViewShape = {
   priceChange: z.object({ previousCents: z.number().int() }).optional(),
   /** Satır toplamı — fiyat yoksa `null`. Sıfır YAZILMAZ (`CLAUDE §1`). */
   lineTotalCents: z.number().int().nullable(),
+  /** KDV oranı; KDV hariç fiyatlı sepette özet KDV'yi oran başına ekler (`cartAddedVat`). */
+  vatRate: z.number(),
   /** Bu satır çıkarılmadan checkout'a geçilemez: tükenmiş ya da satışa kapanmış. */
   blocked: z.boolean(),
   /** Kalem hangi yoldan gelir; **`null` = yer bilinmiyor** ve o hâlde ayrım YAPILMAZ. */
@@ -288,6 +290,10 @@ export const MeCartViewSchema = z.object({
   shippingFreeRemainingCents: z.number().int(),
   /** Kapı siparişinin yalnız kendi kalemleriyle alacağı indirim; bölünmüş sepette düğme o siparişin tutarını yazar. */
   localOrderDiscountCents: z.number().int(),
+  /** Kalem fiyatları KDV dahil mi; değilse (onaylı işletme) özet KDV'yi oran başına ekler ve toplam KDV dahildir. */
+  pricesIncludeVat: z.boolean(),
+  /** Ters yükleme (doğrulanmış AB vergi numarasıyla Almanya'ya işletme satışı); KDV eklenmez. */
+  zeroRated: z.boolean(),
 });
 export type MeCartView = z.infer<typeof MeCartViewSchema>;
 

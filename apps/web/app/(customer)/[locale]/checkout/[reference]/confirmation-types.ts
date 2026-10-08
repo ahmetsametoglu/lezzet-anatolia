@@ -55,6 +55,11 @@ export interface ConfirmationView {
   /** Kampanya adı SİPARİŞTEKİ kopyadan çözülmüş hâliyle; boşsa satır genel adında kalır. */
   discountName: string;
   shippingFeeCents: number;
+  /** Kalem fiyatları KDV dahil mi; değilse (onaylı işletme) özet KDV'yi oran başına yazar ve toplam KDV dahildir. */
+  pricesIncludeVat: boolean;
+  zeroRated: boolean;
+  /** KDV hariç fiyatta kalemlere eklenen KDV, oran başına; KDV dahil fiyatta boş. */
+  vat: { vatRate: number; vatCents: number }[];
   /** Müşterinin ADI (ilk ad kutlama başlığında) ve e-postası — profilden, sipariş satırından değil. */
   customerFirstName: string;
   customerEmail: string;

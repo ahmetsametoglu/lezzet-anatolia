@@ -141,11 +141,13 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     shippingFree: threshold.free,
     shippingFreeRemainingCents: threshold.remainingForFreeCents,
     localOrderDiscountCents: view.localOrderDiscountCents,
+    pricesIncludeVat: view.pricesIncludeVat,
+    zeroRated: view.zeroRated,
   };
 }
 
 /**
- * Satır, iki tür; `vatRate` ve `shippable` düşer, ilki checkout'un işi, ikincisinin kararı `route`ta.
+ * Satır, iki tür; `shippable` düşer, kararı `route`ta. `vatRate` kalır, çünkü KDV hariç sepetin özeti adet değişince istemcide tazelenir.
  */
 function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][number] {
   const view = {
@@ -158,6 +160,7 @@ function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][n
     limitCap: line.limitCap,
     priceChange: line.priceChange,
     lineTotalCents: line.lineTotalCents,
+    vatRate: line.vatRate,
     blocked: line.blocked,
     route: line.route,
     // Grup kapıdan gelir, `route`tan türetilmez; kural `cartGroupOf`ta.

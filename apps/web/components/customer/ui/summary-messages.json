@@ -6,8 +6,7 @@
     "discountCampaignPercent": "kampanya %{percent}",
     "delivery": "Teslimat",
     "free": "Ücretsiz",
-    "total": "Genel toplam",
-    "vatIncluded": "Fiyatlara KDV dahildir."
+    "total": "Genel toplam"
   },
   "fr": {
     "title": "Récapitulatif",
@@ -16,8 +15,7 @@
     "discountCampaignPercent": "promotion {percent} %",
     "delivery": "Livraison",
     "free": "Offerte",
-    "total": "Total",
-    "vatIncluded": "Prix TTC."
+    "total": "Total"
   },
   "de": {
     "title": "Bestellübersicht",
@@ -26,7 +24,6 @@
     "discountCampaignPercent": "Aktion {percent} %",
     "delivery": "Lieferung",
     "free": "Kostenlos",
-    "total": "Gesamtsumme",
-    "vatIncluded": "Preise inkl. MwSt."
+    "total": "Gesamtsumme"
   }
 }

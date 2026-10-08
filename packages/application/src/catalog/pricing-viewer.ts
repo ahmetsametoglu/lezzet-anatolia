@@ -26,6 +26,8 @@ export interface PricingViewer {
   customerRule?: CustomerPriceRule | null;
   /** Profesyonel müşteri mi (`isProfessionalCustomer`); tüketici promosyonları (kampanya, kupon, puan) ona kapalıdır. */
   professional: boolean;
+  /** AB vergi numarası VIES ile doğrulanmış mı; ters yüklemenin bir şartı (`resolveVatTreatment`). */
+  vatNumberValid: boolean;
 }
 
 /** Ziyaretçi — kimliksiz, perakende. Bağlamı olmayan okumaların (boş bağlam) hâli. */
@@ -36,6 +38,7 @@ export const VISITOR: PricingViewer = {
   groupPercentOff: null,
   customerRule: null,
   professional: false,
+  vatNumberValid: false,
 };
 
 /**
@@ -83,5 +86,6 @@ export async function pricingViewerFor(db: SupabaseClient, profile: UserProfile 
         ? { basis: profile.priceRuleBasis, percent: profile.priceRulePercent }
         : null,
     professional: isProfessionalCustomer(profile),
+    vatNumberValid: profile.vatNumberValid === true,
   };
 }

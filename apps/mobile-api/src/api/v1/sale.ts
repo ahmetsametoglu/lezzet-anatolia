@@ -9,6 +9,7 @@ import {
   sellOnSite,
   toWireCampaign,
   vehicleWarehouseOf,
+  VISITOR,
   type PlaceWarehouses,
 } from '@lezzet/application';
 import { customerBusinessOf } from '@lezzet/domain-core';
@@ -164,7 +165,7 @@ sale.get('/catalog', async (c) => {
       onlyStockedHere: c.get('salePlace') === 'van',
     },
     place: salePlaceOf(c.get('warehouseId')),
-    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null, professional: false },
+    viewer: VISITOR,
     limit: DEFAULT_PAGE_SIZE,
   });
 
@@ -204,7 +205,7 @@ sale.get('/catalog/:slug/variants', async (c) => {
     locale: locale.data,
     slug: c.req.param('slug'),
     place: salePlaceOf(c.get('warehouseId')),
-    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null, professional: false },
+    viewer: VISITOR,
   });
   if (!detail) return fail(c, 'product_not_found', 404);
 
@@ -251,7 +252,7 @@ sale.get('/scan', async (c) => {
   if (variant === null) return ok(c, SaleScanResponseSchema.parse({ status: 'unknown_code' }));
 
   const place = salePlaceOf(c.get('warehouseId'));
-  const viewer = { channel: 'b2c' as const, b2bApproved: false, customerId: null, groupPercentOff: null, professional: false };
+  const viewer = VISITOR;
 
   const page = await getCatalogData(db, {
     locale: locale.data,

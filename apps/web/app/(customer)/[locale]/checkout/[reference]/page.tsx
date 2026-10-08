@@ -23,7 +23,7 @@ import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
 import { ConfirmationClient } from './confirmation-client';
 import { revolutPaymentGateway } from '@/lib/revolut';
-import { orderOutcomeOf, paymentStateOf } from '@lezzet/domain-core';
+import { isFulfillmentSettled, isZeroRated, orderAddedVat, orderOutcomeOf, paymentStateOf } from '@lezzet/domain-core';
 import type { ConfirmationView } from './confirmation-types';
 import messages from './messages.json';
 // Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`).
@@ -121,6 +121,9 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
      */
     discountName: order.discountLabel ? resolveLocalizedText(order.discountLabel, locale as Locale) : '',
     shippingFeeCents: order.shippingFeeCents,
+    pricesIncludeVat: order.pricesIncludeVat,
+    zeroRated: isZeroRated(order.vatTreatment),
+    vat: orderAddedVat(order, items, isFulfillmentSettled(order.status)).map(({ vatRate, vatCents }) => ({ vatRate, vatCents })),
     // Yalnız İLK ad (tasarım: "Teşekkürler, Ahmet") — tam ad kutlama cümlesini resmîleştirirdi.
     customerFirstName: profile.name ? (profile.name.split(' ')[0] ?? '') : '',
     customerEmail: profile.email ?? '',

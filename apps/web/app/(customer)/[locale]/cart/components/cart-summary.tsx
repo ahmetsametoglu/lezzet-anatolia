@@ -1,5 +1,7 @@
 'use client';
 
+import { cartAddedVat, vatTotalOf } from '@lezzet/domain-core';
+import { vatSummaryOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -102,6 +104,9 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
   const copy = cartMessages[locale];
   // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor, yazan sunucu.
   const discountCents = view.subtotalCents - view.totalCents;
+  // KDV hariç sepette (onaylı işletme) KDV oran başına eklenir ve toplam KDV dahildir; dahil sepette satır yoktur.
+  const vat = cartAddedVat(view.lines, view);
+  const vatText = vatSummaryOf({ pricesIncludeVat: view.pricesIncludeVat, vat, zeroRated: view.zeroRated }, locale);
   // Sepetin tamamı kargodaysa satır kargonun ücretsiz mi yoksa ödeme adımında mı belli olacağını söyler; tutarı taşıyıcı fiyatlar.
   const threshold = view.shippingOnly ? shippingGroupFree(view) : null;
   /* Sepetin tamamı kapıya gidiyorsa teslimat ücretsizdir; karışık sepette her grup kendi bloğunda konuşur, yol bilinmiyorken söz
@@ -127,7 +132,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
           cümleye dönüşürdü. */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between font-sans text-body-sm">
-          <span className="text-body">{t.subtotal}</span>
+          <span className="text-body">{vatText.subtotalLabel ?? t.subtotal}</span>
           <span className="font-bold text-ink">{formatPrice(view.subtotalCents, locale)}</span>
         </div>
 
@@ -147,6 +152,14 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
             cümlesiyle aynı aile. Sunucu yalnız KAZANILABİLİR olanı gönderir (eşiğe varmak bugünkü
             indirimi büyütmüyorsa alan `null`), yani buradaki cümle her zaman tutulabilir bir sözdür. */}
         {reachableNote !== null && <span className="font-sans text-note leading-relaxed text-olive">{reachableNote}</span>}
+
+        {/* KDV ara toplamın hemen altında, teslimat en altta: işletme önce malın vergisini, sonra teslimatı okur. */}
+        {vatText.vatRows.map((row) => (
+          <div key={row.key} className="flex items-center justify-between font-sans text-body-sm">
+            <span className="text-body">{row.label}</span>
+            <span className="font-bold text-ink">{row.value}</span>
+          </div>
+        ))}
 
         {threshold !== null && (
           <div className="flex items-center justify-between font-sans text-body-sm">
@@ -173,10 +186,10 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
             compact ? 'pt-2 text-copy' : 'pt-2.5 text-card-title-sm',
           ].join(' ')}
         >
-          <span>{summary.total}</span>
-          <span>{formatPrice(view.totalCents, locale)}</span>
+          <span>{vatText.totalLabel ?? summary.total}</span>
+          <span>{formatPrice(view.totalCents + vatTotalOf(vat), locale)}</span>
         </div>
-        <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
+        <span className="font-sans text-micro text-muted">{vatText.note}</span>
       </div>
 
       <FreeShippingProgress view={view} t={t} locale={locale} />

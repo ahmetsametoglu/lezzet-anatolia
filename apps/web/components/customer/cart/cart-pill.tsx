@@ -1,5 +1,6 @@
 'use client';
 
+import { cartAddedVat, vatTotalOf } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { focusRingClass } from '@/components/customer/ui/button';
@@ -24,7 +25,9 @@ export function CartPill({ locale, label, copy }: CartPillProps) {
   const text = !ready
     ? label
     : count > 0
-      ? (count === 1 ? copy.itemsOne : copy.items).replace('{n}', String(count)).replace('{total}', formatPrice(view.totalCents, locale))
+      ? (count === 1 ? copy.itemsOne : copy.items)
+          .replace('{n}', String(count))
+          .replace('{total}', formatPrice(view.totalCents + vatTotalOf(cartAddedVat(view.lines, view)), locale))
       : copy.empty;
 
   return (

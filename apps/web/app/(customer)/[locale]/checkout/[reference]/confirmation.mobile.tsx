@@ -1,5 +1,6 @@
 'use client';
 
+import { vatSummaryOf } from '@lezzet/helper';
 import { confirmationCopy, type Locale } from '@lezzet/i18n';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
@@ -51,7 +52,7 @@ export function ConfirmationMobile(props: ConfirmationViewProps) {
             { key: 'delivery', label: c.delivery, value: deliveryLabel(copy, view, locale) },
             { key: 'payment', label: c.payment, value: paymentLabel(copy, view) },
           ]}
-          totalLabel={c.total}
+          totalLabel={vatSummaryOf(view, locale).totalLabel ?? c.total}
           totalValue={formatPrice(view.totalCents, locale)}
         />
       </div>

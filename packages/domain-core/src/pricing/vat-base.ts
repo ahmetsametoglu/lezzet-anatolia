@@ -67,3 +67,12 @@ export function grossTotalCents(
 ): number {
   return vatByRate(goods, shipping, pricesIncludeVat, zeroRated).reduce((sum, line) => sum + line.grossCents, 0);
 }
+
+/**
+ * Müşteri özetinin KDV satırları: KDV hariç fiyatlı kalemlere eklenen KDV, oran başına. KDV dahil fiyatta ve ters yüklemede boştur;
+ * kargo ücreti KDV dahil olduğu için girmez.
+ */
+export function addedVatOf(goods: readonly RateAmount[], pricesIncludeVat: boolean, zeroRated = false): RateVat[] {
+  if (pricesIncludeVat) return [];
+  return vatByRate(goods, [], false, zeroRated).filter((line) => line.vatCents > 0);
+}

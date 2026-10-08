@@ -173,6 +173,11 @@ export const MeOrderDetailSchema = z.object({
   discountLabel: z.string(),
   shippingFeeCents: z.number().int(),
   totalCents: z.number().int(),
+  /** Kalem fiyatları KDV dahil mi; değilse (onaylı işletme) özet KDV'yi oran başına yazar, toplam KDV dahildir. */
+  pricesIncludeVat: z.boolean(),
+  zeroRated: z.boolean(),
+  /** KDV hariç fiyatta kalemlere eklenen KDV, oran başına; KDV dahil fiyatta boş. */
+  vat: z.array(z.object({ vatRate: z.number(), vatCents: z.number().int() })),
   paymentMethod: PaymentMethodEnum.nullable(),
   paymentStatus: PaymentStatusEnum,
   /** Vadeli (B2B) — ödeme hapının ayrı bir hâli. */

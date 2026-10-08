@@ -3,17 +3,19 @@ import {
   decideCartAgainstWarehouse,
   meetsMinBasket,
   minBasketBaseOf,
+  resolveVatTreatment,
   undeliverableTotalOf,
+  vatBaseOf,
   type CartLineInput,
   type CartLineRoute,
   type DiscountableLine,
 } from '@lezzet/domain-core';
-import { resolveLocalizedText } from '@lezzet/types';
+import { CountryEnum, resolveLocalizedText } from '@lezzet/types';
 import type { Business, PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
 import { EMPTY_IMAGE, EMPTY_PRODUCT_CONTEXT, imageOf, sellingOf, toVariant } from '../catalog/map';
 import type { ProductContext } from '../catalog/map';
 import { loadProductContext } from '../catalog/product-context';
-import { pricingViewerOf } from '../catalog/pricing-viewer';
+import { pricingViewerOf, type PricingViewer } from '../catalog/pricing-viewer';
 import type { PlaceWarehouses, StorefrontImage } from '../catalog/storefront-types';
 import { minBasketFor } from './min-basket';
 import { settingScopeOf } from './setting-scope';
@@ -316,6 +318,9 @@ export async function getCartView(
     undeliverableSubtotalCents,
     // Bölünmüş değilse kapı siparişi sepetin kendisidir ya da hiç yoktur.
     localOrderDiscountCents: localOrderDiscountCents ?? (lines.some((l) => cartGroupOf(l) === 'local') ? discountAmountOf(discount) : 0),
+    // Taban fiyatın okunduğu kanaldan; ters yükleme yalnız onaylı işletmenin KDV hariç fiyatında görünür bir şey değiştirir.
+    pricesIncludeVat: vatBaseOf(viewer.channel) === 'ttc',
+    zeroRated: zeroRatedFor(viewer, opts.country),
     /**
      * Doğacak tek sipariş kargo siparişiyse lojistik tabanı yoktur. İki gruplu sepette taban kapı siparişinin kendi tutarına
      * uygulanır, çünkü kargo kalemleri o siparişe girmez.
@@ -471,4 +476,13 @@ function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | unde
     // Pakette tek bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır.
     shippable: !pack.inRouteOnly,
   };
+}
+
+/** Ters yükleme sepette de siparişteki kuralla sorulur; ülkesi bilinmeyen okuma %0 açmaz, yanlış %0 bizim riskimizdir. */
+function zeroRatedFor(viewer: PricingViewer, country: string | null | undefined): boolean {
+  const deliveryCountry = CountryEnum.safeParse(country);
+  return (
+    deliveryCountry.success &&
+    resolveVatTreatment({ channel: viewer.channel, deliveryCountry: deliveryCountry.data, vatNumberValid: viewer.vatNumberValid }).zeroRated
+  );
 }

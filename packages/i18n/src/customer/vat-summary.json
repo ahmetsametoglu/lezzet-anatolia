@@ -1,0 +1,26 @@
+{
+  "tr": {
+    "vatIncluded": "Fiyatlara KDV dahildir.",
+    "subtotalHt": "Ara toplam (KDV hariç)",
+    "vatRate": "KDV (%{rate})",
+    "totalTtc": "Genel toplam (KDV dahil)",
+    "vatAdded": "Fiyatlar KDV hariçtir, KDV toplama eklenir.",
+    "reverseCharge": "Fiyatlar KDV hariçtir; KDV'yi alıcı beyan eder (ters yükümlülük)."
+  },
+  "fr": {
+    "vatIncluded": "Prix TTC.",
+    "subtotalHt": "Sous-total HT",
+    "vatRate": "TVA ({rate} %)",
+    "totalTtc": "Total TTC",
+    "vatAdded": "Prix HT, TVA ajoutée au total.",
+    "reverseCharge": "Prix HT, autoliquidation de la TVA par le client."
+  },
+  "de": {
+    "vatIncluded": "Preise inkl. MwSt.",
+    "subtotalHt": "Zwischensumme netto",
+    "vatRate": "MwSt. ({rate} %)",
+    "totalTtc": "Gesamtsumme brutto",
+    "vatAdded": "Nettopreise, die MwSt. wird zur Summe addiert.",
+    "reverseCharge": "Nettopreise, Steuerschuldnerschaft des Leistungsempfängers."
+  }
+}

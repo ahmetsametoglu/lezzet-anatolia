@@ -34,7 +34,8 @@
     "./customer/invite": "./src/customer/invite.json",
     "./customer/neighbor": "./src/customer/neighbor.json",
     "./customer/feedback": "./src/customer/feedback.json",
-    "./customer/professionals": "./src/customer/professionals.json"
+    "./customer/professionals": "./src/customer/professionals.json",
+    "./customer/vat-summary": "./src/customer/vat-summary.json"
   },
   "types": "./src/index.ts",
   "scripts": {

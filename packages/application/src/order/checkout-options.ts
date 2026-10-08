@@ -2,6 +2,7 @@ import { OrderService, SettingsService, UserProfileService, type Db } from '@lez
 import {
   PAYMENT_TERM_DAYS_DEFAULT,
   PAYMENT_TERM_DAYS_KEY,
+  addedVatOf,
   apportionShippingVat,
   creditPosition,
   deriveChannel,
@@ -52,6 +53,8 @@ export interface CheckoutPaymentResult {
   missingForMinBasketCents: number;
   /** Kalem fiyatları KDV dahil mi; değilse toplam, kalemlere eklenen KDV'yi taşır. */
   pricesIncludeVat: boolean;
+  /** KDV hariç fiyatta kalemlere eklenen KDV, oran başına; özet bunu yazar. KDV dahil fiyatta ve ters yüklemede boş. */
+  goodsVat: { vatRate: number; vatCents: number }[];
   /** Müşteriden tahsil edilecek KDV dahil toplam (sepet + kargo, cent); kargo ücreti bilinmiyorsa `null`. */
   orderTotalCents: number | null;
 }
@@ -137,14 +140,11 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
       deliveryCountry: deliveryCountry.data,
       vatNumberValid: customer.vatNumberValid ?? undefined,
     }).zeroRated;
-  const goodsCents = pricesIncludeVat
-    ? input.basketCents
-    : grossTotalCents(
-        input.lines.map((line, index) => ({ vatRate: line.vatRate, amountCents: line.totalCents - (input.discountShares?.[index] ?? 0) })),
-        [],
-        false,
-        zeroRated,
-      );
+  const goods = input.lines.map((line, index) => ({
+    vatRate: line.vatRate,
+    amountCents: line.totalCents - (input.discountShares?.[index] ?? 0),
+  }));
+  const goodsCents = pricesIncludeVat ? input.basketCents : grossTotalCents(goods, [], false, zeroRated);
   const orderTotalCents = shipping.feeCents === null ? null : goodsCents + shipping.feeCents;
 
   // ── Vade freni için açık bakiye ve gecikme TÜRETİLİR (saklanmaz). Hesabın kendisi motorda (`creditPosition`): sipariş listesi de
@@ -186,6 +186,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     minBasketOk: minBasket.ok,
     missingForMinBasketCents: minBasket.missingCents,
     pricesIncludeVat,
+    goodsVat: addedVatOf(goods, pricesIncludeVat, zeroRated).map(({ vatRate, vatCents }) => ({ vatRate, vatCents })),
     orderTotalCents,
   };
 }

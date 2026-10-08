@@ -5,7 +5,9 @@ import { addressFixture } from '@/screens/customer-kit/address-fixture';
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { CartScreen } from './cart-screen';
 import { cartView, cartViewBundleLine, cartViewLine, cartWith } from './cart-view-fixture';
+import { formatPrice } from '@lezzet/helper';
 import messages from '@lezzet/i18n/customer/cart';
+import vatMessages from '@lezzet/i18n/customer/vat-summary';
 
 /*
   Sepetin üç grubu sözleşmeden okunur: bu adrese gelemeyen kalem kapı grubuna girerse sepet yeşil "Siparişi tamamla" gösterir ve
@@ -78,6 +80,22 @@ beforeEach(() => {
 });
 
 const t = messages.tr;
+
+/** Onaylı işletmenin fiyatı KDV hariçtir; müşteri ödeyeceği KDV dahil tutarı sepette görür (DOMAIN §5). */
+describe('CartScreen — KDV hariç sepet (onaylı işletme)', () => {
+  it('KDV ara toplamın altında oran başına yazılır; toplam ve sipariş düğmesi KDV dahil tutarı gösterir', async () => {
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local', { qty: 2, unitPriceCents: 1000 })], { pricesIncludeVat: false }));
+
+    await render(<CartScreen />);
+
+    expect(screen.getByText(vatMessages.tr.subtotalHt)).toBeOnTheScreen();
+    expect(screen.getByText('KDV (%5,5)')).toBeOnTheScreen();
+    expect(screen.getByText(vatMessages.tr.totalTtc)).toBeOnTheScreen();
+    // 20,00 € + %5,5 KDV: özetin toplamı ve sipariş düğmesi aynı tutarı yazar.
+    expect(within(screen.getByTestId('cart-summary')).getByText(formatPrice(2110, 'tr'))).toBeOnTheScreen();
+    expect(within(screen.getByTestId('cart-checkout')).getByText(formatPrice(2110, 'tr'))).toBeOnTheScreen();
+  });
+});
 
 describe('CartScreen — üç gruplu sepet', () => {
   it('grupları SÖZLEŞMEDEN ayırır ve üçünün de başlığını çizer', async () => {
@@ -203,7 +221,7 @@ describe('CartScreen — üç gruplu sepet', () => {
     const summary = within(screen.getByTestId('cart-summary'));
     expect(summary.getByText(t.summary.undeliverable)).toBeOnTheScreen();
     expect(summary.getByText('12,50 €')).toBeOnTheScreen();
-    expect(screen.getByText(`${t.summary.note} ${t.summary.undeliverableNote}`)).toBeOnTheScreen();
+    expect(screen.getByText(`${vatMessages.tr.vatIncluded} ${t.summary.deliveryNote} ${t.summary.undeliverableNote}`)).toBeOnTheScreen();
   });
 });
 

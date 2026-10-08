@@ -105,6 +105,7 @@ function snapshot(blocked: boolean, orderTotalCents: number, shippingFeeCents = 
       shippingFeeCents,
       shippingFreeReason: null,
       orderTotalCents,
+      goodsVat: [],
       minBasketOk: true,
       missingForMinBasketCents: 0,
       placeLabel: '75011 Paris',

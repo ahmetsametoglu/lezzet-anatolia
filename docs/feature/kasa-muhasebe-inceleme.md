@@ -9,7 +9,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | # | Bulgu | Ağırlık | Durum |
 |---|---|---|---|
 | 1 | Araç satışı ana deponun kasa gününü kilitliyor | Yüksek | Yapıldı |
-| 2 | Onaylı işletme müşterisinden KDV alınmıyor | Yüksek | Kabul, yapılacak |
+| 2 | Onaylı işletme müşterisinden KDV alınmıyor | Yüksek | Yapıldı |
 | 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Yapıldı |
 | 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
 | 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
@@ -57,12 +57,12 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 ## 2. Onaylı işletme müşterisinden KDV alınmıyor
 
-**Durum:** Kabul, yapılacak (07.10) · **Ağırlık:** yüksek
+**Durum:** Yapıldı (08.10) · **Ağırlık:** yüksek
 
-**Karar (08.10):** müşterinin borcu her siparişte KDV dahildir; taban siparişe yazılır (6. madde). Para tarafı yapıldı: sipariş
-toplamı, ödeme durumu, online ödeme, kapıda tahsilat, vadeli borç ve kuryenin düştüğü tutar KDV dahil. Sırada müşteri ekranları:
-onaylı işletme sepette, ödemede, onay sayfasında, e-postada ve sipariş geçmişinde KDV hariç tutarı, KDV'yi ve KDV dahil toplamı
-görür.
+**Karar (08.10):** müşterinin borcu her siparişte KDV dahildir; taban siparişe yazılır (6. madde). Sipariş toplamı, ödeme durumu,
+online ödeme, kapıda tahsilat, vadeli borç ve kuryenin düştüğü tutar KDV dahil. Onaylı işletme sepette, ödemede, onay sayfasında,
+e-postada ve sipariş geçmişinde (web ve native) özeti şu sırayla görür: ara toplam (KDV hariç), oran başına KDV, teslimat (KDV
+dahil ücret), genel toplam (KDV dahil).
 
 - **Mevcut durum:** İşletme fiyatı KDV hariç tutulur (DOMAIN §5), sipariş toplamı da KDV hariçtir. Online ödemede çekilen,
   kapıda istenen ve vadeli borca yazılan tutar bu toplamdır; KDV hiçbir yerde eklenmez.

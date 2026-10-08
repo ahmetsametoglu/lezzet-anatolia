@@ -1,7 +1,7 @@
 'use client';
 
 import type { OrderTimelineStep } from '@lezzet/domain-core';
-import { discountRowLabel } from '@lezzet/helper';
+import { discountRowLabel, vatSummaryOf } from '@lezzet/helper';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
@@ -273,10 +273,12 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
   const shortfallTotal = order.lines.reduce((sum, l) => sum + l.shortfallCents, 0);
   // Sözcükler checkout'un değil bloğun kendi sözlüğünden gelir, çünkü sipariş geçmişi ödeme akışının devamı değildir.
   const summary = summaryCopy(locale);
+  // KDV hariç fiyatta (onaylı işletme) KDV ara toplamın altında, teslimat en altta; toplam KDV dahildir.
+  const vatText = vatSummaryOf(order, locale);
 
   return (
     <Panel title={title}>
-      <SummaryRow label={t.subtotal} value={formatPrice(order.subtotalCents, locale)} />
+      <SummaryRow label={vatText.subtotalLabel ?? t.subtotal} value={formatPrice(order.subtotalCents, locale)} />
       {order.discountCents > 0 && (
         <SummaryRow
           label={discountRowLabel(summary.discount, order.discountLabel || null)}
@@ -284,6 +286,9 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
           tone="olive"
         />
       )}
+      {vatText.vatRows.map((row) => (
+        <SummaryRow key={row.key} label={row.label} value={row.value} />
+      ))}
       <SummaryRow
         label={summary.delivery}
         value={order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : summary.free}
@@ -291,7 +296,7 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
         tone={order.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
       />
       <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-sand-200 pt-2.5 font-sans text-copy font-bold text-ink">
-        <span>{summary.total}</span>
+        <span>{vatText.totalLabel ?? summary.total}</span>
         <span>{formatPrice(order.totalCents, locale)}</span>
       </div>
 

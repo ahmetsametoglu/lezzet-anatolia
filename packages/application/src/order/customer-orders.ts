@@ -14,6 +14,8 @@ import {
   fulfilledLineAmountCents,
   isActiveForCustomer,
   isFulfilmentKnown,
+  isZeroRated,
+  orderAddedVat,
   orderTimeline,
 } from '@lezzet/domain-core';
 import type { OrderTimelineStep } from '@lezzet/domain-core';
@@ -203,6 +205,11 @@ export interface CustomerOrderDetail {
   discountLabel: string;
   shippingFeeCents: number;
   totalCents: number;
+  /** Kalem fiyatları KDV dahil mi; değilse özet KDV'yi oran başına yazar ve toplam KDV dahildir. */
+  pricesIncludeVat: boolean;
+  zeroRated: boolean;
+  /** KDV hariç fiyatta kalemlere eklenen KDV, oran başına; KDV dahil fiyatta boş. */
+  vat: Array<{ vatRate: number; vatCents: number }>;
   paymentMethod: PaymentMethod | null;
   paymentStatus: PaymentStatus;
   /** Vadeli (B2B) — ödeme hapının ayrı bir hâli. */
@@ -398,6 +405,9 @@ export async function getCustomerOrderDetail(
       collectedCents: order.amountCollectedCents,
       refundedCents: order.amountRefundedCents,
     }).fulfilledAmountCents,
+    pricesIncludeVat: order.pricesIncludeVat,
+    zeroRated: isZeroRated(order.vatTreatment),
+    vat: orderAddedVat(order, items, measured).map(({ vatRate, vatCents }) => ({ vatRate, vatCents })),
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     onAccount: order.onAccount,

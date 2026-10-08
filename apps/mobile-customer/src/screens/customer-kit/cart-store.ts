@@ -139,6 +139,8 @@ const EMPTY_VIEW: MeCartView = {
   shippingFree: false,
   shippingFreeRemainingCents: 0,
   localOrderDiscountCents: 0,
+  pricesIncludeVat: true,
+  zeroRated: false,
 };
 
 const EMPTY_CART: CartState = {

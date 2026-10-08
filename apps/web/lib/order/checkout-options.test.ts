@@ -113,7 +113,7 @@ describe('KDV dahil toplam', () => {
       quotedFeeCents: 1190,
     });
     // 36,00 € HT + 1,98 € KDV + 11,90 € kargo
-    expect(r).toMatchObject({ pricesIncludeVat: false, orderTotalCents: 3798 + 1190 });
+    expect(r).toMatchObject({ pricesIncludeVat: false, goodsVat: [{ vatRate: 5.5, vatCents: 198 }], orderTotalCents: 3798 + 1190 });
   });
 
   it('onaysız şirket perakende fiyatla alır — toplam sepetin kendisidir, KDV iki kez eklenmez', async () => {

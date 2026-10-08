@@ -1,5 +1,5 @@
-import { checkoutButtonCents } from '@lezzet/domain-core';
-import { discountRowLabel, formatPrice, placeChangeText } from '@lezzet/helper';
+import { cartAddedVat, checkoutButtonCents, vatTotalOf } from '@lezzet/domain-core';
+import { discountRowLabel, formatPrice, placeChangeText, vatSummaryOf } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { MeCartViewLine } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -185,9 +185,13 @@ export function CartScreen() {
   /* Toplam sepette duran her şeyi sayar ama gelemeyen kalem siparişe girmez; kapsam belirsiz kalmasın diye o tutar ayrı satırda
      yazılır ve sunucudan olduğu gibi gelir. */
   const undeliverableCents = view.undeliverableSubtotalCents;
+  // KDV hariç sepette (onaylı işletme) KDV ara toplamın altında oran başına yazılır, teslimat en altta; toplam KDV dahildir.
+  const vat = cartAddedVat(view.lines, view);
+  const vatText = vatSummaryOf({ pricesIncludeVat: view.pricesIncludeVat, vat, zeroRated: view.zeroRated }, locale);
   const summaryRows: SummaryRow[] = [
-    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
+    { key: 'subtotal', label: vatText.subtotalLabel ?? t.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
     ...(discountSummary === null ? [] : [discountSummary]),
+    ...vatText.vatRows,
     // Sepetin tamamı kargodaysa satır kargonun ücretsiz mi yoksa ödeme adımında mı belli olacağını söyler; tutarı taşıyıcı fiyatlar.
     ...(view.shippingOnly
       ? [{ key: 'shipping', label: t.group.shippingRow, value: view.shippingFree ? t.group.free : t.group.shippingAtCheckout }]
@@ -210,7 +214,7 @@ export function CartScreen() {
   /* Kural cümlesi özetin DİP NOTUNA giriyor, ayrı bir kutuya değil: indirim satırının hemen
      altında duruyor ve "neden tek indirim" sorusunu sorulduğu yerde cevaplıyor. Ayrı bir Note
      olsaydı sepette dördüncü bir kutu açardı ve bir kuralı duyuru gibi okuturdu. */
-  const summaryNote = [t.summary.note, undeliverableCents === 0 ? null : t.summary.undeliverableNote, singleRuleNote]
+  const summaryNote = [vatText.note, t.summary.deliveryNote, undeliverableCents === 0 ? null : t.summary.undeliverableNote, singleRuleNote]
     .filter((line): line is string => line !== null)
     .join(' ');
 
@@ -298,10 +302,16 @@ export function CartScreen() {
     split,
     localItemsCents,
     localOrderDiscountCents: view.localOrderDiscountCents,
+    lines: view.lines,
+    basis: view,
   });
 
+  // Grup tutarı açılacak siparişinkidir; KDV hariç sepette KDV'si eklenir. Düğmenin girdisi KDV hariç kalır, KDV'yi motor ekler.
+  const localGroupCents = localItemsCents + vatTotalOf(cartAddedVat(localLines, view, () => true));
+  const shippingGroupCents = shippingItemsCents + vatTotalOf(cartAddedVat(shippingLines, view, () => true));
+
   const shippingBreakdown = [
-    (view.shippingFree ? t.group.shippingFeeFree : t.group.shippingFee).replace('{items}', formatPrice(shippingItemsCents, locale)),
+    (view.shippingFree ? t.group.shippingFeeFree : t.group.shippingFee).replace('{items}', formatPrice(shippingGroupCents, locale)),
     view.shippingFreeRemainingCents > 0
       ? t.group.shippingRemaining.replace('{amount}', formatPrice(view.shippingFreeRemainingCents, locale))
       : null,
@@ -329,7 +339,7 @@ export function CartScreen() {
    */
   const shippingAction = !split ? null : (
     <View style={styles.groupCard} testID="cart-shipping-group">
-      <Text style={styles.groupTotal}>{t.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents, locale))}</Text>
+      <Text style={styles.groupTotal}>{t.group.shippingTotal.replace('{amount}', formatPrice(shippingGroupCents, locale))}</Text>
       <Text style={styles.groupNote}>{shippingBreakdown}</Text>
       <SecondaryButton
         label={t.group.shippingCta}
@@ -343,7 +353,7 @@ export function CartScreen() {
   /** Rota grubunun künyesi — düğmesi yapışkan bardadır, bu kart yalnız tutarı ve vaadi söyler. */
   const routeSummary = !split ? null : (
     <View style={styles.groupCard} testID="cart-route-group">
-      <Text style={styles.groupTotal}>{t.group.routeTotal.replace('{amount}', formatPrice(localItemsCents, locale))}</Text>
+      <Text style={styles.groupTotal}>{t.group.routeTotal.replace('{amount}', formatPrice(localGroupCents, locale))}</Text>
       <Text style={styles.groupNote}>{t.group.routeNote}</Text>
     </View>
   );
@@ -537,8 +547,8 @@ export function CartScreen() {
 
         <SummaryPanel
           rows={summaryRows}
-          totalLabel={t.summary.total}
-          totalValue={formatPrice(view.totalCents, locale)}
+          totalLabel={vatText.totalLabel ?? t.summary.total}
+          totalValue={formatPrice(view.totalCents + vatTotalOf(vat), locale)}
           note={summaryNote}
           testID="cart-summary"
         />

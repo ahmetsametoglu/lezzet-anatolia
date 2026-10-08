@@ -1,7 +1,8 @@
 import { addVat, removeVat } from '@lezzet/helper';
-import type { OrderItem } from '@lezzet/types';
-import { fulfilledLineAmountCents, fulfilledLineOf } from '../payment/payment-status';
-import { grossTotalCents } from '../pricing/vat-base';
+import type { Order, OrderItem } from '@lezzet/types';
+import { chargedQtyOf, fulfilledLineAmountCents, fulfilledLineOf, type FulfilledItem } from '../payment/payment-status';
+import { addedVatOf, grossTotalCents, type RateVat } from '../pricing/vat-base';
+import { isZeroRated } from '../tax/vat-treatment';
 
 /**
  * Sipariş kaleminin para hesabı, muhasebe export'u ile kârlılığın ortak zemini. Tutar siparişin fiyat tabanındadır
@@ -79,4 +80,20 @@ export function chargedAmountCents(item: AccountingLine): number {
 /** Kalemin KDV hariç (HT) ücretlenen tutarı (cent). */
 export function lineNetCents(item: AccountingLine, pricesIncludeVat: boolean, zeroRated = false): number {
   return vatSplitOf(chargedAmountCents(item), pricesIncludeVat, item.vatRate, zeroRated).netCents;
+}
+
+/**
+ * Siparişin müşteri özetindeki KDV satırları: KDV hariç fiyatlı kalemlere eklenen KDV, oran başına; borçla aynı kalem tutarlarından,
+ * hazırlık kesinleşmeden sipariş edilen adetle. Kargo ücreti KDV dahil olduğu için girmez.
+ */
+export function orderAddedVat(
+  order: Pick<Order, 'pricesIncludeVat' | 'vatTreatment'>,
+  items: readonly (FulfilledItem & Pick<OrderItem, 'vatRate'>)[],
+  settled: boolean,
+): RateVat[] {
+  const goods = items
+    .map((item) => ({ line: fulfilledLineOf(item), vatRate: item.vatRate }))
+    .filter(({ line }) => chargedQtyOf(line, settled) > 0)
+    .map(({ line, vatRate }) => ({ vatRate, amountCents: fulfilledLineAmountCents(line, settled) }));
+  return addedVatOf(goods, order.pricesIncludeVat, isZeroRated(order.vatTreatment));
 }

@@ -1,5 +1,5 @@
 import { isCourierOnTheWay } from '@lezzet/domain-core';
-import { discountRowLabel, formatPrice } from '@lezzet/helper';
+import { discountRowLabel, formatPrice, vatSummaryOf } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -153,8 +153,10 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
 
   /* Para satırları toplamı açıkladığı için önce gelir, lojistik ve kargo künyesi ardından; sıfır indirim indirim olmadığı için
      çizilmez. */
+  // KDV hariç fiyatta (onaylı işletme) KDV ara toplamın altında, teslimat en altta; toplam KDV dahildir.
+  const vatText = vatSummaryOf(detail, locale);
   const summaryRows: SummaryRow[] = [
-    { key: 'subtotal', label: t.detail.subtotal, value: formatPrice(detail.subtotalCents, locale) },
+    { key: 'subtotal', label: vatText.subtotalLabel ?? t.detail.subtotal, value: formatPrice(detail.subtotalCents, locale) },
     ...(detail.discountCents > 0
       ? [
           {
@@ -165,6 +167,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
           },
         ]
       : []),
+    ...vatText.vatRows,
     {
       key: 'shipping',
       label: t.detail.shipping,
@@ -319,7 +322,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
 
         <SummaryPanel
           rows={summaryRows}
-          totalLabel={t.detail.total}
+          totalLabel={vatText.totalLabel ?? t.detail.total}
           totalValue={formatPrice(detail.totalCents, locale)}
           totalTone="terracotta"
           testID="order-summary"

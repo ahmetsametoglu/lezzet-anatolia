@@ -68,6 +68,8 @@ export interface CheckoutSnapshot {
     shippingFeeCents: number | null;
     shippingFreeReason: 'route' | 'threshold' | 'pickup' | null;
     orderTotalCents: number | null;
+    /** KDV hariç fiyatta kalemlere eklenen KDV, oran başına; KDV dahil fiyatta boş. */
+    goodsVat: { vatRate: number; vatCents: number }[];
     minBasketOk: boolean;
     missingForMinBasketCents: number;
     /**
@@ -394,6 +396,7 @@ function paymentSlice(
     shippingFeeCents: options.shippingFeeCents,
     shippingFreeReason: options.shippingFreeReason,
     orderTotalCents: options.orderTotalCents,
+    goodsVat: options.goodsVat,
     minBasketOk: options.minBasketOk,
     missingForMinBasketCents: options.missingForMinBasketCents,
     placeLabel,

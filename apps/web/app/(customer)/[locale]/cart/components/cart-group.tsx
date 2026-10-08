@@ -1,5 +1,6 @@
 'use client';
 
+import { cartAddedVat, vatTotalOf } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
 import { Link } from '@/i18n/navigation';
@@ -34,8 +35,8 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
   const undeliverable = kind === 'undeliverable';
 
   // Grubun kalem toplamı kendi satırlarından; indirim burada yazılmaz, çünkü her sipariş indirimini checkout'ta kendi kalemleriyle
-  // yeniden alır.
-  const itemsCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
+  // yeniden alır. KDV hariç sepette KDV eklenir, çünkü tutar açılacak siparişinkidir.
+  const itemsCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0) + vatTotalOf(cartAddedVat(lines, view, () => true));
   // Kargo ücreti yazılmaz, çünkü taşıyıcı onu ödeme adımında seçilen servise göre fiyatlar; grup yalnız eşik cevabını söyler.
   const threshold = shippingGroupFree(view);
 

@@ -172,7 +172,7 @@ Kısaca: müşteri-yüzü doğru KDV = bizim işimiz (fiyat); beyan/OSS/iade = m
 
 - Fiyat motoru iki yöne de çevirir; **çevrim yalnız gösterim içindir**, saklanan değer kanal tabanıdır.
 - `OrderItem.unit_price` fiyatın okunduğu tabanda sabitlenir ve taban siparişe yazılır (`Order.prices_include_vat`): onaylı işletmede KDV hariç, öteki her siparişte KDV dahil. Taban kanaldan çıkarılmaz, çünkü onaysız şirket işletme kanalında perakende fiyatla alır (§10). `vat_rate` kalemde durur; kargo ücreti her siparişte KDV dahildir.
-- **Müşterinin borcu her siparişte KDV dahildir:** `Order.ordered_total`, ödeme durumu, online ödeme, kapıda tahsilat ve vadeli borç aynı tutarı okur. KDV hariç fiyatta KDV kalemlerin oran toplamına eklenir; ters yüklemede oran sıfırdır. Borç, aktarım ve kâr oran bazında tek hesaptan türer (`vatByRate`), fatura/export tabanı belirsiz kalmaz.
+- **Müşterinin borcu her siparişte KDV dahildir:** `Order.ordered_total`, ödeme durumu, online ödeme, kapıda tahsilat ve vadeli borç aynı tutarı okur. KDV hariç fiyatta KDV kalemlerin oran toplamına eklenir; ters yüklemede oran sıfırdır. Borç, aktarım ve kâr oran bazında tek hesaptan türer (`vatByRate`), fatura/export tabanı belirsiz kalmaz. KDV hariç fiyatlı müşterinin özeti (sepet, ödeme, onay, e-posta, sipariş geçmişi) şu sıradadır: ara toplam (KDV hariç), oran başına KDV, teslimat, genel toplam (KDV dahil).
 - Para **tamsayı cent** olarak hesaplanır (kayan nokta yok); yuvarlama kuralı `STACK §8`'de.
 
 ### Fiyat çözüm sırası

@@ -1,4 +1,12 @@
-import { UNKNOWN_AMOUNT, discountRowLabel, formatPrice, servicePointRequired, shippingNotice, type ServicePointEntry } from '@lezzet/helper';
+import {
+  UNKNOWN_AMOUNT,
+  discountRowLabel,
+  formatPrice,
+  servicePointRequired,
+  shippingNotice,
+  vatSummaryOf,
+  type ServicePointEntry,
+} from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AddressCheckResult, PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -26,7 +34,7 @@ import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { hapticError, hapticSuccess } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressContact, addressLine, addressTitle } from '@lezzet/address';
-import { isNameMissing } from '@lezzet/domain-core';
+import { cartAddedVat, isNameMissing, vatTotalOf } from '@lezzet/domain-core';
 import { cartLineId, refreshCart, useCart } from '@/screens/customer-kit/cart-store';
 import { selectDeliveryAddress, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { discountSummaryOf, orderDiscountSummaryOf } from '@/screens/customer-kit/discount-label';
@@ -319,7 +327,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    * Ödenecek toplam sunucunun kararıdır ve taslağın tahsil edeceğiyle aynı kapsamdan çıkar; adres seçilmeden yalnız kalem toplamı
    * bilinir, kargo ücreti bilinmiyorsa toplam da bilinmez. Ekran indirim ve kargoyu kendisi hesaplamaz.
    */
-  const grandTotalCents = payment ? payment.orderTotalCents : view.totalCents;
+  // KDV hariç fiyatta (onaylı işletme) KDV ara toplamın altında, teslimat en altta; satırlar ödeme cevabından, öncesinde sepetten.
+  const vat = payment ? payment.goodsVat : cartAddedVat(view.lines, view);
+  const vatText = vatSummaryOf({ pricesIncludeVat: view.pricesIncludeVat, vat, zeroRated: view.zeroRated }, locale);
+  const grandTotalCents = payment ? payment.orderTotalCents : view.totalCents + vatTotalOf(vat);
   const grandTotalLabel = grandTotalCents === null ? UNKNOWN_AMOUNT : formatPrice(grandTotalCents, locale);
 
   /* İndirim de aynı kaynaktan: özet varsa onun çözülmüş indirimi, yoksa sepetinki. `reasonLabel`
@@ -353,7 +364,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       : [{ key: 'undeliverable-note', label: t.summary.undeliverableNote, value: '', tone: 'danger' as const }]),
     {
       key: 'subtotal',
-      label: t.summary.subtotal,
+      label: vatText.subtotalLabel ?? t.summary.subtotal,
       value: pending ? UNKNOWN_AMOUNT : formatPrice(summary?.subtotalCents ?? orderedSubtotalCents, locale),
     },
     /* İndirimin adı da yazılır ki sepetteki indirimle aynı olduğu anlaşılsın; türetme sepetle ortak. */
@@ -367,6 +378,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             tone: 'olive' as const,
           },
         ]),
+    ...(pending ? [] : vatText.vatRows),
     { key: 'delivery', label: t.summary.delivery, value: shippingFeeLabel },
   ];
 
@@ -844,7 +856,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         <SummaryPanel
           eyebrow={upperIn(t.summary.eyebrow, locale)}
           rows={summaryRows}
-          totalLabel={t.summary.total}
+          totalLabel={vatText.totalLabel ?? t.summary.total}
           totalValue={pending ? UNKNOWN_AMOUNT : grandTotalLabel}
           totalTone="terracotta"
           testID="checkout-summary"

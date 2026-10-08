@@ -116,6 +116,7 @@ describe('pricingViewerOf', () => {
       groupPercentOff: null,
       customerRule: null,
       professional: true,
+      vatNumberValid: false,
     });
   });
 
@@ -129,6 +130,7 @@ describe('pricingViewerOf', () => {
       groupPercentOff: null,
       customerRule: null,
       professional: true,
+      vatNumberValid: false,
     });
   });
 

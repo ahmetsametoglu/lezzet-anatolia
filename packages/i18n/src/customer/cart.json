@@ -82,7 +82,7 @@
       "reachableAnon": "{missing} daha eklerseniz {amount} indirim devreye giriyor.",
       "undeliverable": "Siparişe girmeyenler",
       "total": "Toplam",
-      "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir.",
+      "deliveryNote": "Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir.",
       "undeliverableNote": "Bu adrese gelemeyen ürünler toplama dahil değildir; siparişe girmez, sepetinizde bekler."
     },
     "minimum": "Asgari sepet {minimum}. Sipariş verebilmek için birkaç ürün daha ekleyin.",
@@ -221,7 +221,7 @@
       "reachableAnon": "Ajoutez {missing} et vous obtenez {amount} de remise.",
       "undeliverable": "Hors commande",
       "total": "Total",
-      "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse.",
+      "deliveryNote": "Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse.",
       "undeliverableNote": "Les articles non livrables à cette adresse ne sont pas inclus dans le total ; ils ne font pas partie de la commande et restent dans votre panier."
     },
     "minimum": "Panier minimum {minimum}. Ajoutez encore quelques produits pour pouvoir commander.",
@@ -360,7 +360,7 @@
       "reachableAnon": "Noch {missing} und Sie erhalten {amount} Rabatt.",
       "undeliverable": "Nicht in der Bestellung",
       "total": "Gesamt",
-      "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt.",
+      "deliveryNote": "Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt.",
       "undeliverableNote": "Nicht an diese Adresse lieferbare Artikel sind in der Summe nicht enthalten; sie gehören nicht zur Bestellung und bleiben in Ihrem Warenkorb."
     },
     "minimum": "Mindestbestellwert {minimum}. Fügen Sie noch etwas hinzu, um bestellen zu können.",

@@ -1,7 +1,8 @@
 'use client';
 
 import { Fragment, useCallback, useState } from 'react';
-import { placeChangeText } from '@lezzet/helper';
+import { cartAddedVat, vatTotalOf } from '@lezzet/domain-core';
+import { placeChangeText, vatSummaryOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -122,8 +123,10 @@ export function CartMobile({ t, locale }: CartViewProps) {
   ].filter((group) => group.lines.length > 0);
   // İKİ SİPARİŞ yalnız gerçekten iki sipariş doğacaksa: gelemeyen kalem bir sipariş açmaz, sepette bekler.
   const split = localLines.length > 0 && shippingLines.length > 0;
-  const localItemsCents = sumOf(localLines);
-  const shippingItemsCents = sumOf(shippingLines);
+  // Grup tutarı açılacak siparişin tutarıdır: KDV hariç sepette KDV'si eklenmiş hâli.
+  const groupCents = (lines: readonly CartLine[]) => sumOf(lines) + vatTotalOf(cartAddedVat(lines, view, () => true));
+  const localItemsCents = groupCents(localLines);
+  const shippingItemsCents = groupCents(shippingLines);
   // Ücretsiz kargo eşiğinin cevabı motordan: istemci eşik aritmetiği yapmaz.
   const threshold = shippingGroupFree(view);
   const placeLabel = address?.postalCode ?? place?.postalCode ?? '';
@@ -147,11 +150,15 @@ export function CartMobile({ t, locale }: CartViewProps) {
           .replace('{missing}', formatPrice(reach.missingCents, locale))
           .replace('{amount}', formatPrice(reach.projectedCents, locale));
 
+  // KDV hariç sepette (onaylı işletme) KDV ara toplamın altında oran başına yazılır, teslimat en altta; toplam KDV dahildir.
+  const vat = cartAddedVat(view.lines, view);
+  const vatText = vatSummaryOf({ pricesIncludeVat: view.pricesIncludeVat, vat, zeroRated: view.zeroRated }, locale);
   const summaryRows: SummaryRow[] = [
-    { key: 'subtotal', label: copy.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
+    { key: 'subtotal', label: vatText.subtotalLabel ?? copy.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
     ...(discountCents > 0
       ? [{ key: 'discount', label: discountLabel(discount, summaryCopy(locale), locale), value: `−${formatPrice(discountCents, locale)}`, tone: 'olive' as const }]
       : []),
+    ...vatText.vatRows,
     // Sepetin tamamı kargodaysa satır kargonun ücretsiz mi yoksa ödeme adımında mı belli olacağını söyler; tutarı taşıyıcı fiyatlar.
     ...(view.shippingOnly
       ? [{ key: 'shipping', label: copy.group.shippingRow, value: threshold.free ? copy.group.free : copy.group.shippingAtCheckout }]
@@ -162,7 +169,8 @@ export function CartMobile({ t, locale }: CartViewProps) {
       : []),
   ];
   const summaryNote = [
-    copy.summary.note,
+    vatText.note,
+    copy.summary.deliveryNote,
     view.undeliverableSubtotalCents > 0 ? copy.summary.undeliverableNote : null,
     discountCents > 0 ? copy.summary.singleRule : null,
   ]
@@ -298,7 +306,12 @@ export function CartMobile({ t, locale }: CartViewProps) {
         {/* Sunucu yalnız KAZANILABİLİR olanı gönderir — boş vaat yerine sessizlik. */}
         {reachableNote !== null && <Note tone="olive" description={reachableNote} />}
 
-        <SummaryPanel rows={summaryRows} totalLabel={copy.summary.total} totalValue={formatPrice(view.totalCents, locale)} note={summaryNote} />
+        <SummaryPanel
+          rows={summaryRows}
+          totalLabel={vatText.totalLabel ?? copy.summary.total}
+          totalValue={formatPrice(view.totalCents + vatTotalOf(vat), locale)}
+          note={summaryNote}
+        />
 
         {view.hasBlocked && <Note tone="error" description={copy.blocked} />}
         {/* Dipteki kutu eşiği ve ne yapılacağını söyler, eksik tutar barda: aynı sayı iki kez okunmasın. */}

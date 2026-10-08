@@ -9,8 +9,15 @@ import {
   type Db,
 } from '@lezzet/database';
 import { brand } from '@lezzet/brand';
-import { derivePaymentStatusForOrder, fulfilledLineAmountCents, isFulfillmentSettled } from '@lezzet/domain-core';
-import { formatPrice, formatShortDate } from '@lezzet/helper';
+import {
+  derivePaymentStatusForOrder,
+  fulfilledLineAmountCents,
+  grossTotalCents,
+  isFulfillmentSettled,
+  isZeroRated,
+  orderAddedVat,
+} from '@lezzet/domain-core';
+import { formatPrice, formatShortDate, vatSummaryOf } from '@lezzet/helper';
 import { localizedUrl } from '@lezzet/i18n';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -100,9 +107,12 @@ export async function buildOrderNotification(
     locale,
     steps,
     lines,
-    totals: buildTotals(order, locale, event),
+    totals: buildTotals(order, items, locale, event),
     grandTotal: {
-      label: event === 'order_confirmed' ? TOTAL_LABEL[locale].grand : TOTAL_LABEL[locale].current,
+      label:
+        event === 'order_confirmed'
+          ? (vatSummaryOf(vatInputOf(order, items), locale).totalLabel ?? TOTAL_LABEL[locale].grand)
+          : TOTAL_LABEL[locale].current,
       // Onayda sipariş tutarı yazar, çünkü mal henüz hazırlanmadı ve karşılanan 0'dır; sonraki maillerde karşılanan tutar
       // yazar ve eksik çıkan kalemde toplam kendiliğinden iner.
       value: formatPrice(event === 'order_confirmed' ? order.orderedTotalCents : derivation.fulfilledAmountCents, locale),
@@ -111,7 +121,7 @@ export async function buildOrderNotification(
     // Para çözümü istisna bildirimlerinin ilk kartıdır. İki sayı da TÜRETİLİR: iade borcu motordan
     // (`refundDueCents`), iptalde ise net tahsilatın tamamı — karşılanan 0 sayıldığı için aynı
     // hesap kendiliğinden tamamını verir (ORDER_LIFECYCLE).
-    refund: buildRefund(order, refundAmountCents(items, event, opts.refundedAmountCents, derivation.refundDueCents), event, locale),
+    refund: buildRefund(order, refundAmountCents(order, items, event, opts.refundedAmountCents, derivation.refundDueCents), event, locale),
     paidOnline: order.amountCollectedCents > 0,
     paymentNote: paymentNote(order, derivation.amountToCollectCents, locale),
     delivery: buildDelivery(order, locale, pickupWarehouse),
@@ -262,22 +272,36 @@ const PAYMENT_NOTE: Record<PreferredLanguage, { paid: string; onDelivery: (amoun
 };
 
 /** Onay mailinde tutar dökümü tam, sonraki maillerde yalnız güncel toplam (tasarım kuralı). */
-function buildTotals(order: Order, locale: PreferredLanguage, event: NotifyEventName) {
+function buildTotals(order: Order, items: readonly OrderItem[], locale: PreferredLanguage, event: NotifyEventName) {
   if (event !== 'order_confirmed') return [];
   const t = TOTAL_LABEL[locale];
-  const lineTotalCents = order.orderedTotalCents + order.discountAmountCents - order.shippingFeeCents;
+  // KDV hariç fiyatta (onaylı işletme) ara toplam KDV hariç, KDV oran başına ve teslimat en altta; toplam KDV dahildir.
+  const vat = vatSummaryOf(vatInputOf(order, items), locale);
+  const lineTotalCents = order.pricesIncludeVat
+    ? order.orderedTotalCents + order.discountAmountCents - order.shippingFeeCents
+    : items.reduce((sum, item) => sum + item.unitPriceCents * item.qty, 0);
 
   return [
-    { label: t.subtotal, value: formatPrice(lineTotalCents, locale) },
+    { label: vat.subtotalLabel ?? t.subtotal, value: formatPrice(lineTotalCents, locale) },
     ...(order.discountAmountCents > 0
       ? [{ label: discountRowLabel(order, t.discount, locale), value: `−${formatPrice(order.discountAmountCents, locale)}`, positive: true }]
       : []),
+    ...vat.vatRows.map((row) => ({ label: row.label, value: row.value })),
     {
       label: t.delivery,
       value: order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : t.free,
       positive: order.shippingFeeCents === 0,
     },
   ];
+}
+
+/** Özetin KDV girdisi; onay mailinde mal henüz hazırlanmadığı için sipariş edilen adetle. */
+function vatInputOf(order: Order, items: readonly OrderItem[]) {
+  return {
+    pricesIncludeVat: order.pricesIncludeVat,
+    zeroRated: isZeroRated(order.vatTreatment),
+    vat: orderAddedVat(order, items, isFulfillmentSettled(order.status)),
+  };
 }
 
 /**
@@ -320,13 +344,19 @@ function buildRefund(order: Order, amountCents: number, event: NotifyEventName, 
  * tutar. Türetilen iade borcu yazımdan sonra sıfırdır; onu okusaydık mail "iade yok" derdi.
  */
 function refundAmountCents(
+  order: Order,
   items: readonly OrderItem[],
   event: NotifyEventName,
   refundedAmountCents: number | null | undefined,
   refundDueCents: number,
 ): number {
   if (event === 'order_shortfall') {
-    return items.reduce((sum, item) => sum + item.unitPriceCents * Math.max(0, item.qty - item.fulfilledQty), 0);
+    // Gitmeyen malın değeri borçla aynı tabanda: KDV hariç fiyatta KDV'siyle.
+    const missing = items.map((item) => ({
+      vatRate: item.vatRate,
+      amountCents: item.unitPriceCents * Math.max(0, item.qty - item.fulfilledQty),
+    }));
+    return grossTotalCents(missing, [], order.pricesIncludeVat, isZeroRated(order.vatTreatment));
   }
   return refundedAmountCents ?? refundDueCents;
 }

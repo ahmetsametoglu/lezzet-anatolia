@@ -59,6 +59,8 @@ export const CheckoutPaymentSchema = z.object({
   shippingFreeReason: z.enum(['route', 'threshold', 'pickup']).nullable(),
   /** Müşteriden tahsil edilecek TOPLAM (sepet + kargo, cent) — ekranın son satırı; kargo ücreti bilinmiyorsa `null`. */
   orderTotalCents: z.number().int().nullable(),
+  /** KDV hariç fiyatta (onaylı işletme) kalemlere eklenen KDV, oran başına; KDV dahil fiyatta boş. Kargo ücreti KDV dahildir, girmez. */
+  goodsVat: z.array(z.object({ vatRate: z.number(), vatCents: z.number().int() })),
   /** Asgari sepet tutmuyorsa sipariş açılmaz (DOMAIN §6, ayardan gelir). */
   minBasketOk: z.boolean(),
   missingForMinBasketCents: z.number().int(),

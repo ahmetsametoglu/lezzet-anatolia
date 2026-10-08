@@ -2,7 +2,8 @@
 
 import type { PaymentMethod } from '@lezzet/types';
 import { brand } from '@lezzet/brand';
-import { shippingNotice } from '@lezzet/helper';
+import { cartAddedVat, vatTotalOf } from '@lezzet/domain-core';
+import { shippingNotice, vatSummaryOf } from '@lezzet/helper';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { Chip } from '@/components/customer/phone-kit/chip';
 import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
@@ -87,8 +88,11 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           .map((line) => ({ key: `dropped-${cartKey(line)}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
       : summary.excludedLines.map((line, index) => ({ key: `dropped-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
 
+  // KDV hariç fiyatta (onaylı işletme) KDV ara toplamın altında, teslimat en altta; satırlar ödeme cevabından, öncesinde sepetten.
+  const vat = payment ? payment.goodsVat : cartAddedVat(cart.lines, cart);
+  const vatText = vatSummaryOf({ pricesIncludeVat: cart.pricesIncludeVat, vat, zeroRated: cart.zeroRated }, locale);
   // Toplam SUNUCUNUN kararıdır; sepet okunmadan yazılmaz (CLAUDE §1 — ölçülemeyen değer sıfır değil).
-  const totalCents = payment ? payment.orderTotalCents : cart.totalCents;
+  const totalCents = payment ? payment.orderTotalCents : cart.totalCents + vatTotalOf(vat);
   const totalLabel = settled && totalCents !== null ? formatPrice(totalCents, locale) : UNKNOWN_AMOUNT;
   const feeLabel = !settled
     ? UNKNOWN_AMOUNT
@@ -113,7 +117,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
     ...(droppedLines.length === 0 ? [] : [{ key: 'undeliverable-note', label: copy.summary.undeliverableNote, value: '', tone: 'danger' as const }]),
     {
       key: 'subtotal',
-      label: copy.summary.subtotal,
+      label: vatText.subtotalLabel ?? copy.summary.subtotal,
       value: settled ? formatPrice(summary?.subtotalCents ?? cart.subtotalCents - cart.undeliverableSubtotalCents, locale) : UNKNOWN_AMOUNT,
     },
     // İndirimin KÜNYESİ sepetle aynı yardımcıdan: müşteri aynı indirimi iki ekranda iki adla okumasın.
@@ -127,6 +131,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           },
         ]
       : []),
+    ...(settled ? vatText.vatRows : []),
     { key: 'delivery', label: copy.summary.delivery, value: feeLabel },
   ];
 
@@ -373,7 +378,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           <PhoneCheckoutSkeleton label={copy.state.loading} />
         )}
 
-        <SummaryPanel eyebrow={copy.summary.eyebrow} rows={rows} totalLabel={copy.summary.total} totalValue={totalLabel} totalTone="terracotta" />
+        <SummaryPanel eyebrow={copy.summary.eyebrow} rows={rows} totalLabel={vatText.totalLabel ?? copy.summary.total} totalValue={totalLabel} totalTone="terracotta" />
 
         {/* Kabul bloğu özetle düğmenin arasında, native'deki sırayla. Bağ yeni sekmede açılır ki koşulları okuyan müşterinin seçimleri
             ve kart bilgisi kaybolmasın. */}

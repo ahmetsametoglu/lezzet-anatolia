@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { whatsappHref } from '@lezzet/brand';
-import { discountRowLabel } from '@lezzet/helper';
+import { discountRowLabel, vatSummaryOf } from '@lezzet/helper';
 import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
@@ -342,6 +342,9 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
   const summary = summaryCopy(locale);
   // Kod tasarımda birebir yazılı ("İndirim — HOSGELDIN10"); kodsuz indirimde satır genel adında kalır.
   const discountLabel = discountRowLabel(summary.discount, view.discountName || null);
+  // KDV hariç fiyatta (onaylı işletme) ara toplam ve KDV teslimattan önce yazılır, toplam KDV dahildir.
+  const vatText = vatSummaryOf(view, locale);
+  const goodsCents = view.lines.reduce((sum, line) => sum + line.lineTotalCents, 0) - view.discountCents;
 
   return (
     <Card compact={compact} gap="sm">
@@ -367,6 +370,10 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
         {view.discountCents > 0 && (
           <SummaryRow label={discountLabel} value={`−${formatPrice(view.discountCents, locale)}`} tone="olive" />
         )}
+        {vatText.subtotalLabel !== null && <SummaryRow label={vatText.subtotalLabel} value={formatPrice(goodsCents, locale)} />}
+        {vatText.vatRows.map((row) => (
+          <SummaryRow key={row.key} label={row.label} value={row.value} />
+        ))}
         <SummaryRow
           label={summary.delivery}
           value={view.shippingFeeCents > 0 ? formatPrice(view.shippingFeeCents, locale) : summary.free}
@@ -374,10 +381,10 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
           tone={view.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
         />
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
-          <span className="font-sans text-lead font-bold text-ink">{summary.total}</span>
+          <span className="font-sans text-lead font-bold text-ink">{vatText.totalLabel ?? summary.total}</span>
           <span className="font-sans text-lead font-bold text-ink">{total}</span>
         </div>
-        <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
+        <span className="font-sans text-micro text-muted">{vatText.note}</span>
       </div>
 
       {/* İptal edilen siparişin kalemleri sepete döndü; ödemesi bekleyen siparişin eylemleri kendi bloğunda. */}

@@ -254,6 +254,10 @@ export interface CartView {
    * Sepet düğmesi bölünmüş sepette o siparişin tutarını yazar (`cartCheckoutCents`).
    */
   localOrderDiscountCents: number;
+  /** Kalem fiyatları KDV dahil mi; değilse özet KDV'yi oran başına ekler (`cartAddedVat`). */
+  pricesIncludeVat: boolean;
+  /** Ters yükleme mi (doğrulanmış AB vergi numarasıyla Almanya'ya işletme satışı); KDV eklenmez. */
+  zeroRated: boolean;
 }
 
 /** Boş sepet — hiç kalem yokken ve okuma yapılamadığında aynı şekil döner. */
@@ -279,6 +283,8 @@ export const EMPTY_CART: CartView = {
   shippingSubtotalCents: 0,
   shippingOnly: false,
   localOrderDiscountCents: 0,
+  pricesIncludeVat: true,
+  zeroRated: false,
 };
 
 /**
@@ -387,6 +393,8 @@ export function cartCheckoutCents(view: CartView): number {
     split: isSplitCart(view),
     localItemsCents: view.lines.reduce((sum, l) => (cartGroupOf(l) === 'local' ? sum + (l.lineTotalCents ?? 0) : sum), 0),
     localOrderDiscountCents: view.localOrderDiscountCents,
+    lines: view.lines,
+    basis: view,
   });
 }
 
