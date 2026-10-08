@@ -11,6 +11,8 @@ export interface SummaryRow {
   value: string;
   tone?: 'muted' | 'olive' | 'danger';
   strike?: boolean;
+  /** Satırı komşusundan ayıran kesikli çizgi: kalemler ile tutarlar, tutarlar ile teslim bilgisi ayrı okunsun. */
+  divider?: 'above' | 'below';
 }
 
 interface SummaryPanelProps {
@@ -30,6 +32,11 @@ const ROW_TONE: Record<NonNullable<SummaryRow['tone']>, string> = {
   danger: 'font-semibold text-error',
 };
 
+const DIVIDER: Record<NonNullable<SummaryRow['divider']>, string> = {
+  above: 'border-t-[1.5px] border-dashed border-sand-400 pt-2.5',
+  below: 'border-b-[1.5px] border-dashed border-sand-400 pb-2.5',
+};
+
 export function SummaryPanel({ rows, totalLabel, totalValue, totalTone = 'ink', eyebrow, note }: SummaryPanelProps) {
   return (
     <div className="flex flex-col gap-2 rounded-control bg-sand-150 px-4 py-3.5">
@@ -37,7 +44,12 @@ export function SummaryPanel({ rows, totalLabel, totalValue, totalTone = 'ink', 
       {rows.map((row) => (
         <div
           key={row.key}
-          className={['flex justify-between gap-2.5 font-sans text-note', ROW_TONE[row.tone ?? 'muted'], row.strike ? 'line-through' : ''].join(' ')}
+          className={[
+            'flex justify-between gap-2.5 font-sans text-note',
+            ROW_TONE[row.tone ?? 'muted'],
+            row.strike ? 'line-through' : '',
+            row.divider === undefined ? '' : DIVIDER[row.divider],
+          ].join(' ')}
         >
           <span>{row.label}</span>
           {/* Değer daralabilir ve sağa yaslı kırılır; uzun adres satırı paneli taşırmamalı. */}

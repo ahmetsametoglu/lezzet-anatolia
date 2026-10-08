@@ -22,6 +22,8 @@ export interface SummaryRow {
   tone?: 'muted' | 'olive' | 'danger';
   /** Satırın üstü çizilsin mi — `danger` kalem satırlarında; açıklama satırında değil. */
   strike?: boolean;
+  /** Satırı komşusundan ayıran kesikli çizgi: kalemler ile tutarlar, tutarlar ile teslim bilgisi ayrı okunsun. */
+  divider?: 'above' | 'below';
 }
 
 interface SummaryPanelProps {
@@ -56,7 +58,10 @@ export function SummaryPanel({
           row.tone === 'olive' ? styles.oliveLabel : row.tone === 'danger' ? styles.dangerLabel : styles.mutedLabel;
         const strike = row.strike === true ? styles.struck : null;
         return (
-          <View key={row.key} style={styles.row}>
+          <View
+            key={row.key}
+            style={[styles.row, row.divider === 'above' ? styles.dividerAbove : row.divider === 'below' ? styles.dividerBelow : undefined]}
+          >
             <Text style={[styles.label, toneStyle, strike]}>{row.label}</Text>
             {row.value === '' ? null : <Text style={[styles.label, toneStyle, strike]}>{row.value}</Text>}
           </View>
@@ -97,6 +102,19 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: theme.space.lg,
+  },
+  /* Toplamın üstündeki çizginin aynısı; renk dört kenara verilir, çünkü iOS kesik kenarı ancak bütün kenarların rengi aynıyken çizer. */
+  dividerAbove: {
+    borderTopWidth: theme.border.base,
+    borderColor: theme.colors['sand-400'],
+    borderStyle: 'dashed',
+    paddingTop: theme.space.lg,
+  },
+  dividerBelow: {
+    borderBottomWidth: theme.border.base,
+    borderColor: theme.colors['sand-400'],
+    borderStyle: 'dashed',
+    paddingBottom: theme.space.lg,
   },
   label: {
     fontFamily: theme.font.body[400],

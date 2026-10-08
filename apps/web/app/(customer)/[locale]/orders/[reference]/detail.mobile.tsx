@@ -38,8 +38,7 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
       : addressLine(order.address);
   const carrier = order.shipment === null ? '' : carrierLabel(t, order.shipment.carrierName);
 
-  // Para satırları toplamı açıkladığı için önce gelir ve sıfır indirim indirim olmadığı için çizilmez. Koli sırası yalnız birden
-  // çok kolide yazılır.
+  // Para satırları toplamı açıkladığı için önce gelir, sıfır indirim çizilmez ve koli sırası yalnız birden çok kolide yazılır.
   // KDV hariç fiyatta (onaylı işletme) KDV ara toplamın altında, teslimat en altta; toplam KDV dahildir.
   const vatText = vatSummaryOf(order, locale);
   const rows: SummaryRow[] = [
@@ -55,7 +54,12 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
         ]
       : []),
     ...vatText.vatRows,
-    { key: 'shipping', label: d.shipping, value: order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : d.shippingFree },
+    {
+      key: 'shipping',
+      label: d.shipping,
+      value: order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : d.shippingFree,
+      divider: 'below' as const,
+    },
     ...(delivery === '' ? [] : [{ key: 'delivery', label: d.delivery, value: delivery }]),
     ...(address === '' ? [] : [{ key: 'address', label: d.address, value: address }]),
     { key: 'payment', label: d.payment, value: d.pay[paymentKeyOf(order)] },

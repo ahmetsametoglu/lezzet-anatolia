@@ -365,6 +365,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     {
       key: 'subtotal',
       label: vatText.subtotalLabel ?? t.summary.subtotal,
+      divider: 'above' as const,
       value: pending ? UNKNOWN_AMOUNT : formatPrice(summary?.subtotalCents ?? orderedSubtotalCents, locale),
     },
     /* İndirimin adı da yazılır ki sepetteki indirimle aynı olduğu anlaşılsın; türetme sepetle ortak. */
@@ -578,7 +579,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       showNotice(t.reject.transport);
       return;
     }
-    /* Adres değişti, eski cevap artık bu kaydın değil: soru yeniden sorulur ve cevabı yine arkada hazırlanır. Tazeleme şart, çünkü
+    /* Adres değişti, eski cevap bu kaydın değildir: soru yeniden sorulur ve cevabı yine arkada hazırlanır. Tazeleme şart, çünkü
        kod değişimi bölgeyi, kargo ücretini ve teslim gününü de oynatabilir. */
     checkedFor.current = null;
     pendingCheck.current = null;
@@ -760,8 +761,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   <Note
                     key={neighborInvite.inviteId}
                     tone="olive"
-                    /* Cümle seçime bağlı: davet yalnız tam gün eşleşmesinde bağlanır, başka güne dokunan müşteriye o güne dönmenin
-                       ne kazandırdığı söylenir. */
+                    /* Cümle seçime bağlı: davet yalnız tam gün eşleşmesinde bağlanır, başka güne dokunan müşteriye davetteki güne
+                       dönmenin ne kazandırdığı söylenir. */
                     description={(chosenDate === neighborInvite.deliveryDate ? t.delivery.neighborInvite : t.delivery.neighborInviteOtherDay)
                       .replace('{name}', neighborInvite.inviterName || t.delivery.neighborSomeone)
                       .replace('{day}', formatDeliveryDate(neighborInvite.deliveryDate, locale))}

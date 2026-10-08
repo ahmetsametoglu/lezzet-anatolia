@@ -118,6 +118,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
     {
       key: 'subtotal',
       label: vatText.subtotalLabel ?? copy.summary.subtotal,
+      divider: 'above' as const,
       value: settled ? formatPrice(summary?.subtotalCents ?? cart.subtotalCents - cart.undeliverableSubtotalCents, locale) : UNKNOWN_AMOUNT,
     },
     // İndirimin KÜNYESİ sepetle aynı yardımcıdan: müşteri aynı indirimi iki ekranda iki adla okumasın.
@@ -320,7 +321,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                 )}
                 {delivery.blocked && <Note tone="error" description={t.delivery.blocked} />}
                 {/* Komşu daveti gün seçiminin hemen üstünde, çünkü cümle o seçimin gerekçesi. Cümle seçime bağlı: başka güne
-                    geçen müşteriye "o gün sizin için seçili" demek yalan olurdu. */}
+                    geçen müşteriye "bu gün sizin için seçili" demek yalan olurdu. */}
                 {isRoute &&
                   !delivery.blocked &&
                   delivery.neighborInvites.map((invite) => (

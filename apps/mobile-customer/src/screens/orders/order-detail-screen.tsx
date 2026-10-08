@@ -172,6 +172,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
       key: 'shipping',
       label: t.detail.shipping,
       value: detail.shippingFeeCents > 0 ? formatPrice(detail.shippingFeeCents, locale) : t.detail.shippingFree,
+      divider: 'below' as const,
     },
     {
       key: 'delivery',
