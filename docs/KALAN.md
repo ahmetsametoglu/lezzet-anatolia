@@ -191,6 +191,12 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 ## 21 · Mobil Uygulama
 
+- [ ] (K.71) **Operasyon mal kabulü: girilen bilgi kendiliğinden yazılsın, tamamlanan kalem bilgisini göstersin** — kullanıcı
+  kararı: satıra adet/SKT/lot girildikçe veritabanına yazılır, alttaki kayıt düğmesi kalkar; tamamlanan kalem kaydedileni
+  ("12 alındı · SKT 01.07.2028 · lot —") tamamlandı rengi/çerçevesiyle gösterir. Neden: bugün giriş yalnız ekran belleğinde,
+  ekrandan çıkınca ya da uygulama kapanınca kayboluyor; kısmi kayıttan sonra tamamlanan satır boş açılıyor ve kayıt silinmiş
+  sanılıyor (sahada ölçüldü, test sunucusu).
+
 - [x] (21.6) **Katalog okuma uçları:** `GET /api/v1/categories` (tek tur) + `GET /api/v1/products` (keyset imleç + arama/kategori/sıralama) + `GET /api/v1/products/:slug` (çeşit/aile/benzer) — oturumsuz gezilebilir (public), depo süzgeci ve fiyat kuralı WEB İLE AYNI çekirdekten; web lib'inde kalan orkestrasyon varsa YENİDEN YAZILMAZ, terfi raporlanır (tüzük §3.1).
   - Görev kapandı; koddaki `BEKLEYEN(21.6)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [x] (21.7) **Katalog ekranı — ilk gerçek ekran:** v3 tasarımından birebir; kategori çipleri + 2 sütun kare kart ızgarası (`ProductPhotoCard`) + keyset sonsuz kaydırma + iskelet/boş/hata durumları; ekran başına messages (fr/de/tr, cihaz dili eşlemesi); fiyat cihazda biçimlenir. Ticari bağlamın uca bağlanmasıyla (21.6 kapanışı) aynı turda, iki ajan paralel.
