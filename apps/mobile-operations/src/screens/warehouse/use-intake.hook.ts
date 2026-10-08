@@ -18,30 +18,8 @@ import { parseDate, productLabel } from './warehouse-format';
 import { trackWarehouse } from './warehouse-status';
 
 /*
-  D2 · MAL KABUL (v2:353-400). `/warehouse/intake/:poId` + `/intake/:poId/receive`.
-
-  ── SKT ZORUNLULUĞU BİR EKRAN KURALI DEĞİL, ŞEMA KURALI ─────────────────────
-  v2: *"SKT her satırda zorunlu — girilmeden kabul kapanmaz."* Sözleşmede `expiryDate` zorunlu alan,
-  yani tarihsiz satır gövde ayrıştırmasında 400 alır ve HİÇBİR yazım denenmez. Ekran bu yüzden
-  CTA'yı kapalı tutuyor — kapıyı boşuna zorlamamak için, kuralın sahibi olduğu için değil.
-
-  ── TARİH ALANI METİNDİR, VE BU BİR SINIR ───────────────────────────────────
-  Tasarımın `<input type="date">`i cihazda yerel bir seçici açar; o modül (`@react-native-community/
-  datetimepicker`) bağımlılıklarda YOK ve eklenmesi dev-client'ın yeniden derlenmesini ister —
-  kameranın 21.13'e bağlanmasıyla aynı sınır. Alan metin olarak yazıldı, biçim doğrulaması
-  `parseDate`te (gg.aa.yyyy · gg.aa.yy · ISO; takvimde olmayan gün REDDEDİLİR). Seçici geldiği gün
-  yalnız girdi bileşeni değişir.
-
-  ── HASAR: NOT VAR, FOTOĞRAF YOK ────────────────────────────────────────────
-  Satır başına hasar notu tutulur ve isteğin TEK `note` alanında toplanır (sözleşmede satır başına
-  not yok). Fotoğraf ÇİZİLMEDİ: kamera ve kova yükleme hattı 21.13'ün işi ve olmayan bir makinenin
-  düğmesini koymak, depocuya var olmayan bir kanıt sözü vermek olurdu.
-
-  ── PLANSIZ KABUL AYRI BİR ADRESTİR ─────────────────────────────────────────
-  Uç iki kapı açıyor: PO'lu (`/intake/:poId/receive`) ve plansız (`/intake/receive`). İstemci hangi
-  yolu çağıracağını ekranın konusundan bilir. Plansız yolda FORM BOŞ gelir ve satırların
-  `variantId`si elle seçilmelidir — o seçimi besleyecek bir operasyon ürün araması bugün yok, o
-  yüzden ekran plansız modda satır AÇMAZ ve bunu söyler (rapora yazıldı).
+  SKT alanı metindir: yerel tarih seçici modülü bağımlılıklarda yok ve eklenmesi dev-client'ı yeniden derletir.
+  Hasara fotoğraf eklenmez, çünkü yükleme hattı yok ve düğme olmayan bir kanıtı vaat ederdi.
 */
 
 const t = warehouseCopy;
@@ -61,46 +39,23 @@ export interface IntakeRowState {
   /** Gelen adet; `null` = henüz sayılmadı (sıfır DEĞİL — sıfır "hiç gelmedi" beyanıdır). */
   qty: number | null;
   /**
-   * Adedin DÖKÜMÜ — hangi boydan kaç koli + koli dışı kaç tek paket (v3 · `sheetAdet`).
-   *
-   * `qty` bunun toplamıdır ve ikisi HER ZAMAN aynı yamada yazılır (çekmecenin `onChange`i,
-   * okutmanın `addScanned`i) — ayrı yazılsalardı biri bir gün ötekinden geride kalırdı. Toplamı
-   * ayrıca tutmanın sebebi: gönderim ve sapma hesabı toplamı ister, döküm ise ÇEKMECENİN belleği.
-   * Depocu çekmeceyi yeniden açtığında "27" değil "2 koli + 3 tek" görmeli — düzeltmek istediği
-   * şey toplam değil, bir koli sayısıdır.
+   * Adedin dökümü (kaç koli + kaç tek paket); `qty` bunun toplamıdır ve ikisi aynı yamada yazılır ki biri geride kalmasın.
+   * Döküm ayrıca tutulur, çünkü depocu çekmeceyi yeniden açınca toplamı değil koli sayısını düzeltmek ister.
    */
   breakdown: QuantityBreakdown;
   /** Ham metin: alan yazılırken geçersiz ara hâllerden geçer, ISO'ya ancak tamamlanınca döner. */
   expiryText: string;
   lotText: string;
-  /**
-   * Hasar kartı AÇIK mı — sayacın kendisi 0'dan başladığı için "açıldı" ile "hasar var" ayrı
-   * sorulardır (v3:05 `hasarAcik`). Eskiden bu bayrak yoktu ve kart, nota tek boşluk yazılarak
-   * açılıyordu; o hile notu da kirletiyordu.
-   */
+  /** Hasar kartı açık mı — sayaç 0'dan başladığı için "kart açıldı" ile "hasar var" ayrı sorulardır. */
   damageOpen: boolean;
   /** Kaç paket hasarlı — kabul edilen adedin İÇİNDEN işaretlenir, toplamı değiştirmez. */
   damagedQty: number;
-  /**
-   * İşaretlenen hasar sebebi — TEK (kullanıcı kararı 30.08, tasarımdan sapma). Şablon dört çipi
-   * karta serip çoklu seçime izin veriyordu (`multi:true`); kullanıcı listeyi çekmeceye aldı ve
-   * tek sebebe indirdi. Sebepsiz hasar da geçerlidir: `null` kalabilir.
-   */
+  /** Hasar sebebi; `null` = sebep verilmedi, sebepsiz hasar da geçerlidir. */
   damageReason: string | null;
   damageNote: string;
   /**
-   * Bu satırın adedi BARKOD OKUTULARAK mı yazıldı, ve okutulduysa NE ile (v3:05 — `kaynakNotu`
-   * künyesi ve `okutTuru`/`okutNotu` kutusu; ikisi de aynı bilgiden).
-   *
-   * Tasarım satırın künyesinde bunu söylüyor, varsayılanı *"barkod okutulmadı"*. Bilgi denetim
-   * içindir: elle sayılmış satırla okutularak sayılmış satır aynı görünmemeli — ikincisinde
-   * kutunun üstündeki kod ile kayıt eşleşmiştir, birincisinde yalnız depocunun beyanı vardır.
-   * Türetilemez, çünkü adet ikisinde de aynı sayıdır.
-   *
-   * Bayrak değil NESNE: tasarım yalnız "okutuldu" demiyor, NEYİN okutulduğunu da yazıyor
-   * ("koli barkodu · çarpan 12"). Boole tutsaydık o cümle için ikinci bir yerden veri aramak
-   * gerekirdi — oysa okutan çağıranların ikisi de (`confirmScanned`, `confirmLearn`) bu ikiliyi
-   * zaten elinde tutuyor.
+   * Adet barkod okutularak mı yazıldı ve neyle: elle sayılan satır yalnız beyandır, okutulanda kod ile kayıt eşleşmiştir.
+   * Boole değil nesne, çünkü ekran neyin okutulduğunu da yazar ("koli barkodu · çarpan 12").
    */
   scan: { kind: BarcodeKind; qtyPerCode: number } | null;
 }
@@ -118,16 +73,8 @@ const EMPTY_ROW: IntakeRowState = {
 };
 
 /**
- * Okutulan adedi DÖKÜME yazar — sayı ile hesabın aynı yamada gitmesinin ikinci yarısı.
- *
- * **Koli kodu koli sayar, paket kodu tek paket sayar.** Okutulan koli barkodunun çarpanı biliniyor
- * (`scan.qtyPerCode`) ve depocunun çekmecede söylediği adet paket cinsindendir; tam bölünen kısım
- * koli olarak, artan kısım tek paket olarak yazılır — "26 paket" 12'lik koliden okutulduysa iki
- * koli ve iki tek pakettir, artığı koliye yuvarlamak sayımı bozardı.
- *
- * Okutulan boy ürünün KAYITLI boylarıyla çarpanından eşleştirilir; eşleşme yoksa döküm satırı
- * kodsuz açılır ve çekmecede "ürüne kaydedilecek" diye görünür. Eşleştirme olmasaydı kayıtlı bir
- * boy çekmecede İKİ kez çizilirdi — biri sayılmamış kayıtlı satır, öteki kodsuz kopyası.
+ * Okutulan adedi dökümde koli ve tek pakete böler; artığı koliye yuvarlamak sayımı bozardı.
+ * Boy, kayıtlı boylarla çarpanından eşleşir; eşleşmeseydi aynı boy çekmecede iki kez çizilirdi.
  */
 function addToBreakdown(
   current: QuantityBreakdown,
@@ -146,17 +93,8 @@ function addToBreakdown(
 }
 
 /**
- * Öğrenmenin iki adımı tek durumda: **hangi ürün** (`variantId`) ve **bu kod neyi sayıyor**
- * (`kind`/`qtyPerCode`). İkincisi olmadan öğretilen kod hep 1 adetlik kalırdı (23.12 künyesi).
- */
-/**
- * **Öğrenilen kodun kalıcı künyesi** (v3:05 · kullanıcı bulgusu 30.08) — listenin üstünde duran
- * kart: *"Kod öğrenildi · 8691234567890 → Fıstıklı Baklava 450 g"* + *"koli barkodu · çarpan 12 ·
- * ikinci gelişte tanınacak"*.
- *
- * `LearnState`ten AYRI ve olmak zorunda: o, öğrenme AKIŞININ hâlidir (çekmece açık, ürün seçiliyor)
- * ve bittiğinde `null`a döner. Bu ise akış bittikten SONRA doğar ve ekranda kalır — çünkü anlattığı
- * şey bir adım değil bir SONUÇ: bir dahaki kabulde o kod tanınacak.
+ * Öğrenilen kodun ekranda kalan kartı. `LearnState`ten ayrıdır: o akış bitince `null`a döner, bu akıştan sonra doğar
+ * ve bir sonraki kabulü değiştiren sonucu anlatır.
  */
 export interface LearnedNote {
   code: string;
@@ -166,6 +104,10 @@ export interface LearnedNote {
   qtyPerCode: number;
 }
 
+/**
+ * Öğrenmenin iki adımı tek durumda: kod hangi ürüne bağlanacak ve neyi sayıyor (tekil paket mi, kaç adetlik koli mi).
+ * İkinci adım olmasaydı öğretilen her kod 1 adet sayılırdı.
+ */
 export interface LearnState {
   code: string;
   /** `null` = ürün henüz seçilmedi; ekran birinci adımı (satır listesi) çizer. */
@@ -181,25 +123,16 @@ interface UseIntakeResult {
   /** Konusuz açılışta bekleyen sevkiyatlar; konulu açılışta boş. */
   pending: PendingIntakeContract[];
   /**
-   * Açık sevkiyatın künyesi — **ekranın BAŞLIĞI budur** (v3:05, kullanıcı bulgusu 30.08).
-   *
-   * Uç 21.11d'de göndermeye başlamıştı ama hook onu düşürüyordu; ekran da başlığa sabit
-   * "Mal kabul" yazıyordu. Tasarım oraya SEVKİYATIN KODUNU koyuyor ve sebebi depocunun elindeki
-   * kâğıt: irsaliyede yazan şey `TS-26-4VXQEC`, "mal kabul" değil. Ekranın adını zaten oraya
-   * nasıl geldiğinden biliyor.
-   *
-   * `null` = konusuz açılış (bekleyen listesi) ya da plansız kabul.
+   * Açık sevkiyatın künyesi; ekran başlığa sevkiyat kodunu yazar, çünkü depocunun elindeki irsaliyede o kod durur.
+   * `null` = konusuz açılış ya da plansız kabul.
    */
   purchaseOrder: IntakePurchaseOrderContract | null;
   /**
-   * MLOR eşiği (%) — SUNUCUDAN gelen ayar (`mlor_percent`), satır uyarısının ölçütü.
-   *
-   * Motorun sabiti (`MLOR_PERCENT`) burada varsayılan olarak duruyor ve YALNIZ form daha
-   * okunmadan çizilen bir kare için: eşik okunamadığında uyarıyı büsbütün kapatmak, bilinen bir
-   * kuralı sessizce yok saymak olurdu. Yanıt gelince gerçek ayar bunun yerine geçer.
+   * Sunucudaki MLOR eşiği (%). Motorun sabiti yalnız form okunmadan çizilen kare için varsayılandır: eşik okunamadı diye
+   * uyarıyı kapatmak bilinen bir kuralı yok saymak olurdu.
    */
   mlorPercent: number;
-  /** Plansız kabulde aramadan seçilen ürünü satır yapar (23.13). */
+  /** Plansız kabulde aramadan seçilen ürünü satır yapar. */
   addManualRow: (variant: VariantSearchRowContract) => void;
   stateOf: (variantId: string) => IntakeRowState;
   patch: (variantId: string, patch: Partial<IntakeRowState>) => void;
@@ -213,16 +146,15 @@ interface UseIntakeResult {
   lotsUsedBy: (variantId: string) => string[];
   /** Bu kabulde BAŞKA satırlara yazılmış SKT'ler (ISO) — tarih tuş takımının hızlı çipleri. */
   datesUsedBy: (variantId: string) => string[];
-  /** Beklenenden SAPAN satırlar — yalnız onlar gösterilir (v2'nin fark özeti). */
+  /** Beklenenden sapan satırlar — yalnız onlar gösterilir. */
   differences: { name: string; expected: number; received: number }[];
   sending: boolean;
   notice: IntakeNotice | null;
   /** Kabulün sonucu: uyarılar ve farklar KAPIDAN gelir, ekran yeniden hesaplamaz. */
   warnings: { name: string; remainingPercent: number | null }[];
   /**
-   * Kabulü yazar. `onDone` YALNIZ başarıda çağrılır — gezinme kararı ÇAĞIRANIN (ekranın) işi;
-   * hook bir rota bilmez. Kısmi kayıtta çağrılmaz: orada iş bitmedi, depocu kalan satırlara
-   * devam edecek.
+   * Kabulü yazar; `onDone` yalnız tam kayıtta çağrılır, çünkü gezinme ekranın kararıdır ve kısmi kayıtta depocu kalan
+   * satırlara devam eder.
    */
   submit: (options?: { partial?: boolean; onDone?: () => void }) => void;
   reload: () => void;
@@ -230,17 +162,15 @@ interface UseIntakeResult {
   refresh: () => void;
   /** Çekme sürüyor mu — `status` DEĞİL: o listeyi söküp yükleme hâline geçirirdi. */
   reloading: boolean;
-  /** Tarama sayfası açık mı (Modül 23) — ekran ScanSheet'i bununla çizer. */
+  /** Tarama sayfası açık mı — ekran ScanSheet'i bununla çizer. */
   scanOpen: boolean;
   openScan: () => void;
   closeScan: () => void;
   /** Ham kodun işlenmesi — çözüm, satır bulma ve adet çekmecesi (künye aşağıda). */
   handleScan: (code: string) => void;
-  /** Çözülen kodun çekmecesi — dolu ise ekran ürün kartı + adet seçiciyi çizer. */
   /** Okutmayla sayılan satırın kimliği — ekran onu açar ve adet çekmecesini getirir. */
   pendingCount: string | null;
   clearPendingCount: () => void;
-  /** Seçilen adedi satıra yazar ve çekmeceyi kapatır. */
   /** Tanınmayan kod — dolu ise ekran öğrenme çekmecesini çizer (iki adım, künye aşağıda). */
   learn: LearnState | null;
   /** Öğrenilen kodun kalıcı künyesi — akış bitince doğar, ekranda kalır (künyesi tipin üstünde). */
@@ -256,9 +186,8 @@ interface UseIntakeResult {
 }
 
 /**
- * `unplanned` = PO'SUZ kabul (23.13): mal gelmiş ama siparişi girilmemiş. Satır kümesi sunucudan
- * GELMEZ, depocu kurar — arama ya da okutma ile. PO'lu kabulün "listede olmayan satır açılmaz"
- * duvarı burada YOKTUR ve olamaz: plansızın doğası zaten "liste yok"tur.
+ * `unplanned` = siparişsiz kabul: satırlar sunucudan gelmez, depocu aramayla ya da okutmayla kurar. Bu yüzden PO'lu
+ * kabulün "listede olmayan satır açılmaz" kuralı burada yoktur.
  */
 export function useIntake(purchaseOrderId: string | null, unplanned = false): UseIntakeResult {
   const [status, setStatus] = useState<IntakeStatus>('loading');
@@ -276,15 +205,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
 
   const load = useCallback(async () => {
     if (unplanned) {
-      /* Plansızda okunacak bir form YOK: satırlar depocunun elinden doğar. Sunucuya sormak,
-         cevabı baştan bilinen bir soruyu sormak olurdu.
-
-         ── SATIRLAR TEMİZLENİR (cihazda görüldü 30.08) ────────────────────────
-         Ekran PO'lu kabulden siparişsize geçerken YENİDEN KURULMUYOR (aynı rota, farklı parametre)
-         ve plansız hâl bir önceki siparişin satırlarıyla açılıyordu: "beklenen 36 · GZT-1005"
-         yazan bir siparişsiz kabul. Beklenen adet plansızda YOKTUR; o satırlar depocuya olmayan
-         bir siparişi vaat ediyordu. Satır durumları da gider — yarım kalmış bir SKT, başka bir
-         kalemin satırında görünürdü. */
+      /* Plansızda okunacak form yok. Ekran aynı rotada yeniden kurulmadığı için önceki siparişin satırları ve yarım SKT'leri
+         temizlenir; yoksa siparişsiz kabul olmayan bir siparişin satırlarıyla açılırdı. */
       setRows([]);
       setPending([]);
       setStates({});
@@ -295,9 +217,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       return;
     }
     if (purchaseOrderId === null) {
-      // KONUSUZ AÇILIŞ artık boş bir ekran değil, BEKLEYEN SEVKİYAT LİSTESİ (24.08). Uç 21.11d'den
-      // beri vardı ama ekran okumuyordu; mal kabule yalnız derin bağlantıyla girilebiliyordu ve
-      // sipariş kimliği her tazelemede değiştiği için o yol sürekli kırılıyordu.
+      // Konusuz açılış bekleyen sevkiyatları listeler; depocu kabule derin bağlantı olmadan buradan girer.
       const run = (generation.current += 1);
       const bekleyen = await trackWarehouse(fetchPendingIntakes());
       if (run !== generation.current) return;
@@ -334,9 +254,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     void load();
   }, [load]);
 
-  /* AŞAĞI ÇEKME KENDİ BAYRAĞINI İSTER (30.08): `status` çekme sırasında `loading`e döndüğü an
-     ekran listeyi söküp yükleme hâline geçiyordu — oysa çekme hareketinin sözü "liste dursun,
-     üstüne taze veri gelsin". Bayrak ayrı: liste ekranda kalır, halka döner. */
+  /* Aşağı çekmenin ayrı bayrağı var: `status` `loading`e dönseydi ekran listeyi söküp yükleme hâline geçerdi, oysa çekmede
+     liste yerinde kalmalı. */
   const [reloading, setReloading] = useState(false);
 
   const reload = useCallback(() => {
@@ -366,38 +285,21 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   const complete = rows.length > 0 && rows.every((row) => writable(row.variantId));
 
   /**
-   * KISMİ KAYDIN ölçütü — en az bir satır yazılabilir durumda.
-   *
-   * `complete`in gevşetilmiş hâli değil, AYRI bir soru: "hepsi hazır mı" ile "bir tanesi bile
-   * hazır mı" iki farklı kapıyı açıyor. Hiçbiri hazır değilken kısmi kayıt düğmesi çizilirse
-   * depocu boş bir kabul göndermeye çalışır ve kapı sessizce hiçbir şey yazmaz.
+   * Kısmi kaydın ölçütü: en az bir satır yazılabilir mi. Hiçbiri hazır değilken kısmi kayıt düğmesi çizilseydi kapıya boş
+   * bir kabul giderdi.
    */
   const hasAnyCounted = rows.some((row) => writable(row.variantId));
 
   /**
-   * KAÇ SATIR DOLU — yapışkan çubuğun kapı metni bunu söyler (v3:05 "0/5 satır dolu").
-   *
-   * `complete`/`hasAnyCounted` ile aynı ölçütten (`writable`) sayılıyor, ayrı bir "dolu" tanımı
-   * yazılmadı: üç cümle de aynı soruyu soruyor — satır yazılabilir mi? İkinci bir ölçüt, bir gün
-   * "sayaç 5/5 diyor ama düğme açılmıyor" gibi açıklanamaz bir hâl üretirdi.
+   * Kaç satır dolu — `complete` ve `hasAnyCounted` ile aynı ölçütten (`writable`) sayılır; ayrı bir "dolu" tanımı sayaç ile
+   * düğmeyi birbirinden koparırdı.
    */
   const filledCount = rows.filter((row) => writable(row.variantId)).length;
 
   /**
-   * LOT ÖNERİLERİ — İKİ KAYNAK, BU SIRAYLA (21.175 · kullanıcı kararı 30.08).
-   *
-   * 1. **Bu kabulde başka satırlara girilmiş kodlar.** Bir sevkiyatın satırları çoğunlukla aynı
-   *    lottan ya da iki üç lottan gelir; depocu kodu bir kez yazar, ötekilerde listeden seçer.
-   *    Kaynak formun kendi durumudur — hiçbir uç sorulmaz.
-   * 2. **Varyantın depoda duran partilerinin kodları** (`row.lotCandidates`, kapıdan gelir).
-   *    Birinci kaynak İLK SATIRDA BOŞTUR ve o satırı yazan depocu hiçbir öneri görmüyordu; ikinci
-   *    kaynak tam olarak o boşluğu dolduruyor.
-   *
-   * SIRA TESADÜF DEĞİL: aynı kabulde az önce yazılmış bir kod, elindeki koliyle depodaki eski bir
-   * partiden daha büyük ihtimalle aynıdır. Yakınlık sırası, isabet sırasıdır.
-   *
-   * Satırın KENDİ kodu listede olmaz: depocuya zaten yazdığı şeyi önermek gürültüdür. Tekrarlar da
-   * elenir — aynı kod iki kaynakta birden geçebilir ve listede iki kez görünmesi bir bilgi taşımaz.
+   * Lot önerileri iki kaynaktan, bu sırayla: bu kabuldeki öteki satırların kodları, sonra varyantın depodaki partileri (ilk
+   * satırda birinci kaynak boştur). Sıra yakınlık sırasıdır: aynı kabulde az önce yazılan kod, elimdeki koliyle büyük
+   * ihtimalle aynıdır.
    */
   const lotsUsedBy = (variantId: string): string[] => {
     const seen = new Set<string>();
@@ -414,11 +316,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   };
 
   /**
-   * TARİH ÖNERİLERİ — lot önerisinin aynı kuralı, tek kaynak (kullanıcı kararı 03.09: *"aynı
-   * partideki tarihler de lot gibi öneri olarak gelmeli"*). Bu kabulde BAŞKA satırlara yazılmış
-   * geçerli tarihler, ilk yazılan önce; satırın kendi tarihi listede olmaz, tekrarlar elenir.
-   * İkinci kaynak (depodaki partilerin tarihleri) BİLEREK yok: eski partinin tarihi yeni gelen
-   * koliye ancak yanlışlıkla yazılır.
+   * Tarih önerileri yalnız bu kabuldeki öteki satırlardan gelir. Depodaki partilerin tarihleri bilerek önerilmez: eski
+   * partinin tarihi yeni koliye ancak yanlışlıkla yazılır.
    */
   const datesUsedBy = (variantId: string): string[] => {
     const seen = new Set<string>();
@@ -437,24 +336,12 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       received: states[row.variantId]?.qty ?? null,
     }))
     .filter((row): row is { name: string; expected: number; received: number } => row.received !== null)
-    // Beklenen YOKSA sapma da yoktur (plansız kabul, 23.13): kıyaslanacak sipariş olmadan gelen her
-    // adet "beklenenden farklı" görünür ve fark özeti anlamsız bir listeye dönerdi.
+    // Beklenen yoksa (plansız kabul) sapma da yoktur; yoksa her adet fark özetine düşerdi.
     .filter((row) => row.expected > 0 && row.received !== row.expected);
 
   /**
-   * Kabulü yazar. `partial` **KAPIYI DEĞİL, KAPININ ÖNÜNDEKİ KİLİDİ** açar (v3:05 · `act.kismiKabul`).
-   *
-   * Tasarım yapışkan çubukta İKİ yol sunuyor ve ikisi ayrı karar: birincisi "her satırı saydım,
-   * kabulü kapat", ikincisi *"Kısmen teslim alındı olarak kaydet"* — künyesi de ne olacağını
-   * söylüyor: *"kalan satırlar açık kalır; sevkiyat 'kısmen teslim alındı'ya döner."*
-   *
-   * Gövde ZATEN doğruydu: `lines` sayılmamış satırı hep atlıyordu (aşağıda), yani kısmi kaydın
-   * isteği tam kaydınkiyle aynı. Eksik olan tek şey `complete` kilidiydi — ekran "her satırı say"
-   * diyerek depocuyu bekletiyordu, oysa rampada koli koli gelen bir sevkiyatta o bekleme
-   * gerçek dışı: mal geldiği kadarıyla stoğa girmeli, kalanı açık kalmalı.
-   *
-   * Kısmi kayıtta da EN AZ BİR sayılmış satır şart — hiçbir şey sayılmadan yazmak, kapıya boş bir
-   * kabul göndermek olurdu.
+   * Kabulü yazar; `partial` yalnız `complete` kilidini açar, gövde aynıdır çünkü sayılmamış satır zaten atlanır. Rampada
+   * parça parça gelen mal geldiği kadar stoğa girmeli, ama en az bir sayılmış satır şarttır.
    */
   const submit = useCallback(
     (options?: { partial?: boolean; onDone?: () => void }) => {
@@ -482,12 +369,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
           ];
         });
 
-        // Hasar notları satır başına tutulur ama sözleşmede satır notu YOK — isteğin tek notunda,
-        // hangi satıra ait olduğu YAZILARAK toplanır (bilginin kaybolmasındansa birleşmesi).
-        /* Hasarın ÜÇ parçası tek cümlede toplanır: adet · sebepler · serbest not. Sözleşmede
-           satır başına hasar alanı yok (`damagedQty` diye bir alan hiç açılmadı), o yüzden bilgi
-           isteğin tek notuna yazılıyor — kaybolmasındansa birleşmesi. Stokta ayrı bir "hasarlı"
-           kalem AÇILMIYOR ve ekran bunu saklamıyor (kartın dipnotu söylüyor). */
+        /* Sözleşmede satır başına hasar alanı yok: adet, sebep ve not, hangi satıra ait olduğu yazılarak isteğin tek notunda
+           toplanır. Stokta ayrı "hasarlı" kalem açılmaz; kartın dipnotu bunu söyler. */
         const damage = rows
           .map((row) => {
             const state = states[row.variantId];
@@ -525,14 +408,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
 
         const outcome = noticeOf(result.data);
 
-        /* SONUÇ TOAST'LA SÖYLENİR, EKRANDAKİ ŞERİTLE DEĞİL (kullanıcı bulgusu 30.08).
-           Sebebi başarının ARDINDAN olan şey: ekran kapanıyor ve kapanan ekrandaki şeridi kimse
-           okuyamaz. Toast kabuğun katmanında duruyor (`app/_layout` `ToastHost`), yani depocu
-           listeye döndükten sonra da görüyor. Uygulamada zaten tek toast deposu var; ikinci bir
-           bildirim düzeni açmak aynı işi iki yerde yapmak olurdu (CLAUDE §1).
-
-           HATA ŞERİTTE KALIR: orada ekran kapanmıyor ve mesajın kalıcı olması gerekiyor —
-           depocu tekrar deneyecek, geçip giden bir toast onu okuyamadan söner. */
+        /* Başarı toast'la söylenir, çünkü ekran kapanır ve kapanan ekrandaki bildirim çubuğu okunmaz. Hata çubukta kalır:
+           ekran açık kalır ve depocu yeniden denerken mesaj sönmemeli. */
         if (outcome.tone === 'ok') {
           toastSuccess(outcome.text);
           if (partial) {
@@ -552,30 +429,13 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   );
 
   /*
-    ── TARAMA (Modül 23 · etüt 2.1 · kullanıcı tasarımı 23.08) ───────────────
-    Okutma bir SAYIM değil TANITIMDIR: depocu her koliyi ayrı okutmaz, bir kez okutur ve kod
-    çözülünce ÜRÜN KARTI ÇEKMECESİ açılır — görsel + ad + adet seçici. Varsayılan adet okutulan
-    birimin kendi miktarıdır (koli → çarpan, tekil → 1); "10 koli geldi" gerçeğini depocu adedi
-    çekmecede artırarak söyler ve satıra ancak ONAYLA yazılır. Çarpan önerisi "adet önden
-    doldurulmaz" kuralının istisnası DEĞİL: kodun kendi söylediği ölçülmüş gerçektir, beklenen
-    adet değil. SKT/lot girişi aynen elle sürer; kabulün kendisi değişmez.
-
-    PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ (yalnız söyler): PO'lu kabulün satır kümesi
-    siparişten gelir ve fark raporu o kümeye göre kurulur — listeye dışarıdan satır eklemek,
-    "beklenmedik mal" hâlini fark raporunun göremeyeceği bir yere yazmak olurdu.
+    Okutma adedi hemen yazar (paket kodu 1, koli kodu çarpanı kadar) ve düzeltme için adet çekmecesini açar. PO'lu kabulde
+    siparişte olmayan ürün satır açmaz, çünkü fark raporu siparişin kümesine göre kurulur.
   */
   const [scanOpen, setScanOpen] = useState(false);
   /**
-   * SAYILACAK SATIR — ekranın açıp adet çekmecesini göstereceği satırın kimliği.
-   *
-   * İKİ KAYNAĞI VAR ve ikisi de aynı cümleyi kuruyor (kullanıcı bulgusu 30.08):
-   * · **okutma** — kod çözüldü, adet zaten yazıldı; çekmece düzeltme için açılır.
-   * · **elle ekleme** — aramadan seçilen ürün satır oldu ve adedi SIFIR; çekmece burada
-   *   düzeltme değil, işin kendisidir. Okutmada açılıp elle eklemede açılmaması, aynı sonucu
-   *   veren iki yoldan birini yarım bırakmaktı.
-   *
-   * Adı bu yüzden "okutulan" değil: sinyal kaynağını değil SONUCU söyler. Bir kez tüketilir
-   * (`clearPendingCount`), yoksa çekmece her çizimde yeniden açılırdı.
+   * Adet çekmecesi açılacak satır: okutmada düzeltme için, elle eklemede (adet sıfır) işin kendisi için açılır. Bir kez
+   * tüketilir (`clearPendingCount`), yoksa çekmece her çizimde yeniden açılırdı.
    */
   const [pendingCount, setPendingCount] = useState<string | null>(null);
   const [learn, setLearn] = useState<LearnState | null>(null);
@@ -601,11 +461,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
           },
         };
       });
-      /* BAŞARILI OKUTMA ARTIK BİLDİRİM BASMIYOR (kullanıcı bulgusu 30.08). "Fıstıklı Baklava ·
-         2500 g bulundu — 1 adet eklendi" şeridi aynı şeyi ÜÇÜNCÜ kez söylüyordu: satır zaten
-         açılmış, adedi yazılmış, künyesi "barkod okutuldu" demiş ve içinde "bir okutma = 24 adet"
-         kartı belirmiştir. Bildirim, sonucun görünmediği hâller için: yabancı ürün, formda
-         olmayan kod, okuma hatası — onlar yerinde duruyor. */
+      /* Başarılı okutma bildirim basmaz: satır, adedi ve okutma künyesi zaten görünür. Bildirim sonucun görünmediği hâller
+         içindir — yabancı ürün, formda olmayan kod, okuma hatası. */
       return true;
     },
     [rows],
@@ -630,10 +487,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
         const found = result.data;
         let row = rows.find((candidate) => candidate.variantId === found.variantId);
         if (row === undefined) {
-          // PLANSIZDA OKUTMA SATIR AÇAR — PO'lu kabulün tersi ve bilinçli: orada küme siparişten
-          // gelir ve fark raporu o kümeye göre kurulur, burada küme YOKTUR (23.13). Beklenen adet
-          // 0: kıyaslanacak bir sipariş yok, "beklenen" sıfır değil YOK demektir ve ekran bunu
-          // plansız modda hiç yazmaz.
+          // Plansızda okutma satır açar, çünkü kıyaslanacak sipariş kümesi yoktur. Beklenen 0 "yok" demektir ve plansız
+          // modda ekranda yazılmaz.
           if (!unplanned) {
             setNotice({
               tone: 'warn',
@@ -659,22 +514,13 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
             // çekmece "kaç koli geldi" diye soracak. PO'lu satırda liste zaten var; burada
             // olmasaydı aynı formda bir satır koli sayar, ötekisi sayamazdı.
             caseSizes: found.caseSizes,
-            /* LOT ADAYI YOK ve olamaz: adaylar form açılışında depodan okunuyor (21.175), bu satır
-               ise okutma anında doğdu. Kapıya ikinci bir tur attırmak depocuyu koli elinde
-               bekletirdi — çekmece zaten aynı kabuldeki öteki satırların kodlarını öneriyor. */
+            /* Lot adayı yok: adaylar form açılışında depodan okunur, bu satır okutma anında doğdu. Depocu koli elindeyken
+               ikinci bir tur beklemesin; çekmece aynı kabuldeki öteki satırların kodlarını zaten öneriyor. */
             lotCandidates: [],
           };
           setRows((current) => [...current, row!]);
         }
-        /* OKUTMA BİR SAYMA EYLEMİDİR, ARAMA DEĞİL (tasarım deseni · kullanıcı kararı 30.08).
-           Tasarımın betiği okutulan kodu ANINDA sayıya yazıyor ve adet çekmecesini açıyor
-           (`v3.dc.html:4005-4010`): paket barkodu tek pakete +1, koli barkodu o boydan +1 koli;
-           künye "koli barkodu okundu · KL-24" olur. Depocunun yapacağı tek şey devam etmektir.
-
-           Eskiden araya "Okutulan ürün" diye bir çekmece giriyordu (fotoğraf + kaydırıcı +
-           "Satıra ekle") ve depocuya kaç adet olduğunu SORUYORDU — oysa koli barkodu kaç adet
-           olduğunu kendisi söylüyor (`qtyPerCode`). İki adım, bir soru ve v3'te hiç geçmeyen bir
-           kaydırıcı; üçü de eski desenin kalıntısıydı. */
+        // Adedi kod kendisi söyler (`qtyPerCode`), bu yüzden depocuya sorulmaz.
         const scannedQty = found.qtyPerCode;
         addScanned(found.variantId, scannedQty, { kind: found.kind, qtyPerCode: found.qtyPerCode });
         // Ekran bu sinyali görüp satırı açar ve adet çekmecesini getirir; bir kez tüketilir.
@@ -685,14 +531,12 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   );
 
   /**
-   * Plansız kabulde aramadan seçilen ürün satır olur (23.13). Zaten varsa İKİNCİ KEZ eklenmez:
-   * aynı ürünün iki satırı, kabulün toplamını iki yere bölerdi.
+   * Plansız kabulde aramadan seçilen ürün satır olur; zaten varsa ikinci kez eklenmez, çünkü iki satır kabulün toplamını
+   * bölerdi.
    */
   const addManualRow = useCallback((variant: VariantSearchRowContract) => {
-    /* SAYIM ÇEKMECESİ BURADA DA AÇILIR (kullanıcı bulgusu 30.08): elle eklenen satırın adedi
-       SIFIR — okutmadakinin aksine çekmece bir düzeltme değil, işin kendisi. Zaten var olan
-       satırda da sinyal verilir: depocu aynı ürünü ikinci kez seçtiyse istediği şey onu saymaktır,
-       sessiz bir "zaten ekliydi" değil. */
+    /* Elle eklenen satırın adedi sıfırdır, bu yüzden çekmece burada işin kendisidir. Ürün zaten listedeyse de açılır, çünkü
+       ikinci seçim onu sayma isteğidir. */
     setPendingCount(variant.variantId);
     setRows((current) =>
       current.some((row) => row.variantId === variant.variantId)
@@ -720,13 +564,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   }, []);
 
   /*
-    ── ÖĞRENMENİN İKİNCİ ADIMI: BU KOD NEYİ SAYIYOR? (23.12) ─────────────────
-    Ürünü seçmek yetmiyor. Kod bir KOLİNİN üstündeyse "bir okutma = kaç adet" bilgisi kodun kendi
-    bilgisidir ve öğrenme anında yazılmazsa bir daha yazılacak yeri yok: kapı `kind`/`qtyPerCode`
-    alıyordu ama ekran göndermiyordu, yani her öğretilen kod 1 ADETLİK oluyordu (ölçüldü 23.08).
-    Sonucu sessizdi ve kalıcıydı — koli her okutmada 1 sayılır, depocu adedi hep elle düzeltirdi
-    ve sebebi görünmezdi. Web'de kod EKLEME bilinçle yok (öğrenme kabuldedir, karar §1.3), yani
-    doğru çarpanı yazmanın başka yolu da yoktu.
+    Koli kodunun çarpanı öğrenme anında yazılır, çünkü başka yazılacak yeri yok (web'de kod ekleme yok). Yazılmasaydı
+    her öğretilen kod 1 adet sayılır, depocu adedi hep elle düzeltirdi.
   */
   const pickLearnVariant = useCallback((variantId: string) => {
     setLearn((current) => (current === null ? null : { ...current, variantId }));
@@ -756,11 +595,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
         // Öğretilen kod ÇARPANI kadar sayılır: az önce "bu koli 12 adet" denmişken satıra 1 yazmak,
         // kendi söylediğimizi ilk kullanımda yok saymak olurdu.
         addScanned(variantId, qtyPerCode, { kind, qtyPerCode });
-        /* ÖĞRENME EKRANDA KALIR (v3:05 · kullanıcı bulgusu 30.08): tasarım listenin üstüne kalıcı
-           bir kart koyuyor ("Kod öğrenildi · 869… → Fıstıklı Baklava 450 g · koli barkodu ·
-           çarpan 12 · ikinci gelişte tanınacak"). Bizde yalnız geçip giden bir bildirimdi ve
-           öğrenmenin ne öğrettiği hiçbir yerde okunamıyordu — oysa bu, bir dahaki kabulü
-           değiştiren kalıcı bir kayıt. */
+        // Öğrenmenin sonucu ekranda kalan kartta görünür, çünkü bir sonraki kabulü değiştiren kalıcı bir kayıttır.
         const learnedRow = rows.find((candidate) => candidate.variantId === variantId);
         if (learnedRow !== undefined) {
           setLearned({
@@ -782,9 +617,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
         kind: 'unit',
         qtyPerCode: 1,
       });
-      /* BU BİLDİRİM KALIYOR — başarılı okutmanınki kalktı ama bu başka bir şey: depocu B'yi seçti,
-         adet A'ya düştü. Sonuç GÖRÜNMEZ (seçtiği satır boş kalır, başka satır artar) ve ekranda
-         bunu söyleyen tek şey bu cümledir. */
+      /* Depocu bir ürünü seçti ama adet başka satıra düştü; bunu ekranda söyleyen tek şey bu bildirimdir. */
       if (added) {
         setNotice({ tone: 'warn', text: fillCopy(t.intake.scan.alreadyBound, { name: productLabel(bound.productName, bound.variantLabel) }) });
       }
@@ -841,12 +674,7 @@ function nameOf(rows: readonly IntakeFormRowContract[], variantId: string): stri
 }
 
 /**
- * Kapının cevabı → ekrandaki cümle.
- *
- * `repricedCount` GÖSTERİLMEZ ve bu sözleşmenin kendi hükmü: alan `null` olabiliyor ("ölçülemedi",
- * fiyat portu kayıtlı değil) ve zaten depocuya ait bir sayı değil — depo ekranı fiyat görmez.
- * Sıfır yazmak bozuk bir ölçümü sağlıklı gibi okutur, "bilinmiyor" yazmak da depocuya işi olmayan
- * bir soru sordurur.
+ * Kapının cevabı → ekrandaki cümle. `repricedCount` gösterilmez: `null` olabilir (ölçülemedi) ve depo ekranı fiyat görmez.
  */
 function noticeOf(outcome: ReceiveOutcome): IntakeNotice {
   if (outcome.status === 'empty') return { tone: 'error', text: t.intake.result.empty };
