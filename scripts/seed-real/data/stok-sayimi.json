@@ -1,0 +1,424 @@
+[
+  {
+    "warehouse": "STR",
+    "date": "2026-10-08",
+    "note": null,
+    "supplier": "Behotrade BV",
+    "purchaseOrderNote": "Fatura 2026-0224",
+    "lines": [
+      {
+        "variant": {
+          "product": "Alıç Sirkesi",
+          "label": "500 ml",
+          "sku": "MEIDOORN-AZIJN-500ML"
+        },
+        "qty": 12,
+        "expiryDate": "2031-04-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Ananas Sirkesi",
+          "label": "500 ml",
+          "sku": "ANANAS-AZIJN-500ML"
+        },
+        "qty": 12,
+        "expiryDate": "2028-12-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Andız Özü",
+          "label": "350 g",
+          "sku": "SIFAMIX-ANDIZ-EXTRACT-350GR"
+        },
+        "qty": 12,
+        "expiryDate": "2028-01-28",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Antep Fıstığı",
+          "label": "700 g",
+          "sku": "PISTACHE-700GR"
+        },
+        "qty": 20,
+        "expiryDate": "2028-06-03",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Bal Sirkesi",
+          "label": "500 ml",
+          "sku": "HONING-AZIJN-500ML"
+        },
+        "qty": 12,
+        "expiryDate": "2029-10-08",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Bromelain Şurubu",
+          "label": "250 g",
+          "sku": "BROMELAIN-SIROOP-250ML"
+        },
+        "qty": 18,
+        "expiryDate": "2027-08-28",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Coconut Mix",
+          "label": "250 ml",
+          "sku": "COCONUT-MIX-250ML"
+        },
+        "qty": 12,
+        "expiryDate": "2029-03-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Elma Sirkesi",
+          "label": "500 ml",
+          "sku": "APPEL-AZIJN-500ML"
+        },
+        "qty": 12,
+        "expiryDate": "2030-09-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Enginar Sirkesi",
+          "label": "500 ml",
+          "sku": "ENGINAR-AZIJN-500ML"
+        },
+        "qty": 12,
+        "expiryDate": "2031-07-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Fındıklı Muska Pestil",
+          "label": "300 g",
+          "sku": "PESTIL-MET-HAZINOTEN-MUSKA-300GR"
+        },
+        "qty": 5,
+        "expiryDate": "2026-12-14",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Form Macunu",
+          "label": "240 g",
+          "sku": "FORM-PASTA-240GR"
+        },
+        "qty": 2,
+        "expiryDate": "2027-04-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Işkın Kökü Sirkesi",
+          "label": "500 ml",
+          "sku": "ISGIN-AZIJN-500ML"
+        },
+        "qty": 12,
+        "expiryDate": "2030-06-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "İğde Çekirdeği Macunu",
+          "label": "240 g",
+          "sku": "IGDE-CEKIRDEGI-PASTA-240GR"
+        },
+        "qty": 2,
+        "expiryDate": "2030-01-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Karadut Özü",
+          "label": "670 g",
+          "sku": "ZWARTE-MOERBEI-EXTRAT-670GR"
+        },
+        "qty": 12,
+        "expiryDate": "2028-05-08",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Keçiboynuzu Özü",
+          "label": "700 g",
+          "sku": "SIFAMIX-JOHANNESBROOD-EXTRACT-700ML"
+        },
+        "qty": 12,
+        "expiryDate": "2028-01-29",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Keçiboynuzu Pekmezi",
+          "label": "650 g",
+          "sku": "JOHANNESBROODMELASSE-650GR"
+        },
+        "qty": 12,
+        "expiryDate": "2028-01-29",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Kozalak Macunu",
+          "label": "240 g",
+          "sku": "DENNENAPPEL-PASTA-240GR"
+        },
+        "qty": 2,
+        "expiryDate": "2027-04-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Kozalak Özü",
+          "label": "670 g",
+          "sku": "SIFAMIX-KOZALAK-EXTRACT-670GR"
+        },
+        "qty": 12,
+        "expiryDate": "2028-07-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Kurutulmuş Aronya",
+          "label": "150 g",
+          "sku": "GEDROOGDE-ARONYA-150GR"
+        },
+        "qty": 6,
+        "expiryDate": "2027-07-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Kurutulmuş Elma",
+          "label": "180 g",
+          "sku": "GEDROOGDE-APPEL-180GR"
+        },
+        "qty": 6,
+        "expiryDate": "2027-07-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Kurutulmuş Kavun",
+          "label": "100 g",
+          "sku": "GEDROOGDE-MELOEN-100GR"
+        },
+        "qty": 6,
+        "expiryDate": "2027-07-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Kurutulmuş Şeftali",
+          "label": "180 g",
+          "sku": "GEDROOGDE-PERZIK"
+        },
+        "qty": 6,
+        "expiryDate": "2027-07-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Kurutulmuş Trabzon Hurması Cipsi",
+          "label": "180 g",
+          "sku": "GEDROOGDE-KAKI-CIPS-180GR"
+        },
+        "qty": 6,
+        "expiryDate": "2027-07-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Nar Ekşisi",
+          "label": "250 ml",
+          "sku": "GRANAATAPPELEXTRAAT-250ML"
+        },
+        "qty": 12,
+        "expiryDate": "2028-07-01",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Natürel Sızma Zeytinyağı",
+          "label": "5 l",
+          "sku": "OLIJFOLIE-5LT"
+        },
+        "qty": 4,
+        "expiryDate": "2027-08-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Natürel Sızma Zeytinyağı",
+          "label": "750 ml",
+          "sku": "OLIJFOLIE-750ML"
+        },
+        "qty": 12,
+        "expiryDate": "2027-10-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Propolis Macunu",
+          "label": "240 g",
+          "sku": "PROPOLIS-PASTA-240GR"
+        },
+        "qty": 2,
+        "expiryDate": "2027-06-30",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Tahin",
+          "label": "500 g",
+          "sku": "TAHINI-500GR"
+        },
+        "qty": 12,
+        "expiryDate": "2027-10-31",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Üzüm Pekmezi",
+          "label": "650 g",
+          "sku": "DRUIVENMELASSE-650GR"
+        },
+        "qty": 12,
+        "expiryDate": "2028-02-10",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      },
+      {
+        "variant": {
+          "product": "Zühre Ana Kekre",
+          "label": "250 ml",
+          "sku": "ZUHRE-ANA-KEKRE-250ML"
+        },
+        "qty": 18,
+        "expiryDate": "2030-04-25",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": null
+      }
+    ]
+  },
+  {
+    "warehouse": "STR",
+    "date": "2026-10-08",
+    "note": null,
+    "supplier": null,
+    "purchaseOrderNote": null,
+    "lines": [
+      {
+        "variant": {
+          "product": "Cevizli Pestil Tatlısı",
+          "label": "300 g"
+        },
+        "qty": 5,
+        "expiryDate": "2026-12-14",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": 395
+      },
+      {
+        "variant": {
+          "product": "Fındıklı Kadayıf Rulo Pestil",
+          "label": "300 g"
+        },
+        "qty": 5,
+        "expiryDate": "2026-12-14",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": 395
+      },
+      {
+        "variant": {
+          "product": "Fındıklı Sultan Sarma",
+          "label": "300 g"
+        },
+        "qty": 5,
+        "expiryDate": "2026-12-14",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": 395
+      },
+      {
+        "variant": {
+          "product": "Rulo Fındıklı Pestil",
+          "label": "300 g"
+        },
+        "qty": 5,
+        "expiryDate": "2026-12-14",
+        "lotNumber": null,
+        "storageArea": null,
+        "unitCostCents": 395
+      }
+    ]
+  }
+]

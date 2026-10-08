@@ -476,6 +476,8 @@ export const EK_TASLAKLAR: LooseDraft[] = [
   // Tekil kap pastalar ve trileçe: kaynağın kataloğunda hiç yok, ambalajları elimizde ve künyeleri
   // etiketinden panele girildi (23.09). Kapak fotoğrafları henüz çekilmedi.
   { name: 'Trileçe (Tres Leches Caramel)' },
+  // Asistanla açıldı; koli etiketindeki 500125 kaynağın kodu olduğu için taslak olarak burada durmazsa ayna onu katalog ürünü sanardı.
+  { name: 'Trileçe (Tres Leches Raspberry)' },
   { name: 'Kırmızı Kadife Pasta (tekil kap)', ...studyoSeti('kirmizi-kadife-pasta-tekil-kap') },
   { name: 'Fıstıklı Pasta (tekil kap)', ...studyoSeti('fistikli-pasta-tekil-kap') },
   { name: 'Ahududulu Cheesecake (tekil kap)', ...studyoSeti('ahududulu-cheesecake-tekil-kap') },
@@ -565,6 +567,39 @@ interface SeedCategory {
   aiQuestion?: UcDil;
 }
 
+/**
+ * Faturası olmayan ürünün fiyat kararı, SKU'ya bağlı — anahtar fatura adı olamaz, çünkü ürün hiç faturalanmadı. Değerler Fiyat Karar
+ * Masası'ndaki son karardır, gerçek veridir ve katman 1'de yazılır; `TEST_SALE_PRICES` ise uydurma faturaya bağlıdır.
+ */
+export const MASA_FIYATLARI: Record<string, { b2c: number; b2b: number }> = {
+  '900412': { b2c: 5.5, b2b: 2.79 },
+  '900413': { b2c: 5.5, b2b: 2.79 },
+  '900414': { b2c: 5.5, b2b: 2.79 },
+  '900415': { b2c: 5.5, b2b: 2.79 },
+  '900416': { b2c: 5.5, b2b: 2.79 },
+  '500115': { b2c: 30, b2b: 17.7 },
+  '500125': { b2c: 30, b2b: 17.7 },
+  '200301': { b2c: 5, b2b: 4.2 },
+  '900201': { b2c: 25.5, b2b: 19.95 },
+  '900901': { b2c: 25.5, b2b: 21 },
+  '900105': { b2c: 35, b2b: 26.6 },
+  '901809': { b2c: 25, b2b: 21.7 },
+  '901804': { b2c: 25, b2b: 21.7 },
+  '601402': { b2c: 45, b2b: 30.8 },
+  '900411': { b2c: 5.5, b2b: 2.79 },
+};
+
+/**
+ * SKU'su olmayan faturasız taslağın fiyatı, ürünün Türkçe adıyla — kod uydurulmaz, tedarikçinin kodudur. Pestiller faturada
+ * "Muska 25 adet" diye kesildi, gelen beş çeşitten beşer adetti: alış da satış da Muska'nınki.
+ */
+export const TASLAK_FIYATLARI: Record<string, { b2c: number; b2b: number }> = {
+  'Cevizli Pestil Tatlısı': { b2c: 8, b2b: 5.53 },
+  'Fındıklı Sultan Sarma': { b2c: 8, b2b: 5.53 },
+  'Fındıklı Kadayıf Rulo Pestil': { b2c: 8, b2b: 5.53 },
+  'Rulo Fındıklı Pestil': { b2c: 8, b2b: 5.53 },
+};
+
 export const CATEGORIES: SeedCategory[] = [
   {
     key: 'firin',
@@ -650,8 +685,8 @@ export const CATEGORIES: SeedCategory[] = [
 
 /**
  * Faturada olmayan katalog kalemleri aday kurulur ve fiyatsız kalır: alış maliyeti olmayan ürüne satış fiyatı yazmak
- * uydurma olurdu. Tatlıda ailenin iki üyesi birden gelir ki çeşit bloğu kurulabilsin (`ELLE_AILELER`); mezede
- * kaynağın bütün rafı gelir ki satıştaki tek meze olan çiğ köfte kategori sayfasında yalnız kalmasın.
+ * uydurma olurdu. Tatlıda ailenin iki üyesi birden gelir ki çeşit bloğu kurulabilsin (`ELLE_AILELER`). Fiyat masasında açık
+ * olmayan meze ve baklavalar listede yok: işletmeci onları katalogdan çıkardı.
  */
 export const ADAY_SKULARI: string[] = [
   // Bütün pastalar ve cheesecake'ler → Tatlı
@@ -663,38 +698,26 @@ export const ADAY_SKULARI: string[] = [
   '900105',
   '900808',
   '900308',
-  '901813',
+  '900411',
   '901809',
   '901804',
   '901807',
   // Baklava çeşitleri → Tatlı
   '601201',
-  '600101',
-  '600201',
   '600903',
   '601402',
   '600802',
   '600601',
   '601102',
   '600807',
-  '600402',
   // Maraş dondurmaları → Tatlı
   '111107',
   '111112',
   '111106',
-  '111141',
   '111131',
-  '111121',
   '111113',
-  // Mezeler → Meze; iki boylu kalemlerde perakende boyu (500 g · 20 × 25 g · 5 × 70 g)
-  '200412',
-  '200411',
-  '200413',
-  '200414',
-  '200410',
+  // Mezeler → Meze; iki boylu kalemde perakende boyu (5 × 70 g)
   '200201',
-  '200702',
-  '201401',
   '200301',
 ];
 
@@ -780,7 +803,7 @@ export const AILELER: Array<{ ad: string; uyeler: Array<({ draft: string } | { s
     // taşır; iki tarife tek beyan yazmak etikete aykırı olurdu.
     ad: 'Tekil Kap Tatlı',
     uyeler: [
-      { sku: '901813', etiket: { tr: 'Tiramisu', fr: 'Tiramisu', de: 'Tiramisu' } },
+      { sku: '900411', etiket: { tr: 'Tiramisu', fr: 'Tiramisu', de: 'Tiramisu' } },
       { draft: 'Kırmızı Kadife Pasta (tekil kap)', etiket: { tr: 'Kırmızı kadife', fr: 'Red velvet', de: 'Red Velvet' } },
       { draft: 'Fıstıklı Pasta (tekil kap)', etiket: { tr: 'Fıstıklı', fr: 'Pistache', de: 'Pistazie' } },
       { draft: 'Ahududulu Cheesecake (tekil kap)', etiket: { tr: 'Ahududulu cheesecake', fr: 'Cheesecake framboise', de: 'Himbeer-Cheesecake' } },

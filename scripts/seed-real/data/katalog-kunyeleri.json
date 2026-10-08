@@ -1,88 +1,215 @@
 {
   "_not": "KATALOG ÜRÜNLERİNİN KÜNYE AYNASI — `urun-kunyeleri.json` ile aynı kural, farklı ürün kümesi: orası taslakların (faturadan gelen kendi ürünlerimiz), burası KAYNAK KATALOĞUN ürünlerinin. Anahtar ürünün Türkçe adıdır (`translations.json`taki ad). Elle yazılmaz, test veritabanından çekilir; çelişkide kazanan veritabanıdır. Neden ayrı dosya: taslak künyesi ürünü KURAR (ad, açıklama, kategori, boy), buradaki künye kaynaktan kurulan ürünün ÜSTÜNE yazılır — ad ve açıklama burada yoktur, onlar `seed/data/translations.json`ta durur. Beyanlar etiket fotoğrafıyla, asistanın dilekçesi panelden onaylanarak veritabanına girdi (işletmeci kararı 19.09); kaynağın belgesi (`sources/specs-docx.json`) bu ürünlerde yoktu ya da eksikti. `variants` anahtarı SKU'dur ve yalnız kaynağın değerinden FARKLI olan boy yazılır.",
-  "Frambuazlı Cheesecake": {
-    "ingredients": {
-      "tr": "Bisküvi, bitkisel yağ (sade margarin), **buğday** unu, pastörize bütün **yumurta**, pudra şekeri, su, kek katkısı, kabartma tozu, labne peyniri (**süt**), şekerli bitkisel krem şanti, UHT **süt**, ahududulu soğuk jöle, ahududulu kısmi dolgu.",
-      "fr": "Biscuit, huile végétale (margarine nature), farine de **blé**, **œufs** entiers pasteurisés, sucre en poudre, eau, additif pour gâteau, levure chimique, fromage labné (**lait**), crème fouettée végétale sucrée, **lait** UHT, gelée froide à la framboise, garniture partielle à la framboise.",
-      "de": "Keks, Pflanzenöl (einfache Margarine), **Weizen**mehl, pasteurisierte ganze **Eier**, Puderzucker, Wasser, Kuchenzusatz, Backpulver, Labne-Käse (**Milch**), gezuckerte pflanzliche Schlagcreme, UHT-**Milch**, kaltes Himbeergelee, Teilfüllung mit Himbeeren."
+  "Acılı Tavuk Fileto": {
+    "name": {
+      "tr": "Acılı Tavuk Fileto",
+      "fr": "Aiguillettes de poulet épicées",
+      "de": "Scharfe Hähnchen-Filetstreifen"
     },
-    "nutrition": {
-      "energyKj": 1345,
-      "energyKcal": 322,
-      "fatG": 17.33,
-      "saturatedFatG": 1.25,
-      "carbohydrateG": 35.94,
-      "sugarsG": 20.99,
-      "proteinG": 4.95,
-      "saltG": 0
+    "description": {
+      "tr": "Baharat harcı acı tarafa çekilmiş, önceden pişirilmiş tavuk fileto. Fırında ya da hava fritözünde ısıtın — yanına soğuk bir sos iyi gider.",
+      "fr": "Filets de poulet précuits, panure relevée côté piquant. Au four ou à l'air fryer — une sauce froide à côté fait tout le travail.",
+      "de": "Vorgegarte Hähnchenfilets mit scharf abgeschmeckter Panade. Im Ofen oder in der Heißluftfritteuse — ein kalter Dip daneben genügt."
+    },
+    "allergens": [
+      "gluten"
+    ],
+    "traces": [
+      "yumurta",
+      "sut",
+      "soya",
+      "kereviz"
+    ],
+    "shelfLifeDays": 540,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "et-tavuk",
+    "variants": {
+      "312341": {
+        "label": {
+          "tr": "10 × 70 g",
+          "fr": "10 × 70 g",
+          "de": "10 × 70 g"
+        },
+        "netQuantity": 700,
+        "netUnit": "g",
+        "piecesCount": 10,
+        "portionKind": "item",
+        "packedWeightG": 720,
+        "packedLengthMm": 260,
+        "packedWidthMm": 220,
+        "packedHeightMm": 50,
+        "barcodes": [
+          {
+            "code": "8696425024701",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Acılı Tavuk Kanat": {
+    "name": {
+      "tr": "Acılı Tavuk Kanat",
+      "fr": "Ailes de poulet épicées",
+      "de": "Scharfe Hähnchenflügel"
+    },
+    "description": {
+      "tr": "Acılı baharatla marine edilip önceden pişirilmiş kanatlar. Fırında ya da hava fritözünde ısıtın — elle yenen, maç akşamlarının yemeği.",
+      "fr": "Ailes de poulet marinées au piment et précuites. Au four ou à l'air fryer — ça se mange avec les doigts, devant un match.",
+      "de": "Scharf marinierte, vorgegarte Hähnchenflügel. Im Ofen oder in der Heißluftfritteuse — isst man mit den Fingern, vor dem Spiel."
+    },
+    "allergens": [],
+    "traces": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya",
+      "kereviz"
+    ],
+    "shelfLifeDays": 540,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "et-tavuk",
+    "variants": {
+      "312442": {
+        "label": {
+          "tr": "700 g",
+          "fr": "700 g",
+          "de": "700 g"
+        },
+        "netQuantity": 700,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "item",
+        "packedWeightG": 720,
+        "packedLengthMm": 260,
+        "packedWidthMm": 200,
+        "packedHeightMm": 50,
+        "barcodes": [
+          {
+            "code": "8696425024732",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Açma": {
+    "name": {
+      "tr": "Açma",
+      "fr": "Açma",
+      "de": "Açma"
+    },
+    "description": {
+      "tr": "80 g'lık açmalar, %80 pişmiş halde şoklandı. Isıtınca hamuru yeniden kabarır — fırından yeni çıkmış yumuşaklıkta, çayın yanına.",
+      "fr": "Açma de 80 g, surgelés cuits à 80 %. À la chaleur, la pâte regonfle — la tendreté du tout juste sorti du four, à servir avec le thé.",
+      "de": "Açma à 80 g, zu 80 % gebacken und eingefroren. Beim Aufwärmen geht der Teig wieder auf — ofenfrische Weichheit, passend zum Tee."
     },
     "allergens": [
       "gluten",
-      "yumurta",
-      "sut"
+      "yumurta"
     ],
     "traces": [
-      "sert_kabuklu",
       "susam"
     ],
-    "storage": {
-      "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
-      "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
-      "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
-    },
+    "shelfLifeDays": 365,
     "storageType": "frozen",
     "shippable": false,
-    "dateType": "DDM"
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700301": {
+        "label": {
+          "tr": "4 × 80 g",
+          "fr": "4 × 80 g",
+          "de": "4 × 80 g"
+        },
+        "netQuantity": 320,
+        "netUnit": "g",
+        "piecesCount": 4,
+        "portionKind": "item",
+        "packedWeightG": 340,
+        "packedLengthMm": 320,
+        "packedWidthMm": 130,
+        "packedHeightMm": 70,
+        "barcodes": [
+          {
+            "code": "8681925066382",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
   },
-  "Limonlu Cheesecake": {
+  "Antep Baklavası": {
+    "name": {
+      "tr": "Antep Baklavası",
+      "fr": "Baklava d'Antep",
+      "de": "Antep-Baklava"
+    },
+    "description": {
+      "tr": "Antep'in küçük kesimi: lokmalar minik, fıstık bol, şerbet ölçülü. Kahvenin yanına bir tane derken üç tane gittiğini fark edersiniz.",
+      "fr": "La coupe courte d'Antep : petites bouchées, pistache généreuse, sirop mesuré. On en prend une avec le café, on en compte trois.",
+      "de": "Der kleine Antep-Schnitt: winzige Stücke, viel Pistazie, maßvoller Sirup. Man nimmt eines zum Kaffee und zählt am Ende drei."
+    },
+    "shelfLifeDays": 546,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "601102": {
+        "label": {
+          "tr": "2000 g",
+          "fr": "2000 g",
+          "de": "2000 g"
+        },
+        "netQuantity": 2000,
+        "netUnit": "g",
+        "piecesCount": 76,
+        "portionKind": "item",
+        "packedWeightG": 2152,
+        "packedLengthMm": 220,
+        "packedWidthMm": 155,
+        "packedHeightMm": 145
+      }
+    }
+  },
+  "Bitter Çikolatalı Pasta": {
+    "name": {
+      "tr": "Bitter Çikolatalı Pasta",
+      "fr": "Gâteau au chocolat noir",
+      "de": "Zartbitter-Schokoladentorte"
+    },
+    "description": {
+      "tr": "Katlar arasında bitter çikolata kreması, üzeri yine çikolata. Tatlıyı fazla şekerli bulanlar için yapılmış, koyu ve ciddi bir pasta. **E102, E129: çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "De la crème au chocolat noir entre les couches, du chocolat encore sur le dessus. Un gâteau sombre et sérieux, pour qui trouve le sucre envahissant. **E102, E129 : peut avoir des effets indésirables sur l’activité et l’attention chez les enfants.**",
+      "de": "Zartbittercreme zwischen den Böden, obenauf noch einmal Schokolade. Eine dunkle, ernste Torte für alle, denen süß schnell zu süß ist. **E102, E129: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
     "ingredients": {
-      "tr": "Bisküvi, bitkisel yağ (sade margarin), **buğday** unu, pastörize bütün **yumurta**, pudra şekeri, su, kek katkısı, kabartma tozu, labne peyniri (**süt**), şekerli bitkisel krem şanti, UHT **süt**, limonlu soğuk jöle, limonlu kısmi dolgu.",
-      "fr": "Biscuit, huile végétale (margarine nature), farine de **blé**, **œufs** entiers pasteurisés, sucre en poudre, eau, additif pour gâteau, levure chimique, fromage labné (**lait**), crème fouettée végétale sucrée, **lait** UHT, gelée froide au citron, garniture partielle au citron.",
-      "de": "Keks, Pflanzenöl (einfache Margarine), **Weizen**mehl, pasteurisierte ganze **Eier**, Puderzucker, Wasser, Kuchenzusatz, Backpulver, Labne-Käse (**Milch**), gezuckerte pflanzliche Schlagcreme, UHT-**Milch**, kaltes Zitronengelee, Teilfüllung mit Zitrone."
+      "tr": "**Buğday** unu [askorbik asit (antioksidan E300)], pastörize bütün **yumurta**, pudra şekeri, UHT **süt**, bitkisel yağ (ayçiçek), içme suyu, kakao tozu, kek katkısı [çözücü (su), emülgatör (mono ve digliseritler (E471)), yağ asitlerinin poligliserol esterleri (E475, %1), taşıyıcı (propilen glikol, gliserin (E422)), bitkisel yağ (palm çekirdeği yağı)], nişasta [mısır], kabartma tozu [sodyum bikarbonat E500, sodyum asit pirofosfat E450i, mısır nişastası, topaklanmayı önleyici (kalsiyum karbonat E170), monokalsiyum fosfat E341i], karbonat, granül kahve, toz tarçın, vanilin, tuz, şekerli bitkisel sıvı krema [su, hidrojenize bitkisel yağ (palm), şeker, **süt** proteini (sodyum kazeinat), stabilizatörler (sorbitol (E420i), hidroksipropil selüloz (E463), karboksimetil selüloz (E466)), emülgatörler (yağ asitlerinin mono- ve digliseritlerinin laktik asit esterleri (E472b), **soya** lesitini (E322)), koruyucu (potasyum sorbat (E202)), doğala özdeş aroma, renklendirici (beta karoten (E160a))], bitter kompound çikolata [şeker, bitkisel yağ (tam hidrojenize palm), **peynir altı suyu** tozu (**süt** ürünü), kalsiyum karbonat, kakao tozu, emülgatör (ayçiçek lesitini), aroma (çikolata)], krem şanti tozu [şeker (%56,5), tam hidrojenize bitkisel yağ (glikoz şurubu, hidrojenize bitkisel yağ (palm ve/veya hindistan cevizi yağı)), emülgatör (yağ asitlerinin mono- ve digliseritleri, yağ asitlerinin mono- ve digliseritlerinin asetik asit esterleri), **süt** proteini (kazeinat), asitlik düzenleyici (potasyum fosfat), **peynir altı suyu** tozu, stabilizatör (karboksimetil selüloz), aroma (**süt**)], bitter çikolata [şeker, kakao kütlesi, kakao yağı, yağı azaltılmış kakao tozu, emülgatör (**soya** lesitini), sade yağ (**süt**), aroma], jelatin tozu, çikolata aromalı soğuk pasta jelesi [glikoz şurubu, su, nem tutucu (E422), kakao tozu, kıvam arttırıcı (E440, E406), renklendirici (E150d, E153, E102, E129), asitlik düzenleyici (E330), aroma (çikolata), koruyucu (E202)], nötr sıcak pasta jelesi [glikoz şurubu, su, şeker, nem tutucu (sorbitol şurubu), jelleştirici (pektin), asit (sitrik asit), stabilizatör (sodyum polifosfat), kıvam arttırıcılar (gellan gam, ksantan gam), asitlik düzenleyiciler (tripotasyum sitrat, kalsiyum klorür), koruyucu (potasyum sorbat), emülgatör (yağ asitlerinin mono- ve digliseritleri)]. Sert kabuklu yemiş içerebilir.",
+      "fr": "Farine de **blé** [acide ascorbique (antioxydant E300)], **œufs** entiers pasteurisés, sucre glace, **lait** UHT, huile végétale (tournesol), eau potable, poudre de cacao, additif pour gâteau [solvant (eau), émulsifiant ((mono et diglycéride (E 471)), esters polyglycéroliques d'acides gras (E475, (1 %),) support (propylène glycol, glycérine (E422)), huile végétale (huile de palmiste)], amidon [maïs], levure chimique [bicarbonate de sodium E500, pyrophosphate acide de sodium E450i, amidon de maïs, antiagglomérant (carbonate de calcium E 170), phosphate monocalcique E 341i], bicarbonate de soude, café granulé, cannelle en poudre, vanilline, sel, crème fouettée liquide végétale avec sucre [eau, huile végétale hydrogénée (palme), sucre, protéines de **lait** (caséinate de sodium), stabilisants (sorbitol (E420i), hydroxypropylcellulose (E463), carboxyméthylcellulose (E466)), émulsifiants (esters d'acide lactique de mono et diglycérides d'acides gras (E472b), lécithine de **soja** (E322)), conservateur (sorbate de potassium (E202)), arôme naturel identique, colorant (bêta-carotène (E160a))], chocolat composé amer [sucre, huile végétale (palme entièrement hydrogénée), poudre de **lactosérum** (produit laitier), carbonate de calcium, poudre de cacao, émulsifiant (lécithine de tournesol), arôme (chocolat)], poudre fouettée [sucre (56 %, 5), huile végétale entièrement hydrogénée (sirop de glucose, huile végétale hydrogénée (palme et/ou huile de coco)), émulsifiant (mono et diglycérides d'acides gras, esters d'acide acétique de mono et diglycérides d'acides gras), correcteur d'acidité (phosphate de potassium), poudre de protéine de **lait** (caséinate), poudre de **lactosérum**, stabilisant (carboxyméthylcellulose), arôme (**lait**)], chocolat amer [sucre, pâte de cacao, beurre de cacao, poudre de cacao allégée, émulsifiant (lécithine de **soja**), **beurre** clarifié (**lait**), arôme], gélatine en poudre, gelée pâtissière froide au chocolat [sirop de glucose, eau, hydratant (E422), poudre de cacao, épaississant (E440, E406), correcteur d'acidité (E 330), arôme (chocolat), colorant (E 150 D, E153, E 102, E129), conservateur (E202)], gelée pâtissière chaude neutre [glucose sirop, eau, sucre, humectant (sirop de sorbitol), gélifiant (pectine), acidifiant (acide citrique), stabilisant (polyphosphate de sodium), épaississants (gomme gellane, gomme xanthane), correcteurs d'acidité (citrate de trypotassium, chlorure de calcium), conservateur (sorbate de potassium), émulsifiant (mono- et diglycérides d'acides gras)]. Peut contenir des noix.",
+      "de": "**Weizen**mehl [Ascorbinsäure (Antioxidans E300)], pasteurisierte Voll**eier**, Puderzucker, H-**Milch**, Pflanzenöl (Sonnenblume), Trinkwasser, Kakaopulver, Kuchenzusatz [Lösungsmittel (Wasser), Emulgator ((Mono- und Diglyceride (E 471)), Polyglycerinester von Speisefettsäuren (E475, (1%),) Träger (Propylenglykol, Glycerin (E422)), Pflanzenöl (Palmkernöl)], Stärke [Mais], Backpulver [Natriumbicarbonat E500, Natriumhydrogenpyrophosphat E450i, Maisstärke, Trennmittel (Calciumcarbonat E 170), Monocalciumphosphat E 341i], Backsoda, granulierter Kaffee, Zimtpulver, Vanillin, Salz, flüssige pflanzliche Schlagsahne mit Zucker [Wasser, gehärtet Pflanzenöl (Palm), Zucker, **Milch**eiweiß (Natriumkaseinat), Stabilisatoren (Sorbit (E420i), Hydroxypropylcellulose (E463), Carboxymethylcellulose (E466)), Emulgatoren (Milchsäureester von Mono- und Diglyceriden von Speisefettsäuren (E472b), **Soja**lecithin (E322)), Konservierungsmittel (Kaliumsorbat (E202)), naturidentisches Aroma, Farbstoff (Beta-Carotin (E160a))], Bitterschokolade [Zucker, Pflanzenöl (vollständig gehärtetes Palm), **Molken**pulver (**Milch**produkt), Calciumcarbonat, Kakaopulver, Emulgator (Sonnenblumenlecithin), Aroma (Schokolade)], Schlagsahnepulver [Zucker (56%,5), vollständig gehärtetes Pflanzenöl (Glukosesirup, gehärtetes Pflanzenöl (Palm und/oder Kokosnuss Öl)), Emulgator (Mono- und Diglyceride von Speisefettsäuren, Essigsäureester von Mono- und Diglyceriden von Speisefettsäuren), **Milch**eiweiß (Kaseinat), Säureregulator (Kaliumphosphat), **Molken**pulver, Stabilisator (Carboxymethylcellulose), Aroma (**Milch**)], Bitterschokolade [Zucker, Kakaomasse, Kakaobutter, fettreduziertes Kakaopulver, Emulgator (**Soja**lecithin), geklärte **Butter** (**Milch**), Aroma], Gelatinepulver, kaltes Gelee mit Schokoladengeschmack [Glukosesirup, Wasser, Feuchtigkeitsmittel (E422), Kakaopulver, Verdickungsmittel (E440, E406), Farbstoff (E 150 D, E153, E 102, E129), Säureregulator (E 330), Aroma (Schokolade), Konservierungsmittel (E202)], neutrales heißes Gelee [Glukosesirup, Wasser, Zucker, Feuchthaltemittel (Sorbitsirup), Geliermittel (Pektin), Säure (Zitronensäure), Stabilisator (Natriumpolyphosphat), Verdickungsmittel (Gellangummi, Xanthangummi), Säureregulatoren (Trikaliumcitrat, Calciumchlorid), Konservierungsmittel (Kaliumsorbat), Emulgator (Mono- und Diglyceride von Speisefettsäuren)]. Kann Nüsse enthalten."
     },
     "nutrition": {
-      "energyKj": 1345,
-      "energyKcal": 322,
-      "fatG": 17.33,
-      "saturatedFatG": 1.25,
-      "carbohydrateG": 35.94,
+      "fatG": 51.58,
+      "saltG": 0,
       "sugarsG": 20.99,
-      "proteinG": 4.95,
-      "saltG": 0
-    },
-    "allergens": [
-      "gluten",
-      "yumurta",
-      "sut"
-    ],
-    "traces": [
-      "sert_kabuklu",
-      "susam"
-    ],
-    "storage": {
-      "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
-      "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
-      "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
-    },
-    "storageType": "frozen",
-    "shippable": false,
-    "dateType": "DDM"
-  },
-  "Kara Orman Pastası": {
-    "ingredients": {
-      "tr": "**Buğday** unu [antioksidan (E300)], pastörize bütün **yumurta**, pudra şekeri, içme suyu, kek katkısı [su, emülgatörler (E471, E475 (%1)), taşıyıcı (E422), bitkisel yağ (palm çekirdeği yağı)], kakao tozu, kabartma tozu [E500, E450i, mısır nişastası, topaklanmayı önleyici (E170), E341i], şekerli bitkisel krem şanti [su, hidrojene bitkisel yağ (palm), şeker, **süt** proteini (kazeinat), stabilizörler (E420i, E463, E466), emülgatörler (E472b, **soya** lesitini (E322)), koruyucu (E202), aroma, renklendirici (E160a)], UHT **süt**, bitter kuvertür [şeker, tam hidrojene palm yağı, peynir altı suyu tozu (**süt**), kalsiyum karbonat, kakao tozu, emülgatör (ayçiçek lesitini), aroma], krem şanti tozu [şeker (%56,5), tam hidrojene bitkisel yağ (glikoz şurubu, hidrojene palm ve/veya hindistan cevizi yağı), emülgatörler (E471, E472a), **süt** proteini (kazeinat), asitlik düzenleyici (potasyum fosfat), peynir altı suyu tozu (**süt**), stabilizör (E466), aroma (**süt**)], bitter çikolata [şeker, kakao kitlesi, kakao yağı, kakao tozu, emülgatör (**soya** lesitini (E322)), sadeyağ (**süt**), aroma], toz jelatin, vişne aromalı jöle [glikoz şurubu, su, şeker, kıvam artırıcılar (E406, E440), asitlik düzenleyiciler (E330, E331iii), lezzet artırıcı (kiraz), koruyucu (E202), renklendiriciler (E150d, E122 (en fazla %0,005), E129 (en fazla %0,05))], beyaz kuvertür [şeker, bitkisel yağ (palm), yağsız **süt** tozu, kakao tozu, peynir altı suyu tozu (**süt**), emülgatörler (**soya** lesitini (E322), E476), aroma (vanilin)], beyaz çikolata [şeker, kakao yağı, peynir altı suyu tozu (**süt**), tam yağlı **süt** tozu, yağsız **süt** tozu, bitkisel yağlar (palm, shea), sadeyağ (**süt**), emülgatörler (**soya** lesitini (E322), E476)], çikolata aromalı jöle [glikoz şurubu, su, nem tutucu (E422), kakao tozu, kıvam artırıcılar (E440, E406), renklendiriciler (E150d, E153, E102, E129), asitlik düzenleyici (E330), aroma, koruyucu (E202)], dondurulmuş vişne, nötr jöle [glikoz şurubu, su, şeker, kıvam artırıcılar (E407, E440), asitlik düzenleyiciler (E330, E331iii), koruyucu (E202)].",
-      "fr": "Farine de **blé** [antioxydant (E300)], **œufs** entiers pasteurisés, sucre en poudre, eau potable, additif pour gâteau [eau, émulsifiants (E471, E475 (1 %)), support (E422), huile végétale (huile de palmiste)], poudre de cacao, levure chimique [E500, E450i, amidon de maïs, antiagglomérant (E170), E341i], crème fouettée végétale sucrée [eau, huile végétale hydrogénée (palme), sucre, protéine de **lait** (caséinate), stabilisants (E420i, E463, E466), émulsifiants (E472b, lécithine de **soja** (E322)), conservateur (E202), arôme, colorant (E160a)], **lait** UHT, chocolat composé amer [sucre, huile de palme entièrement hydrogénée, poudre de lactosérum (**lait**), carbonate de calcium, poudre de cacao, émulsifiant (lécithine de tournesol), arôme], poudre à fouetter [sucre (56,5 %), huile végétale entièrement hydrogénée (sirop de glucose, huile de palme et/ou de coco hydrogénée), émulsifiants (E471, E472a), protéine de **lait** (caséinate), correcteur d'acidité (phosphate de potassium), poudre de lactosérum (**lait**), stabilisant (E466), arôme (**lait**)], chocolat amer [sucre, pâte de cacao, beurre de cacao, poudre de cacao, émulsifiant (lécithine de **soja** (E322)), beurre clarifié (**lait**), arôme], gélatine en poudre, gelée au goût de cerise aigre [sirop de glucose, eau, sucre, épaississants (E406, E440), correcteurs d'acidité (E330, E331iii), exhausteur de goût (cerise), conservateur (E202), colorants (E150d, E122 (max 0,005 %), E129 (max 0,05 %))], chocolat blanc composé [sucre, huile végétale (palme), **lait** écrémé en poudre, poudre de cacao, poudre de lactosérum (**lait**), émulsifiants (lécithine de **soja** (E322), E476), arôme (vanilline)], chocolat blanc [sucre, beurre de cacao, poudre de lactosérum (**lait**), **lait** entier en poudre, **lait** écrémé en poudre, huiles végétales (palme, karité), beurre clarifié (**lait**), émulsifiants (lécithine de **soja** (E322), E476)], gelée au chocolat [sirop de glucose, eau, humectant (E422), poudre de cacao, épaississants (E440, E406), colorants (E150d, E153, E102, E129), correcteur d'acidité (E330), arôme, conservateur (E202)], cerises aigres surgelées, gelée neutre [sirop de glucose, eau, sucre, épaississants (E407, E440), correcteurs d'acidité (E330, E331iii), conservateur (E202)].",
-      "de": "**Weizen**mehl [Antioxidationsmittel (E300)], pasteurisierte ganze **Eier**, Puderzucker, Trinkwasser, Kuchenzusatz [Wasser, Emulgatoren (E471, E475 (1 %)), Trägerstoff (E422), Pflanzenöl (Palmkernöl)], Kakaopulver, Backpulver [E500, E450i, Maisstärke, Trennmittel (E170), E341i], gezuckerte pflanzliche Schlagcreme [Wasser, gehärtetes Pflanzenöl (Palm), Zucker, **Milch**eiweiß (Caseinat), Stabilisatoren (E420i, E463, E466), Emulgatoren (E472b, **Soja**lecithin (E322)), Konservierungsstoff (E202), Aroma, Farbstoff (E160a)], H-**Milch**, Bitterschokoladenmasse [Zucker, vollständig gehärtetes Palmöl, **Molken**pulver (**Milch**), Calciumcarbonat, Kakaopulver, Emulgator (Sonnenblumenlecithin), Aroma], Schlagpulver [Zucker (56,5 %), vollständig gehärtetes Pflanzenöl (Glukosesirup, gehärtetes Palm- und/oder Kokosöl), Emulgatoren (E471, E472a), **Milch**eiweiß (Caseinat), Säureregulator (Kaliumphosphat), **Molken**pulver (**Milch**), Stabilisator (E466), Aroma (**Milch**)], Bitterschokolade [Zucker, Kakaomasse, Kakaobutter, Kakaopulver, Emulgator (**Soja**lecithin (E322)), geklärte **Butter** (**Milch**), Aroma], Gelatinepulver, Gelee mit Sauerkirschgeschmack [Glukosesirup, Wasser, Zucker, Verdickungsmittel (E406, E440), Säureregulatoren (E330, E331iii), Geschmacksverstärker (Kirsche), Konservierungsstoff (E202), Farbstoffe (E150d, E122 (max. 0,005 %), E129 (max. 0,05 %))], weiße Schokoladenmasse [Zucker, Pflanzenöl (Palm), **Magermilch**pulver, Kakaopulver, **Molken**pulver (**Milch**), Emulgatoren (**Soja**lecithin (E322), E476), Aroma (Vanillin)], weiße Schokolade [Zucker, Kakaobutter, **Molken**pulver (**Milch**), **Vollmilch**pulver, **Magermilch**pulver, pflanzliche Öle (Palm, Shea), geklärte **Butter** (**Milch**), Emulgatoren (**Soja**lecithin (E322), E476)], Gelee mit Schokoladengeschmack [Glukosesirup, Wasser, Feuchthaltemittel (E422), Kakaopulver, Verdickungsmittel (E440, E406), Farbstoffe (E150d, E153, E102, E129), Säureregulator (E330), Aroma, Konservierungsstoff (E202)], gefrorene Sauerkirschen, neutrales Gelee [Glukosesirup, Wasser, Zucker, Verdickungsmittel (E407, E440), Säureregulatoren (E330, E331iii), Konservierungsstoff (E202)]."
-    },
-    "nutrition": {
-      "energyKj": 1507,
-      "energyKcal": 360,
-      "fatG": 14.49,
-      "saturatedFatG": 0,
+      "energyKj": 1422,
+      "proteinG": 5.04,
+      "energyKcal": 340,
       "carbohydrateG": 50.73,
-      "sugarsG": 19.45,
-      "proteinG": 4.05,
-      "saltG": 0
+      "saturatedFatG": 1.25
     },
     "allergens": [
       "gluten",
@@ -94,62 +221,201 @@
       "sert_kabuklu"
     ],
     "storage": {
-      "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
-      "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
-      "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+      "tr": "Son tüketim tarihine kadar -18 °C'de saklayınız. Buzdolabında 4-6 saat çözdürüp soğuk servis ediniz.",
+      "fr": "Conserver à -18 °C jusqu'à la date indiquée. Décongeler 4 à 6 heures au réfrigérateur et déguster frais.",
+      "de": "Bei -18 °C bis zum Mindesthaltbarkeitsdatum lagern. 4–6 Stunden im Kühlschrank auftauen und kalt genießen."
     },
+    "shelfLifeDays": 365,
     "storageType": "frozen",
     "shippable": false,
-    "dateType": "DDM"
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "900201": {
+        "label": {
+          "tr": "1600 g",
+          "fr": "1600 g",
+          "de": "1600 g"
+        },
+        "netQuantity": 1600,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 1724,
+        "packedLengthMm": 205,
+        "packedWidthMm": 145,
+        "packedHeightMm": 135,
+        "barcodes": [
+          {
+            "code": "8682815620462",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
   },
-  "Kırmızı Kadife Pasta": {
+  "Bitter Çikolatalı Profiterol Pastası": {
+    "name": {
+      "tr": "Bitter Çikolatalı Profiterol Pastası",
+      "fr": "Gâteau profiterole chocolat noir",
+      "de": "Profiterole-Torte Zartbitter"
+    },
+    "description": {
+      "tr": "Pastanın üstünü kaplayan profiterol topları ve üzerine akan bitter çikolata sosu. Doğum günü masasına konduğunda soru sorulmaz.",
+      "fr": "Des choux à la crème couvrent le gâteau, nappés d'une sauce au chocolat noir. Posé sur la table d'anniversaire, il ne soulève aucune question.",
+      "de": "Profiterole bedecken die Torte, darüber fließt dunkle Schokoladensauce. Auf den Geburtstagstisch gestellt, stellt niemand mehr Fragen."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "902301": {
+        "label": {
+          "tr": "1700 g",
+          "fr": "1700 g",
+          "de": "1700 g"
+        },
+        "netQuantity": 1700,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 1831,
+        "packedLengthMm": 210,
+        "packedWidthMm": 150,
+        "packedHeightMm": 135
+      }
+    }
+  },
+  "Çikolatalı Baklava": {
+    "name": {
+      "tr": "Çikolatalı Baklava",
+      "fr": "Baklava au chocolat",
+      "de": "Baklava mit Schokolade"
+    },
+    "description": {
+      "tr": "Klasik baklava hamuru, arasında çikolata. Şerbetin yerini kakaonun aldığı bu yorum, tatlıyı ilk kez deneyenlerin en kolay sevdiği.",
+      "fr": "La pâte à baklava classique, du chocolat entre les feuilles. Cette version, moins sirupeuse et plus cacaotée, séduit dès la première bouchée.",
+      "de": "Klassischer Baklava-Teig, dazwischen Schokolade. Diese Lesart — weniger Sirup, mehr Kakao — überzeugt schon beim ersten Versuch."
+    },
+    "shelfLifeDays": 546,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "600903": {
+        "label": {
+          "tr": "2000 g",
+          "fr": "2000 g",
+          "de": "2000 g"
+        },
+        "netQuantity": 2000,
+        "netUnit": "g",
+        "piecesCount": 54,
+        "portionKind": "item",
+        "packedWeightG": 2152,
+        "packedLengthMm": 220,
+        "packedWidthMm": 155,
+        "packedHeightMm": 145
+      }
+    }
+  },
+  "Çilekli Artisan Kek": {
+    "name": {
+      "tr": "Çilekli Artisan Kek",
+      "fr": "Gâteau artisan fraise",
+      "de": "Artisan-Kuchen Erdbeere"
+    },
+    "description": {
+      "tr": "Çilek biçiminde dökülmüş, tek kişilik kek. Tabakta tek başına durduğunda bile bir sunum gibi görünen, kırmızı ve parlak. **Ponceau 4R (E124): çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Un gâteau individuel moulé en forme de fraise. Rouge et brillant : posé seul dans l'assiette, il ressemble déjà à un dressage. **E124 : peut avoir des effets indésirables sur l’activité et l’attention chez les enfants.**",
+      "de": "Ein Küchlein in Erdbeerform, für eine Person. Rot und glänzend — allein auf dem Teller wirkt es schon wie angerichtet. **E124: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
     "ingredients": {
-      "tr": "Red velvet karışımı, labne peyniri (**süt**), UHT **süt**, beyaz çikolata, pastörize bütün **yumurta**, şekerli bitkisel krem şanti, krem şanti tozu, içme suyu, beyaz kuvertür, bitkisel yağ (ayçiçek), nötr jöle, toz jelatin.",
-      "fr": "Mélange red velvet, fromage labneh (**lait**), **lait** UHT, chocolat blanc, **œufs** entiers pasteurisés, crème fouettée végétale sucrée, poudre à fouetter, eau potable, chocolat blanc composé, huile végétale (tournesol), gelée neutre, gélatine en poudre.",
-      "de": "Red-Velvet-Mischung, Labneh-Käse (**Milch**), UHT-**Milch**, weiße Schokolade, pasteurisierte ganze **Eier**, gezuckerte pflanzliche Schlagcreme, Schlagpulver, Trinkwasser, weiße Schokoladenmasse, Pflanzenöl (Sonnenblume), neutrales Gelee, Gelatinepulver."
+      "tr": "Beyaz konfiseri, **krem şanti**, **krema yağı**, kakao yağı, bitkisel susuz yağ, çilek özütü, çilek dolgu, toz jelatin, Ponceau 4R (E124), yeşil gıda boyası (E140). Bu ürün eser miktarda **süt** ve **süt** ürünleri içerebilir.",
+      "fr": "Confiserie blanche, **crème** fouettée, matière grasse de **crème**, beurre de cacao, matière grasse végétale anhydre, extrait de fraise, garniture de fraise, gélatine en poudre, Ponceau 4R (E124), colorant alimentaire vert (E140). Ce produit peut contenir des traces de **lait** et produits laitiers.",
+      "de": "Weiße Konfiserie, **Schlagsahne**, **Milch**fett, Kakaobutter, pflanzliches wasserfreies Fett, Erdbeerextrakt, Erdbeerfüllung, Gelatinepulver, Ponceau 4R (E124), grüner Farbstoff (E140). Dieses Produkt kann Spuren von **Milch** und **Milch**produkten enthalten."
     },
     "nutrition": {
-      "energyKj": 2130,
-      "energyKcal": 510,
-      "fatG": 31.3,
-      "saturatedFatG": 0,
-      "carbohydrateG": 56.02,
-      "sugarsG": 41,
-      "proteinG": 5,
-      "saltG": 0.1
+      "fatG": 58,
+      "saltG": 0.03,
+      "sugarsG": 35,
+      "energyKj": 528,
+      "proteinG": 4,
+      "energyKcal": 2202,
+      "carbohydrateG": 37,
+      "saturatedFatG": 34
     },
     "allergens": [
-      "gluten",
-      "yumurta",
       "sut"
     ],
-    "traces": [
-      "sert_kabuklu"
-    ],
     "storage": {
-      "tr": "Son tüketim tarihine kadar -18 °C'de saklayınız. Çözüldükten sonra buzdolabında (+4 °C) 3 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
-      "fr": "Conserver à -18 °C jusqu'à la date de péremption. Après décongélation, consommer sous 3 jours à +4 °C. Ne pas recongeler après décongélation. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
-      "de": "Bis zum Mindesthaltbarkeitsdatum bei -18 °C lagern. Nach dem Auftauen innerhalb von 3 Tagen bei +4 °C verbrauchen. Nach dem Auftauen nicht wieder einfrieren. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+      "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
+      "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren."
     },
+    "shelfLifeDays": 365,
     "storageType": "frozen",
     "shippable": false,
-    "dateType": "DDM"
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "901024B": {
+        "label": {
+          "tr": "9 × 90 g",
+          "fr": "9 × 90 g",
+          "de": "9 × 90 g"
+        },
+        "netQuantity": 810,
+        "netUnit": "g",
+        "piecesCount": 9,
+        "portionKind": "item",
+        "packedWeightG": 850,
+        "packedLengthMm": 290,
+        "packedWidthMm": 220,
+        "packedHeightMm": 60,
+        "barcodes": [
+          {
+            "code": "8682815624798",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
   },
   "Fıstık Bahçesi Pastası": {
+    "name": {
+      "tr": "Fıstık Bahçesi Pastası",
+      "fr": "Gâteau jardin de pistaches",
+      "de": "Pistaziengarten-Torte"
+    },
+    "description": {
+      "tr": "Fıstık kreması katlar arasında, üzeri yine çekilmiş fıstıkla. Yeşilin bu kadar bol olduğu bir pastayı kesmek ayrı bir keyif. **Tartrazin (E102): çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "De la crème de pistache entre les couches, de la pistache concassée sur le dessus. Trancher un gâteau aussi vert est un plaisir en soi. **E102 : peut avoir des effets indésirables sur l’activité et l’attention chez les enfants.**",
+      "de": "Pistaziencreme zwischen den Böden, gehackte Pistazien obenauf. Eine so grüne Torte anzuschneiden ist ein Vergnügen für sich. **E102: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
     "ingredients": {
       "tr": "**Buğday** unu [antioksidan (E300)], pastörize bütün **yumurta**, pudra şekeri, içme suyu, kek katkısı [su, emülgatörler (E471, E475 (%1)), taşıyıcı (E422), bitkisel yağ (palm çekirdeği yağı)], kabartma tozu [E500, E450i, mısır nişastası, E170, E341i], şekerli bitkisel krem şanti [su, hidrojene bitkisel yağ (palm), şeker, **süt** proteini (kazeinat), stabilizörler (E420i, E463, E466), emülgatörler (E472b, **soya** lesitini (E322)), koruyucu (E202), aroma, renklendirici (E160a)], UHT **süt**, bitter kuvertür [şeker, tam hidrojene palm yağı, peynir altı suyu tozu (**süt**), kalsiyum karbonat, kakao tozu, emülgatör (ayçiçek lesitini), aroma], krem şanti tozu [şeker, tam hidrojene bitkisel yağ (glikoz şurubu, hidrojene palm ve hindistan cevizi yağı), emülgatörler (E471, E472a), **süt** proteini (kazeinat), asitlik düzenleyici (potasyum fosfat), peynir altı suyu tozu (**süt**), stabilizör (E466), aroma (**süt**)], bitter çikolata [şeker, kakao kitlesi, kakao yağı, kakao tozu, emülgatör (**soya** lesitini (E322)), sadeyağ (**süt**), aroma], toz jelatin, sütlü mat **antep fıstığı** [sütlü çikolata %67, **antep fıstığı** %33 (şeker, **süt** tozu, kakao, kakao yağı)], beyaz kuvertür [şeker, bitkisel yağ (palm), yağsız **süt** tozu, kakao tozu, peynir altı suyu tozu (**süt**), emülgatörler (**soya** lesitini (E322), E476), aroma (vanilin)], beyaz çikolata [şeker, kakao yağı, peynir altı suyu tozu (**süt**), tam yağlı **süt** tozu, yağsız **süt** tozu, bitkisel yağlar (palm, shea), sadeyağ (**süt**), emülgatörler (**soya** lesitini (E322), E476)], **antep fıstığı** aromalı pastacılık karışımı [glikoz şurubu, su, şeker, **antep fıstığı** (%5), lezzet artırıcı (**antep fıstığı**), kıvam artırıcılar (E406, E440), renklendirici (E150d), asitlik düzenleyici (E330), koruyucu (E202, en fazla %0,2), renklendiriciler (E102, E133, en fazla %0,02), antioksidan (E300)], **antep fıstığı**, nötr jöle [glikoz şurubu, su, şeker, kıvam artırıcılar (E407, E440), asitlik düzenleyiciler (E330, E331iii), koruyucu (E202)].",
       "fr": "Farine de **blé** [antioxydant (E300)], **œufs** entiers pasteurisés, sucre glace, eau potable, additif pour gâteaux [eau, émulsifiants (E471, E475 (1 %)), support (E422), huile végétale (huile de palmiste)], levure chimique [E500, E450i, amidon de maïs, E170, E341i], crème fouettée végétale sucrée [eau, huile végétale hydrogénée (palme), sucre, protéine de **lait** (caséinate), stabilisants (E420i, E463, E466), émulsifiants (E472b, lécithine de **soja** (E322)), conservateur (E202), arôme, colorant (E160a)], **lait** UHT, chocolat composé amer [sucre, huile de palme entièrement hydrogénée, poudre de lactosérum (**lait**), carbonate de calcium, poudre de cacao, émulsifiant (lécithine de tournesol), arôme], poudre à fouetter [sucre, huile végétale entièrement hydrogénée (sirop de glucose, huile de palme et de coco hydrogénée), émulsifiants (E471, E472a), protéine de **lait** (caséinate), correcteur d'acidité (phosphate de potassium), poudre de lactosérum (**lait**), stabilisant (E466), arôme (**lait**)], chocolat amer [sucre, pâte de cacao, beurre de cacao, poudre de cacao, émulsifiant (lécithine de **soja** (E322)), beurre clarifié (**lait**), arôme], gélatine en poudre, **pistaches** mates lactées [chocolat au **lait** 67 %, **pistaches** 33 % (sucre, **lait** en poudre, cacao, beurre de cacao)], chocolat blanc composé [sucre, huile végétale (palme), **lait** écrémé en poudre, poudre de cacao, poudre de lactosérum (**lait**), émulsifiants (lécithine de **soja** (E322), E476), arôme (vanilline)], chocolat blanc [sucre, beurre de cacao, poudre de lactosérum (**lait**), **lait** entier en poudre, **lait** écrémé en poudre, huiles végétales (palme, karité), beurre clarifié (**lait**), émulsifiants (lécithine de **soja** (E322), E476)], mélange pâtissier à la **pistache** [sirop de glucose, eau, sucre, **pistache** (5 %), exhausteur de goût (**pistache**), épaississants (E406, E440), colorant (E150d), correcteur d'acidité (E330), conservateur (E202, max 0,2 %), colorants (E102, E133, max 0,02 %), antioxydant (E300)], **pistaches**, gelée neutre [sirop de glucose, eau, sucre, épaississants (E407, E440), correcteurs d'acidité (E330, E331iii), conservateur (E202)].",
       "de": "**Weizen**mehl [Antioxidationsmittel (E300)], pasteurisierte ganze **Eier**, Puderzucker, Trinkwasser, Kuchenzusatz [Wasser, Emulgatoren (E471, E475 (1 %)), Trägerstoff (E422), Pflanzenöl (Palmkernöl)], Backpulver [E500, E450i, Maisstärke, E170, E341i], gezuckerte pflanzliche Schlagcreme [Wasser, gehärtetes Pflanzenöl (Palm), Zucker, **Milch**eiweiß (Caseinat), Stabilisatoren (E420i, E463, E466), Emulgatoren (E472b, **Soja**lecithin (E322)), Konservierungsstoff (E202), Aroma, Farbstoff (E160a)], H-**Milch**, Bitterschokoladenmasse [Zucker, vollständig gehärtetes Palmöl, **Molken**pulver (**Milch**), Calciumcarbonat, Kakaopulver, Emulgator (Sonnenblumenlecithin), Aroma], Schlagpulver [Zucker, vollständig gehärtetes Pflanzenöl (Glukosesirup, gehärtetes Palm- und Kokosöl), Emulgatoren (E471, E472a), **Milch**eiweiß (Caseinat), Säureregulator (Kaliumphosphat), **Molken**pulver (**Milch**), Stabilisator (E466), Aroma (**Milch**)], Bitterschokolade [Zucker, Kakaomasse, Kakaobutter, Kakaopulver, Emulgator (**Soja**lecithin (E322)), geklärte **Butter** (**Milch**), Aroma], Gelatinepulver, milchig-matte **Pistazien** [**Milch**schokolade 67 %, **Pistazien** 33 % (Zucker, **Milch**pulver, Kakao, Kakaobutter)], weiße Schokoladenmasse [Zucker, Pflanzenöl (Palm), **Magermilch**pulver, Kakaopulver, **Molken**pulver (**Milch**), Emulgatoren (**Soja**lecithin (E322), E476), Aroma (Vanillin)], weiße Schokolade [Zucker, Kakaobutter, **Molken**pulver (**Milch**), **Vollmilch**pulver, **Magermilch**pulver, pflanzliche Öle (Palm, Shea), geklärte **Butter** (**Milch**), Emulgatoren (**Soja**lecithin (E322), E476)], **Pistazien**-Backmischung [Glukosesirup, Wasser, Zucker, **Pistazien** (5 %), Geschmacksverstärker (**Pistazien**), Verdickungsmittel (E406, E440), Farbstoff (E150d), Säureregulator (E330), Konservierungsstoff (E202, max. 0,2 %), Farbstoffe (E102, E133, max. 0,02 %), Antioxidationsmittel (E300)], **Pistazien**, neutrales Gelee [Glukosesirup, Wasser, Zucker, Verdickungsmittel (E407, E440), Säureregulatoren (E330, E331iii), Konservierungsstoff (E202)]."
     },
     "nutrition": {
-      "energyKj": 1232,
-      "energyKcal": 308,
       "fatG": 24,
-      "saturatedFatG": 12,
-      "carbohydrateG": 43,
+      "saltG": 0,
       "sugarsG": 24.17,
+      "energyKj": 1232,
       "proteinG": 4.87,
-      "saltG": 0
+      "energyKcal": 308,
+      "carbohydrateG": 43,
+      "saturatedFatG": 12
     },
     "allergens": [
       "gluten",
@@ -167,81 +433,62 @@
       "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
       "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
     },
+    "shelfLifeDays": 365,
     "storageType": "frozen",
     "shippable": false,
-    "dateType": "DDM"
-  },
-  "Mangolu Artisan Kek": {
-    "ingredients": {
-      "tr": "Beyaz konfiseri, krem şanti (**süt**), krema yağı (**süt**), kakao yağı, bitkisel susuz yağ, mango özütü, mango dolgu, toz jelatin, renklendirici (E102).",
-      "fr": "Confiserie blanche, crème fouettée (**lait**), matière grasse de crème (**lait**), beurre de cacao, matière grasse végétale anhydre, extrait de mangue, garniture de mangue, gélatine en poudre, colorant (E102).",
-      "de": "Weiße Konfiserie, Schlagsahne (**Milch**), **Milch**fett, Kakaobutter, pflanzliches wasserfreies Fett, Mangoextrakt, Mangofüllung, Gelatinepulver, Farbstoff (E102)."
-    },
-    "nutrition": {
-      "energyKj": 2202,
-      "energyKcal": 528,
-      "fatG": 58,
-      "saturatedFatG": 34,
-      "carbohydrateG": 37,
-      "sugarsG": 35,
-      "proteinG": 4,
-      "saltG": 0.03
-    },
-    "allergens": [
-      "sut"
-    ],
-    "storage": {
-      "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
-      "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
-      "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren."
-    },
-    "storageType": "frozen",
-    "shippable": false,
-    "dateType": "DDM"
-  },
-  "Limonlu Artisan Kek": {
-    "ingredients": {
-      "tr": "Beyaz konfiseri, krem şanti (**süt**), krema yağı (**süt**), kakao yağı, bitkisel susuz yağ, limon özütü, limon dolgu, toz jelatin, renklendirici (E102).",
-      "fr": "Confiserie blanche, crème fouettée (**lait**), matière grasse de crème (**lait**), beurre de cacao, matière grasse végétale anhydre, extrait de citron, garniture au citron, gélatine en poudre, colorant (E102).",
-      "de": "Weiße Konfiserie, Schlagsahne (**Milch**), **Milch**fett, Kakaobutter, pflanzliches wasserfreies Fett, Zitronenextrakt, Zitronenfüllung, Gelatinepulver, Farbstoff (E102)."
-    },
-    "nutrition": {
-      "energyKj": 2202,
-      "energyKcal": 528,
-      "fatG": 58,
-      "saturatedFatG": 34,
-      "carbohydrateG": 37,
-      "sugarsG": 35,
-      "proteinG": 4,
-      "saltG": 0.03
-    },
-    "allergens": [
-      "sut"
-    ],
-    "storage": {
-      "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
-      "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
-      "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren."
-    },
-    "storageType": "frozen",
-    "shippable": false,
-    "dateType": "DDM"
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "900105": {
+        "label": {
+          "tr": "1600 g",
+          "fr": "1600 g",
+          "de": "1600 g"
+        },
+        "netQuantity": 1600,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 1900,
+        "packedLengthMm": 265,
+        "packedWidthMm": 265,
+        "packedHeightMm": 90,
+        "barcodes": [
+          {
+            "code": "8682815620516",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
   },
   "Fıstıklı Artisan Kek": {
+    "name": {
+      "tr": "Fıstıklı Artisan Kek",
+      "fr": "Gâteau artisan pistache",
+      "de": "Artisan-Kuchen Pistazie"
+    },
+    "description": {
+      "tr": "Fıstık biçiminde dökülmüş, tek kişilik kek. Çözdürüp tabağa alın — yeşili fıstığın kendisinden gelen, sunumu zaten hazır bir tatlı.",
+      "fr": "Un gâteau individuel moulé en forme de pistache. Décongelez et dressez — un vert qui vient de la pistache même, un dressage déjà fait.",
+      "de": "Ein Küchlein in Pistazienform, für eine Person. Auftauen und anrichten — das Grün kommt von der Pistazie selbst, angerichtet ist es schon."
+    },
     "ingredients": {
       "tr": "Beyaz konfiseri, krem şanti (**süt**), krema yağı (**süt**), kakao yağı, bitkisel susuz yağ, **antep fıstığı** özütü, **antep fıstığı** dolgu, toz jelatin, renklendirici (E140).",
       "fr": "Confiserie blanche, crème fouettée (**lait**), matière grasse de crème (**lait**), beurre de cacao, matière grasse végétale anhydre, extrait de **pistache**, garniture de **pistache**, gélatine en poudre, colorant (E140).",
       "de": "Weiße Konfiserie, Schlagsahne (**Milch**), **Milch**fett, Kakaobutter, pflanzliches wasserfreies Fett, **Pistazien**extrakt, **Pistazien**füllung, Gelatinepulver, Farbstoff (E140)."
     },
     "nutrition": {
-      "energyKj": 2202,
-      "energyKcal": 528,
       "fatG": 58,
-      "saturatedFatG": 34,
-      "carbohydrateG": 37,
+      "saltG": 0.03,
       "sugarsG": 35,
+      "energyKj": 2202,
       "proteinG": 4,
-      "saltG": 0.03
+      "energyKcal": 528,
+      "carbohydrateG": 37,
+      "saturatedFatG": 34
     },
     "allergens": [
       "sut",
@@ -252,114 +499,306 @@
       "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
       "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren."
     },
+    "shelfLifeDays": 365,
     "storageType": "frozen",
     "shippable": false,
-    "dateType": "DDM"
-  },
-  "Sade Maraş Dondurması": {
-    "ingredients": {
-      "tr": "**Süt**, şeker, salep, stabilizör (E412), **antep fıstığı**.",
-      "fr": "**Lait**, sucre, poudre d'orchidée (salep), stabilisant (E412), **pistache**.",
-      "de": "**Milch**, Zucker, Orchideenwurzelpulver (Salep), Stabilisator (E412), **Pistazie**."
-    },
-    "nutrition": {
-      "energyKj": 802,
-      "energyKcal": 191,
-      "fatG": 4.5,
-      "saturatedFatG": 4,
-      "carbohydrateG": 32,
-      "sugarsG": 14,
-      "proteinG": 5.6,
-      "saltG": 0.001
-    },
-    "allergens": [
-      "sut",
-      "sert_kabuklu"
-    ],
-    "storage": {
-      "tr": "Son kullanma tarihinden önce -20 °C'de saklayınız.",
-      "fr": "Conserver à -20 °C avant la date d'expiration.",
-      "de": "Vor dem Verfallsdatum bei -20 °C lagern."
-    },
-    "storageType": "frozen",
-    "shippable": false,
-    "dateType": "DLC",
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
     "variants": {
-      "111106": {
+      "901015B": {
         "label": {
-          "tr": "500 g kap",
-          "fr": "barquette 500 g",
-          "de": "500 g Behälter"
+          "tr": "9 × 90 g",
+          "fr": "9 × 90 g",
+          "de": "9 × 90 g"
         },
-        "netQuantity": 500,
-        "netUnit": "g"
-      },
-      "111121": {
-        "label": {
-          "tr": "70 g dilim",
-          "fr": "Tranche 70 g",
-          "de": "Scheibe 70 g"
-        },
-        "netQuantity": 70,
-        "netUnit": "g"
+        "netQuantity": 810,
+        "netUnit": "g",
+        "piecesCount": 9,
+        "portionKind": "item",
+        "packedWeightG": 850,
+        "packedLengthMm": 290,
+        "packedWidthMm": 220,
+        "packedHeightMm": 60,
+        "barcodes": [
+          {
+            "code": "8682815625016",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
       }
     }
   },
-  "Yaprak Sarma": {
-    "ingredients": {
-      "tr": "Pirinç, **bulgur** (gluten), salamura üzüm yaprakları (asma yaprağı, içme suyu, tuz), soğan, içme suyu, bitkisel yağ (zeytinyağı, ayçiçek yağı), salça, maydanoz, nane, kimyon, karabiber, tuz, asitlik düzenleyici (E330).",
-      "fr": "Riz, **boulgour** (contient du gluten), feuilles de vigne marinées (feuilles de vigne, eau potable, sel), oignon, eau potable, huile végétale (huile d'olive, huile de tournesol), concentré de tomate, persil, menthe, cumin, poivre noir, sel, correcteur d'acidité (E330).",
-      "de": "Reis, **Bulgur** (enthält Gluten), eingelegte Weinblätter (Weinblätter, Trinkwasser, Salz), Zwiebel, Trinkwasser, Pflanzenöl (Olivenöl, Sonnenblumenöl), Tomatenmark, Petersilie, Minze, Kreuzkümmel, schwarzer Pfeffer, Salz, Säureregulator (E330)."
+  "Fıstıklı Maraş Dondurması": {
+    "name": {
+      "tr": "Fıstıklı Maraş Dondurması",
+      "fr": "Glace de Maraş à la pistache",
+      "de": "Maraş-Eis mit Pistazie"
     },
-    "nutrition": {
-      "energyKj": 514,
-      "energyKcal": 122,
-      "fatG": 11.58,
-      "saturatedFatG": 1.62,
-      "carbohydrateG": 16.71,
-      "sugarsG": 2.81,
-      "proteinG": 2.23,
-      "saltG": 0.8
-    },
-    "allergens": [
-      "gluten"
-    ],
-    "storage": {
-      "tr": "-18 °C'de donuk saklayınız. Çözdürdükten sonra tekrar dondurmayınız.",
-      "fr": "Conserver congelé à -18 °C. Ne pas recongeler après décongélation.",
-      "de": "Bei -18 °C tiefgefroren lagern. Nach dem Auftauen nicht erneut einfrieren."
+    "status": "passive",
+    "description": {
+      "tr": "Salepli Maraş dondurması, içinde Antep fıstığı. Yoğun dokunun arasından çıkan fıstık parçaları, her kaşıkta ayrı bir çıtırtı.",
+      "fr": "Glace de Maraş au salep, parsemée de pistache. Des éclats qui surgissent de la texture dense — un croquant à chaque cuillerée.",
+      "de": "Salep-Eis aus Maraş mit Pistazien. Stückchen, die aus der dichten Masse auftauchen — bei jedem Löffel ein Knacken."
     },
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "shelfLifeDays": 730,
+    "vatRate": 5.5,
+    "category": "tatli",
     "variants": {
-      "200201": {
+      "111112": {
         "label": {
-          "tr": "1000 g",
-          "fr": "1000 g",
-          "de": "1000 g"
+          "tr": "500 g",
+          "fr": "500 g",
+          "de": "500 g"
         },
-        "netQuantity": 1000,
-        "netUnit": "g"
+        "netQuantity": 500,
+        "netUnit": "g",
+        "packedWeightG": 280,
+        "packedLengthMm": 120,
+        "packedWidthMm": 85,
+        "packedHeightMm": 80
       }
     }
   },
-  "Tiramisu": {
+  "Fıstıklı Soğuk Baklava": {
+    "name": {
+      "tr": "Fıstıklı Soğuk Baklava",
+      "fr": "Baklava froid à la pistache",
+      "de": "Kaltes Baklava mit Pistazie"
+    },
+    "description": {
+      "tr": "Sütle ıslatılmış baklava, üzeri kakaolu — soğuk servis edilir. Şerbetli tatlıyı ağır bulanların yazın keşfettiği o serin yorum.",
+      "fr": "Un baklava imbibé de lait, saupoudré de cacao, servi froid. La version fraîche que découvrent l'été ceux qui trouvent le sirop trop lourd.",
+      "de": "Ein in Milch getränktes Baklava mit Kakao, kalt serviert. Die kühle Lesart für alle, denen Sirup im Sommer zu schwer ist."
+    },
+    "shelfLifeDays": 546,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "600807": {
+        "label": {
+          "tr": "1500 g",
+          "fr": "1500 g",
+          "de": "1500 g"
+        },
+        "netQuantity": 1500,
+        "netUnit": "g",
+        "piecesCount": 36,
+        "portionKind": "item",
+        "packedWeightG": 1617,
+        "packedLengthMm": 200,
+        "packedWidthMm": 145,
+        "packedHeightMm": 130
+      }
+    }
+  },
+  "Frambuazlı Cheesecake": {
+    "name": {
+      "tr": "Frambuazlı Cheesecake",
+      "fr": "Cheesecake à la framboise",
+      "de": "Himbeer-Cheesecake"
+    },
+    "description": {
+      "tr": "Peynirli kremanın üstüne frambuaz sosu. Kırmızının beyazla buluştuğu dilimler, tabakta olduğu kadar fotoğrafta da iyi duruyor.",
+      "fr": "Un coulis de framboise sur la crème de fromage. Des parts où le rouge rencontre le blanc — aussi belles dans l'assiette qu'en photo.",
+      "de": "Himbeersauce auf Frischkäsecreme. Stücke, in denen Rot auf Weiß trifft — auf dem Teller so gut wie auf dem Foto."
+    },
+    "ingredients": {
+      "tr": "Bisküvi, bitkisel yağ (sade margarin), **buğday** unu, pastörize bütün **yumurta**, pudra şekeri, su, kek katkısı, kabartma tozu, labne peyniri (**süt**), şekerli bitkisel krem şanti, UHT **süt**, ahududulu soğuk jöle, ahududulu kısmi dolgu.",
+      "fr": "Biscuit, huile végétale (margarine nature), farine de **blé**, **œufs** entiers pasteurisés, sucre en poudre, eau, additif pour gâteau, levure chimique, fromage labné (**lait**), crème fouettée végétale sucrée, **lait** UHT, gelée froide à la framboise, garniture partielle à la framboise.",
+      "de": "Keks, Pflanzenöl (einfache Margarine), **Weizen**mehl, pasteurisierte ganze **Eier**, Puderzucker, Wasser, Kuchenzusatz, Backpulver, Labne-Käse (**Milch**), gezuckerte pflanzliche Schlagcreme, UHT-**Milch**, kaltes Himbeergelee, Teilfüllung mit Himbeeren."
+    },
+    "nutrition": {
+      "fatG": 17.33,
+      "saltG": 0,
+      "sugarsG": 20.99,
+      "energyKj": 1345,
+      "proteinG": 4.95,
+      "energyKcal": 322,
+      "carbohydrateG": 35.94,
+      "saturatedFatG": 1.25
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut"
+    ],
+    "traces": [
+      "sert_kabuklu",
+      "susam"
+    ],
+    "storage": {
+      "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
+      "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
+      "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "901804": {
+        "label": {
+          "tr": "12 × 150 g",
+          "fr": "12 × 150 g",
+          "de": "12 × 150 g"
+        },
+        "netQuantity": 1800,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 2030,
+        "packedLengthMm": 265,
+        "packedWidthMm": 265,
+        "packedHeightMm": 90,
+        "barcodes": [
+          {
+            "code": "8682815620554",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Ispanaklı Peynirli E Böreği": {
+    "name": {
+      "tr": "Ispanaklı Peynirli E Böreği",
+      "fr": "Börek en E épinards & fromage",
+      "de": "E-Börek mit Spinat & Käse"
+    },
+    "description": {
+      "tr": "Ispanak ve beyaz peynir bir arada, elde sarılmış çiğ börek. Çözdürmeden fırına girer — yeşilin peynirle buluştuğu klasik Anadolu iç harcı.",
+      "fr": "Épinards et fromage blanc réunis dans un börek roulé à la main, surgelé cru. Au four sans décongeler — la farce anatolienne classique, verte et fondante.",
+      "de": "Spinat und Weißkäse in einem von Hand gerollten Börek, roh eingefroren. Ohne Auftauen backen — die klassische anatolische Füllung, grün und mild."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700905": {
+        "label": {
+          "tr": "200 g",
+          "fr": "200 g",
+          "de": "200 g"
+        },
+        "netQuantity": 200,
+        "netUnit": "g",
+        "packedWeightG": 226,
+        "packedLengthMm": 110,
+        "packedWidthMm": 80,
+        "packedHeightMm": 75
+      }
+    }
+  },
+  "İçli Köfte": {
+    "name": {
+      "tr": "İçli Köfte",
+      "fr": "Kibbeh",
+      "de": "Kibbeh"
+    },
+    "description": {
+      "tr": "İnce bulgurdan kabuğun içinde baharatlı bitkisel iç harç. Isıtıp servis edin — çatalla kırılınca içi görünen, sofranın en sevilen köftesi.",
+      "fr": "Une coque de boulgour fin, une farce végétale épicée. Réchauffez et servez — on l'ouvre à la fourchette et le cœur parfumé se révèle.",
+      "de": "Eine Hülle aus feinem Bulgur, eine würzige pflanzliche Füllung. Erwärmen und servieren — mit der Gabel geöffnet zeigt sich der Kern."
+    },
+    "ingredients": {
+      "tr": "Bulghur (wheat gluten) (8.9%), water, semolina (wheat gluten), pregelatinized wheat flour (wheat gluten), salt, chili pepper. Filling: vegetable oil (sunflower), dried vegetable mix (36%) (tomato, capia pepper, leek, carrot), soy, onion, dried potatoes, walnut, sesame, spice mix (salt, sweet red pepper, black pepper, cumin, coriander, allspice, ginger), chili pepper, isot, salt.",
+      "fr": "Bulghur (wheat gluten) (8.9%), water, semolina (wheat gluten), pregelatinized wheat flour (wheat gluten), salt, chili pepper. Filling: vegetable oil (sunflower), dried vegetable mix (36%) (tomato, capia pepper, leek, carrot), soy, onion, dried potatoes, walnut, sesame, spice mix (salt, sweet red pepper, black pepper, cumin, coriander, allspice, ginger), chili pepper, isot, salt.",
+      "de": "Bulghur (wheat gluten) (8.9%), water, semolina (wheat gluten), pregelatinized wheat flour (wheat gluten), salt, chili pepper. Filling: vegetable oil (sunflower), dried vegetable mix (36%) (tomato, capia pepper, leek, carrot), soy, onion, dried potatoes, walnut, sesame, spice mix (salt, sweet red pepper, black pepper, cumin, coriander, allspice, ginger), chili pepper, isot, salt."
+    },
+    "nutrition": {
+      "fatG": 15.7,
+      "saltG": 1.6,
+      "sugarsG": 0.1,
+      "energyKj": 1083,
+      "proteinG": 8.8,
+      "energyKcal": 259,
+      "carbohydrateG": 30.2,
+      "saturatedFatG": 8.5
+    },
+    "allergens": [
+      "gluten",
+      "soya",
+      "sert_kabuklu",
+      "susam"
+    ],
+    "traces": [
+      "sut",
+      "kereviz"
+    ],
+    "storage": {
+      "tr": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "fr": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "de": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın."
+    },
+    "shelfLifeDays": 360,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "meze",
+    "variants": {
+      "200301": {
+        "label": {
+          "tr": "5 × 70 g",
+          "fr": "5 × 70 g",
+          "de": "5 × 70 g"
+        },
+        "netQuantity": 350,
+        "netUnit": "g",
+        "piecesCount": 5,
+        "portionKind": "item",
+        "packedWeightG": 370,
+        "packedLengthMm": 190,
+        "packedWidthMm": 140,
+        "packedHeightMm": 50,
+        "barcodes": [
+          {
+            "code": "8682815620707",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "İtalyan Tiramisu Bardağı": {
+    "name": {
+      "tr": "Tiramisu",
+      "fr": "Tiramisu",
+      "de": "Tiramisu"
+    },
+    "description": {
+      "tr": "Kahveye batırılmış kedidili, mascarpone kreması ve üzerine kakao. Tek kişilik kabında — paylaşmak zorunda kalmadığınız tatlı. **E102, E129: çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Biscuits imbibés de café, crème de mascarpone, cacao sur le dessus. En portion individuelle — le dessert qu'on n'a pas à partager. **E102, E129 : peut avoir des effets indésirables sur l’activité et l’attention chez les enfants.**",
+      "de": "In Kaffee getränkte Löffelbiskuits, Mascarponecreme, Kakao darüber. Einzelportion — das Dessert, das man nicht teilen muss. **E102, E129: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
     "ingredients": {
       "tr": "Su, UHT **süt**, şeker, **buğday** unu, kakao tozu, bitkisel yağ (palm, hindistan cevizi), **süt** kreması, peynir altı suyu tozu (**süt**), pastörize **yumurta** ve **yumurta** tozu, çikolata (kakao kitlesi, kakao yağı, şeker, ayçiçek lesitini), labne peyniri (pastörize inek **sütü** ve kreması, yoğurt kültürü), glikoz şurubu, jelatin, modifiye nişasta, **süt** proteini, emülgatörler (E471, E472a, **soya** lesitini (E322)), stabilizörler (E420ii, E463, E466), asitlik düzenleyici (E330), kıvam artırıcılar (E401, E410, E440), aromalar (**süt**, çikolata), renklendiriciler (E150d, E153, E102, E129), koruyucu (E202).",
       "fr": "Eau, **lait** UHT, sucre, farine de **blé**, cacao en poudre, matière grasse végétale (palme, coco), crème de **lait**, lactosérum en poudre (**lait**), **œuf** pasteurisé et **œuf** en poudre, chocolat (pâte de cacao, beurre de cacao, sucre, lécithine de tournesol), fromage labneh (**lait** de vache pasteurisé et crème, ferments du yaourt), sirop de glucose, gélatine, amidon modifié, protéines de **lait**, émulsifiants (E471, E472a, lécithine de **soja** (E322)), stabilisants (E420ii, E463, E466), correcteur d'acidité (E330), épaississants (E401, E410, E440), arômes (**lait**, chocolat), colorants (E150d, E153, E102, E129), conservateur (E202).",
       "de": "Wasser, UHT-**Milch**, Zucker, **Weizen**mehl, Kakaopulver, Pflanzenfett (Palm, Kokos), **Milch**rahm, **Molken**pulver (**Milch**), pasteurisiertes **Ei** und **Ei**pulver, Schokolade (Kakaomasse, Kakaobutter, Zucker, Sonnenblumenlecithin), Labneh-Käse (pasteurisierte Kuh**milch** und Sahne, Joghurtkultur), Glukosesirup, Gelatine, modifizierte Stärke, **Milch**eiweiß, Emulgatoren (E471, E472a, **Soja**lecithin (E322)), Stabilisatoren (E420ii, E463, E466), Säureregulator (E330), Verdickungsmittel (E401, E410, E440), Aromen (**Milch**, Schokolade), Farbstoffe (E150d, E153, E102, E129), Konservierungsstoff (E202)."
     },
     "nutrition": {
-      "energyKj": 1297,
-      "energyKcal": 310,
       "fatG": 11.8,
-      "saturatedFatG": 7.1,
-      "carbohydrateG": 32.5,
+      "saltG": 0.06,
       "sugarsG": 21.8,
+      "energyKj": 1297,
       "proteinG": 5.6,
-      "saltG": 0.06
+      "energyKcal": 310,
+      "carbohydrateG": 32.5,
+      "saturatedFatG": 7.1
     },
     "allergens": [
       "gluten",
@@ -375,36 +814,967 @@
       "fr": "Conserver congelé à -18 °C. Après décongélation, conserver au réfrigérateur à +4 °C et consommer dans les 5 jours. Ne pas recongeler après décongélation.",
       "de": "Tiefgefroren bei -18 °C lagern. Nach dem Auftauen im Kühlschrank bei +4 °C aufbewahren und innerhalb von 5 Tagen verzehren. Nach dem Auftauen nicht wieder einfrieren."
     },
+    "shelfLifeDays": 365,
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
     "variants": {
-      "901813": {
+      "900411": {
         "label": {
           "tr": "165 g",
           "fr": "165 g",
           "de": "165 g"
         },
         "netQuantity": 165,
-        "netUnit": "g"
+        "netUnit": "g",
+        "packedWeightG": 185,
+        "packedLengthMm": 80,
+        "packedWidthMm": 70,
+        "packedHeightMm": 70,
+        "barcodes": [
+          {
+            "code": "8682815624125",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Kakaolu Maraş Dondurması": {
+    "name": {
+      "tr": "Kakaolu Maraş Dondurması",
+      "fr": "Glace de Maraş au cacao",
+      "de": "Maraş-Eis mit Kakao"
+    },
+    "status": "passive",
+    "description": {
+      "tr": "Salepli Maraş dondurmasının kakaolu hâli: yoğun dokusu aynı, tadı koyu. Kaşığın zorlandığı o kıvamı ilk kez denemek için iyi bir yer.",
+      "fr": "La version cacao de la glace de Maraş au salep : même texture dense, goût plus profond. Un bon point de départ pour découvrir cette consistance.",
+      "de": "Die Kakao-Variante des Salep-Eises aus Maraş: gleiche dichte Textur, dunklerer Geschmack. Ein guter Einstieg in diese Konsistenz."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "111107": {
+        "label": {
+          "tr": "500 g",
+          "fr": "500 g",
+          "de": "500 g"
+        },
+        "netQuantity": 500,
+        "netUnit": "g",
+        "packedWeightG": 280,
+        "packedLengthMm": 120,
+        "packedWidthMm": 85,
+        "packedHeightMm": 80
+      }
+    }
+  },
+  "Kara Orman Pastası": {
+    "name": {
+      "tr": "Kara Orman Pastası",
+      "fr": "Forêt-Noire",
+      "de": "Schwarzwälder Kirschtorte"
+    },
+    "description": {
+      "tr": "Kakaolu kat, krema ve vişne: Kara Orman'ın değişmeyen üçlüsü. Dondurucudan çıkar, buzdolabında çözülür ve dilimlenmeyi bekler. **E102, E122, E129: çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Génoise au cacao, crème et griottes : le trio immuable de la Forêt-Noire. Sortie du congélateur, elle décongèle au frais et attend d'être tranchée. **E102, E122, E129 : peut avoir des effets indésirables sur l’activité et l’attention chez les enfants.**",
+      "de": "Kakaoboden, Sahne und Kirschen: das unveränderte Trio der Schwarzwälder. Aus dem Froster, im Kühlschrank aufgetaut, wartet sie aufs Anschneiden. **E102, E122, E129: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
+    "ingredients": {
+      "tr": "**Buğday** unu [antioksidan (E300)], pastörize bütün **yumurta**, pudra şekeri, içme suyu, kek katkısı [su, emülgatörler (E471, E475 (%1)), taşıyıcı (E422), bitkisel yağ (palm çekirdeği yağı)], kakao tozu, kabartma tozu [E500, E450i, mısır nişastası, topaklanmayı önleyici (E170), E341i], şekerli bitkisel krem şanti [su, hidrojene bitkisel yağ (palm), şeker, **süt** proteini (kazeinat), stabilizörler (E420i, E463, E466), emülgatörler (E472b, **soya** lesitini (E322)), koruyucu (E202), aroma, renklendirici (E160a)], UHT **süt**, bitter kuvertür [şeker, tam hidrojene palm yağı, peynir altı suyu tozu (**süt**), kalsiyum karbonat, kakao tozu, emülgatör (ayçiçek lesitini), aroma], krem şanti tozu [şeker (%56,5), tam hidrojene bitkisel yağ (glikoz şurubu, hidrojene palm ve/veya hindistan cevizi yağı), emülgatörler (E471, E472a), **süt** proteini (kazeinat), asitlik düzenleyici (potasyum fosfat), peynir altı suyu tozu (**süt**), stabilizör (E466), aroma (**süt**)], bitter çikolata [şeker, kakao kitlesi, kakao yağı, kakao tozu, emülgatör (**soya** lesitini (E322)), sadeyağ (**süt**), aroma], toz jelatin, vişne aromalı jöle [glikoz şurubu, su, şeker, kıvam artırıcılar (E406, E440), asitlik düzenleyiciler (E330, E331iii), lezzet artırıcı (kiraz), koruyucu (E202), renklendiriciler (E150d, E122 (en fazla %0,005), E129 (en fazla %0,05))], beyaz kuvertür [şeker, bitkisel yağ (palm), yağsız **süt** tozu, kakao tozu, peynir altı suyu tozu (**süt**), emülgatörler (**soya** lesitini (E322), E476), aroma (vanilin)], beyaz çikolata [şeker, kakao yağı, peynir altı suyu tozu (**süt**), tam yağlı **süt** tozu, yağsız **süt** tozu, bitkisel yağlar (palm, shea), sadeyağ (**süt**), emülgatörler (**soya** lesitini (E322), E476)], çikolata aromalı jöle [glikoz şurubu, su, nem tutucu (E422), kakao tozu, kıvam artırıcılar (E440, E406), renklendiriciler (E150d, E153, E102, E129), asitlik düzenleyici (E330), aroma, koruyucu (E202)], dondurulmuş vişne, nötr jöle [glikoz şurubu, su, şeker, kıvam artırıcılar (E407, E440), asitlik düzenleyiciler (E330, E331iii), koruyucu (E202)].",
+      "fr": "Farine de **blé** [antioxydant (E300)], **œufs** entiers pasteurisés, sucre en poudre, eau potable, additif pour gâteau [eau, émulsifiants (E471, E475 (1 %)), support (E422), huile végétale (huile de palmiste)], poudre de cacao, levure chimique [E500, E450i, amidon de maïs, antiagglomérant (E170), E341i], crème fouettée végétale sucrée [eau, huile végétale hydrogénée (palme), sucre, protéine de **lait** (caséinate), stabilisants (E420i, E463, E466), émulsifiants (E472b, lécithine de **soja** (E322)), conservateur (E202), arôme, colorant (E160a)], **lait** UHT, chocolat composé amer [sucre, huile de palme entièrement hydrogénée, poudre de lactosérum (**lait**), carbonate de calcium, poudre de cacao, émulsifiant (lécithine de tournesol), arôme], poudre à fouetter [sucre (56,5 %), huile végétale entièrement hydrogénée (sirop de glucose, huile de palme et/ou de coco hydrogénée), émulsifiants (E471, E472a), protéine de **lait** (caséinate), correcteur d'acidité (phosphate de potassium), poudre de lactosérum (**lait**), stabilisant (E466), arôme (**lait**)], chocolat amer [sucre, pâte de cacao, beurre de cacao, poudre de cacao, émulsifiant (lécithine de **soja** (E322)), beurre clarifié (**lait**), arôme], gélatine en poudre, gelée au goût de cerise aigre [sirop de glucose, eau, sucre, épaississants (E406, E440), correcteurs d'acidité (E330, E331iii), exhausteur de goût (cerise), conservateur (E202), colorants (E150d, E122 (max 0,005 %), E129 (max 0,05 %))], chocolat blanc composé [sucre, huile végétale (palme), **lait** écrémé en poudre, poudre de cacao, poudre de lactosérum (**lait**), émulsifiants (lécithine de **soja** (E322), E476), arôme (vanilline)], chocolat blanc [sucre, beurre de cacao, poudre de lactosérum (**lait**), **lait** entier en poudre, **lait** écrémé en poudre, huiles végétales (palme, karité), beurre clarifié (**lait**), émulsifiants (lécithine de **soja** (E322), E476)], gelée au chocolat [sirop de glucose, eau, humectant (E422), poudre de cacao, épaississants (E440, E406), colorants (E150d, E153, E102, E129), correcteur d'acidité (E330), arôme, conservateur (E202)], cerises aigres surgelées, gelée neutre [sirop de glucose, eau, sucre, épaississants (E407, E440), correcteurs d'acidité (E330, E331iii), conservateur (E202)].",
+      "de": "**Weizen**mehl [Antioxidationsmittel (E300)], pasteurisierte ganze **Eier**, Puderzucker, Trinkwasser, Kuchenzusatz [Wasser, Emulgatoren (E471, E475 (1 %)), Trägerstoff (E422), Pflanzenöl (Palmkernöl)], Kakaopulver, Backpulver [E500, E450i, Maisstärke, Trennmittel (E170), E341i], gezuckerte pflanzliche Schlagcreme [Wasser, gehärtetes Pflanzenöl (Palm), Zucker, **Milch**eiweiß (Caseinat), Stabilisatoren (E420i, E463, E466), Emulgatoren (E472b, **Soja**lecithin (E322)), Konservierungsstoff (E202), Aroma, Farbstoff (E160a)], H-**Milch**, Bitterschokoladenmasse [Zucker, vollständig gehärtetes Palmöl, **Molken**pulver (**Milch**), Calciumcarbonat, Kakaopulver, Emulgator (Sonnenblumenlecithin), Aroma], Schlagpulver [Zucker (56,5 %), vollständig gehärtetes Pflanzenöl (Glukosesirup, gehärtetes Palm- und/oder Kokosöl), Emulgatoren (E471, E472a), **Milch**eiweiß (Caseinat), Säureregulator (Kaliumphosphat), **Molken**pulver (**Milch**), Stabilisator (E466), Aroma (**Milch**)], Bitterschokolade [Zucker, Kakaomasse, Kakaobutter, Kakaopulver, Emulgator (**Soja**lecithin (E322)), geklärte **Butter** (**Milch**), Aroma], Gelatinepulver, Gelee mit Sauerkirschgeschmack [Glukosesirup, Wasser, Zucker, Verdickungsmittel (E406, E440), Säureregulatoren (E330, E331iii), Geschmacksverstärker (Kirsche), Konservierungsstoff (E202), Farbstoffe (E150d, E122 (max. 0,005 %), E129 (max. 0,05 %))], weiße Schokoladenmasse [Zucker, Pflanzenöl (Palm), **Magermilch**pulver, Kakaopulver, **Molken**pulver (**Milch**), Emulgatoren (**Soja**lecithin (E322), E476), Aroma (Vanillin)], weiße Schokolade [Zucker, Kakaobutter, **Molken**pulver (**Milch**), **Vollmilch**pulver, **Magermilch**pulver, pflanzliche Öle (Palm, Shea), geklärte **Butter** (**Milch**), Emulgatoren (**Soja**lecithin (E322), E476)], Gelee mit Schokoladengeschmack [Glukosesirup, Wasser, Feuchthaltemittel (E422), Kakaopulver, Verdickungsmittel (E440, E406), Farbstoffe (E150d, E153, E102, E129), Säureregulator (E330), Aroma, Konservierungsstoff (E202)], gefrorene Sauerkirschen, neutrales Gelee [Glukosesirup, Wasser, Zucker, Verdickungsmittel (E407, E440), Säureregulatoren (E330, E331iii), Konservierungsstoff (E202)]."
+    },
+    "nutrition": {
+      "fatG": 14.49,
+      "saltG": 0,
+      "sugarsG": 19.45,
+      "energyKj": 1507,
+      "proteinG": 4.05,
+      "energyKcal": 360,
+      "carbohydrateG": 50.73,
+      "saturatedFatG": 0
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
+      "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
+      "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "900401": {
+        "label": {
+          "tr": "1600 g",
+          "fr": "1600 g",
+          "de": "1600 g"
+        },
+        "netQuantity": 1600,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 1900,
+        "packedLengthMm": 265,
+        "packedWidthMm": 265,
+        "packedHeightMm": 90,
+        "barcodes": [
+          {
+            "code": "8682815620455",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Karamelli Bisküvili Pasta": {
+    "name": {
+      "tr": "Karamelli Bisküvili Pasta",
+      "fr": "Gâteau caramel et biscuit",
+      "de": "Karamell-Keks-Torte"
+    },
+    "description": {
+      "tr": "Karamelize bisküvi kırıkları ve karamel kreması kat kat. Tanıdık bir tat, pasta boyunda — çocukların da büyüklerin de ortak noktası.",
+      "fr": "Des éclats de biscuit caramélisé et une crème au caramel, couche après couche. Un goût familier, en format gâteau — petits et grands d'accord.",
+      "de": "Karamellisierte Keksbrösel und Karamellcreme, Schicht für Schicht. Ein vertrauter Geschmack in Tortengröße — Groß und Klein einig."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "900808": {
+        "label": {
+          "tr": "800 g",
+          "fr": "800 g",
+          "de": "800 g"
+        },
+        "netQuantity": 800,
+        "netUnit": "g",
+        "packedWeightG": 868,
+        "packedLengthMm": 165,
+        "packedWidthMm": 120,
+        "packedHeightMm": 110
+      }
+    }
+  },
+  "Kare Baklava": {
+    "name": {
+      "tr": "Kare Baklava",
+      "fr": "Baklava carré",
+      "de": "Quadrat-Baklava"
+    },
+    "description": {
+      "tr": "Kare kesim, düzgün sıralar, eşit paylar. Tepsiden alırken kimsenin gözü ötekinin diliminde kalmaz — sunumu kadar tadı da derli toplu.",
+      "fr": "Coupe carrée, rangées nettes, parts égales. Personne ne lorgne la part du voisin — une présentation aussi soignée que le goût.",
+      "de": "Quadratischer Schnitt, saubere Reihen, gleiche Stücke. Niemand schielt auf das Stück des Nachbarn — so ordentlich wie der Geschmack."
+    },
+    "shelfLifeDays": 546,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "600601": {
+        "label": {
+          "tr": "1250 g",
+          "fr": "1250 g",
+          "de": "1250 g"
+        },
+        "netQuantity": 1250,
+        "netUnit": "g",
+        "piecesCount": 15,
+        "portionKind": "item",
+        "packedWeightG": 1350,
+        "packedLengthMm": 190,
+        "packedWidthMm": 135,
+        "packedHeightMm": 125
+      }
+    }
+  },
+  "Karışık Baklava": {
+    "name": {
+      "tr": "Karışık Baklava",
+      "fr": "Baklava assorti",
+      "de": "Baklava gemischt"
+    },
+    "description": {
+      "tr": "Fıstıklı, cevizli ve çikolatalı bir arada. Hangisini seveceğinizi bilmiyorsanız ya da sofrada herkesin kendi tercihi varsa doğru tepsi bu.",
+      "fr": "Pistache, noix et chocolat réunis. Le bon plateau quand on ne sait pas encore ce qu'on préfère — ou quand chacun à table a son idée.",
+      "de": "Pistazie, Walnuss und Schokolade vereint. Das richtige Blech, wenn man seinen Favoriten noch sucht — oder wenn am Tisch jeder einen anderen hat."
+    },
+    "shelfLifeDays": 546,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "601201": {
+        "label": {
+          "tr": "450 g",
+          "fr": "450 g",
+          "de": "450 g"
+        },
+        "netQuantity": 450,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "item",
+        "packedWeightG": 494,
+        "packedLengthMm": 140,
+        "packedWidthMm": 100,
+        "packedHeightMm": 95
+      }
+    }
+  },
+  "Karışık Maraş Dondurması": {
+    "name": {
+      "tr": "Karışık Maraş Dondurması",
+      "fr": "Glace de Maraş assortie",
+      "de": "Maraş-Eis gemischt"
+    },
+    "status": "passive",
+    "description": {
+      "tr": "Sade, kakaolu ve fıstıklı bir arada. Hangisini alacağınıza karar veremediğinizde ya da sofrada üç ayrı tercih olduğunda doğru paket.",
+      "fr": "Nature, cacao et pistache réunis. Le bon format quand on n'arrive pas à choisir — ou quand la table a trois avis différents.",
+      "de": "Natur, Kakao und Pistazie zusammen. Die richtige Packung, wenn die Wahl schwerfällt — oder am Tisch drei Meinungen sitzen."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "111113": {
+        "label": {
+          "tr": "500 g kalıp",
+          "fr": "Pain 500 g",
+          "de": "500 g Block"
+        },
+        "netQuantity": 500,
+        "netUnit": "g",
+        "packedWeightG": 547,
+        "packedLengthMm": 145,
+        "packedWidthMm": 105,
+        "packedHeightMm": 95
+      }
+    }
+  },
+  "Kırmızı Kadife Pasta": {
+    "name": {
+      "tr": "Kırmızı Kadife Pasta",
+      "fr": "Gâteau velours rouge entier",
+      "de": "Rote-Samt-Torte"
+    },
+    "description": {
+      "tr": "Kadife kırmızısı katlar, arada beyaz peynirli krema. Kesildiğinde ortaya çıkan o renk kontrastı, pastanın yarısı kadar iş görür.",
+      "fr": "Des couches rouge velours, une crème au fromage frais entre elles. Le contraste qui apparaît à la coupe fait la moitié du travail.",
+      "de": "Samtrote Böden, dazwischen Frischkäsecreme. Der Kontrast, der beim Anschneiden erscheint, erledigt die halbe Arbeit."
+    },
+    "ingredients": {
+      "tr": "Red velvet karışımı, labne peyniri (**süt**), UHT **süt**, beyaz çikolata, pastörize bütün **yumurta**, şekerli bitkisel krem şanti, krem şanti tozu, içme suyu, beyaz kuvertür, bitkisel yağ (ayçiçek), nötr jöle, toz jelatin.",
+      "fr": "Mélange red velvet, fromage labneh (**lait**), **lait** UHT, chocolat blanc, **œufs** entiers pasteurisés, crème fouettée végétale sucrée, poudre à fouetter, eau potable, chocolat blanc composé, huile végétale (tournesol), gelée neutre, gélatine en poudre.",
+      "de": "Red-Velvet-Mischung, Labneh-Käse (**Milch**), UHT-**Milch**, weiße Schokolade, pasteurisierte ganze **Eier**, gezuckerte pflanzliche Schlagcreme, Schlagpulver, Trinkwasser, weiße Schokoladenmasse, Pflanzenöl (Sonnenblume), neutrales Gelee, Gelatinepulver."
+    },
+    "nutrition": {
+      "fatG": 31.3,
+      "saltG": 0.1,
+      "sugarsG": 41,
+      "energyKj": 2130,
+      "proteinG": 5,
+      "energyKcal": 510,
+      "carbohydrateG": 56.02,
+      "saturatedFatG": 0
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "Son tüketim tarihine kadar -18 °C'de saklayınız. Çözüldükten sonra buzdolabında (+4 °C) 3 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
+      "fr": "Conserver à -18 °C jusqu'à la date de péremption. Après décongélation, consommer sous 3 jours à +4 °C. Ne pas recongeler après décongélation. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
+      "de": "Bis zum Mindesthaltbarkeitsdatum bei -18 °C lagern. Nach dem Auftauen innerhalb von 3 Tagen bei +4 °C verbrauchen. Nach dem Auftauen nicht wieder einfrieren. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "900901": {
+        "label": {
+          "tr": "1600 g",
+          "fr": "1600 g",
+          "de": "1600 g"
+        },
+        "netQuantity": 1600,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 1750,
+        "packedLengthMm": 260,
+        "packedWidthMm": 260,
+        "packedHeightMm": 90,
+        "barcodes": [
+          {
+            "code": "8682815620509",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Kıymalı E Böreği": {
+    "name": {
+      "tr": "Kıymalı E Böreği",
+      "fr": "Börek en E à la viande",
+      "de": "E-Börek mit Hackfleisch"
+    },
+    "description": {
+      "tr": "Baharatlı kıymayla doldurulmuş, elde sarılmış çiğ börek. Çözdürmeden fırına verin — çıtırdayan kabuğu ve sıcak iç harcıyla akşam sofrasının ortasına.",
+      "fr": "Börek roulé à la main, farci à la viande hachée épicée et surgelé cru. Au four sans décongeler : croûte croustillante, farce chaude, au centre de la table.",
+      "de": "Von Hand gerollter Börek mit würziger Hackfleischfüllung, roh eingefroren. Ohne Auftauen backen — knusprige Kruste, warme Füllung, Mitte des Tisches."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700914": {
+        "label": {
+          "tr": "200 g",
+          "fr": "200 g",
+          "de": "200 g"
+        },
+        "netQuantity": 200,
+        "netUnit": "g",
+        "packedWeightG": 226,
+        "packedLengthMm": 110,
+        "packedWidthMm": 80,
+        "packedHeightMm": 75
+      }
+    }
+  },
+  "Latte Pastası": {
+    "name": {
+      "tr": "Latte Pastası",
+      "fr": "Gâteau latte",
+      "de": "Latte-Torte"
+    },
+    "description": {
+      "tr": "Beyaz kremalı katların üstünde karamel sosu. Adı gibi sakin bir pasta — kahvenin yanında, ikindi sofrasının tatlısı olmaya uygun.",
+      "fr": "Des couches de crème blanche, un filet de caramel sur le dessus. Un gâteau calme comme son nom — parfait avec un café, l'après-midi.",
+      "de": "Helle Cremeschichten, darüber ein Faden Karamell. Eine ruhige Torte, wie ihr Name — zum Kaffee am Nachmittag."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "900801": {
+        "label": {
+          "tr": "1600 g",
+          "fr": "1600 g",
+          "de": "1600 g"
+        },
+        "netQuantity": 1600,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 1724,
+        "packedLengthMm": 205,
+        "packedWidthMm": 145,
+        "packedHeightMm": 135
+      }
+    }
+  },
+  "Limonlu Artisan Kek": {
+    "name": {
+      "tr": "Limonlu Artisan Kek",
+      "fr": "Gâteau artisan citron",
+      "de": "Artisan-Kuchen Zitrone"
+    },
+    "description": {
+      "tr": "Limon biçiminde dökülmüş, tek kişilik kek. Çözdürüp tabağa alın — kabuğundaki parlaklık, ilk çatal girene kadar bozulmuyor. **Tartrazin (E102): çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Un gâteau individuel moulé en forme de citron. Décongelez et dressez — le brillant du glaçage tient jusqu'au premier coup de fourchette. **E102 : peut avoir des effets indésirables sur l’activité et l’attention chez les enfants.**",
+      "de": "Ein Küchlein in Zitronenform, für eine Person. Auftauen und anrichten — der Glanz hält bis zum ersten Gabelstich. **E102: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
+    "ingredients": {
+      "tr": "Beyaz konfiseri, krem şanti (**süt**), krema yağı (**süt**), kakao yağı, bitkisel susuz yağ, limon özütü, limon dolgu, toz jelatin, renklendirici (E102).",
+      "fr": "Confiserie blanche, crème fouettée (**lait**), matière grasse de crème (**lait**), beurre de cacao, matière grasse végétale anhydre, extrait de citron, garniture au citron, gélatine en poudre, colorant (E102).",
+      "de": "Weiße Konfiserie, Schlagsahne (**Milch**), **Milch**fett, Kakaobutter, pflanzliches wasserfreies Fett, Zitronenextrakt, Zitronenfüllung, Gelatinepulver, Farbstoff (E102)."
+    },
+    "nutrition": {
+      "fatG": 58,
+      "saltG": 0.03,
+      "sugarsG": 35,
+      "energyKj": 2202,
+      "proteinG": 4,
+      "energyKcal": 528,
+      "carbohydrateG": 37,
+      "saturatedFatG": 34
+    },
+    "allergens": [
+      "sut"
+    ],
+    "storage": {
+      "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
+      "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "901016B": {
+        "label": {
+          "tr": "9 × 90 g",
+          "fr": "9 × 90 g",
+          "de": "9 × 90 g"
+        },
+        "netQuantity": 810,
+        "netUnit": "g",
+        "piecesCount": 9,
+        "portionKind": "item",
+        "packedWeightG": 850,
+        "packedLengthMm": 290,
+        "packedWidthMm": 220,
+        "packedHeightMm": 60,
+        "barcodes": [
+          {
+            "code": "8682815624774",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Limonlu Cheesecake": {
+    "name": {
+      "tr": "Limonlu Cheesecake",
+      "fr": "Cheesecake au citron",
+      "de": "Zitronen-Cheesecake"
+    },
+    "description": {
+      "tr": "Bisküvi tabanın üstünde limonlu peynirli krema. Ekşiliği tatlılığın önüne geçmeyen, ağır bir yemekten sonra en kolay yenen tatlı.",
+      "fr": "Une crème de fromage au citron sur un fond de biscuit. L'acidité ne prend jamais le dessus : le dessert le plus facile après un repas copieux.",
+      "de": "Zitronige Frischkäsecreme auf Keksboden. Die Säure drängt sich nie vor — das leichteste Dessert nach einem schweren Essen."
+    },
+    "ingredients": {
+      "tr": "Bisküvi, bitkisel yağ (sade margarin), **buğday** unu, pastörize bütün **yumurta**, pudra şekeri, su, kek katkısı, kabartma tozu, labne peyniri (**süt**), şekerli bitkisel krem şanti, UHT **süt**, limonlu soğuk jöle, limonlu kısmi dolgu.",
+      "fr": "Biscuit, huile végétale (margarine nature), farine de **blé**, **œufs** entiers pasteurisés, sucre en poudre, eau, additif pour gâteau, levure chimique, fromage labné (**lait**), crème fouettée végétale sucrée, **lait** UHT, gelée froide au citron, garniture partielle au citron.",
+      "de": "Keks, Pflanzenöl (einfache Margarine), **Weizen**mehl, pasteurisierte ganze **Eier**, Puderzucker, Wasser, Kuchenzusatz, Backpulver, Labne-Käse (**Milch**), gezuckerte pflanzliche Schlagcreme, UHT-**Milch**, kaltes Zitronengelee, Teilfüllung mit Zitrone."
+    },
+    "nutrition": {
+      "fatG": 17.33,
+      "saltG": 0,
+      "sugarsG": 20.99,
+      "energyKj": 1345,
+      "proteinG": 4.95,
+      "energyKcal": 322,
+      "carbohydrateG": 35.94,
+      "saturatedFatG": 1.25
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut"
+    ],
+    "traces": [
+      "sert_kabuklu",
+      "susam"
+    ],
+    "storage": {
+      "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
+      "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
+      "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "901809": {
+        "label": {
+          "tr": "12 × 150 g",
+          "fr": "12 × 150 g",
+          "de": "12 × 150 g"
+        },
+        "netQuantity": 1800,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 2050,
+        "packedLengthMm": 265,
+        "packedWidthMm": 265,
+        "packedHeightMm": 90,
+        "barcodes": [
+          {
+            "code": "8682815620561",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Limonlu Maraş Dondurması": {
+    "name": {
+      "tr": "Limonlu Maraş Dondurması",
+      "fr": "Glace de Maraş au citron",
+      "de": "Maraş-Eis mit Zitrone"
+    },
+    "status": "passive",
+    "description": {
+      "tr": "Limonlu Maraş dondurmasının porsiyonlanmış dilimi. Salebin yoğunluğu limonun ekşisiyle hafifliyor — yaz akşamlarının dilimi.",
+      "fr": "La glace de Maraş au citron, tranchée en portions. La densité du salep s'allège avec l'acidité — la part des soirs d'été.",
+      "de": "Zitronen-Eis aus Maraş, in Portionen geschnitten. Die Dichte des Saleps wird durch die Säure leichter — für Sommerabende."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "111131": {
+        "label": {
+          "tr": "500 g",
+          "fr": "500 g",
+          "de": "500 g"
+        },
+        "netQuantity": 500,
+        "netUnit": "g",
+        "packedWeightG": 87,
+        "packedLengthMm": 85,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60
+      }
+    }
+  },
+  "Mangolu Artisan Kek": {
+    "name": {
+      "tr": "Mangolu Artisan Kek",
+      "fr": "Gâteau artisan mangue",
+      "de": "Artisan-Kuchen Mango"
+    },
+    "description": {
+      "tr": "Mango biçiminde dökülmüş, tek kişilik kek. Çözdürüp tabağa alın — tropik tarafı ağır basan, kışın bile yaz tabağı gibi duran bir tatlı. **Tartrazin (E102): çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Un gâteau individuel moulé en forme de mangue. Décongelez et dressez — une note tropicale assumée, une assiette d'été même en plein hiver. **E102 : peut avoir des effets indésirables sur l’activité et l’attention chez les enfants.**",
+      "de": "Ein Küchlein in Mangoform, für eine Person. Auftauen und anrichten — deutlich tropisch, ein Sommerteller selbst mitten im Winter. **E102: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
+    "ingredients": {
+      "tr": "Beyaz konfiseri, krem şanti (**süt**), krema yağı (**süt**), kakao yağı, bitkisel susuz yağ, mango özütü, mango dolgu, toz jelatin, renklendirici (E102).",
+      "fr": "Confiserie blanche, crème fouettée (**lait**), matière grasse de crème (**lait**), beurre de cacao, matière grasse végétale anhydre, extrait de mangue, garniture de mangue, gélatine en poudre, colorant (E102).",
+      "de": "Weiße Konfiserie, Schlagsahne (**Milch**), **Milch**fett, Kakaobutter, pflanzliches wasserfreies Fett, Mangoextrakt, Mangofüllung, Gelatinepulver, Farbstoff (E102)."
+    },
+    "nutrition": {
+      "fatG": 58,
+      "saltG": 0.03,
+      "sugarsG": 35,
+      "energyKj": 2202,
+      "proteinG": 4,
+      "energyKcal": 528,
+      "carbohydrateG": 37,
+      "saturatedFatG": 34
+    },
+    "allergens": [
+      "sut"
+    ],
+    "storage": {
+      "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
+      "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "901023B": {
+        "label": {
+          "tr": "9 × 90 g",
+          "fr": "9 × 90 g",
+          "de": "9 × 90 g"
+        },
+        "netQuantity": 810,
+        "netUnit": "g",
+        "piecesCount": 9,
+        "portionKind": "item",
+        "packedWeightG": 850,
+        "packedLengthMm": 290,
+        "packedWidthMm": 220,
+        "packedHeightMm": 60,
+        "barcodes": [
+          {
+            "code": "8682815624781",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Midye Baklava": {
+    "name": {
+      "tr": "Midye Baklava",
+      "fr": "Baklava moule",
+      "de": "Muschel-Baklava"
+    },
+    "description": {
+      "tr": "Adını kıvrımından alan midye baklava, içinde fıstık ve kaymakla. Tek lokmalık — elle alınır, ikram tabağında en çabuk biten odur.",
+      "fr": "Le baklava « moule » doit son nom à sa courbe ; à l'intérieur, pistache et crème. Une bouchée, prise à la main — la première à disparaître.",
+      "de": "Das „Muschel“-Baklava verdankt seinen Namen der Wölbung; innen Pistazie und Sahne. Ein Bissen, mit der Hand genommen — stets zuerst leer."
+    },
+    "shelfLifeDays": 546,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "600802": {
+        "label": {
+          "tr": "2000 g",
+          "fr": "2000 g",
+          "de": "2000 g"
+        },
+        "netQuantity": 2000,
+        "netUnit": "g",
+        "piecesCount": 48,
+        "portionKind": "item",
+        "packedWeightG": 2152,
+        "packedLengthMm": 220,
+        "packedWidthMm": 155,
+        "packedHeightMm": 145
+      }
+    }
+  },
+  "Patatesli E Böreği": {
+    "name": {
+      "tr": "Patatesli E Böreği",
+      "fr": "Börek en E à la pomme de terre",
+      "de": "E-Börek mit Kartoffel"
+    },
+    "description": {
+      "tr": "Baharatlanmış patatesle doldurulmuş, elde sarılmış çiğ börek. Çözdürmeden fırınlanır; etsiz, yumuşak ve doyurucu — çay saatine de akşama da yakışır.",
+      "fr": "Börek roulé à la main, farci à la pomme de terre épicée et surgelé cru. Cuit sans décongeler : sans viande, moelleux et nourrissant, à toute heure.",
+      "de": "Von Hand gerollter Börek mit gewürzter Kartoffelfüllung, roh eingefroren. Ohne Auftauen backen: fleischlos, weich und sättigend — zu jeder Tageszeit."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700911": {
+        "label": {
+          "tr": "200 g",
+          "fr": "200 g",
+          "de": "200 g"
+        },
+        "netQuantity": 200,
+        "netUnit": "g",
+        "packedWeightG": 226,
+        "packedLengthMm": 110,
+        "packedWidthMm": 80,
+        "packedHeightMm": 75
+      }
+    }
+  },
+  "Peynirli E Böreği": {
+    "name": {
+      "tr": "Peynirli E Böreği",
+      "fr": "Börek en E au fromage",
+      "de": "E-Börek mit Käse"
+    },
+    "description": {
+      "tr": "Beyaz peynirli iç harcıyla elde sarılmış, çiğ dondurulmuş börek. Çözdürmeden fırına girer; piştiğinde mutfak yeni çıkmış hamur işi gibi kokar.",
+      "fr": "Börek roulé à la main, farci au fromage blanc et surgelé cru. Il passe au four sans décongeler ; la cuisine sent alors la pâtisserie tout juste sortie.",
+      "de": "Von Hand gerollter Börek mit Weißkäsefüllung, roh eingefroren. Kommt ohne Auftauen in den Ofen; dann duftet die Küche nach frischem Gebäck."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700904": {
+        "label": {
+          "tr": "200 g",
+          "fr": "200 g",
+          "de": "200 g"
+        },
+        "netQuantity": 200,
+        "netUnit": "g",
+        "packedWeightG": 226,
+        "packedLengthMm": 110,
+        "packedWidthMm": 80,
+        "packedHeightMm": 75
+      }
+    }
+  },
+  "Peynirli Kol Böreği": {
+    "name": {
+      "tr": "Peynirli Kol Böreği",
+      "fr": "Börek en spirale au fromage",
+      "de": "Spiral-Börek mit Käse"
+    },
+    "description": {
+      "tr": "Yufkanın peynirle sarılıp kıvrıldığı geleneksel kol böreği, evde fırınlanmaya hazır. Bütün çıkar, dilimlenir — kalabalık sofraların böreği.",
+      "fr": "Le börek en spirale traditionnel : yufka roulée autour du fromage, prêt à cuire chez vous. Il sort entier et se tranche — le börek des grandes tablées.",
+      "de": "Traditioneller Spiral-Börek: Yufka um Käse gerollt, fertig zum Backen. Kommt ganz aus dem Ofen und wird aufgeschnitten — für die große Runde."
+    },
+    "allergens": [
+      "gluten",
+      "sut"
+    ],
+    "traces": [
+      "susam"
+    ],
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700501": {
+        "label": {
+          "tr": "800 g",
+          "fr": "800 g",
+          "de": "800 g"
+        },
+        "netQuantity": 800,
+        "netUnit": "g",
+        "packedWeightG": 820,
+        "packedLengthMm": 280,
+        "packedWidthMm": 280,
+        "packedHeightMm": 30,
+        "barcodes": [
+          {
+            "code": "8681925066399",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Sade Maraş Dondurması": {
+    "name": {
+      "tr": "Sade Maraş Dondurması",
+      "fr": "Glace de Maraş nature",
+      "de": "Maraş-Eis natur"
+    },
+    "description": {
+      "tr": "Salep ve keçi sütüyle yapılan Maraş dondurması: bıçakla kesilecek kadar yoğun, kaşıkla çekilince uzayan. Sadesi, işin aslı.",
+      "fr": "La glace de Maraş au salep et lait de chèvre : assez dense pour se couper au couteau, élastique sous la cuillère. La nature, l'originale.",
+      "de": "Maraş-Eis aus Salep und Ziegenmilch: dicht genug zum Schneiden, zäh beim Löffeln. Die pure Sorte — das Original."
+    },
+    "ingredients": {
+      "tr": "**Süt**, şeker, salep, stabilizör (E412), **antep fıstığı**.",
+      "fr": "**Lait**, sucre, poudre d'orchidée (salep), stabilisant (E412), **pistache**.",
+      "de": "**Milch**, Zucker, Orchideenwurzelpulver (Salep), Stabilisator (E412), **Pistazie**."
+    },
+    "nutrition": {
+      "fatG": 4.5,
+      "saltG": 0.001,
+      "sugarsG": 14,
+      "energyKj": 802,
+      "proteinG": 5.6,
+      "energyKcal": 191,
+      "carbohydrateG": 32,
+      "saturatedFatG": 4
+    },
+    "allergens": [
+      "sut",
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "Son kullanma tarihinden önce -20 °C'de saklayınız.",
+      "fr": "Conserver à -20 °C avant la date d'expiration.",
+      "de": "Vor dem Verfallsdatum bei -20 °C lagern."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DLC",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "111106": {
+        "label": {
+          "tr": "500 g kap",
+          "fr": "barquette 500 g",
+          "de": "500 g Behälter"
+        },
+        "netQuantity": 500,
+        "netUnit": "g",
+        "packedWeightG": 547,
+        "packedLengthMm": 145,
+        "packedWidthMm": 105,
+        "packedHeightMm": 95,
+        "barcodes": [
+          {
+            "code": "8681925066931",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Sade Poğaça": {
+    "name": {
+      "tr": "Sade Poğaça",
+      "fr": "Poğaça nature",
+      "de": "Poğaça natur"
+    },
+    "description": {
+      "tr": "Sade poğaça, fırından çıkar çıkmaz şoklandı. Isıtıp sofraya koyun — çayın yanında, kahvaltının ortasında, yumuşacık ve iddiasız.",
+      "fr": "Poğaça nature, surgelés dès la sortie du four. Réchauffez-les et posez-les sur la table — moelleux et sans chichi, parfaits avec le thé.",
+      "de": "Schlichte Poğaça, direkt nach dem Backen schockgefrostet. Aufwärmen und auf den Tisch — weich und unaufdringlich, ideal zum Tee."
+    },
+    "allergens": [
+      "gluten",
+      "yumurta"
+    ],
+    "traces": [
+      "susam"
+    ],
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700201": {
+        "label": {
+          "tr": "4 × 80 g",
+          "fr": "4 × 80 g",
+          "de": "4 × 80 g"
+        },
+        "netQuantity": 320,
+        "netUnit": "g",
+        "piecesCount": 4,
+        "portionKind": "item",
+        "packedWeightG": 340,
+        "packedLengthMm": 250,
+        "packedWidthMm": 140,
+        "packedHeightMm": 90,
+        "barcodes": [
+          {
+            "code": "8681925066320",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "San Sebastian Cheesecake": {
+    "name": {
+      "tr": "San Sebastian Cheesecake",
+      "fr": "Cheesecake basque brûlé",
+      "de": "Baskischer Cheesecake"
+    },
+    "description": {
+      "tr": "Bask usulü: üstü bilerek yakılmış, içi akışkan kalmış cheesecake. Karamelize kabuğun altındaki o yumuşaklık için yapılıyor.",
+      "fr": "À la basque : surface volontairement brûlée, cœur resté coulant. Tout est fait pour la douceur qui attend sous la croûte caramélisée.",
+      "de": "Baskisch: Oberfläche bewusst dunkel gebacken, Kern cremig geblieben. Alles zielt auf die Weichheit unter der karamellisierten Kruste."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "901807": {
+        "label": {
+          "tr": "1400 g",
+          "fr": "1400 g",
+          "de": "1400 g"
+        },
+        "netQuantity": 1400,
+        "netUnit": "g",
+        "piecesCount": 12,
+        "portionKind": "slice",
+        "packedWeightG": 1510,
+        "packedLengthMm": 195,
+        "packedWidthMm": 140,
+        "packedHeightMm": 130
       }
     }
   },
   "Sıkımlık Çiğ Köfte": {
+    "name": {
+      "tr": "Sıkımlık Çiğ Köfte",
+      "fr": "Çiğ köfte à façonner",
+      "de": "Çiğ Köfte zum Formen"
+    },
+    "description": {
+      "tr": "İnce bulgurla yoğrulmuş, baharatlı bitkisel çiğ köfte. Marul yaprağına sarıp limon sıkın — sosunu kendiniz seçmek isteyenler için sade hâli.",
+      "fr": "Çiğ köfte végétal, pétri au boulgour fin et aux épices. Roulez-le dans une feuille de laitue, pressez un citron — la version nature, à assaisonner selon vous.",
+      "de": "Pflanzliches Çiğ Köfte, mit feinem Bulgur und Gewürzen geknetet. In ein Salatblatt rollen, Zitrone darüber — die pure Variante zum Selbstwürzen."
+    },
     "ingredients": {
       "tr": "Su, **bulgur** (**buğday** glüteni), isot, pul biber, tuz, çiğ köfte baharat karışımı (soğan, sarımsak, havuç, kırmızı biber, tuz, şeker, pırasa, maydanoz, **kereviz**, zerdeçal, karabiber, asitlik düzenleyici, maya ekstraktı, doğala özdeş bitkisel aroma vericiler, bitkisel yağ (ayçiçek), baharat karışımı (tuz, soğan, tatlı kırmızı biber, karabiber, kimyon, kişniş, yenibahar, zencefil), tuz, domates salçası, biber salçası, keçap (su, invert şeker (pancar), domates salçası, sirke, şeker, asitlik düzenleyici (sitrik asit)), tuz, modifiye mısır nişastası, stabilizör (ksantan gam), karanfil tozu, renklendirici (havuç konsantresi), koruyucular (potasyum sorbat, sodyum benzoat)), invert şeker şurubu (pancar şekeri), bitkisel yağ (ayçiçek), maydanoz, sarımsak.",
       "fr": "Eau, **boulgour** (gluten de **blé**), isot, piment en poudre, sel, mélange d'épices pour çiğ köfte (oignon, ail, carotte, poivron rouge, sel, sucre, poireau, persil, **céleri**, curcuma, poivre noir, correcteur d'acidité, extrait de levure, arômes végétaux identiques aux naturels, huile végétale (tournesol), mélange d'épices (sel, oignon, piment doux, poivre noir, cumin, coriandre, piment de la Jamaïque, gingembre), sel, concentré de tomates, concentré de poivrons doux, ketchup (eau, sucre inverti (betterave), concentré de tomates, vinaigre, sucre, correcteur d'acidité (acide citrique)), sel, amidon de maïs modifié, stabilisant (gomme xanthane), poudre de clou de girofle, colorant (concentré de carotte), conservateurs (sorbate de potassium, benzoate de sodium)), sirop de sucre inverti (sucre de betterave), huile végétale (tournesol), persil, ail.",
       "de": "Wasser, **Bulgur** (**Weizen**gluten), Isot, Paprikapulver, Salz, Çiğköfte-Gewürzmischung (Zwiebel, Knoblauch, Karotte, rote Paprika, Salz, Zucker, Lauch, Petersilie, **Sellerie**, Kurkuma, schwarzer Pfeffer, Säureregulator, Hefeextrakt, naturidentische pflanzliche Aromastoffe, Pflanzenöl (Sonnenblume), Gewürzmischung (Salz, Zwiebel, süßer roter Paprika, schwarzer Pfeffer, Kreuzkümmel, Koriander, Piment, Ingwer), Salz, Tomatenmark, Paprikamark, Ketchup (Wasser, Invertzucker (Rübe), Tomatenmark, Essig, Zucker, Säureregulator (Zitronensäure)), Salz, modifizierte Maisstärke, Stabilisator (Xanthan), Nelkenpulver, Farbstoff (Karottenkonzentrat), Konservierungsstoffe (Kaliumsorbat, Natriumbenzoat)), Invertzuckersirup (Rübenzucker), Pflanzenöl (Sonnenblumenöl), Petersilie, Knoblauch."
     },
     "nutrition": {
-      "energyKj": 1013,
-      "energyKcal": 242,
       "fatG": 11,
-      "saturatedFatG": 3.3,
-      "carbohydrateG": 27.6,
+      "saltG": 0.6,
       "sugarsG": 4.5,
+      "energyKj": 1013,
       "proteinG": 5.1,
-      "saltG": 0.6
+      "energyKcal": 242,
+      "carbohydrateG": 27.6,
+      "saturatedFatG": 3.3
     },
     "allergens": [
       "gluten",
@@ -420,9 +1790,447 @@
       "fr": "Conserver à -18 °C, à l'abri de la lumière. Ne pas recongeler après décongélation. Décongeler à +4 °C un jour avant consommation ; consommer le jour même après ouverture. À consommer frais, entre 4 °C et 12 °C. La durée de conservation est valable si le produit est non ouvert et correctement stocké.",
       "de": "Bei -18 °C lagern, vor Sonnenlicht schützen. Nach dem Auftauen nicht erneut einfrieren. Produkt einen Tag vor dem Verzehr bei +4 °C auftauen; nach dem Öffnen am selben Tag verzehren. Verzehr gekühlt bei 4–12 °C empfohlen. Haltbarkeit gilt nur bei ungeöffneter Verpackung und sachgemäßer Lagerung."
     },
+    "shelfLifeDays": 365,
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "shelfLifeDays": 360
+    "vatRate": 5.5,
+    "category": "meze",
+    "variants": {
+      "201301": {
+        "label": {
+          "tr": "1000 g",
+          "fr": "1000 g",
+          "de": "1000 g"
+        },
+        "netQuantity": 1000,
+        "netUnit": "g",
+        "packedWeightG": 1000,
+        "packedLengthMm": 180,
+        "packedWidthMm": 140,
+        "packedHeightMm": 60,
+        "barcodes": [
+          {
+            "code": "18682815620490",
+            "kind": "case",
+            "qtyPerCode": 16
+          },
+          {
+            "code": "8682815620868",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Simit": {
+    "name": {
+      "tr": "Simit",
+      "fr": "Simit",
+      "de": "Simit"
+    },
+    "description": {
+      "tr": "105 g'lık susamlı simitler, %80 pişmiş halde şoklandı. Fırında tamamlayın — kabuğu çıtırdayan, içi yumuşak, sokak simidi tadında.",
+      "fr": "Simit au sésame de 105 g, surgelés cuits à 80 %. Terminez la cuisson au four — croûte croustillante, mie tendre, le goût des rues d'Istanbul.",
+      "de": "Sesam-Simit à 105 g, zu 80 % gebacken und eingefroren. Im Ofen fertig backen — knusprige Kruste, weiche Krume, wie am Straßenstand."
+    },
+    "ingredients": {
+      "tr": "Wheat flour (gluten), water, sesame (10%), grape molasses (2%), fresh yeast, salt.",
+      "fr": "Wheat flour (gluten), water, sesame (10%), grape molasses (2%), fresh yeast, salt.",
+      "de": "Wheat flour (gluten), water, sesame (10%), grape molasses (2%), fresh yeast, salt."
+    },
+    "nutrition": {
+      "fatG": 7.3,
+      "saltG": 1.9,
+      "sugarsG": 3.9,
+      "energyKj": 1310,
+      "proteinG": 10.3,
+      "energyKcal": 313,
+      "carbohydrateG": 50.1,
+      "saturatedFatG": 1.2
+    },
+    "allergens": [
+      "gluten",
+      "susam"
+    ],
+    "traces": [
+      "sut",
+      "yumurta",
+      "soya"
+    ],
+    "storage": {
+      "tr": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "fr": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "de": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700101": {
+        "label": {
+          "tr": "4 × 105 g",
+          "fr": "4 × 105 g",
+          "de": "4 × 105 g"
+        },
+        "netQuantity": 420,
+        "netUnit": "g",
+        "piecesCount": 4,
+        "portionKind": "item",
+        "packedWeightG": 440,
+        "packedLengthMm": 350,
+        "packedWidthMm": 170,
+        "packedHeightMm": 70,
+        "barcodes": [
+          {
+            "code": "8681925066344",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Su Böreği": {
+    "name": {
+      "tr": "Su Böreği",
+      "fr": "Su Börek (feuilleté au fromage)",
+      "de": "Su Börek (Käseblätterteig)"
+    },
+    "description": {
+      "tr": "Kat kat el açması yufka arasında beyaz peynir, fırında tam pişmiş. Dondurucudan çıkar, ısınır ve sofraya bütün gider — kesip paylaşmak size kalıyor.",
+      "fr": "Du fromage blanc entre des feuilles de yufka étalées à la main, entièrement cuit au four. Il sort du congélateur, se réchauffe et arrive entier à table.",
+      "de": "Weißkäse zwischen hauchdünn ausgezogenen Yufka-Blättern, fertig gebacken. Kommt aus dem Froster, wird warm und landet ganz auf dem Tisch — zum Teilen."
+    },
+    "ingredients": {
+      "tr": "Wheat flour, water, semi-skimmed white cheese (18%) (milk), egg, sunflower oil, butter (milk), salt, corn starch, vegetable fat (palm oil, cottonseed oil, sunflower oil, canola oil), natural and/or artificial flavor, color added (beta-carotene).",
+      "fr": "Wheat flour, water, semi-skimmed white cheese (18%) (milk), egg, sunflower oil, butter (milk), salt, corn starch, vegetable fat (palm oil, cottonseed oil, sunflower oil, canola oil), natural and/or artificial flavor, color added (beta-carotene).",
+      "de": "Wheat flour, water, semi-skimmed white cheese (18%) (milk), egg, sunflower oil, butter (milk), salt, corn starch, vegetable fat (palm oil, cottonseed oil, sunflower oil, canola oil), natural and/or artificial flavor, color added (beta-carotene)."
+    },
+    "nutrition": {
+      "fatG": 10.3,
+      "saltG": 1,
+      "sugarsG": 0.8,
+      "energyKj": 905,
+      "proteinG": 7.7,
+      "energyKcal": 215,
+      "carbohydrateG": 25,
+      "saturatedFatG": 2.5
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut"
+    ],
+    "traces": [
+      "soya"
+    ],
+    "storage": {
+      "tr": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "fr": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "de": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "firin",
+    "variants": {
+      "700402": {
+        "label": {
+          "tr": "800 g",
+          "fr": "800 g",
+          "de": "800 g"
+        },
+        "netQuantity": 800,
+        "netUnit": "g",
+        "packedWeightG": 820,
+        "packedLengthMm": 155,
+        "packedWidthMm": 155,
+        "packedHeightMm": 40,
+        "barcodes": [
+          {
+            "code": "8681925066627",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Şerbetli Künefe": {
+    "name": {
+      "tr": "Şerbetli Künefe",
+      "fr": "Künefe avec sirop",
+      "de": "Künefe mit Sirup"
+    },
+    "description": {
+      "tr": "Tel tel kadayıfın arasında eriyen peynir, üzerine kendi şerbeti. Sıcak servis edilir — kaşık daldırınca peynirin uzadığı o an için.",
+      "fr": "Du fromage qui fond entre les cheveux d'ange, arrosé de son sirop. À servir brûlant — pour l'instant où le fromage file sous la cuillère.",
+      "de": "Schmelzender Käse zwischen feinen Teigfäden, dazu der eigene Sirup. Heiß servieren — für den Moment, in dem der Käse Fäden zieht."
+    },
+    "ingredients": {
+      "tr": "Raw kadayif pastry [wheat flour (gluten), water, salt, preservatives (potassium sorbate E202, calcium propionate E282)], vegetable anhydrous fat [palm, shea, butter flavouring, colour (beta-carotene)], fresh low-fat processed cheese [pasteurised cow's milk (lactose), rennet, emulsifying salts (E339, E452)], glucose-fructose syrup.",
+      "fr": "Raw kadayif pastry [wheat flour (gluten), water, salt, preservatives (potassium sorbate E202, calcium propionate E282)], vegetable anhydrous fat [palm, shea, butter flavouring, colour (beta-carotene)], fresh low-fat processed cheese [pasteurised cow's milk (lactose), rennet, emulsifying salts (E339, E452)], glucose-fructose syrup.",
+      "de": "Raw kadayif pastry [wheat flour (gluten), water, salt, preservatives (potassium sorbate E202, calcium propionate E282)], vegetable anhydrous fat [palm, shea, butter flavouring, colour (beta-carotene)], fresh low-fat processed cheese [pasteurised cow's milk (lactose), rennet, emulsifying salts (E339, E452)], glucose-fructose syrup."
+    },
+    "nutrition": {
+      "fatG": 22.83,
+      "saltG": 0.23,
+      "sugarsG": 5.87,
+      "energyKj": 1623,
+      "proteinG": 13.21,
+      "energyKcal": 388,
+      "carbohydrateG": 34.8,
+      "saturatedFatG": 10.75
+    },
+    "allergens": [
+      "gluten",
+      "sut"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18°C dondurulmuş. Buzdolabında çözdürün, tekrar dondurmayın. Güneş ışığına maruz bırakmayın.",
+      "fr": "-18°C dondurulmuş. Buzdolabında çözdürün, tekrar dondurmayın. Güneş ışığına maruz bırakmayın.",
+      "de": "-18°C dondurulmuş. Buzdolabında çözdürün, tekrar dondurmayın. Güneş ışığına maruz bırakmayın."
+    },
+    "preparationSteps": [
+      {
+        "tr": "Künefeyi çözülmesini beklemeden, 230°C'ye önceden ısıtılmış fırında uygun bir tepside 15 dakika veya üzeri kızarana kadar pişirin.",
+        "fr": "Künefeyi çözülmesini beklemeden, 230°C'ye önceden ısıtılmış fırında uygun bir tepside 15 dakika veya üzeri kızarana kadar pişirin.",
+        "de": "Künefeyi çözülmesini beklemeden, 230°C'ye önceden ısıtılmış fırında uygun bir tepside 15 dakika veya üzeri kızarana kadar pişirin."
+      },
+      {
+        "tr": "Önceden hazırladığınız şurupla servis edin.",
+        "fr": "Önceden hazırladığınız şurupla servis edin.",
+        "de": "Önceden hazırladığınız şurupla servis edin."
+      }
+    ],
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "500103": {
+        "label": {
+          "tr": "2 × 145 g",
+          "fr": "2 × 145 g",
+          "de": "2 × 145 g"
+        },
+        "netQuantity": 290,
+        "netUnit": "g",
+        "piecesCount": 2,
+        "portionKind": "item",
+        "packedWeightG": 440,
+        "packedLengthMm": 140,
+        "packedWidthMm": 140,
+        "packedHeightMm": 50,
+        "barcodes": [
+          {
+            "code": "28681925066454",
+            "kind": "case",
+            "qtyPerCode": 12
+          },
+          {
+            "code": "8681925066023",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Şöbiyet Baklava": {
+    "name": {
+      "tr": "Şöbiyet Baklava",
+      "fr": "Baklava şöbiyet",
+      "de": "Şöbiyet-Baklava"
+    },
+    "description": {
+      "tr": "Şöbiyetin farkı kaymak: fıstığın yanına giren o serin tabaka, tatlıyı ağırlaştırmadan yumuşatıyor. Büyük tepside, paylaşmak için.",
+      "fr": "Ce qui distingue le şöbiyet, c'est la crème : une couche fraîche à côté de la pistache, qui adoucit sans alourdir. En grand plateau, à partager.",
+      "de": "Das Besondere am Şöbiyet ist die Sahne: eine kühle Schicht neben der Pistazie, die mildert, ohne schwer zu machen. Im großen Blech, zum Teilen."
+    },
+    "shelfLifeDays": 546,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "601402": {
+        "label": {
+          "tr": "1250 g",
+          "fr": "1250 g",
+          "de": "1250 g"
+        },
+        "netQuantity": 1250,
+        "netUnit": "g",
+        "piecesCount": 28,
+        "portionKind": "item",
+        "packedWeightG": 1350,
+        "packedLengthMm": 190,
+        "packedWidthMm": 135,
+        "packedHeightMm": 125
+      }
+    }
+  },
+  "Tavuk Fileto": {
+    "name": {
+      "tr": "Tavuk Fileto",
+      "fr": "Aiguillettes de poulet",
+      "de": "Hähnchen-Filetstreifen"
+    },
+    "description": {
+      "tr": "Galeta unuyla kaplanıp önceden pişirilmiş tavuk fileto. Fırında ya da hava fritözünde ısıtın — patatesin yanına, çocuk sofrasının kurtarıcısı.",
+      "fr": "Filets de poulet panés et précuits. Réchauffez au four ou à l'air fryer — avec des frites, la solution des soirs pressés.",
+      "de": "Panierte, vorgegarte Hähnchenfilets. Im Ofen oder in der Heißluftfritteuse erwärmen — mit Pommes die Rettung für hektische Abende."
+    },
+    "allergens": [
+      "gluten"
+    ],
+    "traces": [
+      "yumurta",
+      "sut",
+      "soya",
+      "kereviz"
+    ],
+    "shelfLifeDays": 540,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "et-tavuk",
+    "variants": {
+      "312241": {
+        "label": {
+          "tr": "10 × 70 g",
+          "fr": "10 × 70 g",
+          "de": "10 × 70 g"
+        },
+        "netQuantity": 700,
+        "netUnit": "g",
+        "piecesCount": 10,
+        "portionKind": "item",
+        "packedWeightG": 720,
+        "packedLengthMm": 260,
+        "packedWidthMm": 220,
+        "packedHeightMm": 80,
+        "barcodes": [
+          {
+            "code": "8696425024695",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
+  },
+  "Yaban Mersinli Şeftalili Pasta": {
+    "name": {
+      "tr": "Yaban Mersinli Şeftalili Pasta",
+      "fr": "Gâteau myrtille & pêche",
+      "de": "Heidelbeer-Pfirsich-Torte"
+    },
+    "description": {
+      "tr": "Yaban mersini ve şeftali bir arada, hafif kremalı katların üstünde. Çikolatalı tatlılardan sonra sofrada aranan o meyveli hâl.",
+      "fr": "Myrtille et pêche réunies sur des couches à la crème légère. Cette note fruitée que l'on cherche après les desserts au chocolat.",
+      "de": "Heidelbeere und Pfirsich auf luftigen Cremeschichten. Genau die fruchtige Note, die man nach Schokoladendesserts sucht."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "tatli",
+    "variants": {
+      "900308": {
+        "label": {
+          "tr": "580 g",
+          "fr": "580 g",
+          "de": "580 g"
+        },
+        "netQuantity": 580,
+        "netUnit": "g",
+        "piecesCount": 7,
+        "portionKind": "slice",
+        "packedWeightG": 633,
+        "packedLengthMm": 150,
+        "packedWidthMm": 110,
+        "packedHeightMm": 100
+      }
+    }
+  },
+  "Yaprak Sarma": {
+    "name": {
+      "tr": "Yaprak Sarma",
+      "fr": "Feuilles de vigne farcies",
+      "de": "Gefüllte Weinblätter"
+    },
+    "description": {
+      "tr": "Baharatlı pirinç, asma yaprağına tek tek sarıldı. Çözdürüp servis edin; limon sıkın, zeytinyağı gezdirin — soğuk mezelerin en eskisi.",
+      "fr": "Du riz épicé, roulé un à un dans des feuilles de vigne. Décongelez et servez ; un filet de citron, un trait d'huile d'olive — le plus ancien des mezze.",
+      "de": "Gewürzter Reis, Blatt für Blatt in Weinblätter gerollt. Auftauen und servieren; Zitrone und Olivenöl darüber — das älteste kalte Mezze."
+    },
+    "ingredients": {
+      "tr": "Pirinç, **bulgur** (gluten), salamura üzüm yaprakları (asma yaprağı, içme suyu, tuz), soğan, içme suyu, bitkisel yağ (zeytinyağı, ayçiçek yağı), salça, maydanoz, nane, kimyon, karabiber, tuz, asitlik düzenleyici (E330).",
+      "fr": "Riz, **boulgour** (contient du gluten), feuilles de vigne marinées (feuilles de vigne, eau potable, sel), oignon, eau potable, huile végétale (huile d'olive, huile de tournesol), concentré de tomate, persil, menthe, cumin, poivre noir, sel, correcteur d'acidité (E330).",
+      "de": "Reis, **Bulgur** (enthält Gluten), eingelegte Weinblätter (Weinblätter, Trinkwasser, Salz), Zwiebel, Trinkwasser, Pflanzenöl (Olivenöl, Sonnenblumenöl), Tomatenmark, Petersilie, Minze, Kreuzkümmel, schwarzer Pfeffer, Salz, Säureregulator (E330)."
+    },
+    "nutrition": {
+      "fatG": 11.58,
+      "saltG": 0.8,
+      "sugarsG": 2.81,
+      "energyKj": 514,
+      "proteinG": 2.23,
+      "energyKcal": 122,
+      "carbohydrateG": 16.71,
+      "saturatedFatG": 1.62
+    },
+    "allergens": [
+      "gluten"
+    ],
+    "storage": {
+      "tr": "-18 °C'de donuk saklayınız. Çözdürdükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver congelé à -18 °C. Ne pas recongeler après décongélation.",
+      "de": "Bei -18 °C tiefgefroren lagern. Nach dem Auftauen nicht erneut einfrieren."
+    },
+    "shelfLifeDays": 730,
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "vatRate": 5.5,
+    "category": "meze",
+    "variants": {
+      "200201": {
+        "label": {
+          "tr": "1000 g",
+          "fr": "1000 g",
+          "de": "1000 g"
+        },
+        "netQuantity": 1000,
+        "netUnit": "g",
+        "packedWeightG": 1020,
+        "packedLengthMm": 230,
+        "packedWidthMm": 155,
+        "packedHeightMm": 70,
+        "barcodes": [
+          {
+            "code": "8682815621339",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    }
   }
 }

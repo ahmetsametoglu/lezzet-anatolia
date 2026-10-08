@@ -176,7 +176,8 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    içindekiler, besin künyesi, alerjen, saklama, raf ömrü, boy, barkod, ambalaj ölçüsü, SKU — test
    veritabanına etiket fotoğrafıyla, asistanın dilekçesi panelden onaylanarak girer; besleme onları
    `scripts/seed-real/data/urun-kunyeleri.json` AYNASINDAN okur (`seed-real/kunye.ts`). Ayna elle
-   yazılmaz, veritabanından çekilir; çelişkide kazanan veritabanıdır. `data.ts` yalnız faturayı
+   yazılmaz, betikle çekilir: sunucuda `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet npx tsx
+   scripts/seed-real-ayna.ts --out=/tmp/ayna`; üç dosya (iki künye aynası + `stok-sayimi.json`) depoya kopyalanır; çelişkide kazanan veritabanıdır. `data.ts` yalnız faturayı
    (kalem, adet, alış fiyatı), işletmecinin kararlarını (kategori, koleksiyon, paket, tarif,
    `SALE_PRICES`) ve kapakları taşır. Künyesi aynada olmayan taslak beslemeyi DURDURUR.
 

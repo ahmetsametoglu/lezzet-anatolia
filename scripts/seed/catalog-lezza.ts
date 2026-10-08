@@ -103,6 +103,20 @@ function readCeviriler(): Record<string, LezzaCeviri> {
   return Object.fromEntries(Object.entries(ham).filter(([k, v]) => !k.startsWith('_') && typeof v === 'object')) as Record<string, LezzaCeviri>;
 }
 
+/**
+ * Katalog SKU'su → ürünün kuruluştaki Türkçe adı, yani `kunye` aynasının anahtarı. Birleştirme ve çeviri kuruluştaki kuralla
+ * hesaplanır; ayna betiği anahtarı kendisi türetseydi iki hesap ayrıştığı gün beyan sessizce düşerdi.
+ */
+export function katalogAynaAnahtarlari(merge?: Readonly<Record<string, string>>): Map<string, string> {
+  const ceviriler = readCeviriler();
+  const anahtar = new Map<string, string>();
+  for (const p of katla(readLezzaCatalog().products, merge)) {
+    const ad = ceviriler[p.slug]?.name.tr ?? p.name.tr ?? '';
+    for (const v of p.variants) if (v.sku != null) anahtar.set(String(v.sku), ad);
+  }
+  return anahtar;
+}
+
 /** Addan alerjen tahmini, beyan değil; bir ad birden çok desene uyabilir ve alerjenler birikir. */
 const ALERJEN_IPUCLARI: Array<[RegExp, ProductAllergen[]]> = [
   [/b[öo]rek|bagel|pastry|bun|cake|baklava|kunefe|k[üu]nefe|calzone|simit|croissant|pide|lahmacun|pizza|donut|profiterol|tiramisu|cheesecake|waffle|kadayif|kaday[ıi]f|nugget|burger|fillet|wings|crispy|breaded/i, ['gluten']],
@@ -406,6 +420,9 @@ export interface LezzaSecim {
 
 /** Kaynağın üstüne yazılan beyan — alanların adı kolonlarla aynı, çeviri katmanı yok. */
 export interface KatalogUrunKunyesi {
+  /** Panelde düzeltilen ad ve açıklama çevirinin üstüne yazılır; anahtar yine çevirideki addır ki ad değişince ayna kopmasın. */
+  name?: LocalizedText;
+  description?: LocalizedText;
   ingredients?: LocalizedText;
   nutrition?: Nutrition;
   allergens?: ProductAllergen[];
@@ -560,11 +577,12 @@ export async function seedLezzaProducts(
     // çevrilmemiş ürünün gerçek hâli budur ve ürün formundaki "çeviri eksik" uyarısı ancak böyle koşar.
     const tamAd: LocalizedText = ceviri?.name ?? { tr: ad, fr: ad, de: ad };
     const tamAciklama: LocalizedText | null = ceviri?.description ?? (p.description ? { tr: p.description, fr: p.description, de: p.description } : null);
-    const name: LocalizedText = dilEksik ? { tr: tamAd.tr } : tamAd;
     // Test veritabanının aynası kaynağı YENER: bu beyan ürünün kendi etiketinden okundu, kaynağın belgesi
     // ya hiç yoktu ya eksikti. `undefined` alan yazılmaz — ayna yalnız BİLDİĞİNİ söyler.
     const ayna = secim?.kunye?.[tamAd.tr ?? ''];
-    const aciklama: LocalizedText | null = tamAciklama ? (dilEksik ? { tr: tamAciklama.tr } : tamAciklama) : null;
+    const name: LocalizedText = ayna?.name ?? (dilEksik ? { tr: tamAd.tr } : tamAd);
+    const aciklama: LocalizedText | null =
+      ayna?.description ?? (tamAciklama ? (dilEksik ? { tr: tamAciklama.tr } : tamAciklama) : null);
 
     // Kapak GERÇEK görselden; R2 ayarsızsa null döner ve kayıt görselsiz oluşur (graceful).
     // Yerel kare varsa adresten indirilmez: besleme çevrimdışı koşabilmeli ve işletmeci kapağı

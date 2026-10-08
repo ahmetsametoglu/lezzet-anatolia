@@ -29,7 +29,7 @@ import {
 } from '@lezzet/database';
 import { canPublishProduct, purchaseOrderReferenceNo, rebalanceAllocations } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import { PRODUCT_GALLERY_MAX, type LocalizedText, type Product } from '@lezzet/types';
+import { PRODUCT_GALLERY_MAX, type LocalizedText, type PortionKind, type Product } from '@lezzet/types';
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -47,6 +47,8 @@ import {
   DRAFT_CATEGORY,
   AILELER,
   EK_TASLAKLAR,
+  MASA_FIYATLARI,
+  TASLAK_FIYATLARI,
   KATALOG_BIRLESIK,
   KATALOG_BOY_ADI,
   KATALOG_TEDARIKCISI,
@@ -66,7 +68,7 @@ import {
   WAREHOUSE,
   ZONES,
 } from './seed-real/data';
-import { KATALOG_KUNYELERI, KUNYELER, type UrunKunyesi } from './seed-real/kunye';
+import { KATALOG_KUNYELERI, KUNYELER, STOK_SAYIMI, type SayimBoyu, type UrunKunyesi } from './seed-real/kunye';
 
 const KOK = dirname(fileURLToPath(import.meta.url));
 /** Katalog kaynağının slug'ı → beslemedeki ürün görsel klasörü (`katalogKareleri`). */
@@ -84,13 +86,27 @@ type Line = Purchase['catalog'][number] | Draft['variants'][number];
 type SeedLine = (typeof BUNDLES)[number]['items'][number];
 
 /** Bütün taslaklar tek listede — faturalı olanlar tedarikçisiyle, faturasızlar tedarikçisiz. */
-const TASLAKLAR: Array<{ draft: AnyDraft; supplier: string | null }> = [
+const VERI_TASLAKLARI: Array<{ draft: AnyDraft; supplier: string | null }> = [
   ...PURCHASES.flatMap((p) => p.drafts.map((draft) => ({ draft: draft as AnyDraft, supplier: p.supplier }))),
   ...EK_TASLAKLAR.map((draft) => ({ draft: draft as AnyDraft, supplier: null })),
 ];
 
 /** Katalogda görünen ad Türkçesidir; faturadaki ad tedarikçinin dilinde kalır (eşleştirme onun üstünden). */
 const draftName = (draft: AnyDraft): string => draft.nameTr ?? draft.name;
+
+/**
+ * Veritabanında (panelde ya da asistanla) doğan ürünün faturası da `data.ts` satırı da yok; künyesi aynada durur ve taslak olarak
+ * oradan kurulur. Kategorisi de aynadan gelir (`kategoriOf`).
+ */
+const TASLAKLAR: Array<{ draft: AnyDraft; supplier: string | null }> = [
+  ...VERI_TASLAKLARI,
+  ...Object.keys(KUNYELER)
+    .filter((ad) => !VERI_TASLAKLARI.some(({ draft }) => draftName(draft) === ad))
+    .map((ad) => ({ draft: { name: ad } as AnyDraft, supplier: null })),
+];
+
+/** Kategori önce aynadan (veritabanındaki gerçek), yoksa `DRAFT_CATEGORY`den. */
+const kategoriOf = (draft: AnyDraft): string | undefined => KUNYELER[draftName(draft)]?.category ?? DRAFT_CATEGORY[draft.name];
 
 /**
  * Faturadaki ad → katalogdaki Türkçe ad; koleksiyon, paket ve aile üyeliği faturadaki adla yazılı.
@@ -339,9 +355,9 @@ function checkKunyeler(): void {
 
 function checkDraftCategories(): void {
   const gecerli = new Set(CATEGORIES.map((c) => c.key));
-  const eksik = TASLAKLAR.map(({ draft }) => draft.name).filter((ad) => !gecerli.has(DRAFT_CATEGORY[ad] ?? ''));
+  const eksik = TASLAKLAR.filter(({ draft }) => !gecerli.has(kategoriOf(draft) ?? '')).map(({ draft }) => draft.name);
   if (eksik.length > 0) {
-    throw new Error(`kategorisi yazılmamış taslak (${eksik.length}): ${eksik.join(' · ')} — DRAFT_CATEGORY'ye ekle`);
+    throw new Error(`kategorisi yazılmamış taslak (${eksik.length}): ${eksik.join(' · ')} — panelde kategori seç ya da DRAFT_CATEGORY'ye ekle`);
   }
 }
 
@@ -460,7 +476,8 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   plan(`${lines.length} fatura varyantı + ${ADAYLAR.length} aday · ürün, metin, görsel ve kategori katalog kaynağından`);
   if (DRY_RUN) return;
   /** Boy künyesi: kaynağın değerlerinin üstüne yazılan düzeltmeler (fatura birimi, boy adı). */
-  type BoyKunyesi = { label?: LocalizedText; netQuantity?: number; netUnit?: 'g' | 'ml'; piecesCount?: number };
+  type BoyKunyesi = { label?: LocalizedText; netQuantity?: number; netUnit?: 'g' | 'ml'; piecesCount?: number; portionKind?: PortionKind };
+  const al = (o: BoyKunyesi): BoyKunyesi => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
   const secim = new Map<string, BoyKunyesi>(
     lines.map((l) => [
       l.sku,
@@ -489,7 +506,9 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   for (const boylar of Object.values(KATALOG_KUNYELERI)) {
     for (const [sku, duzeltme] of Object.entries(boylar.variants ?? {})) {
       const boy = secim.get(sku);
-      if (boy) secim.set(sku, { ...boy, ...duzeltme });
+      // Ambalaj ölçüsü ve barkod kurulumdan sonra yazılır (`seedKatalogAynasi`): kurulum onları kaynaktan türetir.
+      const { label, netQuantity, netUnit, piecesCount, portionKind } = duzeltme;
+      if (boy) secim.set(sku, { ...boy, ...al({ label, netQuantity, netUnit, piecesCount, portionKind }) });
     }
   }
   // Katman 3: her kalem "satış kurgusunda" sayılır, çünkü motorun kapısı `teklifli || kurguda`dır ve alış fiyatı olmayan kalem aday
@@ -519,6 +538,56 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
 }
 
+/**
+ * Katalog ürününe aynanın kurulumda yazılamayan kısmı: ambalaj ölçüsü, barkod, KDV ve kategori. Kurulum bunları kaynaktan türetir;
+ * panelde düzeltilen ya da depoda okutulan değer burada üstüne yazılır, yoksa sıfırlamada kaybolurdu.
+ */
+async function seedKatalogAynasi(db: Db, catId: Map<string, string>): Promise<void> {
+  console.log('▸ katalog aynası — ölçü · barkod · KDV · kategori');
+  const variants = new ProductVariantService(db);
+  const products = new ProductService(db);
+  const barcodes = new VariantBarcodeService(db);
+  let boy = 0;
+  let kod = 0;
+  for (const [ad, kunye] of Object.entries(KATALOG_KUNYELERI)) {
+    let urunId: string | null = null;
+    for (const [sku, v] of Object.entries(kunye.variants ?? {})) {
+      const satir = await variants.findBySku(sku);
+      if (!satir) {
+        console.log(`  ⚠ ${ad} · ${sku} — boy kurulmamış, aynası yazılmadı`);
+        continue;
+      }
+      urunId = satir.productId;
+      const olcu = {
+        ...(v.packedWeightG === undefined ? {} : { packedWeightG: v.packedWeightG }),
+        ...(v.packedLengthMm === undefined ? {} : { packedLengthMm: v.packedLengthMm }),
+        ...(v.packedWidthMm === undefined ? {} : { packedWidthMm: v.packedWidthMm }),
+        ...(v.packedHeightMm === undefined ? {} : { packedHeightMm: v.packedHeightMm }),
+      };
+      const yeniKodlar = [];
+      for (const b of v.barcodes ?? []) if (!(await barcodes.getByCode(b.code))) yeniKodlar.push(b);
+      if (Object.keys(olcu).length === 0 && yeniKodlar.length === 0) continue;
+      plan(`${ad} · ${sku}${Object.keys(olcu).length ? ' · ölçü' : ''}${yeniKodlar.length ? ` · ${yeniKodlar.length} barkod` : ''}`);
+      if (DRY_RUN) continue;
+      if (Object.keys(olcu).length > 0) {
+        await variants.update({ id: satir.id, ...olcu });
+        boy += 1;
+      }
+      for (const b of yeniKodlar) await barcodes.insert({ variantId: satir.id, code: b.code, kind: b.kind, qtyPerCode: b.qtyPerCode });
+      kod += yeniKodlar.length;
+    }
+    const kategori = kunye.category ? catId.get(kunye.category) : undefined;
+    if (!urunId || DRY_RUN || (kunye.vatRate === undefined && !kategori && !kunye.status)) continue;
+    await products.update({
+      id: urunId,
+      ...(kunye.vatRate === undefined ? {} : { vatRate: kunye.vatRate }),
+      ...(kategori ? { categoryId: kategori } : {}),
+      ...(kunye.status ? { status: kunye.status } : {}),
+    });
+  }
+  if (!DRY_RUN) console.log(`  ✓ ${boy} boya ölçü · ${kod} barkod`);
+}
+
 async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
   console.log('▸ taslak ürünler');
   const products = new ProductService(db);
@@ -536,7 +605,11 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
     // Yayına hazır mı sorusunu motor cevaplar (`canPublishProduct`) ve veritabanı kısıtıyla aynı cümleyi kurar; fiyat ayrı şarttır, fiyatsız
     // ürün vitrine fiyatsız kart olarak düşerdi. Uydurma fatura taslağa adından bağlanır.
     const satirlar = SATIRLAR_ADA_GORE.get(ad) ?? faturaSatirlari(draft);
-    const fiyatli = satirlar.length > 0 && satirlar.every((v) => FIYATLAR[v.nameAtSupplier] !== undefined);
+    // Faturasız taslağın fiyatı SKU'dan gelir (`MASA_FIYATLARI`); her boyun fiyatı olmalı.
+    const fiyatli =
+      (satirlar.length > 0 && satirlar.every((v) => FIYATLAR[v.nameAtSupplier] !== undefined)) ||
+      kunye.variants.every((v) => v.sku !== undefined && MASA_FIYATLARI[v.sku] !== undefined) ||
+      TASLAK_FIYATLARI[ad] !== undefined;
     const yayina =
       fiyatli &&
       canPublishProduct({
@@ -562,7 +635,7 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
       // Künyenin tamamı aynadan geçer: eksik alan veritabanında da EKSİKTİ, burada tamamlanmaz.
       name: kunye.name,
       // Kategori doğuşta yazılır; eşlemenin tamlığı `checkDraftCategories` ile koşudan önce sınandı.
-      categoryId: catId.get(DRAFT_CATEGORY[draft.name] ?? '') ?? null,
+      categoryId: catId.get(kategoriOf(draft) ?? '') ?? null,
       status: yayina ? 'active' : 'candidate',
       ...(kunye.description ? { description: kunye.description } : {}),
       ...(kunye.ingredients ? { ingredients: kunye.ingredients } : {}),
@@ -573,6 +646,8 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
       // Saklama rejimi İKİ kolon: ikisi de aynadan gelir, biri ötekinden türetilmez.
       ...(kunye.storageType ? { storageType: kunye.storageType } : {}),
       ...(kunye.shippable === undefined ? {} : { shippable: kunye.shippable }),
+      ...(kunye.dateType ? { dateType: kunye.dateType } : {}),
+      ...(kunye.vatRate === undefined ? {} : { vatRate: kunye.vatRate }),
       ...(kunye.nutrition ? { nutrition: kunye.nutrition } : {}),
       ...(kunye.allergens ? { allergens: kunye.allergens } : {}),
       ...(kunye.traces?.length ? { traces: kunye.traces } : {}),
@@ -778,6 +853,70 @@ async function seedPurchases(db: Db): Promise<void> {
   }
 }
 
+/**
+ * Katalog ürünü fatura satırı değilse aday kurulur; masa fiyatı gelince beyanı tamsa satışa açılır. Kapı motorun kendisidir, fiyatı olmayan
+ * boy kalmışsa ürün aday kalır.
+ */
+async function fiyatlaninAdayiAc(db: Db, productId: string): Promise<void> {
+  const products = new ProductService(db);
+  const urun = (await products.listAll()).find((p) => p.id === productId);
+  if (!urun || urun.status !== 'candidate') return;
+  const boylar = (await new ProductVariantService(db).listByProduct(productId)).filter((v) => v.isActive !== false);
+  const prices = new PriceService(db);
+  for (const v of boylar) if ((await prices.listByVariant(v.id)).length === 0) return;
+  const beyanli = canPublishProduct({
+    name: urun.name,
+    description: urun.description,
+    ingredients: urun.ingredients,
+    storageInstructions: urun.storageInstructions,
+    allergens: urun.allergens ?? null,
+    variants: boylar.map((v) => ({ netQuantity: v.netQuantity })),
+  });
+  if (beyanli) await products.update({ id: productId, status: 'active' });
+}
+
+/** Faturası olmayan boyun fiyatı (`MASA_FIYATLARI`): fiyatı olan boya dokunulmaz, kurulmamış boy söylenir. */
+async function seedMasaFiyatlari(db: Db): Promise<void> {
+  console.log('▸ masa fiyatları');
+  const variants = new ProductVariantService(db);
+  const prices = new PriceService(db);
+  for (const [sku, fiyat] of Object.entries(MASA_FIYATLARI)) {
+    const boy = await variants.findBySku(sku);
+    if (!boy) {
+      console.log(`  ${DRY_RUN ? '○' : '⚠'} ${sku} — boy yok${DRY_RUN ? '; taslaklar yazılınca kurulur' : ', fiyat yazılmadı'}`);
+      continue;
+    }
+    if ((await prices.listByVariant(boy.id)).length > 0) {
+      done(`fiyat · ${sku}`);
+      continue;
+    }
+    plan(`fiyat · ${sku} · ${fiyat.b2c} € / ${fiyat.b2b} €`);
+    if (DRY_RUN) continue;
+    await prices.setPrice({ variantId: boy.id, channel: 'b2c', amountCents: toCents(fiyat.b2c) });
+    await prices.setPrice({ variantId: boy.id, channel: 'b2b', amountCents: toCents(fiyat.b2b) });
+    await fiyatlaninAdayiAc(db, boy.productId);
+  }
+  const urunler = await new ProductService(db).listAll();
+  for (const [ad, fiyat] of Object.entries(TASLAK_FIYATLARI)) {
+    const urun = urunler.find((u) => u.name.tr === ad);
+    const boylar = urun ? await variants.listByProduct(urun.id) : [];
+    if (boylar.length === 0) {
+      console.log(`  ${DRY_RUN ? '○' : '⚠'} ${ad} — ürün yok${DRY_RUN ? '; taslaklar yazılınca kurulur' : ', fiyat yazılmadı'}`);
+      continue;
+    }
+    for (const boy of boylar) {
+      if ((await prices.listByVariant(boy.id)).length > 0) {
+        done(`fiyat · ${ad}`);
+        continue;
+      }
+      plan(`fiyat · ${ad} · ${fiyat.b2c} € / ${fiyat.b2b} €`);
+      if (DRY_RUN) continue;
+      await prices.setPrice({ variantId: boy.id, channel: 'b2c', amountCents: toCents(fiyat.b2c) });
+      await prices.setPrice({ variantId: boy.id, channel: 'b2b', amountCents: toCents(fiyat.b2b) });
+    }
+  }
+}
+
 /** Kalemi varyanta çözer: Lezza ürünü varyant koduyla, taslak faturadaki adla ve birden çok boyu varsa etiketle. */
 async function lineVariantId(line: SeedLine, variants: ProductVariantService, urunler: Product[]): Promise<string | null> {
   if ('sku' in line) return (await variants.findBySku(line.sku))?.id ?? null;
@@ -912,8 +1051,87 @@ async function seedTestCatalogPrices(db: Db): Promise<void> {
   console.log(`  ${DRY_RUN ? '○' : '✓'} ${yazilan} varyanta fiyat ${DRY_RUN ? 'yazılacak' : 'yazıldı'}`);
 }
 
+/** Sayılmış boyu bulur: SKU'su varsa onunla, yoksa ürünün Türkçe adı ve boy etiketiyle. */
+async function sayimBoyu(boy: SayimBoyu, variants: ProductVariantService, urunler: Product[]): Promise<string | null> {
+  if (boy.sku) return (await variants.findBySku(boy.sku))?.id ?? null;
+  const urun = urunler.find((p) => p.name.tr === boy.product);
+  if (!urun) return null;
+  return (await variants.listByProduct(urun.id)).find((v) => v.label.tr === boy.label)?.id ?? null;
+}
+
+/**
+ * Sayılmış GERÇEK stok (`stok-sayimi.json`, veritabanı aynası) — katman 1'dir, çünkü uydurma değil. Kabul kapısından geçer; siparişli
+ * kabul aynı notlu siparişe bağlanır ki fatura ile mal yine eşleşsin. Depoda parti varsa hiç yazılmaz: ayna anlık görüntüdür ve
+ * ikinci koşu stoğu ikiye katlardı.
+ */
+async function seedStokSayimi(db: Db, facilityId: string): Promise<void> {
+  if (STOK_SAYIMI.length === 0) return;
+  const satirSayisi = STOK_SAYIMI.reduce((n, k) => n + k.lines.length, 0);
+  console.log(`▸ stok sayımı · ${STOK_SAYIMI.length} kabul · ${satirSayisi} parti`);
+  const { count } = facilityId === PLANNED ? { count: 0 } : await db.from('stock').select('id', { count: 'exact', head: true }).eq('warehouse_id', facilityId);
+  if ((count ?? 0) > 0) {
+    done(`stok sayımı — depoda ${count} parti var`);
+    return;
+  }
+  const variants = new ProductVariantService(db);
+  const urunler = await new ProductService(db).listAll();
+  const areas = facilityId === PLANNED ? [] : await new StorageAreaService(db).listByWarehouses([facilityId]);
+  const suppliers = await new SupplierService(db).list();
+  const orders = new PurchaseOrderService(db);
+  for (const kabul of STOK_SAYIMI) {
+    if (kabul.warehouse !== WAREHOUSE.code) {
+      console.log(`  ⚠ ${kabul.date} — depo ${kabul.warehouse} beslemede yok, kabul yazılmadı`);
+      continue;
+    }
+    const supplierId = kabul.supplier ? (suppliers.find((s) => s.name === kabul.supplier)?.id ?? null) : null;
+    const order =
+      supplierId && kabul.purchaseOrderNote
+        ? (await orders.listBySupplier(supplierId)).find((o) => o.note === kabul.purchaseOrderNote)
+        : undefined;
+    const lines = [];
+    const bulunamayan: string[] = [];
+    for (const l of kabul.lines) {
+      const variantId = await sayimBoyu(l.variant, variants, urunler);
+      if (!variantId) {
+        bulunamayan.push(`${l.variant.product} ${l.variant.label}`);
+        continue;
+      }
+      lines.push({
+        variantId,
+        qty: l.qty,
+        expiryDate: l.expiryDate,
+        lotNumber: l.lotNumber,
+        storageAreaId: areas.find((a) => a.name === l.storageArea)?.id ?? null,
+        unitCostCents: l.unitCostCents,
+      });
+    }
+    // Eksik boyla yarım kabul yazılmaz: sayılan stok eksik görünür ve fark sessiz kalırdı.
+    if (bulunamayan.length > 0 || (kabul.purchaseOrderNote && !order)) {
+      const neden = [bulunamayan.length ? `boyu yok: ${bulunamayan.join(' · ')}` : null, kabul.purchaseOrderNote && !order ? `sipariş yok: ${kabul.purchaseOrderNote}` : null];
+      console.log(`  ${DRY_RUN ? '○' : '⚠'} ${kabul.date} — ${neden.filter(Boolean).join(' · ')}${DRY_RUN ? '' : ', kabul yazılmadı'}`);
+      continue;
+    }
+    plan(`kabul · ${kabul.date} · ${lines.length} parti · ${kabul.purchaseOrderNote ?? kabul.supplier ?? 'siparişsiz'}`);
+    if (DRY_RUN) continue;
+    const outcome = await receivePurchase(db, {
+      warehouseId: facilityId,
+      purchaseOrderId: order?.id ?? null,
+      supplierId,
+      date: kabul.date,
+      note: kabul.note,
+      lines,
+    });
+    if (outcome.status !== 'ok') console.log(`  ⚠ ${kabul.date} — kabul yazılamadı (${outcome.status})`);
+  }
+}
+
 /** Siparişlerin tamamını tek partide teslim alır — arayüz denemesi için, gerçek sayım değil. */
 async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
+  // Gerçek sayım varken uydurma parti yazılmaz: iki stok karışır ve hangisinin gerçek olduğu partiden okunamaz.
+  if (STOK_SAYIMI.length > 0) {
+    console.log('▸ test kabulü — gerçek stok sayımı var, atlandı');
+    return;
+  }
   console.log(`▸ test kabulü · lot ${TEST_INTAKE.lotNumber} · SKT ${TEST_INTAKE.expiryDate} — uydurma değer, arayüz denemesi`);
   const areas = facilityId === PLANNED ? [] : await new StorageAreaService(db).listByWarehouses([facilityId]);
   const intakes = new StockIntakeService(db);
@@ -1048,10 +1266,12 @@ async function main(): Promise<void> {
   await seedSuppliers(db);
   const catId = await seedCategories(db);
   await seedCatalog(db, catId);
+  await seedKatalogAynasi(db, catId);
   await seedDrafts(db, catId);
   await seedFamilies(db);
   await seedCollections(db);
   await seedPurchases(db);
+  await seedMasaFiyatlari(db);
   // Uydurma fiyat gerçeklerden SONRA: var olan fiyatın üstüne yazmaz.
   if (LAYERS >= 3) await seedTestCatalogPrices(db);
   // Paket fiyatı liste fiyatlarından türediği için fiyatlardan sonra.
@@ -1060,6 +1280,8 @@ async function main(): Promise<void> {
   // Sayfa görselleri kuru koşuda YÜKLENMEZ: fonksiyon slot doluysa atlar, boşsa kovaya yazar.
   if (DRY_RUN) console.log(`▸ sayfa görselleri\n  ○ ${SAYFA_GORSELLERI.map((g) => g.slot).join(' · ')} — eklenecek`);
   else await seedSiteImages(db, SAYFA_GORSELLERI);
+  // Gerçek sayım siparişlerden sonra: siparişli kabul aynı notlu siparişe bağlanır.
+  await seedStokSayimi(db, facilityId);
   // Mal kabulü katman 2'dir: lot ve son kullanma uydurmadır ama ürünün beyanına dokunmaz. Beyanı tahminle dolduran türetme katman 3'te
   // kalır, aynı kapıda olsalar stok görmek için beyan bozmak gerekirdi.
   if (LAYERS >= 2) await seedTestIntake(db, facilityId);

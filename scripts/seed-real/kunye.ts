@@ -3,7 +3,7 @@
 
   **Beyanların tek kaynağı TEST VERİTABANIDIR** (işletmeci kararı, 19.09): künyeler oraya etiket
   fotoğrafıyla, asistanın dilekçesi panelden onaylanarak girdi. `urun-kunyeleri.json` o kayıtların
-  aynasıdır — elle yazılmaz, veritabanından çekilir; çelişki çıktığında kazanan veritabanıdır.
+  aynasıdır — elle yazılmaz, `scripts/seed-real-ayna.ts` veritabanından baştan yazar; çelişkide kazanan veritabanıdır.
 
   Neden dosyada duruyor: besleme çevrimdışı koşmalı ve sıfırlanmış bir veritabanını yeniden
   kurabilmeli. Aynı desen katalogda da var (`seed/data/lezza-catalog.json`, kaynağın aynası).
@@ -17,7 +17,7 @@
   yalnız bu işaret çevrildi — beyanın kendisi, sırası ve sayıları değişmedi. Sonraki sıfırlamada
   veritabanı da aynadan yazıldığı için iki taraf yine aynı biçimi taşır.
 */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { LocalizedText, Nutrition, PortionKind, ProductAllergen } from '@lezzet/types';
@@ -62,6 +62,10 @@ export interface UrunKunyesi {
   /** `storage_type` ve `shippable` beraber gelir: ikisi de veritabanının kararı, türetilmez. */
   storageType?: 'ambient' | 'chilled' | 'frozen';
   shippable?: boolean;
+  dateType?: 'DLC' | 'DDM';
+  vatRate?: number;
+  /** Beslemenin kategori anahtarı (`CATEGORIES[].key`); veritabanında doğan ürünün faturası olmadığı için kategori de buradan gelir. */
+  category?: string;
   variants: KunyeVaryanti[];
 }
 
@@ -75,11 +79,48 @@ export const KUNYELER: Record<string, UrunKunyesi> = JSON.parse(readFileSync(DOS
  * `description` yoktur (onlar `seed/data/translations.json`ta), `variants` da dizi değil SKU sözlüğüdür: yalnız
  * kaynağınkinden farklı olan boy yazılır. Gerisi aynı kural — kaynak veritabanı, eksik alan orada da eksikti.
  */
-export interface KatalogKunyesi extends Omit<UrunKunyesi, 'name' | 'description' | 'variants'> {
-  /** Tarih türü kaynakta yok, etikette var: ürünün imha mı yoksa kalite tarihi mi taşıdığını beyan belirler. */
-  dateType?: 'DLC' | 'DDM';
-  variants?: Record<string, { label?: LocalizedText; netQuantity?: number; netUnit?: 'g' | 'ml'; piecesCount?: number }>;
+export interface KatalogKunyesi extends Omit<UrunKunyesi, 'name' | 'variants'> {
+  /** Paneldeki ad; anahtar çevirideki ad kalır (`katalogAynaAnahtarlari`), ad düzeltilince ayna kopmasın. */
+  name?: LocalizedText;
+  /** İşletmecinin kapattığı ama katalogda tuttuğu ürün; kurulur ve pasife alınır. */
+  status?: 'passive';
+  variants?: Record<string, Omit<KunyeVaryanti, 'sku'>>;
 }
+
+/** Sayılmış partinin boyu: SKU varsa o, yoksa ürünün Türkçe adı + boy etiketi (veritabanında doğan üründe SKU yok). */
+export interface SayimBoyu {
+  sku?: string;
+  product: string;
+  label: string;
+}
+
+export interface SayimSatiri {
+  variant: SayimBoyu;
+  qty: number;
+  expiryDate: string;
+  lotNumber: string | null;
+  storageArea: string | null;
+  /** Yalnız siparişsiz kabulde; siparişli kabulde maliyeti siparişin birim fiyatı verir. */
+  unitCostCents: number | null;
+}
+
+/** Bir mal kabulü — adet partinin BUGÜNKÜ fiili miktarıdır, ilk girişi değil: ayna anlık görüntüdür. */
+export interface SayimKabulu {
+  warehouse: string;
+  date: string;
+  note: string | null;
+  supplier: string | null;
+  /** Bağlı tedarik siparişinin notu (`Fatura INV/…`); besleme siparişi bu notla bulur. */
+  purchaseOrderNote: string | null;
+  lines: SayimSatiri[];
+}
+
+const SAYIM_DOSYASI = join(dirname(fileURLToPath(import.meta.url)), 'data/stok-sayimi.json');
+
+/** Sayılmış gerçek stok — veritabanı aynası; dosya yoksa stok yok demektir. */
+export const STOK_SAYIMI: SayimKabulu[] = existsSync(SAYIM_DOSYASI)
+  ? (JSON.parse(readFileSync(SAYIM_DOSYASI, 'utf8')) as SayimKabulu[])
+  : [];
 
 const KATALOG_DOSYASI = join(dirname(fileURLToPath(import.meta.url)), 'data/katalog-kunyeleri.json');
 
