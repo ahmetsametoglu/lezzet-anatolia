@@ -5,7 +5,7 @@ import { RecipeSchema } from '../entities/recipe.schema';
 
 /**
  * Mobil vitrin ucunun (`GET /api/v1/home`) sözleşmesi: yalnız müşteriden bağımsız bölümler taşınır, Bearer yalnız fiyatı kişiselleştirir.
- * `featured` kataloğun kendi sıralamasından ilk N'dir, web'in sinyalli seçkisi değil (BEKLEYEN(21.14): seçki terfi edince o kapıya döner).
+ * `featured` kataloğun kendi sıralamasından ilk N'dir, web'in sinyalli seçkisi değil.
  */
 
 /** Bant türü kartın açacağı katalog süzgecini belirler; kategori ve koleksiyon tek şeritte durur. */
