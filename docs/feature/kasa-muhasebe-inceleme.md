@@ -13,7 +13,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Yapıldı |
 | 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
 | 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
-| 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Konuşulacak |
+| 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Ölçüldü |
 | 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Konuşulacak |
 | 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Konuşulacak |
 | 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Konuşulacak |
@@ -150,7 +150,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 ## 6. Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor
 
-**Durum:** Konuşulacak · **Ağırlık:** orta
+**Durum:** Ölçüldü (08.10) · **Ağırlık:** orta
 
 - **Mevcut durum:** Onaysız şirketin siparişi işletme kanalına yazılır ama fiyatı perakende (KDV dahil) tabandan gelir
   (DOMAIN §10). Kargo ücreti herkes için KDV dahil hesaplanır. Aktarım işletme kanalında KDV'yi tutarın üstüne ekler.
@@ -159,6 +159,61 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 - **Olması gereken:** Kalem ve kargo siparişin kanal tabanında saklanır; işletme siparişinde perakende fiyat KDV hariçe çevrilir.
 - **Kanıt:** `packages/application/src/order/checkout-draft.ts:215, 554` · `catalog/pricing-viewer.ts:44-47` ·
   `order/shipping-selection.ts:13-17` · `packages/domain-core/src/accounting/line.ts:45-55`.
+
+### Etki analizi (08.10)
+
+Siparişin kalem fiyatlarını, kargo ücretini ve toplamını okuyan her yer tarandı:
+
+| Okuyan | Ne okur | Fiyatın KDV dahil mi hariç mi olduğunu nereden bilir |
+|---|---|---|
+| Tahsilat: online ödeme, kapıda tahsilat, vadeli borç, ödeme durumu, banka eşleştirmesi, kuryenin "kapıda X €"su | Sipariş toplamı; kalemler artı kargo | Bilmez, saklanan tutarı ister |
+| Müşteri ekranları: sepet, ödeme, onay sayfası, e-postalar, sipariş geçmişi (web ve native) | Aynı | Bilmez |
+| Para grafikleri ve sayaçlar: panelin 7 günlük cirosu, analitik ciro, kampanya getirisi, müşteri cirosu, sipariş listesi toplamı, asistanın satış özeti | Sipariş toplamı (`ordered_total`), gün ve kanal bazında | Bilmez, kanalları toplar |
+| Muhasebe ve kâr: Raporlar'daki muhasebe aktarımı, şirket ve ürün kârı, sipariş detayının KDV satırı, fiyat etiketi ve kâr kartı | Kalemler artı kargo | **Kanaldan** (`vatBaseOf(channel)`) |
+| Kasa (Hiboutik) | — | İşletme kanalındaki siparişi hiç yazmaz |
+
+Hata yalnız muhasebe ve kâr satırında. Bu satır tabanı kanaldan çıkarıyor, ama onaysız şirketin fiyatı KDV dahil, kargo ücreti de
+herkes için KDV dahil. İşletme siparişinde kargo ücreti yalnız taşıyıcıyla gidip ücretsiz kargo eşiğinin altında kalan siparişte
+alınır; rota teslimatında ücret hep 0.
+
+**İki çözüm yolu:**
+
+- **A, saklanan tutarı kanal tabanına çevirmek** (yukarıdaki "olması gereken"):
+  - Onaysız şirketin fiyatı ve işletme kargosu KDV hariç saklanır.
+  - Saklanan tutar değiştiği için tahsilat, müşteri ekranları ve para grafikleri de etkilenir. Tahsilat, 2. maddenin düzeltmesiyle
+    aynı anda değişmek zorunda; yoksa onaysız şirketten KDV'siz tutar alınır.
+  - Ölçülen yuvarlama sorunu: KDV dahil birim fiyat iki haneli KDV hariçe çevrilip KDV geri eklenince, 1–30 € fiyat ve 1–10 adet
+    çiftlerinin %72'sinde (%5,5) ve %73'ünde (%20) müşterinin gördüğünden farklı tutar çıkıyor. Fark en çok 6 cent; örneğin
+    3,49 € × 7 adet %20'de görülen 24,43 €, alınacak 24,44 €.
+- **B, siparişin fiyat tabanını siparişe yazmak** (önerilen):
+  - Sipariş açılırken fiyatların KDV dahil mi hariç mi olduğu bir alana yazılır: onaylı işletmede hariç, öteki her siparişte dahil.
+  - Kargo ücreti her siparişte KDV dahil kalır; bu kural muhasebe çekirdeğine yazılır.
+  - Saklanan hiçbir tutar değişmez. Tahsilat, müşteri ekranları, para grafikleri ve kasa aynı sayıları okur.
+  - Değişen yalnız muhasebe ve kâr satırı: tabanı bu alandan okur, kargonun KDV'sini içinden ayırır.
+
+**B'nin boyutu:**
+
+- Üretimde 10 dosya:
+  - Şema `0012_order.sql`; sipariş satış görünümü yeni alanı kendiliğinden taşır, `db:refresh` gerekir.
+  - Tip `order.schema.ts`.
+  - Yazan tek yer `checkout-draft.ts`. Alanın varsayılanı "KDV dahil"; yerinde satış hep perakende olduğu için dokunulmaz.
+  - Çekirdekte `accounting/line.ts`, `export.ts`, `profit.ts`.
+  - Web'de `lib/accounting/profit.ts` ve sipariş detayının okuma, etiket ve tip dosyaları.
+- Test tarafında:
+  - Veritabanına işletme siparişi kuran 11 test dosyası ve aktarım ile kâr testleri gözden geçirilir.
+  - Onaylı işletmenin siparişinin "KDV hariç" yazıldığını, onaysız şirketin ve işletme kargosunun KDV'sinin içinden ayrıldığını
+    tutan yeni testler yazılır.
+- Ekranda yalnız onaysız şirket siparişlerinde ve kargo ücreti alınan işletme siparişlerinde değişiklik görünür:
+  - Raporlar'da aktarımın net ve KDV tutarları ile kâr.
+  - Sipariş detayında KDV satırı, fiyat etiketi ve kâr kartı.
+
+**2. maddeyle ilişkisi:** 2. madde KDV'yi eklerken bu alanı okumalı. Bugünkü kodla 2. madde tek başına yapılırsa onaysız şirket de
+işletme kanalında göründüğü için KDV dahil ödediği fiyata bir kez daha KDV eklenir. Bu yüzden önce 6. madde, sonra 2. madde yapılır.
+
+**Kanıt:** web ve uygulama katmanında `ordered_total`a dokunan 22 dosya · `analytics_order_revenue` `0036_analytics_signals.sql:368` ·
+`dashboard-page-read.ts:371` · `apps/web/lib/analytics/read.ts:188` · kasa `packages/domain-core/src/register/plan.ts:57` ·
+rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `accounting/export.ts:149`, `accounting/line.ts:67`,
+`orders/[id]/order-detail-read.ts:539`.
 
 ## 7. Şirket kârında kart komisyonu iki kez düşülüyor
 
