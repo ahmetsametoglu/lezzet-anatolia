@@ -96,6 +96,11 @@ export const OrderSchema = z.object({
 
   vatNumberSnapshot: z.string().nullable(),
   vatTreatment: VatTreatmentEnum,
+  /**
+   * Kalem fiyatları KDV dahil mi: onaylı işletmede hariç, öteki her siparişte dahil. Kanaldan çıkarılmaz, çünkü onaysız şirket işletme
+   * kanalında perakende fiyatla alır. Kargo ücreti her siparişte KDV dahildir.
+   */
+  pricesIncludeVat: z.boolean(),
 
   /** Siparişin dili: sipariş mailleri buradan okunur, profil sonradan değişse de değişmez; `null` → profilin dili. */
   locale: PreferredLanguageEnum.nullable(),
@@ -117,8 +122,8 @@ export const OrderSchema = z.object({
   // Para **cent** (STACK §8); DB kolonları euro `numeric`, dönüşüm `OrderService.moneyFields`.
   shippingFeeCents: z.number().int(),
   /**
-   * Sipariş anında anlaşılan tutar (Σ kalem − indirim + kargo), donuktur: ödeme niyeti, vade limiti ve onay maili
-   * bunu okur. "Ne tahsil edilecek" sorusunun cevabı bu değil, `derivePaymentStatus`tır.
+   * Sipariş anında anlaşılan KDV dahil tutar (Σ kalem − indirim, KDV hariç fiyatta KDV eklenmiş, + kargo), donuktur: ödeme niyeti,
+   * vade limiti ve onay maili bunu okur. "Ne tahsil edilecek" sorusunun cevabı bu değil, `derivePaymentStatus`tır.
    */
   orderedTotalCents: z.number().int(),
   /**
@@ -171,6 +176,7 @@ export const OrderInsertSchema = z.object({
   deliveryCountry: CountryEnum.optional(),
   vatNumberSnapshot: z.string().nullish(),
   vatTreatment: VatTreatmentEnum.optional(),
+  pricesIncludeVat: z.boolean().optional(),
   shippingFeeCents: z.number().int().nonnegative().optional(),
   orderedTotalCents: z.number().int().nonnegative().optional(),
   deliveryCostCents: z.number().int().nonnegative().nullish(),
@@ -191,10 +197,10 @@ export const OrderInsertSchema = z.object({
 export type OrderInsert = z.infer<typeof OrderInsertSchema>;
 
 /**
- * `channel` yazılamaz: KDV işlemesini ve fiyat kademesini belirlediği için sonradan değişmesi alınmış paranın vergisini
- * geriye dönük oynatırdı. İkinci savunma veritabanında (`order_channel_frozen`), doğrudan SQL yazan betiğe karşı.
+ * `channel` ve `pricesIncludeVat` yazılamaz: KDV işlemesini, fiyat kademesini ve borcun KDV'sini belirledikleri için sonradan
+ * değişmeleri alınmış paranın vergisini geriye dönük oynatırdı. İkinci savunma veritabanında (`order_channel_frozen`), doğrudan SQL yazan betiğe karşı.
  */
-export const OrderUpdateSchema = OrderSchema.omit({ channel: true }).partial().required({ id: true });
+export const OrderUpdateSchema = OrderSchema.omit({ channel: true, pricesIncludeVat: true }).partial().required({ id: true });
 export type OrderUpdate = z.infer<typeof OrderUpdateSchema>;
 
 /**

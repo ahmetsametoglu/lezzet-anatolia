@@ -171,7 +171,8 @@ Kısaca: müşteri-yüzü doğru KDV = bizim işimiz (fiyat); beyan/OSS/iade = m
 `Price.amount` **kanalın tabanında** saklanır: B2C satırları KDV **dahil**, B2B satırları KDV **hariç**. Fransız piyasa alışkanlığı budur — tüketici etiketi TTC görür, işletme müşterisi HT konuşur; DE B2B reverse charge (%0) da doğrudan HT tabanına oturur.
 
 - Fiyat motoru iki yöne de çevirir; **çevrim yalnız gösterim içindir**, saklanan değer kanal tabanıdır.
-- `OrderItem.unit_price` siparişin kanal tabanında sabitlenir; `vat_rate` kalemde durur, `Order.total` aynı tabandadır. Fatura/export tabanı belirsiz kalmaz.
+- `OrderItem.unit_price` fiyatın okunduğu tabanda sabitlenir ve taban siparişe yazılır (`Order.prices_include_vat`): onaylı işletmede KDV hariç, öteki her siparişte KDV dahil. Taban kanaldan çıkarılmaz, çünkü onaysız şirket işletme kanalında perakende fiyatla alır (§10). `vat_rate` kalemde durur; kargo ücreti her siparişte KDV dahildir.
+- **Müşterinin borcu her siparişte KDV dahildir:** `Order.ordered_total`, ödeme durumu, online ödeme, kapıda tahsilat ve vadeli borç aynı tutarı okur. KDV hariç fiyatta KDV kalemlerin oran toplamına eklenir; ters yüklemede oran sıfırdır. Borç, aktarım ve kâr oran bazında tek hesaptan türer (`vatByRate`), fatura/export tabanı belirsiz kalmaz.
 - Para **tamsayı cent** olarak hesaplanır (kayan nokta yok); yuvarlama kuralı `STACK §8`'de.
 
 ### Fiyat çözüm sırası

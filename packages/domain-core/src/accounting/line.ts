@@ -1,11 +1,11 @@
 import { addVat, removeVat } from '@lezzet/helper';
-import type { Channel, OrderItem } from '@lezzet/types';
+import type { OrderItem } from '@lezzet/types';
 import { fulfilledLineAmountCents, fulfilledLineOf } from '../payment/payment-status';
-import { vatBaseOf } from '../pricing/vat-base';
+import { grossTotalCents } from '../pricing/vat-base';
 
 /**
- * Sipariş kaleminin para hesabı, muhasebe export'u ile kârlılığın ortak zemini. Tutar kanalın kendi tabanındadır
- * (`vatBaseOf`) ve kâr her zaman HT üstünden hesaplanır, çünkü KDV ciro değildir.
+ * Sipariş kaleminin para hesabı, muhasebe export'u ile kârlılığın ortak zemini. Tutar siparişin fiyat tabanındadır
+ * (`pricesIncludeVat`) ve kâr her zaman HT üstünden hesaplanır, çünkü KDV ciro değildir.
  */
 
 export type AccountingLine = Pick<
@@ -13,13 +13,11 @@ export type AccountingLine = Pick<
   'qty' | 'fulfilledQty' | 'goodwillQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'
 >;
 
-/**
- * `lineAmountCents`in gerçekten istediği alanlar; KDV oranı yok, çünkü kurye sözleşmesi onu taşımaz.
- */
+/** `lineAmountCents`in gerçekten istediği alanlar. */
 export type LineAmountInput = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents'>;
 
 /**
- * Kalemin teslim edilen adet üzerinden tutarı (kanalın tabanında, cent); kapıda reddedilen kalemin payı bununla bulunur. Ciro ve fiş
+ * Kalemin teslim edilen adet üzerinden tutarı (siparişin fiyat tabanında, cent); kapıda reddedilen kalemin payı bununla bulunur. Ciro ve fiş
  * müşteride kalan adedi de düşer (`chargedAmountCents`).
  */
 export function lineAmountCents(item: LineAmountInput): number {
@@ -27,6 +25,22 @@ export function lineAmountCents(item: LineAmountInput): number {
   // İndirim payı eksik karşılanan kalemde oransal düşer, yoksa yarısı gitmiş kalem indirimin tamamını taşırdı.
   const discountShare = item.qty > 0 ? Math.round((item.lineDiscountAmountCents * item.fulfilledQty) / item.qty) : 0;
   return Math.max(0, beforeDiscount - discountShare);
+}
+
+/**
+ * Kapıda geri verilen malın borçtan düşen KDV dahil tutarı (cent): tam ve kalan kalemlerin farkı, borcun oran toplamıyla aynı hesaptan;
+ * kalem kalem KDV eklemek teslimden sonra sunucunun bulduğu borçtan kuruş ayrışırdı.
+ */
+export function refusedGrossCents(
+  lines: readonly (LineAmountInput & { vatRate: number; refusedQty: number })[],
+  pricesIncludeVat: boolean,
+): number {
+  const amounts = (kept: boolean) =>
+    lines.map((line) => ({
+      vatRate: line.vatRate,
+      amountCents: lineAmountCents({ ...line, fulfilledQty: kept ? line.qty - line.refusedQty : line.qty }),
+    }));
+  return grossTotalCents(amounts(false), [], pricesIncludeVat) - grossTotalCents(amounts(true), [], pricesIncludeVat);
 }
 
 /** Bir tutarın KDV kırılımı (cent). `net + vat === gross` her zaman tutar. */
@@ -39,13 +53,13 @@ export interface VatSplit {
 }
 
 /**
- * Kanal tabanındaki tutarı TTC/HT/KDV'ye ayırır: b2c'de KDV içinden çıkar, b2b'de üstüne eklenir, tek yön B2B'de KDV'yi
- * iki kez düşürürdü. `zeroRated` AB içi ters yüklemedir, KDV yoktur.
+ * Siparişin fiyat tabanındaki tutarı TTC/HT/KDV'ye ayırır: KDV dahil fiyatta KDV içinden çıkar, hariç fiyatta üstüne eklenir.
+ * `zeroRated` AB içi ters yüklemedir, KDV yoktur.
  */
-export function vatSplitOf(amountCents: number, channel: Channel, vatRate: number, zeroRated = false): VatSplit {
+export function vatSplitOf(amountCents: number, pricesIncludeVat: boolean, vatRate: number, zeroRated = false): VatSplit {
   if (zeroRated) return { grossCents: amountCents, netCents: amountCents, vatCents: 0 };
 
-  if (vatBaseOf(channel) === 'ttc') {
+  if (pricesIncludeVat) {
     const net = removeVat(amountCents, vatRate);
     return { grossCents: amountCents, netCents: net, vatCents: amountCents - net };
   }
@@ -55,7 +69,7 @@ export function vatSplitOf(amountCents: number, channel: Channel, vatRate: numbe
 }
 
 /**
- * Kalemin ücretlenen tutarı (kanalın tabanında, cent): teslim edilen eksi müşteride kalan, ödeme türetiminin tanımı. Müşteride kalan
+ * Kalemin ücretlenen tutarı (siparişin fiyat tabanında, cent): teslim edilen eksi müşteride kalan, ödeme türetiminin tanımı. Müşteride kalan
  * mal stoktan ve maliyetten çıkar ama ciroya girmez; kasa fişi de aynı tanımı kullanır.
  */
 export function chargedAmountCents(item: AccountingLine): number {
@@ -63,6 +77,6 @@ export function chargedAmountCents(item: AccountingLine): number {
 }
 
 /** Kalemin KDV hariç (HT) ücretlenen tutarı (cent). */
-export function lineNetCents(item: AccountingLine, channel: Channel, zeroRated = false): number {
-  return vatSplitOf(chargedAmountCents(item), channel, item.vatRate, zeroRated).netCents;
+export function lineNetCents(item: AccountingLine, pricesIncludeVat: boolean, zeroRated = false): number {
+  return vatSplitOf(chargedAmountCents(item), pricesIncludeVat, item.vatRate, zeroRated).netCents;
 }

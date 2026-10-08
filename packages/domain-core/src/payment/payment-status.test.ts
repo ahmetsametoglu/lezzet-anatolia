@@ -3,20 +3,22 @@ import {
   derivePaymentStatus,
   derivePaymentStatusForOrder,
   fulfilledLineAmountCents,
-  type FulfilledLine,
+  type ChargedLine,
   type PaymentDerivationInput,
 } from './payment-status';
 
-/** 2 adet × 10 € = 20 € — tamamı gitmiş kalem. */
-const line = (over: Partial<FulfilledLine> = {}): FulfilledLine => ({
+/** 2 adet × 10 € = 20 € — tamamı gitmiş kalem, %5,5. */
+const line = (over: Partial<ChargedLine> = {}): ChargedLine => ({
   fulfilledQty: 2,
   orderedQty: 2,
   unitPriceCents: 1000,
+  vatRate: 5.5,
   ...over,
 });
 
 const input = (over: Partial<PaymentDerivationInput> = {}): PaymentDerivationInput => ({
   lines: [line()],
+  pricesIncludeVat: true,
   collectedCents: 0,
   refundedCents: 0,
   ...over,
@@ -134,11 +136,12 @@ describe('iade senaryoları (03.6)', () => {
 describe('kutu kutu hazırlık', () => {
   it('hazırlık sürerken ilk kutuya giren kalemler borcu düşürmez; sipariş "iade bekliyor" görünmez', () => {
     const items = [
-      { fulfilledQty: 2, goodwillQty: 0, qty: 2, unitPriceCents: 1000, lineDiscountAmountCents: 0 },
-      { fulfilledQty: 0, goodwillQty: 0, qty: 1, unitPriceCents: 500, lineDiscountAmountCents: 0 },
+      { fulfilledQty: 2, goodwillQty: 0, qty: 2, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5 },
+      { fulfilledQty: 0, goodwillQty: 0, qty: 1, unitPriceCents: 500, lineDiscountAmountCents: 0, vatRate: 5.5 },
     ];
 
-    const r = derivePaymentStatusForOrder({ status: 'preparing', shippingFeeCents: 0, orderedTotalCents: 2500 }, items, {
+    const order = { status: 'preparing' as const, shippingFeeCents: 0, orderedTotalCents: 2500, pricesIncludeVat: true };
+    const r = derivePaymentStatusForOrder(order, items, {
       collectedCents: 2500,
       refundedCents: 0,
     });
@@ -176,5 +179,26 @@ describe('hazırlık kesinleşmemişken beklenen tutar', () => {
     // Hazırlık kesinleşince cevap sipariş toplamı değildir: yarısı gittiyse yarısı faturalanır.
     const r = derivePaymentStatus(input({ lines: [line({ fulfilledQty: 1 })], orderTotalCents: 1700 }));
     expect(r.fulfilledAmountCents).toBe(1000);
+  });
+});
+
+/** Onaylı işletmenin fiyatı KDV hariçtir; borç KDV eklenmiş hâlidir, kargo ücreti her tabanda KDV dahil kalır (DOMAIN §5). */
+describe('KDV hariç fiyatta borç', () => {
+  it("KDV kalemlerin oran toplamına eklenir — işletme KDV'siz tutar ödemez", () => {
+    // 20 € %5,5 + 10 € %20 → 21,10 € + 12,00 €
+    const r = derivePaymentStatus(
+      input({ pricesIncludeVat: false, lines: [line(), line({ fulfilledQty: 1, orderedQty: 1, vatRate: 20 })] }),
+    );
+    expect(r.fulfilledAmountCents).toBe(3310);
+  });
+
+  it('kargo ücreti KDV dahildir — üstüne bir kez daha KDV eklenmez', () => {
+    const r = derivePaymentStatus(input({ pricesIncludeVat: false, shippingFeeCents: 1190 }));
+    expect(r.fulfilledAmountCents).toBe(2110 + 1190);
+  });
+
+  it("kapıda reddedilen adet KDV'siyle birlikte düşer", () => {
+    const r = derivePaymentStatus(input({ pricesIncludeVat: false, lines: [line({ fulfilledQty: 1 })], collectedCents: 0 }));
+    expect(r.amountToCollectCents).toBe(1055);
   });
 });

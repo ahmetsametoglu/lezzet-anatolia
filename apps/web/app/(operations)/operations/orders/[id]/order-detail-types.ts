@@ -254,10 +254,7 @@ export interface OrderDetailView {
     refundDueCents: number;
     dueDate: string | null;
     overdue: boolean;
-    /**
-     * Siparişin KDV rejimi — tutarın hangi tabanda okunacağını söyler: B2B fiyatı KDV hariçtir, ters yükümlülükte vergi hiç
-     * yoktur. Etiket kanal ve rejim ikilisinden `moneyCells`te kurulur.
-     */
+    /** Siparişin KDV rejimi: ters yükümlülükte vergi hiç yoktur; toplamın etiketi `moneyCells`te kurulur. */
     vatTreatment: VatTreatment;
   };
   movements: OrderMovementView[];

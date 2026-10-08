@@ -13,7 +13,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Yapıldı |
 | 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
 | 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
-| 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Ölçüldü |
+| 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Yapıldı |
 | 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Konuşulacak |
 | 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Konuşulacak |
 | 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Konuşulacak |
@@ -58,6 +58,11 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 ## 2. Onaylı işletme müşterisinden KDV alınmıyor
 
 **Durum:** Kabul, yapılacak (07.10) · **Ağırlık:** yüksek
+
+**Karar (08.10):** müşterinin borcu her siparişte KDV dahildir; taban siparişe yazılır (6. madde). Para tarafı yapıldı: sipariş
+toplamı, ödeme durumu, online ödeme, kapıda tahsilat, vadeli borç ve kuryenin düştüğü tutar KDV dahil. Sırada müşteri ekranları:
+onaylı işletme sepette, ödemede, onay sayfasında, e-postada ve sipariş geçmişinde KDV hariç tutarı, KDV'yi ve KDV dahil toplamı
+görür.
 
 - **Mevcut durum:** İşletme fiyatı KDV hariç tutulur (DOMAIN §5), sipariş toplamı da KDV hariçtir. Online ödemede çekilen,
   kapıda istenen ve vadeli borca yazılan tutar bu toplamdır; KDV hiçbir yerde eklenmez.
@@ -150,13 +155,14 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 ## 6. Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor
 
-**Durum:** Ölçüldü (08.10) · **Ağırlık:** orta
+**Durum:** Yapıldı (08.10, 2. maddeyle birlikte) · **Ağırlık:** orta
 
 - **Mevcut durum:** Onaysız şirketin siparişi işletme kanalına yazılır ama fiyatı perakende (KDV dahil) tabandan gelir
   (DOMAIN §10). Kargo ücreti herkes için KDV dahil hesaplanır. Aktarım işletme kanalında KDV'yi tutarın üstüne ekler.
 - **Problem:** Bu iki tutarda KDV iki kez sayılır: 52,75 € ödeyen onaysız şirket aktarımda 55,65 € görünür (doğrusu 50,00 € +
   2,75 € KDV), 11,90 € kargo 12,55 € olur. KDV beyanının girdisi ve kâr cirosu şişer.
-- **Olması gereken:** Kalem ve kargo siparişin kanal tabanında saklanır; işletme siparişinde perakende fiyat KDV hariçe çevrilir.
+- **Olması gereken:** Kalem fiyatının KDV dahil mi hariç mi olduğu siparişe yazılır; kargo ücreti her siparişte KDV dahil sayılır.
+  Aktarım, kâr ve sipariş detayı tabanı bu alandan okur (aşağıdaki B yolu; karar 08.10).
 - **Kanıt:** `packages/application/src/order/checkout-draft.ts:215, 554` · `catalog/pricing-viewer.ts:44-47` ·
   `order/shipping-selection.ts:13-17` · `packages/domain-core/src/accounting/line.ts:45-55`.
 

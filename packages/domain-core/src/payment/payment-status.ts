@@ -1,5 +1,7 @@
 import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
+import { chargedShippingParts } from '../delivery/shipping-fee';
 import { isFulfillmentSettled } from '../order/status-machine';
+import { grossTotalCents } from '../pricing/vat-base';
 
 /**
  * Ödeme durumu elle yazılmaz, net tahsilat (tahsil − iade) ile karşılanan tutardan türer (DOMAIN §7); kurallar orada. İndirim
@@ -11,7 +13,7 @@ export interface FulfilledLine {
   fulfilledQty: number;
   /** Gidenden müşteride kalan adet; ücretlenmez, verilmezse 0. */
   goodwillQty?: number;
-  /** Sabitlenmiş birim fiyat (kanal tabanında, cent). */
+  /** Sabitlenmiş birim fiyat (siparişin fiyat tabanında, cent). */
   unitPriceCents: number;
   /** Sepet indiriminin bu kaleme düşen payı (cent, kalemin TAMAMI için). */
   lineDiscountCents?: number;
@@ -19,8 +21,13 @@ export interface FulfilledLine {
   orderedQty: number;
 }
 
+/** Borç hesabının kalemi: tutar ve KDV oranı, çünkü KDV hariç fiyatta borç oran toplamına eklenen KDV'yi de taşır. */
+export type ChargedLine = FulfilledLine & { vatRate: number };
+
 export interface PaymentDerivationInput {
-  lines: readonly FulfilledLine[];
+  lines: readonly ChargedLine[];
+  /** Kalem fiyatları KDV dahil mi; değilse borç KDV eklenmiş hâlidir. Kargo ücreti her zaman KDV dahildir. */
+  pricesIncludeVat: boolean;
   collectedCents: number;
   refundedCents: number;
   shippingFeeCents?: number;
@@ -32,7 +39,7 @@ export interface PaymentDerivationInput {
    */
   fulfillmentSettled?: boolean;
   /**
-   * Siparişin anlaşılan toplamı (cent, indirim düşülmüş, kargo eklenmiş); hazırlık kesinleşmeden beklenen tutar budur ve
+   * Siparişin anlaşılan KDV dahil toplamı (cent, indirim düşülmüş, kargo eklenmiş); hazırlık kesinleşmeden beklenen tutar budur ve
    * kalemlerden yeniden hesaplanmaz, yoksa kaleme yazılmamış bir indirim payı tutarı şişirirdi. Verilmezse kalemlerden hesaplanır.
    */
   orderTotalCents?: number;
@@ -40,7 +47,7 @@ export interface PaymentDerivationInput {
 
 export interface PaymentDerivation {
   status: PaymentStatus;
-  /** Müşterinin ödemesi gereken tutar — kısmi karşılamada düşürülmüş hâli. */
+  /** Müşterinin ödemesi gereken KDV dahil tutar — kısmi karşılamada düşürülmüş hâli. */
   fulfilledAmountCents: number;
   /** Peşin ödenmişse iade edilecek fark (0 ise borç yok). */
   refundDueCents: number;
@@ -53,12 +60,13 @@ export interface PaymentDerivation {
  * Tutarlar dışarıdan gelir, çünkü siparişteki `amount_*` bir önbellektir ve doğrusu para hareketlerindedir.
  */
 export function derivePaymentStatusForOrder(
-  order: Pick<Order, 'shippingFeeCents' | 'status' | 'orderedTotalCents'>,
-  items: readonly FulfilledItem[],
+  order: Pick<Order, 'shippingFeeCents' | 'status' | 'orderedTotalCents' | 'pricesIncludeVat'>,
+  items: readonly (FulfilledItem & Pick<OrderItem, 'vatRate'>)[],
   amounts: { collectedCents: number; refundedCents: number },
 ): PaymentDerivation {
   return derivePaymentStatus({
-    lines: items.map(fulfilledLineOf),
+    lines: items.map((item) => ({ ...fulfilledLineOf(item), vatRate: item.vatRate })),
+    pricesIncludeVat: order.pricesIncludeVat,
     collectedCents: amounts.collectedCents,
     refundedCents: amounts.refundedCents,
     shippingFeeCents: order.shippingFeeCents,
@@ -130,21 +138,26 @@ export function chargedQtyOf(line: FulfilledLine, settled = true): number {
   return settled ? line.fulfilledQty - (line.goodwillQty ?? 0) : line.orderedQty;
 }
 
-/** Karşılanan tutar: kalemlerin ücretlenen kısmı, ücretlenen kalem varsa kargo da. */
-function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = true, orderTotalCents }: PaymentDerivationInput): number {
-  // Hazırlık kesinleşmediyse cevap siparişin ANLAŞILAN toplamıdır — indirim ve kargo zaten içinde.
+/** Karşılanan tutar: kalemlerin ücretlenen kısmı, ücretlenen kalem varsa kargo da; KDV hariç fiyatta KDV eklenmiş hâli. */
+function fulfilledAmount({
+  lines,
+  pricesIncludeVat,
+  shippingFeeCents = 0,
+  fulfillmentSettled = true,
+  orderTotalCents,
+}: PaymentDerivationInput): number {
+  // Hazırlık kesinleşmediyse cevap siparişin ANLAŞILAN toplamıdır — indirim, kargo ve KDV zaten içinde.
   // Kalemlerden yeniden toplamak, aynı gerçeği ikinci bir yoldan hesaplamak olurdu.
   if (!fulfillmentSettled && orderTotalCents != null) return orderTotalCents;
 
-  let total = 0;
-  let anyFulfilled = false;
-
-  for (const line of lines) {
-    if (chargedQtyOf(line, fulfillmentSettled) <= 0) continue;
-    anyFulfilled = true;
-    total += fulfilledLineAmountCents(line, fulfillmentSettled);
-  }
+  const charged = lines
+    .filter((line) => chargedQtyOf(line, fulfillmentSettled) > 0)
+    .map((line) => ({ vatRate: line.vatRate, amountCents: fulfilledLineAmountCents(line, fulfillmentSettled) }));
 
   // Ücretlenen kalem yoksa kargo da ücretlenmez: hiçbir şey gitmediyse hizmet verilmemiştir, her şey müşteride kaldıysa para tamamen döner.
-  return anyFulfilled ? total + shippingFeeCents : total;
+  const shipping = chargedShippingParts(
+    shippingFeeCents,
+    charged.map((part) => ({ totalCents: part.amountCents, vatRate: part.vatRate })),
+  ).map((part) => ({ vatRate: part.vatRate, amountCents: part.amountCents }));
+  return grossTotalCents(charged, shipping, pricesIncludeVat);
 }

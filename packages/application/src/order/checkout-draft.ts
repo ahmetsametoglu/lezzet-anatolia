@@ -322,6 +322,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       // Asgari sepet eşiği indirim öncesini ister; `basketCents` kargo ve toplam içindir.
       subtotalCents: scope.subtotalCents,
       lines: vatLines,
+      discountShares: scope.shares,
       /* Ayar kapsamı ödeme kapısına da sepet okumasındaki ifadelerle geçer; geçmeseydi sepet kapsamlı ayarı, siparişe yazılan kargo
          ücreti ise genel değeri okurdu. */
       country: deliveryCountry,
@@ -485,6 +486,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       vatTreatment: vat.treatment,
       // Vergi numarasının o anki kopyası, yalnız %0 uygulandığında: numara sonradan değişse de denetimde cevap siparişte durur.
       vatNumberSnapshot: vat.zeroRated ? customer.vatNumber : null,
+      // Fiyat sepetin okunduğu kanaldan gelir: onaysız şirket işletme kanalında perakende (KDV dahil) fiyatla alır.
+      pricesIncludeVat: options.pricesIncludeVat,
       shippingFeeCents: options.shippingFeeCents,
       orderedTotalCents: options.orderTotalCents,
       // Doğrudan maliyetler sipariş anının değeriyle yazılır; kargoda seçilen servisin teklifi, bildirimde gerçek kutularla düzelir.

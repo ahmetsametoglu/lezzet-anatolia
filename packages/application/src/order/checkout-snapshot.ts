@@ -247,6 +247,7 @@ export async function readCheckoutSnapshot(
     // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
     // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
     lines: vatLines,
+    discountShares: scope.shares,
     /* Ayar kapsamının üç ekseni sepet okumasıyla aynı ifadelerle geçer, yoksa kalem bloğu kapsamlı eşiği, ödeme bloğu global eşiği
        gösterirdi. */
     country: selected.country,
@@ -358,6 +359,7 @@ async function pickupSnapshot(
     basketCents: scope.basketCents,
     subtotalCents: scope.subtotalCents,
     lines: scope.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),
+    discountShares: scope.shares,
     country: ctx.warehouse.countryCode,
     zoneId: null,
     warehouseId: ctx.warehouse.id,

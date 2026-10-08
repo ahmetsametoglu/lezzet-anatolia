@@ -33,6 +33,10 @@ describe('OrderUpdateSchema — kanal DONAR', () => {
     expect(cikti).not.toHaveProperty('channel');
   });
 
+  it("fiyat tabanı da güncelleme çıktısında yer almaz — borcun KDV'si sonradan oynamaz", () => {
+    expect(OrderUpdateSchema.parse({ id: ORDER_ID, pricesIncludeVat: false })).toEqual({ id: ORDER_ID });
+  });
+
   it('AÇILIŞTA kanal hâlâ zorunlu — donmak "hiç yazılmaz" demek değil', () => {
     // Değişmezliğin anlamı budur: bir kez yazılır, sonra sabit. Insert'ten de düşseydi kanal
     // hiç doğmazdı ve türetim (`deriveChannel`) sonuçsuz kalırdı.

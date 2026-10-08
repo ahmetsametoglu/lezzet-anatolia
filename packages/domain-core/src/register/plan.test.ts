@@ -9,6 +9,7 @@ const order = (over: Partial<RegisterOrder> = {}): RegisterOrder => ({
   isGiftOrder: false,
   shippingFeeCents: 490,
   orderedTotalCents: 3690,
+  pricesIncludeVat: true,
   ...over,
 });
 

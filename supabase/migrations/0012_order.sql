@@ -75,6 +75,9 @@ create table public.order (
 
   vat_number_snapshot text,                          -- reverse charge'da o anki geçerli no (denetim kanıtı)
   vat_treatment vat_treatment not null default 'domestic',
+  -- Kalem fiyatları KDV dahil mi: onaylı işletmede hariç, öteki her siparişte dahil. Kanaldan çıkarılmaz, çünkü onaysız şirket
+  -- işletme kanalında perakende fiyatla alır. Kargo ücreti her siparişte KDV dahildir.
+  prices_include_vat boolean not null default true,
 
   -- Siparişin dili: sipariş mailleri profilden değil buradan okunur, profil sonradan değişebilir.
   -- NULL = bilinmiyor → okuyan taraf profilin diline düşer.
@@ -150,8 +153,8 @@ create index order_status_idx on public.order (warehouse_id, status, delivery_da
 -- Kuryenin günü.
 create index order_courier_idx on public.order (courier_id, delivery_date) where courier_id is not null;
 
--- Kanal donar: KDV işlemesini ve fiyat kademesini belirlediği için sonradan değişmesi alınmış paranın vergisini
--- geriye dönük oynatırdı. Şema kendi kapısını korur; doğrudan SQL yazan betiği yalnız bu tetikleyici durdurur.
+-- Kanal ve fiyat tabanı donar: KDV işlemesini, fiyat kademesini ve borcun KDV'sini belirledikleri için sonradan değişmeleri alınmış
+-- paranın vergisini geriye dönük oynatırdı. Şema kendi kapısını korur; doğrudan SQL yazan betiği yalnız bu tetikleyici durdurur.
 create function public.order_channel_frozen() returns trigger
 language plpgsql
 as $$
@@ -161,12 +164,16 @@ begin
       old.channel, new.channel
       using errcode = 'check_violation';
   end if;
+  if new.prices_include_vat <> old.prices_include_vat then
+    raise exception 'Siparişin fiyat tabanı değiştirilemez — sipariş açılırken yazılır ve donar.'
+      using errcode = 'check_violation';
+  end if;
   return new;
 end;
 $$;
 
 create trigger order_channel_frozen
-  before update of channel on public.order
+  before update of channel, prices_include_vat on public.order
   for each row
   execute function public.order_channel_frozen();
 
@@ -209,8 +216,8 @@ create index order_item_variant_idx on public.order_item (variant_id);
 
 /*
   Ciro kalemlerden türer: `order.revenue_total` bir önbellektir, artırılmaz, `order_item.fulfilled_qty`den yeniden hesaplanır; tetikleyicidir, çünkü `fulfilled_qty`yi yazan bütün yollar SQL'dedir ve uygulama katmanı bazılarını atlardı.
-  Formül motorunkiyle (`fulfilledLineAmountCents`) aynıdır: ücretlenen adet karşılanandan müşteride kalan adedin çıkmasıdır, indirim payı o
-  orana bölünür, ücretlenen kalem yoksa kargo da ciroya girmez.
+  Formül motorunkiyle (`fulfilledLineAmountCents`, `vatByRate`) aynıdır: ücretlenen adet karşılanandan müşteride kalan adedin çıkmasıdır, indirim
+  payı o orana bölünür, KDV hariç fiyatta KDV oran toplamına eklenir, ücretlenen kalem yoksa kargo da ciroya girmez. Tutar KDV dahildir.
 */
 create or replace function public.resync_order_revenue(p_order_id uuid)
 returns void
@@ -222,13 +229,20 @@ as $$
      set revenue_total = coalesce(k.tutar, 0)
                        + case when coalesce(k.ucretlenen, 0) > 0 then o.shipping_fee else 0 end
     from (
-      select coalesce(sum(
-               (oi.fulfilled_qty - oi.goodwill_qty) * oi.unit_price
-               - round(oi.line_discount_amount * (oi.fulfilled_qty - oi.goodwill_qty) / greatest(oi.qty, 1), 2)
-             ), 0) as tutar,
-             coalesce(sum(oi.fulfilled_qty - oi.goodwill_qty), 0) as ucretlenen
-        from public.order_item oi
-       where oi.order_id = p_order_id
+      select sum(case when s.prices_include_vat then r.tutar else round(r.tutar * (1 + r.vat_rate / 100), 2) end) as tutar,
+             sum(r.ucretlenen) as ucretlenen
+        from (
+          select oi.vat_rate,
+                 sum(
+                   (oi.fulfilled_qty - oi.goodwill_qty) * oi.unit_price
+                   - round(oi.line_discount_amount * (oi.fulfilled_qty - oi.goodwill_qty) / greatest(oi.qty, 1), 2)
+                 ) as tutar,
+                 sum(oi.fulfilled_qty - oi.goodwill_qty) as ucretlenen
+            from public.order_item oi
+           where oi.order_id = p_order_id
+           group by oi.vat_rate
+        ) r
+        cross join (select prices_include_vat from public.order where id = p_order_id) s
     ) k
    where o.id = p_order_id;
 $$;

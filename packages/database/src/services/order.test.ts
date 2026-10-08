@@ -314,6 +314,16 @@ describe('kanal DEĞİŞMEZ — tetikleyici (order_channel_frozen)', () => {
     expect((await orders.getById(order.id))?.channel).toBe('b2c');
   });
 
+  it('fiyat tabanını değiştiren doğrudan güncelleme REDDEDİLİR', async () => {
+    const { order } = await orders.create(header(), [line()]);
+    expect(order.pricesIncludeVat).toBe(true);
+
+    const { error } = await db.from('order').update({ prices_include_vat: false }).eq('id', order.id);
+
+    expect(error?.code).toBe('23514');
+    expect((await orders.getById(order.id))?.pricesIncludeVat).toBe(true);
+  });
+
   it('AYNI kanalı yeniden yazmak reddedilmez — donmak "dokunma" değil, "değiştirme" yasağıdır', async () => {
     const { order } = await orders.create(header(), [line()]);
 

@@ -5,13 +5,15 @@ import {
   apportionShippingVat,
   creditPosition,
   deriveChannel,
+  grossTotalCents,
   meetsMinBasket,
   resolveCheckoutOptions,
   resolveShippingFee,
+  resolveVatTreatment,
   type ShippingVatPart,
 } from '@lezzet/domain-core';
-import type { DeliveryType, PaymentMethod } from '@lezzet/types';
-import { pricingViewerFor } from '../catalog/pricing-viewer';
+import { CountryEnum, type DeliveryType, type PaymentMethod } from '@lezzet/types';
+import { pricesIncludeVatFor, pricingViewerFor } from '../catalog/pricing-viewer';
 import { minBasketFor } from '../cart/min-basket';
 import { settingScopeOf } from '../cart/setting-scope';
 // Müşteriye söz veren ayarlar: sepet ve checkout AYNI satırı okumalı (`../cart/settings-keys`).
@@ -48,7 +50,9 @@ export interface CheckoutPaymentResult {
   /** Asgari sepet tutmuyorsa checkout açılmaz. */
   minBasketOk: boolean;
   missingForMinBasketCents: number;
-  /** Müşteriden tahsil edilecek toplam (sepet + kargo, cent); kargo ücreti bilinmiyorsa `null`. */
+  /** Kalem fiyatları KDV dahil mi; değilse toplam, kalemlere eklenen KDV'yi taşır. */
+  pricesIncludeVat: boolean;
+  /** Müşteriden tahsil edilecek KDV dahil toplam (sepet + kargo, cent); kargo ücreti bilinmiyorsa `null`. */
   orderTotalCents: number | null;
 }
 
@@ -69,8 +73,10 @@ export interface CheckoutPaymentInput {
    * İki alan, çünkü taslak kapısı da eşiği indirim öncesinden ölçer; aynı sepette biri "tamam" öteki "eksik" dememeli.
    */
   subtotalCents: number;
-  /** KDV kırılımı için kalem tutarları + oranları. */
+  /** KDV kırılımı için kalem tutarları (indirim öncesi) + oranları. */
   lines: readonly { totalCents: number; vatRate: number }[];
+  /** `lines` ile aynı sırada kalemlerin indirim payı (cent); KDV hariç fiyatta KDV indirimli tutara eklenir. Verilmezse 0. */
+  discountShares?: readonly number[];
   /**
    * Ayar kapsamının yer eksenleri; çağıran çözer, çünkü aynı hesap kapıda ödeme, WhatsApp ve mobil uçlardan da çağrılır ve çerezi okuyan yüzeydir.
    */
@@ -120,7 +126,26 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
           freeThresholdCents,
           quotedFeeCents: input.quotedFeeCents,
         });
-  const orderTotalCents = shipping.feeCents === null ? null : input.basketCents + shipping.feeCents;
+  // Borç her tabanda KDV dahildir: KDV hariç fiyatta KDV indirimli kalemlerin oran toplamına eklenir, ters yüklemede oran sıfırdır.
+  const pricesIncludeVat = pricesIncludeVatFor(customer);
+  // Ülkesi bilinmeyen okuma (operasyonun adres öncesi sorusu) ters yükleme açmaz; yanlış %0 bizim riskimizdir.
+  const deliveryCountry = CountryEnum.safeParse(input.country);
+  const zeroRated =
+    deliveryCountry.success &&
+    resolveVatTreatment({
+      channel: deriveChannel({ isCompany: customer.type === 'company' }),
+      deliveryCountry: deliveryCountry.data,
+      vatNumberValid: customer.vatNumberValid ?? undefined,
+    }).zeroRated;
+  const goodsCents = pricesIncludeVat
+    ? input.basketCents
+    : grossTotalCents(
+        input.lines.map((line, index) => ({ vatRate: line.vatRate, amountCents: line.totalCents - (input.discountShares?.[index] ?? 0) })),
+        [],
+        false,
+        zeroRated,
+      );
+  const orderTotalCents = shipping.feeCents === null ? null : goodsCents + shipping.feeCents;
 
   // ── Vade freni için açık bakiye ve gecikme TÜRETİLİR (saklanmaz). Hesabın kendisi motorda (`creditPosition`): sipariş listesi de
   //    aynı "açık" ve "gecikmiş" tanımını kullanıyor, iki yerde yazılsaydı checkout freni ile ekranın vade işareti ayrışırdı.
@@ -137,7 +162,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
 
   const options = resolveCheckoutOptions({
     // Ücret bilinmiyorsa sipariş zaten açılamaz; yöntemler ürün tutarına göre çözülür ki ekran ne sunulacağını yine bilsin.
-    orderTotalCents: orderTotalCents ?? input.basketCents,
+    orderTotalCents: orderTotalCents ?? goodsCents,
     channel: paymentChannel,
     deliveryType: input.deliveryType,
     codMaxCents,
@@ -160,6 +185,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     shippingVat: shipping.feeCents === null ? [] : apportionShippingVat(shipping.feeCents, input.lines),
     minBasketOk: minBasket.ok,
     missingForMinBasketCents: minBasket.missingCents,
+    pricesIncludeVat,
     orderTotalCents,
   };
 }

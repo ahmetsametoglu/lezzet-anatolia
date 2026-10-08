@@ -1,5 +1,5 @@
 import type { OrderBoxTrace } from '@lezzet/application';
-import { isZeroRated, vatBaseOf, type OrderDecision } from '@lezzet/domain-core';
+import { isZeroRated, type OrderDecision } from '@lezzet/domain-core';
 import type { DeliveryType, OrderSource, ShipmentStatus } from '@lezzet/types';
 import { money, shortDateTime } from '@/components/operation/ui/format';
 import type { TimelineStep } from '@/components/operation/ui/timeline';
@@ -69,19 +69,11 @@ interface MoneyCellView {
 }
 
 /**
- * "Sipariş toplamı" hücresinin altındaki taban açıklaması (01.09, kullanıcı bildirimi).
- *
- * Burada bir zamanlar sabit `'KDV dahil'` yazıyordu ve **B2B'de yanlıştı**: işletme fiyatları KDV
- * HARİÇTİR (`vatBaseOf`: b2c → dahil, b2b → hariç), yani ekranda 234,80 € gören operatör müşterinin
- * 247,71 € ödeyeceğini bilmiyordu. Sayı doğruydu, ekranın ona verdiği anlam yanlıştı — ve bu tür
- * bir hata sessizdir: hiçbir hesap tutmaz ama hiçbir yerde de patlamaz.
- *
- * **Üçüncü hâl ayrı yazılır:** ters yükümlülükte (VIES ile doğrulanmış AB alıcısı) vergi hiç yoktur,
- * müşteri kendi ülkesinde beyan eder. Orada "dahil" de "hariç" de yanıltıcı olurdu.
+ * "Sipariş toplamı" hücresinin altındaki taban açıklaması: toplam her siparişte müşterinin borcudur, yani KDV dahildir. Ters
+ * yükümlülükte (VIES ile doğrulanmış AB alıcısı) vergi hiç yoktur; orada "dahil" yanıltıcı olurdu.
  */
 function vatBasisText(order: OrderDetailView): string {
-  if (isZeroRated(order.payment.vatTreatment)) return 'KDV yok · ters yükümlülük';
-  return vatBaseOf(order.channel) === 'ttc' ? 'KDV dahil' : 'KDV hariç';
+  return isZeroRated(order.payment.vatTreatment) ? 'KDV yok · ters yükümlülük' : 'KDV dahil';
 }
 
 /**

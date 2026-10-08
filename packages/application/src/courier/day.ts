@@ -64,6 +64,7 @@ export interface CourierStop {
   payment: {
     /** `null`: önceden ödenmiş, para konuşulmaz. Birim cent. */
     dueAmountCents: number | null;
+    pricesIncludeVat: boolean;
     expectedMethod: Order['paymentMethod'];
     /**
      * `null`: kurye bu durakta para almadı. Kapanış görünümüyle (`delivery_run_collection`) aynı kuralı izler ki iki ekran aynı
@@ -109,6 +110,7 @@ export interface CourierStopItem {
   /** Birim fiyat ve indirim payı birlikte: ekran geri verilen malın tahsilattan ne kadar düşeceğini hesaplar. */
   unitPriceCents: number;
   lineDiscountAmountCents: number;
+  vatRate: number;
   /** Kısmi teslim buradan okunur: `delivered` durakta `fulfilledQty < qty` ise bir kalem araçta kalmıştır. */
   fulfilledQty: number;
 }
@@ -205,6 +207,7 @@ export async function listCourierDay(
       doorCheck: doorCheckOf(order.addressSnapshot as Record<string, unknown> | null),
       payment: {
         dueAmountCents: amountDueCents(order, lines),
+        pricesIncludeVat: order.pricesIncludeVat,
         expectedMethod: order.paymentMethod,
         collectedAtDoorCents: collectedAtDoorCents(order),
       },
@@ -217,6 +220,7 @@ export async function listCourierDay(
         fulfilledQty: line.fulfilledQty,
         unitPriceCents: line.unitPriceCents,
         lineDiscountAmountCents: line.lineDiscountAmountCents,
+        vatRate: line.vatRate,
       })),
       outcome,
       awaitingPreparation: order.status === 'confirmed' || order.status === 'preparing',

@@ -1,5 +1,5 @@
 import { PriceGroupService, UserProfileService } from '@lezzet/database';
-import { deriveChannel, isProfessionalCustomer, type CustomerPriceRule } from '@lezzet/domain-core';
+import { deriveChannel, isProfessionalCustomer, vatBaseOf, type CustomerPriceRule } from '@lezzet/domain-core';
 import type { Channel, UserProfile } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -44,6 +44,11 @@ export const VISITOR: PricingViewer = {
 export function effectiveChannelOf(profile: { type: string | null; b2bApproved: boolean | null }): Channel {
   const channel = deriveChannel({ isCompany: profile.type === 'company' });
   return channel === 'b2b' && profile.b2bApproved === true ? 'b2b' : 'b2c';
+}
+
+/** Müşterinin fiyatları KDV dahil mi: fiyat satırı geçerli kanaldan okunduğu için taban da ondan gelir (DOMAIN §5). */
+export function pricesIncludeVatFor(profile: { type: string | null; b2bApproved: boolean | null }): boolean {
+  return vatBaseOf(effectiveChannelOf(profile)) === 'ttc';
 }
 
 /**

@@ -14,7 +14,10 @@ import {
  * karşılaştırılır, yalnız fark yazılır. Hareketler silinip ekstreyle yutulabildiği için olay başına yazım mükerrer üretirdi.
  */
 
-export type RegisterOrder = Pick<Order, 'status' | 'channel' | 'isGiftOrder' | 'shippingFeeCents' | 'orderedTotalCents'>;
+export type RegisterOrder = Pick<
+  Order,
+  'status' | 'channel' | 'isGiftOrder' | 'shippingFeeCents' | 'orderedTotalCents' | 'pricesIncludeVat'
+>;
 export type RegisterItem = FulfilledItem & Pick<OrderItem, 'id' | 'vatRate'>;
 
 /** Siparişin tahsilat ya da iade hareketi, kasanın gördüğü yüzüyle. */

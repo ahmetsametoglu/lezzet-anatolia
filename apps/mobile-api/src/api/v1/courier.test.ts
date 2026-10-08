@@ -399,7 +399,7 @@ describe('GET /api/v1/courier/day', () => {
     const stop = day.stops.find((s) => s.orderId === benim)!;
     expect(stop.address).toBe('12 rue des Fleurs, 67000, Strasbourg');
     /* Bekleyen durakta kapıda tahsilat `null`. */
-    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash', collectedAtDoorCents: null });
+    expect(stop.payment).toEqual({ dueAmountCents: 3000, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null });
     expect(stop.outcome).toBe('pending');
     // Kuryenin gördüğü tek para tahsil edeceği tutardır — maliyet/kâr sözleşmede YOK (tasarım §6).
     expect(JSON.stringify(stop)).not.toContain('purchasePrice');

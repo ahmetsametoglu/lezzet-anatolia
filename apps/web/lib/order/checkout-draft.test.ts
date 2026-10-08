@@ -184,6 +184,43 @@ const base = async () => ({
   paymentMethod: 'card' as const,
 });
 
+/**
+ * Fiyat tabanı siparişe yazılır ve borç her tabanda KDV dahildir (DOMAIN §5). Müşteri kaydı testin kendisinindir; şirkete çevrilir ve
+ * her testten sonra eski hâline döner.
+ */
+describe('fiyat tabanı ve KDV dahil toplam', () => {
+  const profiles = new UserProfileService(db);
+  afterEach(async () => {
+    await profiles.update({ id: customerId, type: 'individual', b2bApproved: false });
+  });
+
+  it('onaylı işletmenin siparişi KDV hariç fiyatla yazılır; toplamı KDV eklenmiş tutardır', async () => {
+    await new PriceService(db).setPrice({ variantId, channel: 'b2b', amountCents: 1000 });
+    await profiles.update({ id: customerId, type: 'company', b2bApproved: true });
+
+    // İşletme kanalının asgari sepeti kanal satırından okunur ve dosyanın sıfırladığı genel eşik ona uygulanmaz; tutar onu aşar.
+    const outcome = await createCheckoutDraft({ ...(await base()), entries: [{ kind: 'variant', variantId, qty: 20, stockId: null }] });
+
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    const { order, items } = (await new OrderService(db).getWithItems(outcome.orderId))!;
+    expect(items[0]!.unitPriceCents).toBe(1000);
+    // 20 × 10,00 € HT + %5,5 → 211,00 €
+    expect(order).toMatchObject({ channel: 'b2b', pricesIncludeVat: false, orderedTotalCents: 21100 });
+  });
+
+  it('onaysız şirket perakende fiyatla alır; sipariş KDV dahil fiyatla yazılır ve KDV bir daha eklenmez', async () => {
+    await profiles.update({ id: customerId, type: 'company', b2bApproved: false });
+
+    const outcome = await createCheckoutDraft({ ...(await base()), entries: [{ kind: 'variant', variantId, qty: 2, stockId: null }] });
+
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    const { order } = (await new OrderService(db).getWithItems(outcome.orderId))!;
+    expect(order).toMatchObject({ channel: 'b2b', pricesIncludeVat: true, orderedTotalCents: 4000 });
+  });
+});
+
 describe('sepet → taslak sipariş', () => {
   it('varyant satırı bağlayıcı fiyatıyla yazılır', async () => {
     const outcome = await createCheckoutDraft({

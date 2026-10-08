@@ -116,7 +116,10 @@ function okDelivery(overrides: Record<string, unknown> = {}) {
 
 /** Borçsuz B2C durağı — tahsilat kapısı devrede olmayan "temiz" hâl. */
 const settledStop = (overrides: Partial<CourierStopContract> = {}) =>
-  courierStop(1, { payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null }, ...overrides });
+  courierStop(1, {
+    payment: { dueAmountCents: null, pricesIncludeVat: true, expectedMethod: null, collectedAtDoorCents: null },
+    ...overrides,
+  });
 
 /**
  * Tek kalemli borçsuz durak, kapı testlerinin çoğunun ilgilendiği en küçük hâl; `fulfilledQty` 0, çünkü kapıya henüz gidilmedi.
@@ -126,7 +129,7 @@ const oneLineStop = (overrides: Partial<CourierStopContract> = {}) =>
   settledStop({
     itemCount: 1,
     contentSummary: '1 × Mantı',
-    items: [{ orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0 }],
+    items: [{ orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0, vatRate: 5.5 }],
     /* Kutusuz, çünkü testlerin çoğu kutuyu konu etmez ve kutulu hâli `boxedStop` kurar; boş dizi ortak fikstürün varsayılan kutusunu
        geri alır ve kutusuz durağın kapıyı nasıl kapattığını ölçen testlerin zeminidir. */
     boxes: [],
@@ -288,8 +291,16 @@ describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
     await renderScannedStop({
       itemCount: 2,
       items: [
-        { orderItemId: BAKLAVA, name: 'Fıstıklı Baklava', qty: 2, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0 },
-        { orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0 },
+        {
+          orderItemId: BAKLAVA,
+          name: 'Fıstıklı Baklava',
+          qty: 2,
+          fulfilledQty: 0,
+          unitPriceCents: 1400,
+          lineDiscountAmountCents: 0,
+          vatRate: 5.5,
+        },
+        { orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0, vatRate: 5.5 },
       ],
     });
     await fireEvent.press(screen.getByTestId('courier-goods-refuse-open'));
@@ -308,16 +319,24 @@ describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
   });
 
   // Kapıda alınacak tutar geri verilen malı düşer, yoksa kurye kapıda ne tahsil edeceğini bilemez; hesap motorun kendisidir
-  // (`lineAmountCents`).
+  // (`refusedGrossCents`).
   it('geri verilen kalem TAHSİLAT tutarından düşer', async () => {
     await renderScannedStop(
       {
         itemCount: 2,
         items: [
-          { orderItemId: BAKLAVA, name: 'Fıstıklı Baklava', qty: 2, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0 },
-          { orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0 },
+          {
+            orderItemId: BAKLAVA,
+            name: 'Fıstıklı Baklava',
+            qty: 2,
+            fulfilledQty: 0,
+            unitPriceCents: 1400,
+            lineDiscountAmountCents: 0,
+            vatRate: 5.5,
+          },
+          { orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0, vatRate: 5.5 },
         ],
-        payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
+        payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null },
       },
       { doorCollection: DOOR_COLLECTION_OPEN },
     );
@@ -330,6 +349,36 @@ describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
     // 1 adet × 14,00 € geri verildi → kapıda 28,00 € kaldı; başlık da yeni tutarı yazar.
     expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent(/28,00\s€/);
     expect(screen.getByText(/TAHSİLAT — MOTOR TUTARI 28,00 €/)).toBeOnTheScreen();
+  });
+
+  it("KDV hariç fiyatlı siparişte geri verilen kalem KDV'siyle birlikte düşer", async () => {
+    // Onaylı işletme: 3 × 14,00 € HT, %5,5 → borç 44,31 €.
+    await renderScannedStop(
+      {
+        itemCount: 2,
+        items: [
+          {
+            orderItemId: BAKLAVA,
+            name: 'Fıstıklı Baklava',
+            qty: 2,
+            fulfilledQty: 0,
+            unitPriceCents: 1400,
+            lineDiscountAmountCents: 0,
+            vatRate: 5.5,
+          },
+          { orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0, vatRate: 5.5 },
+        ],
+        payment: { dueAmountCents: 4431, pricesIncludeVat: false, expectedMethod: 'cash', collectedAtDoorCents: null },
+      },
+      { doorCollection: DOOR_COLLECTION_OPEN },
+    );
+
+    await fireEvent.press(screen.getByTestId('courier-goods-refuse-open'));
+    await fireEvent.press(screen.getByTestId(`courier-refuse-step-${BAKLAVA}-increase`));
+    await fireEvent.press(screen.getByTestId('courier-refuse-done'));
+
+    // Kalan 28,00 € HT → 29,54 €; sunucunun teslimden sonra bulacağı borçla aynı.
+    expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent(/29,54\s€/);
   });
 
   it('adet sipariş edilenin üstüne çıkmaz, sıfırın altına inmez', async () => {
@@ -404,7 +453,10 @@ describe('teslimat · tahsilat', () => {
   it('nakit yasal sınırın üstünde UYARI çıkar; kart seçilince kaybolur (uyarı nakde özgüdür)', async () => {
     mockRoutes({
       day: courierDay([
-        courierStop(1, { boxes: [], payment: { dueAmountCents: 124_000, expectedMethod: 'cash', collectedAtDoorCents: null } }),
+        courierStop(1, {
+          boxes: [],
+          payment: { dueAmountCents: 124_000, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null },
+        }),
       ]),
     });
 
@@ -426,7 +478,11 @@ describe('teslimat · tahsilat', () => {
 
   it('yöntemin hesabı YOKSA sebep ekranda ve teslim kapısı KAPALI (para yazılmadan teslim yok)', async () => {
     // Gün cevabında iki yöntem de kapalı; fixture'ın varsayılanı bu.
-    mockRoutes({ day: courierDay([oneLineStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } })]) });
+    mockRoutes({
+      day: courierDay([
+        oneLineStop({ payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } }),
+      ]),
+    });
 
     await renderDelivery();
 
@@ -437,7 +493,7 @@ describe('teslimat · tahsilat', () => {
 
   it('kart hesabı yoksa kart seçilince kapı kapanır, nakitte açık kalır', async () => {
     await renderScannedStop(
-      { payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } },
+      { payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } },
       { doorCollection: { cash: true, card: false } },
     );
     expect(screen.queryByTestId('courier-collection-blocked')).toBeNull();
@@ -453,7 +509,7 @@ describe('teslimat · tahsilat', () => {
 
   it('hesap ayarlıysa tahsilat gövdeye girer: tutar, yöntem ve istek kimliğiyle; hesabı sunucu seçer', async () => {
     await renderScannedStop(
-      { payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } },
+      { payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } },
       { doorCollection: DOOR_COLLECTION_OPEN },
       { deliver: { ok: okDelivery({ collectedCents: 4200 }) } },
     );
@@ -471,7 +527,7 @@ describe('teslimat · tahsilat', () => {
 
   it('borç varken tutar BOŞSA teslim yine gider ama düğme "tahsilat yazılmaz" der', async () => {
     await renderScannedStop(
-      { payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } },
+      { payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } },
       { doorCollection: DOOR_COLLECTION_OPEN },
       { deliver: { ok: okDelivery({ amountDueCents: 4200, paymentStatus: 'pending' }) } },
     );
@@ -664,7 +720,9 @@ describe('adım numarası (v3 · 30.08)', () => {
   // numarasız görünce adımdan saymaz.
   it('kutulu durakta kutular 1., mal 2., tahsilat 3. adımdır', async () => {
     mockRoutes({
-      day: courierDay([boxedStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } })]),
+      day: courierDay([
+        boxedStop({ payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } }),
+      ]),
     });
     await renderDelivery();
 
@@ -678,7 +736,9 @@ describe('adım numarası (v3 · 30.08)', () => {
 
   it('kutusuz durakta numaralar kayar — mal 1., tahsilat 2.', async () => {
     mockRoutes({
-      day: courierDay([oneLineStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } })]),
+      day: courierDay([
+        oneLineStop({ payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } }),
+      ]),
     });
     await renderDelivery();
 

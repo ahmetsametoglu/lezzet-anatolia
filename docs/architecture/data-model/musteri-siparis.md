@@ -265,6 +265,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `delivery_country` | country_code |  | `'FR'` |
 | `vat_number_snapshot` | text | • |  |
 | `vat_treatment` | vat_treatment |  | `'domestic'` |
+| `prices_include_vat` | boolean |  | `true` |
 | `locale` | preferred_language | • |  |
 | `reference_no` | text | • |  |
 | `idempotency_key` | text | • |  |
@@ -314,7 +315,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`delivery_run_id`** — hangi GERÇEKLEŞEN seferle gitti (0046) — yalnız start yazar, teslimle donar
 - **`delivery_country`** — teslimat ülkesi — DE B2C 10.000€ OSS eşiği izlemi (bkz. `DOMAIN.md §5`)
 - **`vat_number_snapshot`** — reverse charge siparişinde o anki geçerli vergi no (denetim kanıtı)
-- **`shipping_fee`** — müşteriden alınan kargo ücreti (varsayılan 0); KDV'ye tabi (bkz. `DOMAIN.md §6`). Uygulamadaki adı `shippingFeeCents`, birimi **cent** (`STACK §8`)
+- **`shipping_fee`** — müşteriden alınan kargo ücreti (varsayılan 0); KDV'ye tabi ve **her siparişte KDV dahil**, kalem fiyatı KDV hariç olsa da (bkz. `DOMAIN.md §5–6`). Uygulamadaki adı `shippingFeeCents`, birimi **cent** (`STACK §8`)
 - **`reference_no`** — sistemin ürettiği referans — marka+yıl+**rastgele** (ör. `LA-26-7K4M2P`), hacim sızdırmaz; **ilk kalıcı duruma geçişte** üretilir (`confirmed`, hızlı satışta `completed`); resmî fatura no değil
 - **`idempotency_key`** — **çift sipariş kalkanı** — istemcinin o checkout denemesi için ürettiği anahtar; aynı istek ikinci kez ulaşırsa (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ, var olan döner. Kısmi unique: anahtarsız satırlar (operasyon girişi, hızlı satış) birbirini engellemez
 - **`delivery_proof`** — teslim onayı: imza görüntüsü/foto (storage yolu), onaylayan, zaman — B2B varsayılan zorunlu, B2C kapalı (parametrik; bkz. `DOMAIN.md §6`)
@@ -322,9 +323,10 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`tracking_number`** — kargo takip numarası. `carrier` ile birlikte **yalnız `delivery_type = 'shipping'`** siparişlerde dolar — kural veride (`order_carrier_only_shipping`): kendi aracımızla giden malın taşıyıcısı yoktur ve ekran unutsa bile yazılamaz
 - **`invoice_no`** — dış muhasebeden sonradan eşleşir
 - **`vat_treatment`** — KDV işleme tipi (export için); ileride `oss_destination`
+- **`prices_include_vat`** — kalem fiyatları KDV dahil mi: onaylı işletmede hariç, öteki her siparişte dahil (`DOMAIN.md §5`). Kanaldan çıkarılmaz, çünkü onaysız şirket işletme kanalında perakende fiyatla alır. Kanal gibi donar (`order_channel_frozen`)
 - **`locale`** — **siparişin dili** — müşterinin bu siparişi verirken okuduğu yüzeyin dili; sipariş maillerinin dili buradan gelir. `null` = bilinmiyor (hızlı satış, operasyon girişi) → profilin `preferred_language`'ına düşülür. Profilden okumamanın sebebi snapshot mantığı: profil sonradan değişebilir, siparişin metni değişmemeli
-- **`ordered_total`** — **sipariş anında anlaşılan** toplam = Σ kalem − indirim + `shipping_fee` (sabit, sipariş anı). App: `orderedTotalCents`. Adı 01.09'da `total`dan değişti: genel ad, yedi ayrı okuyucuyu onu "borç" sanmaya götürmüştü
-- **`revenue_total`** — **gerçekleşen ciro** = Σ (giden adet × birim − indirim payı) [+ kargo, en az bir kalem gittiyse]. Kalemlerden TÜRETİLİR (`resync_order_revenue` tetikleyicisi); taslakta 0'dır. App: `revenueTotalCents`. **Saklanmasının sebebi rapor tarafının SQL'den okuması** — SQL, TypeScript motorunu çağıramaz
+- **`ordered_total`** — **sipariş anında anlaşılan KDV dahil** toplam = Σ kalem − indirim (KDV hariç fiyatta KDV eklenmiş) + `shipping_fee` (sabit, sipariş anı); müşterinin borcu budur. App: `orderedTotalCents`. Adı 01.09'da `total`dan değişti: genel ad, yedi ayrı okuyucuyu onu "borç" sanmaya götürmüştü
+- **`revenue_total`** — **gerçekleşen KDV dahil ciro** = Σ (giden adet × birim − indirim payı, KDV hariç fiyatta oran başına KDV eklenmiş) [+ kargo, en az bir kalem gittiyse]. Kalemlerden TÜRETİLİR (`resync_order_revenue` tetikleyicisi); taslakta 0'dır. App: `revenueTotalCents`. **Saklanmasının sebebi rapor tarafının SQL'den okuması** — SQL, TypeScript motorunu çağıramaz
 - **`discount_id`** — uygulanan indirim/kupon (tek; üst üste binmez)
 - **`discount_amount`** — uygulanan indirim tutarı; varsayılan 0. App: `discountAmountCents`
 - **`discount_label`** — inen indirimin **müşteriye görünen adının** sipariş anındaki kopyası (`{"fr":"Offre de bienvenue",…}`) — kampanya yeniden adlandırılsa/silinse de siparişin maili ve fişi aynı şeyi der; `address_snapshot` ile aynı gerekçe. `null` = ad verilmemiş → yüzey genel "İndirim"e düşer

@@ -38,6 +38,7 @@ const BASE_SALE: OrderSale = {
   deliveryCountry: 'FR',
   vatNumberSnapshot: null,
   vatTreatment: 'domestic',
+  pricesIncludeVat: true,
   locale: null,
   referenceNo: 'LA-26-7K4M2P',
   idempotencyKey: null,
@@ -153,20 +154,32 @@ describe('kargo — malın oranını izler', () => {
   });
 });
 
-describe('KDV tabanı kanaldan gelir (DOMAIN §5)', () => {
-  it('yurtiçi B2B satırında tutar HT\'dir — KDV ÜSTÜNE eklenir, içinden çıkarılmaz', () => {
-    // Bu satır bir para hatasının nöbetçisidir: b2b fiyatı KDV hariç saklanır, ama export tek yön
-    // varsayıp `removeVat` uyguluyordu. Sonuç, beyan edilen KDV'nin ve cironun her b2b satırında
-    // düşük çıkmasıydı — hem muhasebe dosyasında hem kâr raporunda, aynı kökten.
-    const row = buildExportRow(sale({ channel: 'b2b' }), [line({ unitPriceCents: 10_000, vatRate: 5.5 })]);
+describe('KDV tabanı siparişin fiyat tabanından gelir (DOMAIN §5)', () => {
+  it('KDV hariç fiyatlı satırda tutar HT\'dir — KDV ÜSTÜNE eklenir, içinden çıkarılmaz', () => {
+    const row = buildExportRow(sale({ channel: 'b2b', pricesIncludeVat: false }), [line({ unitPriceCents: 10_000, vatRate: 5.5 })]);
 
     expect(row.net).toBe(100); // tutarın kendisi
     expect(row.vat).toBe(5.5);
-    expect(row.gross).toBe(105.5); // müşterinin ödeyeceği
+    expect(row.gross).toBe(105.5); // müşterinin ödediği
     expect(row.net + row.vat).toBe(row.gross);
   });
 
-  it('aynı sayı B2C\'de TTC okunur — iki kanal aynı satırı farklı böler', () => {
+  it('onaysız şirketin KDV dahil fiyatı işletme kanalında da içinden ayrılır — KDV iki kez sayılmaz', () => {
+    const row = buildExportRow(sale({ channel: 'b2b', pricesIncludeVat: true }), [line({ unitPriceCents: 5275, vatRate: 5.5 })]);
+
+    expect(row).toMatchObject({ gross: 52.75, net: 50, vat: 2.75 });
+  });
+
+  it('kargo ücreti KDV hariç fiyatlı satışta da KDV dahildir — içinden ayrılır', () => {
+    const row = buildExportRow(sale({ channel: 'b2b', pricesIncludeVat: false, shippingFeeCents: 1190 }), [
+      line({ unitPriceCents: 10_000, vatRate: 5.5 }),
+    ]);
+
+    // Kalem 100,00 + 5,50 KDV; kargo 11,90 içinden 11,28 + 0,62.
+    expect(row.vatLines).toEqual([{ vatRate: 5.5, gross: 117.4, net: 111.28, vat: 6.12 }]);
+  });
+
+  it('aynı sayı KDV dahil fiyatta TTC okunur', () => {
     const b2c = buildExportRow(sale({ channel: 'b2c' }), [line({ unitPriceCents: 10_000, vatRate: 5.5 })]);
 
     expect(b2c.gross).toBe(100);
@@ -178,7 +191,7 @@ describe('KDV tabanı kanaldan gelir (DOMAIN §5)', () => {
 describe('reverse charge', () => {
   it('AB içi B2B satışta KDV yoktur; satır Autoliquidation ibaresi taşır', () => {
     const row = buildExportRow(
-      sale({ channel: 'b2b', deliveryCountry: 'DE', vatTreatment: 'intra_eu_b2b_reverse_charge', vatNumberSnapshot: 'DE811907980', shippingFeeCents: 1500 }),
+      sale({ channel: 'b2b', pricesIncludeVat: false, deliveryCountry: 'DE', vatTreatment: 'intra_eu_b2b_reverse_charge', vatNumberSnapshot: 'DE811907980', shippingFeeCents: 1500 }),
       [line({ unitPriceCents: 20_000, vatRate: 5.5 })],
     );
 

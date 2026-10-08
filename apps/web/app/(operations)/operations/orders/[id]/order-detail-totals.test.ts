@@ -5,8 +5,8 @@ import { totalsOf } from './order-detail-read';
 import type { OrderLineView } from './order-detail-types';
 
 /**
- * Sipariş detayının toplam bloğu — saf dönüşüm (DB'siz). "İçindeki KDV" satırı motorun kuralından (`isZeroRated`) kurulur
- * ve iddialar kuraldan yazılır: reverse charge'da ekranda vergi görünmez, b2c'de tutarın içinden çıkar, b2b'de üstüne eklenir.
+ * Sipariş detayının toplam bloğu — saf dönüşüm (DB'siz). KDV satırı motorun kırılımından (`vatByRate`) kurulur ve iddialar
+ * kuraldan yazılır: reverse charge'da ekranda vergi görünmez, KDV dahil fiyatta tutarın içinden çıkar, hariç fiyatta üstüne eklenir.
  */
 
 const line = (over: Partial<OrderLineView> = {}): OrderLineView => {
@@ -49,6 +49,7 @@ const order = (over: Partial<Order> = {}): Order =>
   ({
     channel: 'b2c',
     vatTreatment: 'domestic' as VatTreatment,
+    pricesIncludeVat: true,
     shippingFeeCents: 0,
     discountAmountCents: 0,
     discountLabel: null,
@@ -74,7 +75,9 @@ function karsilanan(o: Order, lines: OrderLineView[], settled: boolean): number 
       orderedQty: l.qty,
       unitPriceCents: l.unitPriceCents,
       lineDiscountCents: l.lineDiscountCents,
+      vatRate: l.vatRate,
     })),
+    pricesIncludeVat: o.pricesIncludeVat,
     collectedCents: 0,
     refundedCents: 0,
     shippingFeeCents: o.shippingFeeCents,
@@ -94,18 +97,36 @@ describe('İçindeki KDV — karar motorun', () => {
     expect(satir(rows, 'İçindeki KDV')?.amountCents).toBe(0);
   });
 
-  it('b2c: fiyat KDV DAHİL — vergi tutarın içinden çıkar', () => {
+  it('KDV dahil fiyat — vergi tutarın içinden çıkar', () => {
     const rows = blok(order({ channel: 'b2c' }), [line({ lineTotalCents: 2000, vatRate: 5.5 })], true);
 
     // 20,00 € TTC · %5,5 → HT 18,96 → içindeki KDV 1,04.
     expect(satir(rows, 'İçindeki KDV')?.amountCents).toBe(104);
   });
 
-  it('b2b: fiyat KDV HARİÇ — vergi tutarın üstüne eklenir', () => {
-    const rows = blok(order({ channel: 'b2b', vatTreatment: 'domestic' as VatTreatment }), [line({ lineTotalCents: 2000, vatRate: 5.5 })], true);
+  it('onaysız şirketin KDV dahil fiyatı işletme kanalında da içinden çıkar', () => {
+    const rows = blok(order({ channel: 'b2b', pricesIncludeVat: true }), [line({ lineTotalCents: 2000, vatRate: 5.5 })], true);
 
-    // 20,00 € HT · %5,5 → 1,10. b2c ile AYNI tutarda farklı sayı çıkması doğru: taban farklı.
-    expect(satir(rows, 'İçindeki KDV')?.amountCents).toBe(110);
+    expect(satir(rows, 'İçindeki KDV')?.amountCents).toBe(104);
+    expect(satir(rows, 'Ödenecek')?.amountCents).toBe(2000);
+  });
+
+  it('KDV hariç fiyat — blok fatura gibi okunur, KDV üstüne eklenir ve ödenecek KDV dahildir', () => {
+    const rows = blok(order({ channel: 'b2b', pricesIncludeVat: false, orderedTotalCents: 2110 }), [line({ lineTotalCents: 2000, vatRate: 5.5 })], true);
+
+    expect(satir(rows, 'Kalemler (KDV hariç)')?.amountCents).toBe(2000);
+    expect(satir(rows, 'KDV')).toMatchObject({ amountCents: 110, kind: 'sum' });
+    expect(satir(rows, 'Ödenecek')?.amountCents).toBe(2110);
+  });
+
+  it('KDV hariç fiyatta kargo KDV dahildir — blokta KDV hariç kısmı yazılır, toplam tutar', () => {
+    const o = order({ channel: 'b2b', pricesIncludeVat: false, shippingFeeCents: 1190, orderedTotalCents: 3300 });
+    const rows = blok(o, [line({ lineTotalCents: 2000, vatRate: 5.5 })], true);
+
+    // Kalem 20,00 + kargo 11,90 içinden 11,28 → KDV 1,10 + 0,62.
+    expect(satir(rows, 'Kargo (KDV hariç)')?.amountCents).toBe(1128);
+    expect(satir(rows, 'KDV')?.amountCents).toBe(172);
+    expect(satir(rows, 'Ödenecek')?.amountCents).toBe(2000 + 1128 + 172);
   });
 
   it('KDV satırı bir DÜŞÜM değil bilgidir — ödenecek tutara dokunmaz', () => {
@@ -215,7 +236,7 @@ describe('LA-26-93UXKY — blok kendi içinde toplanır', () => {
 
     // Vergi teslim edilenden hesaplanır, sipariş edilenden değil.
     expect(satir(eksikGiden, 'İçindeki KDV')!.amountCents).toBeLessThan(satir(tamamGiden, 'İçindeki KDV')!.amountCents);
-    // Kalem kalem: 19,09 → 1,00 · 3,55 → 0,19 · 4,65 → 0,24.
-    expect(satir(eksikGiden, 'İçindeki KDV')?.amountCents).toBe(100 + 19 + 24);
+    // Oran başına, aktarımla aynı: 19,09 + 3,55 + 4,65 = 27,29 → HT 25,87 → KDV 1,42.
+    expect(satir(eksikGiden, 'İçindeki KDV')?.amountCents).toBe(142);
   });
 });

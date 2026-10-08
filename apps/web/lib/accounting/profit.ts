@@ -59,8 +59,8 @@ export async function productProfits(period: ProfitPeriod, business?: Business):
   const lines: SoldLine[] = allItems.map((item) => ({
     variantId: item.variantId,
     item,
-    // Kanal kalemde değil satışta durur; KDV tabanı ondan çözülür (b2c TTC, b2b HT).
-    channel: salesById.get(item.orderId)?.channel ?? 'b2c',
+    // Fiyat tabanı kalemde değil satışta durur; satış bulunamazsa sipariş kaydının varsayılanı (KDV dahil).
+    pricesIncludeVat: salesById.get(item.orderId)?.pricesIncludeVat ?? true,
     // Haritada yoksa parti kaydı hiç yok demektir → maliyet bilinmiyor (0 değil).
     costCents: costs.has(item.id) ? costs.get(item.id)! : null,
     zeroRated: (() => {

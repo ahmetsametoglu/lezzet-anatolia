@@ -101,6 +101,34 @@ describe('kargo ücreti ve KDV', () => {
   });
 });
 
+/** Borç her fiyat tabanında KDV dahildir (DOMAIN §5): onaylı işletmenin KDV hariç sepetine KDV eklenir, kargo ücreti zaten dahildir. */
+describe('KDV dahil toplam', () => {
+  it('onaylı işletmede KDV indirimli kalem toplamına eklenir; kargo ücretine bir daha eklenmez', async () => {
+    const r = await odemeCozumle({
+      customerId: businessCustomerId,
+      deliveryType: 'shipping',
+      basketCents: 3600,
+      lines: [{ totalCents: 4000, vatRate: 5.5 }],
+      discountShares: [400],
+      quotedFeeCents: 1190,
+    });
+    // 36,00 € HT + 1,98 € KDV + 11,90 € kargo
+    expect(r).toMatchObject({ pricesIncludeVat: false, orderTotalCents: 3798 + 1190 });
+  });
+
+  it('onaysız şirket perakende fiyatla alır — toplam sepetin kendisidir, KDV iki kez eklenmez', async () => {
+    const r = await odemeCozumle({ customerId: pendingBusinessId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    expect(r).toMatchObject({ pricesIncludeVat: true, orderTotalCents: 4000 });
+  });
+
+  it('ters yüklemede (Almanya, doğrulanmış numara) KDV eklenmez', async () => {
+    const de = await profiles.insert({ name: `DE işletme ${stamp}`, type: 'company', b2bApproved: true, vatNumberValid: true });
+    createdProfiles.push(de.id);
+    const r = await odemeCozumle({ customerId: de.id, deliveryType: 'route', basketCents: 4000, lines: LINES, country: 'DE' });
+    expect(r).toMatchObject({ pricesIncludeVat: false, orderTotalCents: 4000 });
+  });
+});
+
 describe('ödeme yöntemleri', () => {
   // `customerId` bireysel bir müşteri: ertelenmiş tahsilat ona kapalıdır, çünkü ödeme alınmadan hazırlığa geçilir ve risk tümüyle bize kalırdı.
   it('rota içi + tavan altı → kapıda ödeme açık (bireysel: havale yok)', async () => {

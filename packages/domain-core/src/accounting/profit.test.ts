@@ -37,6 +37,7 @@ const BASE_SALE: OrderSale = {
   deliveryCountry: 'FR',
   vatNumberSnapshot: null,
   vatTreatment: 'domestic',
+  pricesIncludeVat: true,
   locale: null,
   referenceNo: 'LA-26-7K4M2P',
   idempotencyKey: null,
@@ -102,10 +103,11 @@ describe('sipariş katkı payı', () => {
     expect(withShipping.contribution!).toBeLessThan(withoutShipping.contribution! + 7.9);
   });
 
-  it('B2B fiyatı ZATEN HT\'dir — KDV bir daha çıkarılmaz', () => {
-    // Fiyat kanalın tabanında saklanır (b2c TTC, b2b HT): aynı 100 € b2c'de 94,79 HT, b2b'de 100 HT'dir;
-    // tek yön varsayılsaydı b2b cirosu her satırda eriyordu.
-    const b2b = orderContribution(closed({ channel: 'b2b', cogsAmountCents: 6000 }), [line({ unitPriceCents: 10_000 })]);
+  it("KDV hariç fiyat ZATEN HT'dir — KDV bir daha çıkarılmaz", () => {
+    // Aynı 100 € KDV dahil fiyatta 94,79 HT, KDV hariç fiyatta 100 HT'dir; tek yön varsayılsaydı işletme cirosu her satırda eriyordu.
+    const b2b = orderContribution(closed({ channel: 'b2b', pricesIncludeVat: false, cogsAmountCents: 6000 }), [
+      line({ unitPriceCents: 10_000 }),
+    ]);
     const b2c = orderContribution(closed({ channel: 'b2c', cogsAmountCents: 6000 }), [line({ unitPriceCents: 10_000 })]);
 
     expect(b2b.revenue).toBe(100);
@@ -114,9 +116,25 @@ describe('sipariş katkı payı', () => {
     expect(b2c.revenue).toBeLessThan(b2b.revenue);
   });
 
+  it("onaysız şirketin KDV dahil fiyatı işletme kanalında da HT'ye çevrilir — ciro KDV kadar şişmez", () => {
+    const result = orderContribution(closed({ channel: 'b2b', pricesIncludeVat: true }), [line({ unitPriceCents: 5275, vatRate: 5.5 })]);
+    const product = variantProfit([
+      { variantId: 'v1', item: line({ unitPriceCents: 5275, vatRate: 5.5 }), pricesIncludeVat: true, costCents: 0 },
+    ]);
+
+    expect(result.revenue).toBe(50);
+    expect(product[0]!.revenue).toBe(50);
+  });
+
   it('reverse charge\'da KDV yoktur — tutar olduğu gibi cirodur', () => {
     const result = orderContribution(
-      closed({ channel: 'b2b', vatTreatment: 'intra_eu_b2b_reverse_charge', deliveryCountry: 'DE', cogsAmountCents: 6000 }),
+      closed({
+        channel: 'b2b',
+        pricesIncludeVat: false,
+        vatTreatment: 'intra_eu_b2b_reverse_charge',
+        deliveryCountry: 'DE',
+        cogsAmountCents: 6000,
+      }),
       [line({ unitPriceCents: 10_000 })],
     );
 
@@ -128,7 +146,11 @@ describe('sipariş katkı payı', () => {
     const item = line({ qty: 3, fulfilledQty: 3, goodwillQty: 1, unitPriceCents: 2110 });
 
     expect(orderContribution(closed({ cogsAmountCents: 2400 }), [item]).revenue).toBe(40);
-    expect(variantProfit([{ variantId: 'v1', item, channel: 'b2c', costCents: 2400 }])[0]).toMatchObject({ qty: 3, revenue: 40, cogs: 24 });
+    expect(variantProfit([{ variantId: 'v1', item, pricesIncludeVat: true, costCents: 2400 }])[0]).toMatchObject({
+      qty: 3,
+      revenue: 40,
+      cogs: 24,
+    });
   });
 
   it('patron ikramı kârda SAYILIR — parayı patron öder', () => {
@@ -174,7 +196,7 @@ describe('ürün kârlılığı — fire düşülmüş net marj', () => {
   const soldLine = (variantId: string, over: Partial<SoldLine> = {}): SoldLine => ({
     variantId,
     item: line({ unitPriceCents: 2110 }),
-    channel: 'b2c',
+    pricesIncludeVat: true,
     costCents: 800,
     ...over,
   });
@@ -220,7 +242,9 @@ describe('şirket kârlılığı — tam P&L', () => {
   // Girdiler EURO okunur (testin okunurluğu için), cent'e burada inilir — sayıların 21,1 kalması
   // "20 HT − 8 = 12" gibi yorumların satırla aynı dili konuşmasını sağlıyor.
   const contribution = (channel: 'b2c' | 'b2b', cogsEuro: number, unitPriceEuro: number) =>
-    orderContribution(closed({ channel, cogsAmountCents: toCents(cogsEuro) }), [line({ unitPriceCents: toCents(unitPriceEuro) })]);
+    orderContribution(closed({ channel, pricesIncludeVat: channel === 'b2c', cogsAmountCents: toCents(cogsEuro) }), [
+      line({ unitPriceCents: toCents(unitPriceEuro) }),
+    ]);
 
   it('genel gider ve fire BİR KEZ düşülür, ürüne dağıtılmaz', () => {
     const pnl = companyProfit({ from: '2026-03-01', to: '2026-03-31' }, [

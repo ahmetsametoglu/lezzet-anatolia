@@ -35,6 +35,8 @@ import {
   PAYMENT_TERM_DAYS_DEFAULT,
   PAYMENT_TERM_DAYS_KEY,
   allowedDecisions,
+  chargedQtyOf,
+  chargedShippingParts,
   allowedReturnDispositions,
   creditPosition,
   derivePaymentStatusForOrder,
@@ -49,7 +51,8 @@ import {
   orderContribution,
   refundSourcesOf,
   skippedBetween,
-  vatSplitOf,
+  vatByRate,
+  type RateAmount,
 } from '@lezzet/domain-core';
 import { doorCheckOf } from '@lezzet/address';
 import { listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl } from '@lezzet/application';
@@ -341,6 +344,7 @@ function financeOf(order: Order, items: readonly OrderItem[]): OrderFinanceView 
       saleDate: order.deliveryDate ?? order.createdAt.slice(0, 10),
       channel: order.channel,
       vatTreatment: order.vatTreatment,
+      pricesIncludeVat: order.pricesIncludeVat,
       shippingFeeCents: order.shippingFeeCents,
       isGiftOrder: order.isGiftOrder,
       cogsAmountCents: order.cogsAmountCents,
@@ -478,8 +482,8 @@ function payableLineOf(item: OrderItem) {
 }
 
 /**
- * Her satır bir öncekinden çıkar ve sonda gerçek rakam durur. İndirim `total − karşılanan` farkından gelir, çünkü motorun cevabı
- * esastır ve yeniden hesaplamak kuruş ayrıştırırdı.
+ * Her satır bir öncekinden çıkar ve sonda gerçek rakam durur. KDV dahil fiyatta indirim `total − karşılanan` farkından gelir, çünkü
+ * motorun cevabı esastır; KDV hariç fiyatta blok fatura gibi okunur: kalemler, kargo ve KDV hariç tutarlar, sonra KDV.
  */
 export function totalsOf(
   order: Order,
@@ -496,16 +500,36 @@ export function totalsOf(
     0,
   );
   const shipping = order.shippingFeeCents;
+  const breakdown = vatBreakdownOf(order, lines, settled);
+  const vatCents = breakdown.reduce((sum, line) => sum + line.vatCents, 0);
+  const refunded = order.amountRefundedCents;
+  const discountLabel = order.discountLabel ? resolveLocalizedText(order.discountLabel) : '';
+  const discountRow = (amountCents: number): OrderTotalLine => ({
+    label: discountLabel ? `Sepet indirimi — ${discountLabel}` : 'Sepet indirimi',
+    amountCents,
+    kind: 'deduction',
+  });
+
+  if (!order.pricesIncludeVat) {
+    const netCents = breakdown.reduce((sum, line) => sum + line.netCents, 0);
+    const goodsNet = lines.reduce((sum, l) => sum + fulfilledLineAmountCents(viewLineOf(l), settled), 0);
+    const rows: OrderTotalLine[] = [{ label: 'Kalemler (KDV hariç)', amountCents: gross, kind: 'sum' }];
+    if (gross > goodsNet) rows.push(discountRow(gross - goodsNet));
+    if (netCents > goodsNet) {
+      rows.push({ label: 'Ara toplam', amountCents: goodsNet, kind: 'sum' });
+      rows.push({ label: 'Kargo (KDV hariç)', amountCents: netCents - goodsNet, kind: 'sum' });
+    }
+    if (!isZeroRated(order.vatTreatment)) rows.push({ label: 'KDV', amountCents: vatCents, kind: 'sum' });
+    rows.push({ label: 'Ödenecek', amountCents: fulfilledAmountCents, kind: 'grand' });
+    if (refunded > 0) rows.push({ label: 'İade edildi', amountCents: refunded, kind: 'refund' });
+    return rows;
+  }
+
   // Brüt − indirim + kargo = ödenecek; ikisi de motorun kalem formülünden türediği için kimlik korunur.
   const discount = Math.max(0, gross + shipping - fulfilledAmountCents);
-  const refunded = order.amountRefundedCents;
-
   const rows: OrderTotalLine[] = [{ label: 'Kalemler', amountCents: gross, kind: 'sum' }];
   // İndirimin sebebi sipariş anındaki kopyadan yazılır; kampanya sonradan silinse de satır sebebini söyler.
-  if (discount > 0) {
-    const label = order.discountLabel ? resolveLocalizedText(order.discountLabel) : '';
-    rows.push({ label: label ? `Sepet indirimi — ${label}` : 'Sepet indirimi', amountCents: discount, kind: 'deduction' });
-  }
+  if (discount > 0) rows.push(discountRow(discount));
   /* Ara toplam yalnız ardında kargo varken yazılır; kargosuz siparişte ödenecekle aynı sayıdır. */
   if (shipping > 0) {
     rows.push({ label: 'Ara toplam', amountCents: gross - discount, kind: 'sum' });
@@ -514,30 +538,39 @@ export function totalsOf(
 
   rows.push({ label: 'Ödenecek', amountCents: fulfilledAmountCents, kind: 'grand' });
   // KDV bir düşüm değil bilgidir: "bu siparişin vergisi ne" sorusunu tutarı bozmadan yanıtlar.
-  rows.push({ label: 'İçindeki KDV', amountCents: vatInsideOf(order, lines, settled), kind: 'note' });
+  rows.push({ label: 'İçindeki KDV', amountCents: vatCents, kind: 'note' });
   if (refunded > 0) rows.push({ label: 'İade edildi', amountCents: refunded, kind: 'refund' });
   return rows;
 }
 
+/** Ekran satırının motor girdisi; kalemin kendisi burada yok, yalnız görünümü var. */
+function viewLineOf(l: OrderLineView) {
+  return {
+    fulfilledQty: l.fulfilledQty,
+    goodwillQty: l.goodwillQty,
+    orderedQty: l.qty,
+    unitPriceCents: l.unitPriceCents,
+    lineDiscountCents: l.lineDiscountCents,
+  };
+}
+
 /**
- * Kararı motor verir, ters vergilendirmenin sıfır dalı dahil. Taban karşılanan tutardır, hiç gitmeyen malın vergisi sayılmaz;
- * hazırlık kesinleşmeden sipariş edilen adet esastır.
+ * Oran bazında kırılım motorun kendisidir (`vatByRate`), kargo payı dahil; taban karşılanan tutardır, hiç gitmeyen malın vergisi
+ * sayılmaz, hazırlık kesinleşmeden sipariş edilen adet esastır.
  */
-function vatInsideOf(order: Pick<Order, 'channel' | 'vatTreatment'>, lines: OrderLineView[], settled: boolean): number {
-  const zeroRated = isZeroRated(order.vatTreatment);
-  return lines.reduce((sum, l) => {
-    const base = fulfilledLineAmountCents(
-      {
-        fulfilledQty: l.fulfilledQty,
-        goodwillQty: l.goodwillQty,
-        orderedQty: l.qty,
-        unitPriceCents: l.unitPriceCents,
-        lineDiscountCents: l.lineDiscountCents,
-      },
-      settled,
-    );
-    return sum + vatSplitOf(base, order.channel, l.vatRate, zeroRated).vatCents;
-  }, 0);
+function vatBreakdownOf(
+  order: Pick<Order, 'pricesIncludeVat' | 'vatTreatment' | 'shippingFeeCents'>,
+  lines: OrderLineView[],
+  settled: boolean,
+) {
+  const goods: RateAmount[] = lines
+    .filter((l) => chargedQtyOf(viewLineOf(l), settled) > 0)
+    .map((l) => ({ vatRate: l.vatRate, amountCents: fulfilledLineAmountCents(viewLineOf(l), settled) }));
+  const shipping = chargedShippingParts(
+    order.shippingFeeCents,
+    goods.map((part) => ({ totalCents: part.amountCents, vatRate: part.vatRate })),
+  ).map((part) => ({ vatRate: part.vatRate, amountCents: part.amountCents }));
+  return vatByRate(goods, shipping, order.pricesIncludeVat, isZeroRated(order.vatTreatment));
 }
 
 /**

@@ -51,6 +51,8 @@ export const CourierStopSchema = z.object({
   payment: z.object({
     /** `null` = önceden ödenmiş; kapıda para konuşulmaz. **Cent**. */
     dueAmountCents: z.number().int().nullable(),
+    /** Kalem fiyatları KDV dahil mi; değilse geri verilen malın düşülecek tutarı KDV'siyle hesaplanır. */
+    pricesIncludeVat: z.boolean(),
     expectedMethod: PaymentMethodEnum.nullable(),
     /**
      * Kapıda fiilen alınan para (cent); `null` = kurye bu durakta para almadı (önceden ödenmiş, vadeli ya da henüz tahsil edilmemiş).
@@ -82,6 +84,7 @@ export const CourierStopSchema = z.object({
        */
       unitPriceCents: z.number().int(),
       lineDiscountAmountCents: z.number().int(),
+      vatRate: z.number(),
     }),
   ),
   outcome: StopOutcomeEnum,

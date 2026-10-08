@@ -217,7 +217,7 @@ describe('gün listesi (11.1)', () => {
     expect(stop.address).toBe('12 rue des Fleurs, 67000, Strasbourg');
     /* `collectedAtDoorCents` kapıda fiilen alınan paradır: bekleyen durakta `null`, sonuçlanmış durakta gün listesi "nakit
        85,00 € alındı" cümlesini onunla kurar. */
-    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash', collectedAtDoorCents: null });
+    expect(stop.payment).toEqual({ dueAmountCents: 3000, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null });
     expect(stop.contentSummary).toMatch(/^3 × Kayısılı Reçel .*\(250 g\)$/);
     expect(stop.outcome).toBe('pending');
   });

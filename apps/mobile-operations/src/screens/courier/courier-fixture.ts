@@ -47,7 +47,7 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     /* `collectedAtDoorCents` varsayılanı `null`: bekleyen durakta kapıda para HENÜZ alınmadı.
        Sonuçlanmış durağı kuran test onu `overrides` ile verir — bekleyen bir durağa tahsil edilmiş
        para yazmak, üretimde doğamayacak bir hâl olurdu. */
-    payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
+    payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null },
     itemCount: 2,
     contentSummary: '2 × Fıstıklı Baklava, 1 × Mantı',
     // Kalem satırları kimliklidir: kısmi iade `orderItemId` ile gönderilir; fixture'ın
@@ -64,6 +64,7 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
         fulfilledQty: delivered ? 2 : 0,
         unitPriceCents: 1400,
         lineDiscountAmountCents: 0,
+        vatRate: 5.5,
       },
       {
         orderItemId: stopItemId(index, 1),
@@ -72,6 +73,7 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
         fulfilledQty: delivered ? 1 : 0,
         unitPriceCents: 1400,
         lineDiscountAmountCents: 0,
+        vatRate: 5.5,
       },
     ],
     outcome: 'pending',

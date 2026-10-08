@@ -2,7 +2,8 @@ import { fromCents, toCents } from '@lezzet/helper';
 import type { Business, Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
 import { chargedShippingParts } from '../delivery/shipping-fee';
 import { chargedQtyOf, fulfilledLineOf } from '../payment/payment-status';
-import { chargedAmountCents, vatSplitOf, type AccountingLine } from './line';
+import { chargedAmountCents, type AccountingLine } from './line';
+import { vatByRate } from '../pricing/vat-base';
 import { isZeroRated } from '../tax/vat-treatment';
 
 /**
@@ -120,40 +121,32 @@ function sumOf<T>(rows: readonly T[], field: keyof T): number {
 }
 
 /**
- * KDV kırılımının tabanı: satışın kanalı ve vergi işlemi. Satırın geri kalanı (referans, müşteri,
+ * KDV kırılımının tabanı: kalem fiyatının KDV dahil olup olmadığı ve vergi işlemi. Satırın geri kalanı (referans, müşteri,
  * ülke) para hesabına girmez — bu yüzden ciro soranın tam bir `OrderSale` taşıması gerekmez.
  */
-export type SaleVatBasis = Pick<OrderSale, 'channel' | 'vatTreatment' | 'shippingFeeCents'>;
+export type SaleVatBasis = Pick<OrderSale, 'pricesIncludeVat' | 'vatTreatment' | 'shippingFeeCents'>;
 
 /**
  * Satışın oran bazında KDV kırılımı; aktarım satırının da kâr raporunun da tek zemini. Ücretlenen kalem ve kargo payı kasa fişindeki
- * tanımla aynıdır; dönüşüm oran başına bir kez uygulanır, çünkü kalem kalem çevirmek kuruş artığı biriktirirdi.
+ * tanımla aynıdır; dönüşüm oran başına bir kez uygulanır (`vatByRate`), çünkü kalem kalem çevirmek kuruş artığı biriktirirdi.
  */
 export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[]): ExportVatLine[] {
-  const zeroRated = isZeroRated(sale.vatTreatment);
   const charged = items
     .filter((item) => chargedQtyOf(fulfilledLineOf(item)) > 0)
-    .map((item) => ({ vatRate: item.vatRate, totalCents: chargedAmountCents(item) }));
-  const shipping = chargedShippingParts(sale.shippingFeeCents, charged).map((part) => ({ vatRate: part.vatRate, totalCents: part.amountCents }));
+    .map((item) => ({ vatRate: item.vatRate, amountCents: chargedAmountCents(item) }));
+  const shipping = chargedShippingParts(
+    sale.shippingFeeCents,
+    charged.map((part) => ({ vatRate: part.vatRate, totalCents: part.amountCents })),
+  ).map((part) => ({ vatRate: part.vatRate, amountCents: part.amountCents }));
 
-  const byRate = new Map<number, number>();
-  for (const part of [...charged, ...shipping]) {
-    const vatRate = zeroRated ? 0 : part.vatRate;
-    byRate.set(vatRate, (byRate.get(vatRate) ?? 0) + part.totalCents);
-  }
-
-  return [...byRate.entries()]
-    .filter(([, amount]) => amount > 0)
-    .sort(([a], [b]) => a - b)
-    .map(([vatRate, amount]) => {
-      const split = vatSplitOf(amount, sale.channel, vatRate, zeroRated);
-      return {
-        vatRate,
-        gross: fromCents(split.grossCents),
-        net: fromCents(split.netCents),
-        vat: fromCents(split.vatCents),
-      };
-    });
+  return vatByRate(charged, shipping, sale.pricesIncludeVat, isZeroRated(sale.vatTreatment))
+    .filter((line) => line.grossCents > 0)
+    .map((line) => ({
+      vatRate: line.vatRate,
+      gross: fromCents(line.grossCents),
+      net: fromCents(line.netCents),
+      vat: fromCents(line.vatCents),
+    }));
 }
 
 /**

@@ -276,7 +276,12 @@ describe('K1 · günün seferi', () => {
 
   it('sefer kapatma CTA\'sı KAPATILACAK SEFERİN KİMLİĞİYLE gider', async () => {
     mockDay(
-      courierDay([courierStop(1, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null } })]),
+      courierDay([
+        courierStop(1, {
+          outcome: 'delivered',
+          payment: { dueAmountCents: null, pricesIncludeVat: true, expectedMethod: null, collectedAtDoorCents: null },
+        }),
+      ]),
     );
 
     await renderDay();
@@ -305,8 +310,11 @@ describe('K1 · günün seferi', () => {
     mockDay(
       courierDay([
         courierStop(1),
-        courierStop(2, { payment: { dueAmountCents: 1000, expectedMethod: 'card', collectedAtDoorCents: null } }),
-        courierStop(3, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null } }),
+        courierStop(2, { payment: { dueAmountCents: 1000, pricesIncludeVat: true, expectedMethod: 'card', collectedAtDoorCents: null } }),
+        courierStop(3, {
+          outcome: 'delivered',
+          payment: { dueAmountCents: null, pricesIncludeVat: true, expectedMethod: null, collectedAtDoorCents: null },
+        }),
       ]),
     );
 
@@ -325,7 +333,7 @@ describe('K1 · günün seferi', () => {
         courierStop(1, {
           outcome: 'delivered',
           settledAt: '2026-08-08T14:12:00.000Z',
-          payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null },
+          payment: { dueAmountCents: null, pricesIncludeVat: true, expectedMethod: null, collectedAtDoorCents: null },
         }),
         courierStop(2, { outcome: 'unreachable', attempts: 1, settledAt: '2026-08-08T15:05:00.000Z' }),
         courierStop(3, { outcome: 'refused', settledAt: '2026-08-08T15:40:00.000Z' }),
@@ -367,7 +375,7 @@ describe('K1 · günün seferi', () => {
         courierStop(1, {
           outcome: 'delivered',
           hasProof: true,
-          payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: 8500 },
+          payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: 8500 },
         }),
       ]),
     );
@@ -393,9 +401,10 @@ describe('K1 · günün seferi', () => {
               fulfilledQty: 2,
               unitPriceCents: 1400,
               lineDiscountAmountCents: 0,
+              vatRate: 5.5,
             },
           ],
-          payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null },
+          payment: { dueAmountCents: null, pricesIncludeVat: true, expectedMethod: null, collectedAtDoorCents: null },
         }),
       ]),
     );
@@ -462,7 +471,7 @@ describe('iptal edilen durak (05.09)', () => {
   const iptalli = (index: number) =>
     courierStop(index, {
       cancelled: true,
-      payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
+      payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null },
     });
 
   it('üstü çizili "SİPARİŞ İPTAL EDİLDİ" — ve tek söylediği şey kutunun geri getirileceği', async () => {

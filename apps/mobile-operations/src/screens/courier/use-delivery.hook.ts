@@ -19,7 +19,7 @@ import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast
 import { newRequestKey } from '@/lib/request-key';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
-import { lineAmountCents } from '@lezzet/domain-core';
+import { refusedGrossCents } from '@lezzet/domain-core';
 import { centsToAmountText, money, parseAmountToCents } from './courier-format';
 
 /*
@@ -281,15 +281,14 @@ export function useDelivery(orderId: string): UseDeliveryResult {
 
   /*
     Kapıda alınacak tutar geri verilen mal düşülmüş hâlidir: `dueAmountCents` siparişin tam tutarıdır ve sunucu düzeltmeyi teslim anında yapar, kurye ise kapıda doğru rakamı görmeli.
-    Hesap motorun kendisidir (`lineAmountCents`); satır başına tam eksi kalan alınır, çünkü indirim payı oransal düşer.
+    Hesap motorun kendisidir (`refusedGrossCents`): KDV hariç fiyatlı siparişte geri verilen malın KDV'si de düşer.
   */
-  const refundedCents = lines.reduce((sum, line) => {
-    const refused = refusedOf(line);
-    if (refused === 0) return sum;
-    const full = lineAmountCents({ ...line, fulfilledQty: line.qty });
-    const kept = lineAmountCents({ ...line, fulfilledQty: line.qty - refused });
-    return sum + (full - kept);
-  }, 0);
+  // Durak yoksa kalem de yoktur; taban hiçbir tutarı etkilemez.
+  const pricesIncludeVat = stop?.payment.pricesIncludeVat ?? true;
+  const refundedCents = refusedGrossCents(
+    lines.map((line) => ({ ...line, refusedQty: refusedOf(line) })),
+    pricesIncludeVat,
+  );
   const fullDueCents = stop?.payment.dueAmountCents ?? null;
   const dueCents = fullDueCents === null ? null : Math.max(0, fullDueCents - refundedCents);
 
@@ -302,21 +301,16 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       setRefusedQtyState((current) => {
         const updated = { ...current, [line.orderItemId]: next };
         if (fullDueCents !== null) {
-          const drop = lines.reduce((sum, row) => {
-            const refused = Math.min(row.qty, Math.max(0, updated[row.orderItemId] ?? 0));
-            if (refused === 0) return sum;
-            return (
-              sum +
-              (lineAmountCents({ ...row, fulfilledQty: row.qty }) -
-                lineAmountCents({ ...row, fulfilledQty: row.qty - refused }))
-            );
-          }, 0);
+          const drop = refusedGrossCents(
+            lines.map((row) => ({ ...row, refusedQty: Math.min(row.qty, Math.max(0, updated[row.orderItemId] ?? 0)) })),
+            pricesIncludeVat,
+          );
           setAmountText(centsToAmountText(Math.max(0, fullDueCents - drop)));
         }
         return updated;
       });
     },
-    [fullDueCents, lines],
+    [fullDueCents, lines, pricesIncludeVat],
   );
   const amountCents = parseAmountToCents(amountText);
   const partialPayment = dueCents !== null && amountCents !== null && amountCents < dueCents;

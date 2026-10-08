@@ -90,7 +90,10 @@ function marginOf(contributionCents: number, revenueCents: number): number | nul
  * Katkı payının istediği satış alanları; sipariş detayı henüz `order_sale`e girmemiş siparişin kârını da sorar.
  */
 export type ContributionInput = SaleVatBasis &
-  Pick<OrderSale, 'id' | 'saleDate' | 'isGiftOrder' | 'cogsAmountCents' | 'deliveryCostCents' | 'paymentFeeCents' | 'packagingCostCents'>;
+  Pick<
+    OrderSale,
+    'id' | 'saleDate' | 'channel' | 'isGiftOrder' | 'cogsAmountCents' | 'deliveryCostCents' | 'paymentFeeCents' | 'packagingCostCents'
+  >;
 
 /** Bir siparişin katkı payı; maliyetler sipariş anında yazılmış değerlerdir, sonradan değişen ayar onları oynatmaz. */
 export function orderContribution(sale: ContributionInput, items: readonly AccountingLine[]): OrderContribution {
@@ -132,8 +135,8 @@ export interface VariantLoss {
 export interface SoldLine {
   variantId: string;
   item: AccountingLine;
-  /** Satışın kanalı — kalem tutarının KDV tabanı buradan belli olur (DOMAIN §5). */
-  channel: Channel;
+  /** Satışın kalem fiyatları KDV dahil mi — kalem tutarının tabanı (DOMAIN §5). */
+  pricesIncludeVat: boolean;
   /** `OrderItemBatch` × `Stock.purchase_price`. Parti kaydı yoksa `null` — 0 DEĞİL. */
   costCents: number | null;
   zeroRated?: boolean;
@@ -150,7 +153,7 @@ export function variantProfit(lines: readonly SoldLine[], losses: readonly Varia
     if (line.costCents === null) continue;
     const current = byVariant.get(line.variantId) ?? { qty: 0, revenue: 0, cogs: 0 };
     current.qty += line.item.fulfilledQty;
-    current.revenue += lineNetCents(line.item, line.channel, line.zeroRated ?? false);
+    current.revenue += lineNetCents(line.item, line.pricesIncludeVat, line.zeroRated ?? false);
     current.cogs += line.costCents;
     byVariant.set(line.variantId, current);
   }
