@@ -230,7 +230,6 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
           copy={copy}
           sort={active.sort}
           onlyOffers={active.onlyOffers}
-          offersLabel={t.offersSwitch}
           closeLabel={t.close}
           onSort={(sort) => {
             setSheetOpen(false);

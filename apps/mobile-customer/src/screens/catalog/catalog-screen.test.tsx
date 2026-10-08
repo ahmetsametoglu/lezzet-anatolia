@@ -46,6 +46,11 @@ const page = (
   campaign: null,
 });
 
+// Katalog okuması kimlikli istekten geçer (`maybeAuthorizedFetch`); oturumsuz ziyaretçi sabitlenir, istek Bearer'sız gider.
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
+  getSupabase: () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }),
+}));
+
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 /** Çağrılan adresler — sorgu dizesinin doğru kurulduğu buradan okunur. */
@@ -257,6 +262,21 @@ describe('CatalogScreen', () => {
     await waitFor(() => expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain('sort=priceAsc'));
     // Seçim ANINDA uygulanır ve sayfa kapanır — ayrı bir "Göster" düğmesi ekranda duranın kopyası olurdu.
     expect(screen.queryByTestId('catalog-sort-featured')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Ürün 5')).toBeOnTheScreen());
+  });
+
+  it('çekmecedeki "Sadece indirimliler" anahtarı uca offers=1 gönderir ve sayfayı kapatır', async () => {
+    mockCatalog(page([catalogProduct(1)], null), page([catalogProduct(5)], null));
+
+    await render(<CatalogScreen />);
+    await waitFor(() => expect(screen.getByText('Ürün 1')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByTestId('catalog-filter'));
+    expect(screen.getByText(t.filter.offers)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('catalog-offers-toggle'));
+
+    await waitFor(() => expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain('offers=1'));
+    expect(screen.queryByTestId('catalog-offers-toggle')).toBeNull();
     await waitFor(() => expect(screen.getByText('Ürün 5')).toBeOnTheScreen());
   });
 

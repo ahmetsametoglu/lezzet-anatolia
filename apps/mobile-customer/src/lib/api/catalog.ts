@@ -43,6 +43,8 @@ interface ProductPageQuery {
   pickupWarehouseId?: string | null;
   /** "Adresime gönderilebilir" çipi yalnız yer eksenini daraltır; tükenmiş ürün listede kalır, çünkü onun kendi işareti var. */
   onlyShippable?: boolean;
+  /** "Sadece indirimliler": teklifli partisi olan ürünler; kapalıyken parametre yazılmaz. */
+  onlyOffers?: boolean;
 }
 
 /** Ürün detayı — sayfanın TAMAMI tek turda (boylar, aile, benzerler, beyan); bölüm başına çağrı yok. */
@@ -81,6 +83,7 @@ export function fetchProducts(query: ProductPageQuery): Promise<ApiResult<z.infe
     country: postalCode === undefined || postalCode.length === 0 ? undefined : (query.country ?? undefined),
     pickupWarehouseId: query.pickupWarehouseId ?? undefined,
     shippable: query.onlyShippable === true ? '1' : undefined,
+    offers: query.onlyOffers === true ? '1' : undefined,
   })}`;
   return maybeAuthorizedFetch(path, CatalogPageSchema);
 }

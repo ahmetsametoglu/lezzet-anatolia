@@ -126,6 +126,8 @@ const ProductQuerySchema = z.object({
    * 400 istemciyi cevapsız bırakır. Tek başına yetmez: süzgeç yalnız rota dışındaki müşteriye uygulanır (`shippableApplies`).
    */
   shippable: z.literal('1').optional().catch(undefined),
+  /** "Sadece indirimliler" web'in `?offers=1` kelimesiyle aynı; teklifli partisi olan ürünleri bırakır. */
+  offers: z.literal('1').optional().catch(undefined),
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
 });
@@ -199,6 +201,7 @@ catalog.get('/products', async (c) => {
       // eleseydik keyset imleci ve `total` birlikte bozulurdu. İstenmesi yetmez, YERİN de uygun
       // olması gerekir (`shippableApplies` künyesi).
       onlyShippable: shippableApplies(parsed.data.shippable === '1', place),
+      onlyOffers: parsed.data.offers === '1',
       cursor: decodeCursor(parsed.data.cursor),
     },
     place,
@@ -214,7 +217,7 @@ catalog.get('/products', async (c) => {
 
   /* Arama talep sinyalidir: süzgeçsiz liste ve imleçle gelen sonraki sayfalar sayılmaz, `zeroResultKind` sonucu olmayan aramayı
      süzgeci fazla daraltmaktan ayırır. Sorgu ham geçer; temizlik kapının işidir. */
-  const suzgecli = Boolean(category || collection || parsed.data.shippable === '1');
+  const suzgecli = Boolean(category || collection || parsed.data.shippable === '1' || parsed.data.offers === '1');
   if ((q || suzgecli) && parsed.data.cursor === undefined) {
     void recordNativeEvent(
       { db, channel: viewer.channel, customerId: viewer.customerId, place, locale, country: null },

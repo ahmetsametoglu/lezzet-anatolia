@@ -5,12 +5,8 @@ import { useCatalog } from './use-catalog.hook';
 import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 
 /*
-  GERÇEK AĞ YOK: `fetch` sarmalanıp taklit ediliyor, ama zarf istemcisi (`apiFetch`) ve Zod
-  sözleşmesi GERÇEK — testin doğruladığı şey sorgu dizesinin kuruluşu ve imlecin gidiş-dönüşü de
-  olsun. Hook'un kendisini taklit eden bir test, tam da kırılabilecek yeri atlardı.
-
-  RNTL v14 ASENKRON: `renderHook`/`act` birer söz döndürür ve beklenmezse React "act(...) ortamı
-  yok" diye uyarır, `result` de kurulmaz.
+  Yalnız `fetch` taklit edilir; zarf istemcisi ve Zod sözleşmesi gerçektir, çünkü kırılabilecek yer sorgu dizesi ve imlecin gidiş-dönüşüdür.
+  `renderHook`/`act` söz döndürür ve beklenir, yoksa `result` kurulmaz.
 */
 
 function okResponse(data: unknown): Response {
@@ -34,11 +30,16 @@ const page = (products: number[], nextCursor: string | null, activeCollection: {
   products: products.map((index) => catalogProduct(index)),
   total: 40,
   nextCursor,
-  // Sözleşmede ZORUNLU ve nullable (21.64): koleksiyon süzgeci yokken uç `null` döner.
+  // Sözleşmede zorunlu ve nullable: koleksiyon süzgeci yokken uç `null` döner.
   activeCollection,
-  // Aynı kural kampanya için de geçerli (08.44): süzgeç yokken ya da kesitte kampanya yokken `null`.
+  // Kampanya da öyle: süzgeç yokken ya da kesitte kampanya yokken `null`.
   campaign: null,
 });
+
+// Katalog okuması kimlikli istekten geçer (`maybeAuthorizedFetch`); oturumsuz ziyaretçi sabitlenir, istek Bearer'sız gider.
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
+  getSupabase: () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }),
+}));
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
@@ -227,6 +228,38 @@ describe('useCatalog', () => {
 
     expect(requestedUrls().at(-1)).toContain('sort=priceDesc');
     expect(result.current.filtersActive).toBe(true);
+  });
+
+  it('indirim anahtarı sorguya offers=1 yazar, kuyruk da aynı süzgeçle istenir ve süzgeç düğmesi etkin olur', async () => {
+    mockOpening();
+    const result = await openCatalog();
+
+    fetchMock.mockImplementation(() => Promise.resolve(okResponse(page([5], 'cursor-6'))));
+    await act(() => result.current.setOnlyOffers(true));
+    expect(requestedUrls().at(-1)).toContain('offers=1');
+    expect(result.current.filtersActive).toBe(true);
+
+    await act(() => result.current.loadMore());
+    expect(requestedUrls().at(-1)).toContain('cursor=cursor-6');
+    expect(requestedUrls().at(-1)).toContain('offers=1');
+  });
+
+  it('"Tüm katalog" kategori, kargo ve indirimi tek okumada kaldırır; biri ötekini geri getirmez', async () => {
+    mockOpening();
+    const result = await openCatalog();
+
+    fetchMock.mockImplementation(() => Promise.resolve(okResponse(page([7], null))));
+    await act(() => result.current.selectCategory('baklava'));
+    await act(() => result.current.setOnlyOffers(true));
+    await act(() => result.current.setOnlyShippable(true));
+    await act(() => result.current.clearFilters());
+
+    const last = requestedUrls().at(-1) ?? '';
+    expect(last).not.toContain('category=');
+    expect(last).not.toContain('offers=');
+    expect(last).not.toContain('shippable=');
+    expect(result.current.activeCategory).toBeNull();
+    expect(result.current.filtersActive).toBe(false);
   });
 
   it('yazılan metin ANINDA görünür, uca GECİKMEYLE gider (her tuş bir uçuş değildir)', async () => {

@@ -123,10 +123,8 @@ async function seedProduct(
 }
 
 beforeAll(async () => {
-  // İKİ EK AKTİF DEPO: fiyat sıralaması `product_listing` görünümünden okunuyor ve o görünümün
-  // grain'i (aktif depo × ürün) + "yeri bilinmeyen" satırıdır. Depo boyutu süzülmezse aynı ürün
-  // sayfada depo sayısı kadar tekrarlar. Yerel yığında kaç depo olduğuna GÜVENMİYORUZ (başka bir
-  // ajan pasifleyebilir) — testin kendisi çoğulluğu garanti ediyor.
+  // İki ek aktif depo, çünkü sıralamanın okuduğu görünüm depo × ürün satırıdır ve depo boyutu süzülmezse ürün depo sayısı kadar
+  // tekrarlar; yerel yığındaki depo sayısına güvenilmez, çoğulluğu test kendisi kurar.
   const [wa, wb] = await Promise.all([
     createTestWarehouse(db, { label: 'MAPIA' }),
     createTestWarehouse(db, { label: 'MAPIB' }),
@@ -147,7 +145,7 @@ beforeAll(async () => {
   needleVariantId = needleSeed.variantId;
   borek = (await seedProduct({ tr: `MAPI Börek ${stamp}`, fr: `MAPI Börek FR ${stamp}`, de: `MAPI Börek DE ${stamp}` }, PRICE_CENTS.borek, false, { multiSize: true })).product;
 
-  // ── ÜRÜN AİLESİ (05.15) — çeşit kartlarının zemini ─────────────────────────
+  // Ürün ailesi: çeşit kartlarının zemini.
   familyId = (await new ProductFamilyService(db).insert({ name: `MAPI Aile ${stamp}` })).id;
   sade = (await seedProduct({ tr: `MAPI Sade kek ${stamp}`, fr: `MAPI Gâteau nature ${stamp}`, de: `MAPI Kuchen ${stamp}` }, PRICE_CENTS.sade, true)).product;
   fistikli = (await seedProduct({ tr: `MAPI Fıstıklı kek ${stamp}`, fr: `MAPI Gâteau pistache ${stamp}`, de: `MAPI Pistazienkuchen ${stamp}` }, PRICE_CENTS.fistikli, true)).product;
@@ -171,8 +169,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Aile dahil TÜM hedefler purge'te (`familyIds` talep karşılığı eklendi, 07.08) — silme sırası
-  // bilgisi tek yerde (`cleanup.ts`), dosyada elle silme yok (CLAUDE §4b).
+  // Aile dahil bütün hedefler purge'e gider, çünkü silme sırası bilgisi tek yerde (`cleanup.ts`) durur.
   await purgeTestData(db, {
     productIds,
     categoryIds: [categoryId],
@@ -315,9 +312,8 @@ describe('GET /api/v1/products', () => {
     // süzgeci düşseydi her ürün burada birden çok kez görünürdü.
     expect(new Set(ids).size).toBe(ids.length);
 
-    // **`product_listing` ile KART ayrışmıyor:** sıralamanın kullandığı fiyat, kartta yazan fiyat.
-    // İkisi ayrı kaynaktan okunuyor (görünüm vs. `resolvePrice`), o yüzden ayrışabilirler — ve
-    // ayrıştıkları gün katalog kendi kendisiyle çelişir. Sıra artansa fiyatlar da artan olmalı.
+    // Sıralamanın fiyatı görünümden, kartın fiyatı `resolvePrice`tan gelir; ayrışırlarsa katalog kendisiyle çelişir, bu yüzden
+    // sıra artansa kart fiyatları da artan olmalı.
     const cents = rows.map((p) => p.priceCents);
     expect(cents).toEqual([...cents].sort((a, b) => (a ?? 0) - (b ?? 0)));
     expect(cents).toEqual([PRICE_CENTS.needle, PRICE_CENTS.sade, PRICE_CENTS.fistikli, PRICE_CENTS.borek, PRICE_CENTS.baklava]);
@@ -332,10 +328,8 @@ describe('GET /api/v1/products', () => {
 
 describe('yakın-SKT teklifi — YER BİLİNMEZKEN gösterilmez', () => {
   it('açık teklifli partide bile kart LİSTE fiyatını yazar, `wasCents` doğmaz', async () => {
-    // Karar (01.08, kullanıcı): teklif bir PARTİYE bağlıdır, parti bir depodadır. Mobil istemci
-    // bugün posta kodu göndermiyor (yer çözümü henüz application'a terfi etmedi), yani uç web'in
-    // posta-kodsuz ziyaretçisiyle aynı hâlde: indirimli fiyatı gösterip ödemede yükseltmek verilmiş
-    // bir sözü bozmak olurdu. `loadProductContext` teklif partilerini yalnız depo belliyken okur.
+    // Teklif bir partiye, parti bir depoya bağlıdır; yer bilinmezken indirimli fiyatı gösterip ödemede yükseltmek verilmiş sözü
+    // bozardı, bu yüzden `loadProductContext` teklifi yalnız depo belliyken okur.
     await db.from('stock').update({ offer_price: 3 }).eq('variant_id', needleVariantId);
     try {
       const res = await app.request(`/api/v1/products?locale=fr&q=${NEEDLE}`);
@@ -348,6 +342,17 @@ describe('yakın-SKT teklifi — YER BİLİNMEZKEN gösterilmez', () => {
       expect(card.limitLabel).toBeNull();
     } finally {
       // Sonraki testler bu ürünü teklifsiz bekliyor.
+      await db.from('stock').update({ offer_price: null }).eq('variant_id', needleVariantId);
+    }
+  });
+
+  it('offers=1 yalnız teklifli partisi olan ürünü bırakır, sayaç da onunla iner', async () => {
+    await db.from('stock').update({ offer_price: 3 }).eq('variant_id', needleVariantId);
+    try {
+      const page = await dataOf<CatalogPage>(await app.request(`/api/v1/products?locale=fr&category=${categorySlug}&offers=1`));
+      expect(page.products.map((card) => card.id)).toEqual([needle.id]);
+      expect(page.total).toBe(1);
+    } finally {
       await db.from('stock').update({ offer_price: null }).eq('variant_id', needleVariantId);
     }
   });

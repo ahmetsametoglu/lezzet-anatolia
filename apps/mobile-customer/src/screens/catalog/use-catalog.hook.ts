@@ -24,6 +24,8 @@ interface CatalogFilters {
   sort: CatalogSort;
   /** "Adresime gönderilebilir" çipi müşterinin kendi daraltmasıdır, bu yüzden posta kodunun aksine süzgeç kümesinde durur. */
   onlyShippable: boolean;
+  /** "Sadece indirimliler" anahtarı; uca gider ve sayfalamayı sıfırlar, bu yüzden süzgeç kümesindedir. */
+  onlyOffers: boolean;
 }
 
 /** Uç kendi varsayılanını (`featured`) zaten taşıyor; buradaki başlangıç onunla AYNI olmalı. */
@@ -43,6 +45,7 @@ interface UseCatalogResult {
   sort: CatalogSort;
   /** "Adresime gönderilebilir" açık mı — çip seçili hâlini bundan okur. */
   onlyShippable: boolean;
+  onlyOffers: boolean;
   /** Varsayılandan sapan bir süzgeç var mı — süzgeç düğmesi bununla "etkin" görünür. */
   filtersActive: boolean;
   products: CatalogProduct[];
@@ -61,6 +64,9 @@ interface UseCatalogResult {
   /** Çipi aç/kapat. Ekran kapatmayı da çağırır: yer rota İÇİNE dönünce çip kaybolur ve görünmeyen
    *  bir süzgecin açık kalması listeyi sessizce daraltırdı. */
   setOnlyShippable: (value: boolean) => void;
+  setOnlyOffers: (value: boolean) => void;
+  /** Boş listenin "Tüm katalog" düğmesi: bütün daraltmalar tek okumada kalkar, sıralama kalır. */
+  clearFilters: () => void;
   loadMore: () => void;
   refresh: () => void;
   retry: () => void;
@@ -83,6 +89,7 @@ export function useCatalog(
     search: '',
     sort: DEFAULT_SORT,
     onlyShippable: false,
+    onlyOffers: false,
   });
   /** Bandın adı — cevabın kendisinden; süzgeç `null`ken sunucu da `null` döner. */
   const [activeCollection, setActiveCollection] = useState<CatalogCollection | null>(null);
@@ -116,6 +123,7 @@ export function useCatalog(
           search: next.search,
           sort: next.sort,
           onlyShippable: next.onlyShippable,
+          onlyOffers: next.onlyOffers,
           postalCode,
           country,
           pickupWarehouseId,
@@ -210,6 +218,21 @@ export function useCatalog(
     [applyFilters, filters],
   );
 
+  const setOnlyOffers = useCallback(
+    (value: boolean) => {
+      if (value === filters.onlyOffers) return;
+      applyFilters({ ...filters, onlyOffers: value });
+    },
+    [applyFilters, filters],
+  );
+
+  // Tek okuma, çünkü daraltmaları ayrı ayrı kaldırmak her birini aynı eski kümeden yazar ve sonuncusu öncekileri geri getirirdi.
+  const clearFilters = useCallback(() => {
+    clearTimeout(searchTimer.current);
+    setSearchText('');
+    applyFilters({ ...filters, category: null, search: '', onlyShippable: false, onlyOffers: false });
+  }, [applyFilters, filters]);
+
   const search = useCallback(
     (text: string) => {
       setSearchText(text);
@@ -249,6 +272,7 @@ export function useCatalog(
       search: filters.search,
       sort: filters.sort,
       onlyShippable: filters.onlyShippable,
+      onlyOffers: filters.onlyOffers,
       cursor,
       postalCode,
       country,
@@ -277,9 +301,10 @@ export function useCatalog(
     searchText,
     sort: filters.sort,
     onlyShippable: filters.onlyShippable,
-    /* Kategori ve koleksiyon sayılmaz, çünkü ikisi ekranda kendi seçili hâliyle görünür; kargo süzgeci süzgeç sayfasında gizli
-       kaldığı için sayılır. */
-    filtersActive: filters.sort !== DEFAULT_SORT || filters.onlyShippable,
+    onlyOffers: filters.onlyOffers,
+    /* Kategori ve koleksiyon sayılmaz, çünkü ikisi ekranda kendi seçili hâliyle görünür; sıralama, kargo ve indirim süzgeçleri
+       kapalı yerde kaldığı için sayılır. */
+    filtersActive: filters.sort !== DEFAULT_SORT || filters.onlyShippable || filters.onlyOffers,
     products,
     hasMore: cursor !== null,
     loadingMore,
@@ -290,6 +315,8 @@ export function useCatalog(
     search,
     selectSort,
     setOnlyShippable,
+    setOnlyOffers,
+    clearFilters,
     loadMore,
     refresh,
     retry,

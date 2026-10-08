@@ -7,18 +7,8 @@ import { Dialog } from '@/components/customer/ui/dialog';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 
 /*
-  SIRALA & FİLTRELE ÇEKMECESİ — native katalogun sıralama sayfasının (`catalog-screen.tsx` `sortSheet`) web
-  telefon ikizi. Seçenekler ŞEMADAN türer (`CATALOG_SORTS`); seçim ANINDA uygulanır ve çekmece kapanır
-  (native sapma 5 — "Temizle"/"Göster" düğmeleri yok). Satır: ikon yuvası + etiket, seçilide `sand-150` zemin
-  ve mürekkep çerçeve, ✓ işareti yalnız görsel (seçililik `aria-pressed`le gider).
-
-  ── WEB'E ÖZGÜ: "SADECE İNDİRİMLİLER" ANAHTARI ──────────────────────────────────
-  Tasarımın çekmecesinde bu anahtar VAR; native onu yalnız uç sözleşmesi taşımadığı için çizmedi (sapma 5).
-  Web'in okuması süzgeci taşıyor (`onlyOffers`) ve masaüstünün bağlantıları `?offers=1` ile geliyor — anahtar
-  çizilmeseydi telefonda o süzgeç görünmez bir daraltma olurdu. Satır tasarımın yuvasında (`padding:4px 2px`,
-  etiket solda, anahtar sağda).
-
-  Kabuk müşteri kitinin çekmecesi (`Dialog placement="sheet"`) — odak tuzağı, Esc ve kaydırma kilidi orada.
+  Native katalogun sıralama sayfasının web telefon ikizi: seçenekler şemadan türer (`CATALOG_SORTS`) ve seçim anında uygulanıp çekmeceyi
+  kapatır, bu yüzden "Temizle"/"Göster" yok. "Sadece indirimliler" iki yüzeyde aynı satırdır; etiketi ortak katalog sözlüğünden gelir.
 */
 
 type CatalogCopy = LocalizedCopy<typeof catalogMessages>;
@@ -36,8 +26,6 @@ interface CatalogSortSheetProps {
   copy: CatalogCopy;
   sort: CatalogSort;
   onlyOffers: boolean;
-  /** Anahtar satırının etiketi — web'e özgü metin, sayfanın sözlüğünden. */
-  offersLabel: string;
   closeLabel: string;
   onSort: (sort: CatalogSort) => void;
   onToggleOffers: () => void;
@@ -45,7 +33,7 @@ interface CatalogSortSheetProps {
   onClose: () => void;
 }
 
-export function CatalogSortSheet({ copy, sort, onlyOffers, offersLabel, closeLabel, onSort, onToggleOffers, onClose }: CatalogSortSheetProps) {
+export function CatalogSortSheet({ copy, sort, onlyOffers, closeLabel, onSort, onToggleOffers, onClose }: CatalogSortSheetProps) {
   return (
     <Dialog placement="sheet" title={copy.filter.title} closeLabel={closeLabel} onClose={onClose}>
       <div className="flex flex-col gap-2">
@@ -77,8 +65,8 @@ export function CatalogSortSheet({ copy, sort, onlyOffers, offersLabel, closeLab
         })}
       </div>
       <div className="flex items-center justify-between gap-2.5 px-0.5 py-1">
-        <span className="font-sans text-body-sm leading-[1.6] font-semibold text-ink">{offersLabel}</span>
-        <ToggleSwitch checked={onlyOffers} onChange={onToggleOffers} label={offersLabel} />
+        <span className="font-sans text-body-sm leading-[1.6] font-semibold text-ink">{copy.filter.offers}</span>
+        <ToggleSwitch checked={onlyOffers} onChange={onToggleOffers} label={copy.filter.offers} />
       </div>
     </Dialog>
   );

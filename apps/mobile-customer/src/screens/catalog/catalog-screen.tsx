@@ -28,6 +28,7 @@ import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
+import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { openProductFromCard } from '@/screens/product/product-preview';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { CatalogSkeleton } from './catalog-skeleton';
@@ -277,6 +278,19 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
           );
         })}
       </View>
+      {/* Anahtar da sıralama gibi anında uygulanır ve sayfayı kapatır, çünkü sayfada "Göster" düğmesi yok. */}
+      <View style={styles.offersRow}>
+        <Text style={styles.offersLabel}>{t.filter.offers}</Text>
+        <ToggleSwitch
+          value={catalog.onlyOffers}
+          onToggle={() => {
+            catalog.setOnlyOffers(!catalog.onlyOffers);
+            setSortSheetOpen(false);
+          }}
+          accessibilityLabel={t.filter.offers}
+          testID="catalog-offers-toggle"
+        />
+      </View>
       {/* Yer süzgeci bu sayfada değil, bölge dışı bandının içinde: bant görünürken anahtar da görünür, kapalı sayfada açık kalıp
           listeyi sessizce kısamaz. */}
     </BottomSheet>
@@ -372,18 +386,14 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
             icon={<Icon name="search-empty" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
             title={t.empty.title}
             description={t.empty.body}
-            /* Düğme yalnız süzgeç varken: süzgeçsiz boş katalogda aynı boş listeye götürürdü. Arama metni ve yer anahtarı da
-               süzgeçtir, düğme onları da temizler. */
+            /* Düğme yalnız süzgeç varken: süzgeçsiz boş katalogda aynı boş listeye götürürdü. Arama metni, yer ve indirim
+               anahtarları da süzgeçtir, düğme onları da temizler. */
             action={
-              catalog.activeCategory === null && catalog.searchText === '' && !catalog.onlyShippable ? undefined : (
+              catalog.activeCategory === null && catalog.searchText === '' && !catalog.onlyShippable && !catalog.onlyOffers ? undefined : (
                 <PrimaryButton
                   label={t.empty.cta}
                   shape="pill"
-                  onPress={() => {
-                    catalog.search('');
-                    catalog.selectCategory(null);
-                    catalog.setOnlyShippable(false);
-                  }}
+                  onPress={catalog.clearFilters}
                   testID="catalog-clear-filter"
                 />
               )
@@ -522,6 +532,21 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   sortList: {
     gap: theme.space.md,
+  },
+  offersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: theme.space.lg,
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space['2xs'],
+  },
+  offersLabel: {
+    flexShrink: 1,
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.ink,
   },
   sortRow: {
     flexDirection: 'row',

@@ -22,7 +22,8 @@
     },
     "filter": {
       "label": "Sırala ve filtrele",
-      "title": "Sırala & filtrele"
+      "title": "Sırala & filtrele",
+      "offers": "Sadece indirimliler"
     },
     "sort": {
       "featured": "Önerilen",
@@ -71,7 +72,8 @@
     },
     "filter": {
       "label": "Trier et filtrer",
-      "title": "Trier & filtrer"
+      "title": "Trier & filtrer",
+      "offers": "Uniquement les offres"
     },
     "sort": {
       "featured": "Recommandés",
@@ -120,7 +122,8 @@
     },
     "filter": {
       "label": "Sortieren und filtern",
-      "title": "Sortieren & filtern"
+      "title": "Sortieren & filtern",
+      "offers": "Nur Angebote"
     },
     "sort": {
       "featured": "Empfohlen",
