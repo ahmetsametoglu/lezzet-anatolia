@@ -55,6 +55,10 @@ function toPackageCard(pack: StorefrontPackage): HomePackage {
     // `soldOut` ağ geneli ("hiç var mı"), `route` yere bağlı ve yer bilinmiyorsa `null`.
     soldOut: pack.soldOut,
     route: pack.route,
+    description: pack.description,
+    coldChain: pack.coldChain,
+    inRouteOnly: pack.inRouteOnly,
+    items: pack.items.map((item) => ({ name: item.name, unitLabel: item.unitLabel, qty: item.qty, thumbUrl: item.thumbUrl })),
   };
 }
 

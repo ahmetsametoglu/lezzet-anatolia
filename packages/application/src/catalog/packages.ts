@@ -9,7 +9,7 @@ import {
   type ProductVariant,
 } from '@lezzet/types';
 import { decideBundleAgainstWarehouse } from '@lezzet/domain-core';
-import { EMPTY_IMAGE, imageOf, variantNameIn } from './map';
+import { EMPTY_IMAGE, imageOf, thumbnailImageUrl, variantNameIn } from './map';
 import { pickFeatured } from './featured';
 import type { PlaceWarehouses, StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './storefront-types';
 
@@ -158,6 +158,7 @@ function toCard(bundle: BundleRow, locale: PreferredLanguage, context: PackageCo
       unitLabel: variant ? variantNameIn(variant, locale) : '',
       qty: item.qty,
       image: product ? imageOf(product) : EMPTY_IMAGE,
+      thumbUrl: product ? thumbnailImageUrl(product) : null,
     };
   });
 

@@ -7,21 +7,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FrameImage } from '@lezzet/mobile-kit/src/components/ui/frame-image';
 
 /*
-  DİKDÖRTGEN FOTOĞRAF YÜZEYİ — kitin İÇ ilkeli; `CirclePhoto`nun (daire) dikdörtgen ikizi ve
-  aynı gerekçeyle ayrı duruyor: "fotoğraf varsa fotoğraf, yoksa baş harf" davranışının iki kopyası
-  bir gün ayrışırdı (CLAUDE §1). Prototipin `image-slot shape="rect"` aracının karşılığıdır.
-
-  DIŞARIYA İKİ BİÇİMDE ÇIKAR: `PhotoTile` (basılabilir tam kart) ve paket listesi kartının
-  fotoğraf bölgesi (kartın gövdesi fotoğrafın ALTINDA sürüyor, yani tile değil).
-
-  ÖLÇÜ VE KÖŞE ÇAĞIRANDAN: yüzey kendi boyunu bilmez — 168'lik tarif kartı da, 198'lik paket
-  fotoğrafı da aynı yüzeydir. Kendi taşıdığı tek görünüm kararı KIRPMADIR (`overflow: hidden`):
-  fotoğraf kabın köşelerinin dışına taşamaz.
-
-  SKRİM İSTEĞE BAĞLI (`gradient.photoBottom`): fotoğrafın alt kenarını karartıp üstündeki yazıyı
-  okunur kılar. Dokunuşu geçirir (`pointerEvents="none"`), yoksa üstündeki kart basılmazdı.
-  Yazısı olmayan bir fotoğrafta çizilmez — gereksiz karartma, fotoğrafı kirletmekten başka bir şey
-  yapmaz.
+  Dikdörtgen fotoğraf yüzeyi `CirclePhoto`nun ikizidir: "fotoğraf varsa fotoğraf, yoksa baş harf" davranışı tek yerde kalsın diye ayrı durur.
+  Ölçü ve köşe çağırandan gelir, yüzey yalnız kırpar; skrim yalnız üstünde yazı olan fotoğrafa çizilir, çünkü gereksiz karartma fotoğrafı kirletir.
 */
 
 interface PhotoSurfaceProps {
@@ -35,6 +22,8 @@ interface PhotoSurfaceProps {
   initial: string;
   /** Alt kenarı karartan geçiş — üstünde yazı duracaksa. */
   scrim?: boolean;
+  /** Yalnız fotoğraf solar; skrim ve üstündeki yazı solmaz, yoksa yazı okunmaz olurdu. */
+  faded?: boolean;
   /** Ölçü + köşe yarıçapı çağırandan gelir. */
   style?: StyleProp<ViewStyle>;
   /** Fotoğrafın ÜSTÜNDEKİ katman: rozet, altyazı. */
@@ -42,17 +31,17 @@ interface PhotoSurfaceProps {
   testID?: string;
 }
 
-export function PhotoSurface({ image, initial, scrim = false, style, children, testID }: PhotoSurfaceProps) {
+export function PhotoSurface({ image, initial, scrim = false, faded = false, style, children, testID }: PhotoSurfaceProps) {
   const { theme } = useUnistyles();
 
   return (
     <View style={[styles.surface, style]} testID={testID}>
       {image.url === null ? (
-        <View style={styles.placeholder}>
+        <View style={[styles.placeholder, faded ? styles.faded : undefined]}>
           <Text style={styles.initial}>{initial}</Text>
         </View>
       ) : (
-        <FrameImage image={image} style={styles.image} />
+        <FrameImage image={image} style={[styles.image, faded ? styles.faded : undefined]} />
       )}
       {scrim ? <LinearGradient {...theme.gradient.photoBottom} style={styles.scrim} pointerEvents="none" /> : null}
       {children}
@@ -85,4 +74,5 @@ const styles = StyleSheet.create((theme) => ({
     position: 'absolute',
     inset: 0,
   },
+  faded: { opacity: theme.soldOutOpacity },
 }));

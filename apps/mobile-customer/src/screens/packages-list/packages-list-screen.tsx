@@ -1,4 +1,4 @@
-import { formatPrice } from '@lezzet/helper';
+import { formatPrice, packageContentsLine, packageNoteOf, packageThumbsOf } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { HomePackage } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,7 @@ import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 
+import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
@@ -33,6 +34,9 @@ import { usePackagesList } from './use-packages-list.hook';
 */
 
 type Messages = LocalizedCopy<typeof messages>;
+
+/** Yığında en çok bu kadar halka; fazlası "+N". */
+const STACK_MAX = 3;
 
 interface PackagesListScreenProps {
   /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
@@ -84,6 +88,8 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
     /* SOLMA iki sebepten: tükendi (evrensel) ya da bu adrese gitmiyor (yere bağlı). `pending`
        ("bölgenizde şu an yok") SOLMAZ — paket gelebilir, yalnız bugün değil. */
     const faded = pack.soldOut || stockMark?.tone === 'blocked';
+    const footNote = packageNoteOf(pack, stockMark?.tone ?? null, t.note, locale);
+    const thumbs = packageThumbsOf(pack.items, STACK_MAX);
     return (
       <PressableSurface
         key={pack.slug}
@@ -91,20 +97,14 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
         feedback="scale"
         style={styles.card}
         /* Ekran okuyucu gören müşteriyle AYNI bilgiyi almalı: durum ve yer notu ada eklenir. */
-        accessibilityLabel={[t.open.replace('{name}', pack.name), pack.soldOut ? t.card.soldOut : undefined, note]
-          .filter((part) => part !== undefined)
+        accessibilityLabel={[t.open.replace('{name}', pack.name), pack.soldOut ? t.card.soldOut : undefined, note, footNote]
+          .filter((part) => part !== undefined && part !== '')
           .join(' · ')}
         testID={`packages-card-${pack.slug}`}
       >
-        {/* Solan grup yalnız fotoğraf ve gradyanıdır; rozet ve künye onun kardeşidir ve tam opak kalır, yoksa solmanın sebebini
-            açıklayan cümle okunaksızlaşır. */}
+        {/* Yalnız fotoğraf solar; skrim ve ad solmaz, yoksa solan kartta ad okunmazdı. */}
         <View style={styles.photo}>
-          <PhotoSurface
-            image={pack.image}
-            initial={pack.name.slice(0, 1)}
-            scrim
-            style={[styles.photoFill, faded ? styles.fadedPhoto : undefined]}
-          />
+          <PhotoSurface image={pack.image} initial={pack.name.slice(0, 1)} scrim faded={faded} style={styles.photoFill} />
           {/* Durum rozeti SOL ÜSTTE — kitin kendi ayrımı (sol üst durum, sağ üst fiyat). */}
           {pack.soldOut ? (
             <View style={styles.soldOutBadge}>
@@ -117,20 +117,45 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
           </View>
           <View style={styles.caption}>
             <Text style={styles.name}>{pack.name}</Text>
+          </View>
+        </View>
+        {/* Künye ve yer notu fotoğrafta değil gövdede, çünkü fotoğraf üstünde, özellikle solan kartta okunmuyorlardı. */}
+        <View style={styles.cardBody}>
+          <View style={styles.head}>
             <Text style={styles.meta}>{t.meta.replace('{n}', String(pack.itemCount))}</Text>
-            {/* YER NOTU zeminsiz, künyenin son satırı — gradyanın en koyu yerinde. İki satıra
-                kadar sarar: cümle üç dilde farklı uzunlukta. */}
             {note === undefined ? null : (
-              <Text style={styles.placeNote} numberOfLines={2} testID={`packages-place-note-${pack.slug}`}>
+              <Text style={styles.placeNote} testID={`packages-place-note-${pack.slug}`}>
                 {note}
               </Text>
             )}
           </View>
-        </View>
-        {/* Tasarımın kesikli ayracı çizilmez, çünkü gövde yalnız eylemi taşır ve ayıracak bir şey yokken çizilen ayraç olmayan bir
-            içeriğin sözünü verirdi. */}
-        <View style={styles.cardBody}>
-          <Text style={styles.cta}>{t.cta}</Text>
+          {pack.description === '' ? null : (
+            <Text style={styles.description} numberOfLines={2}>
+              {pack.description}
+            </Text>
+          )}
+          {thumbs.shown.length === 0 ? null : (
+            <View style={styles.contents} testID={`packages-contents-${pack.slug}`}>
+              <View style={styles.thumbs}>
+                {thumbs.shown.map((item, index) => (
+                  <AvatarThumb
+                    key={`${item.name}-${index}`}
+                    initial={item.name.slice(0, 1)}
+                    accessibilityLabel={item.name}
+                    photoUri={item.thumbUrl}
+                    size="sm"
+                    stacked
+                  />
+                ))}
+                {thumbs.more > 0 ? <Text style={styles.more}>{`+${thumbs.more}`}</Text> : null}
+              </View>
+              <Text style={styles.contentsLine}>{packageContentsLine(pack.items, t.item)}</Text>
+            </View>
+          )}
+          <View style={styles.foot}>
+            {footNote === '' ? null : <Text style={styles.footNote}>{footNote}</Text>}
+            <Text style={styles.cta}>{t.cta}</Text>
+          </View>
         </View>
       </PressableSurface>
     );
@@ -265,8 +290,6 @@ const styles = StyleSheet.create((theme, rt) => ({
      Ölçü burada durur ki solan yüzey ile solmayan rozetler aynı koordinat sistemini paylaşsın. */
   photo: { height: customerMetrics.packageListPhotoHeight },
   photoFill: { position: 'absolute', inset: 0 },
-  /* Solma durağı kare ürün kartıyla AYNI (`soldOutOpacity`): iki kart aynı şeyi söylemeli. */
-  fadedPhoto: { opacity: theme.soldOutOpacity },
   /* Durum rozeti — kare kartın tükendi rozetiyle aynı geometri ve aynı örtü tonu; köşe kitin
      kendi durum yuvası (sol üst). */
   soldOutBadge: {
@@ -295,7 +318,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     left: theme.space['3xl'],
     right: theme.space['3xl'],
     bottom: theme.space['2xl'],
-    gap: theme.space['2xs'],
   },
   name: {
     fontFamily: theme.font.display[theme.text['card-title--font-weight']],
@@ -308,22 +330,66 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.eyebrow,
     // Tasarımın .16em'i yerine kitin .18em'i, çünkü fark ekranda ölçülemez.
     letterSpacing: theme.text.eyebrow * 0.18,
-    color: theme.colors['olive-light'],
+    color: theme.colors['olive-dark'],
   },
-  /* Yer notu zeminsizdir ve vurgu tonuyla (`terracotta`) yazılır, çünkü taşıdığı şey künye değil uyarıdır ve krem yazı solan kartın
-     açık fotoğrafında zemine karışır. */
+  /* Yer notu vurgu tonuyla yazılır, çünkü taşıdığı şey künye değil uyarıdır. */
   placeNote: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text['body-sm'],
-    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors.terracotta,
   },
   cardBody: {
     paddingVertical: theme.space['2xl'],
     paddingHorizontal: theme.space['3xl'],
-    alignItems: 'flex-end',
+    gap: theme.space.lg,
+  },
+  head: { gap: theme.space.xs },
+  description: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.body,
+  },
+  contents: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+  },
+  /* İlk halkanın negatif payını telafi eder, yığın soldan hizalı başlar (sipariş kartının yığını). */
+  thumbs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: theme.space.lg,
+  },
+  more: {
+    marginLeft: theme.space.md,
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text.micro,
+    color: theme.colors.body,
+  },
+  contentsLine: {
+    flexShrink: 1,
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
+  foot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+    borderTopWidth: theme.border.base,
+    borderTopColor: theme.colors['sand-200'],
+    paddingTop: theme.space.lg,
+  },
+  footNote: {
+    flex: 1,
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors.body,
   },
   cta: {
+    marginLeft: 'auto',
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
     color: theme.colors.olive,

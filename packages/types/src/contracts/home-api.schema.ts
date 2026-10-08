@@ -4,36 +4,11 @@ import { CartLineRouteEnum } from '../primitives/enums.schema';
 import { RecipeSchema } from '../entities/recipe.schema';
 
 /**
- * VİTRİN SÖZLEŞMESİ (21.14 bağlanma etabı) — mobil `GET /api/v1/home` ucunun ve onu tüketen Expo
- * vitrin ekranının ORTAK dili. Terfi gerekçesi `catalog-api.schema.ts` ile aynı (02-mimari §3.2
- * "sözleşme tek kaynak"): üreten ve tüketen aynı şemayı çağırır, alan adı değişirse iki taraf
- * birden DERLEME anında kırılır.
- *
- * ── YALNIZ MÜŞTERİDEN BAĞIMSIZ BÖLÜMLER (kullanıcı kararı 08.08) ─────────────
- * Selamlama/ad, puan, B2B rozeti, okunmamış bildirim ve süren sipariş BURADA YOK: onlar kimlikli
- * uçların işidir ve bu etapta kapsam dışı bırakıldı. Bearer bu uçta yalnız FİYATI kişiselleştirir
- * (katalog uçlarının aynı kuralı), kimliğe bağlı içerik taşımaz.
- *
- * ── OLMAYAN ALAN, DOLDURULAMAYAN BÖLÜMDÜR ────────────────────────────────────
- * `flashDeal` alanı bilinçle YOK: "günün fırsatı"nın seçim kuralı HİÇBİR yüzeyde tanımlı değil
- * (bitiş anının veri kaynağı da kararsız) — kural kararı verilmeden alan açılmaz; hep boş kalan
- * bir alan, ekranı "bölüm yok" ile "bölüm bozuk"u ayırt edemez hâlde bırakırdı.
- *
- * `featured` ve `packages` İSE VAR ama web'in kuralları KOPYALANMADAN (08.08 ikinci tur):
- *   · `featured` — kataloğun KENDİ `featured` sıralamasından ilk N (application'ın mevcut kapısı).
- *     Web'in sinyalli seçkisi (`readShowcase`: görüntüleme+sepet sinyali) DEĞİL; sinyalsiz veride
- *     ikisi aynı listeyi verir, sinyal birikince ayrışır — o gün web kuralının paket terfisiyle
- *     bu bölüm o kapıya döner (defter kaydı 08.08; BEKLEYEN(21.14)).
- *   · `packages` — yalnız İŞARETLİ (`isFeatured`) paketler; işaret yoksa bölüm boş (bant
- *     karışımının kendi ilkesi: işaret seçimdir, yedeği yoktur). Web'in "işaretsizde ilk N" yedeği
- *     (`pickFeatured`) bilerek alınmadı — o kural web'de yaşıyor, kopyası yasak (CLAUDE §1).
+ * Mobil vitrin ucunun (`GET /api/v1/home`) sözleşmesi: yalnız müşteriden bağımsız bölümler taşınır, Bearer yalnız fiyatı kişiselleştirir.
+ * `featured` kataloğun kendi sıralamasından ilk N'dir, web'in sinyalli seçkisi değil (BEKLEYEN(21.14): seçki terfi edince o kapıya döner).
  */
 
-/**
- * Bant türü — kartın açacağı katalog süzgecini belirler: `category` → `/products?category=<slug>`,
- * `collection` → katalogun koleksiyon kesiti. Tek şeritte iki tür (kullanıcı kararı 08.08, web'den
- * bilinçli sapma: web'de kategori ızgarası ile koleksiyon bandı AYRI bölümlerdir).
- */
+/** Bant türü kartın açacağı katalog süzgecini belirler; kategori ve koleksiyon tek şeritte durur. */
 export const HomeBandKindEnum = z.enum(['category', 'collection']);
 export type HomeBandKind = z.infer<typeof HomeBandKindEnum>;
 
@@ -46,32 +21,17 @@ export const HomeBandSchema = z.object({
   /** Dil-bağımsız; iki türün de kendi tablosundan gelir (`category.slug` / `collection.slug`). */
   slug: z.string(),
   name: z.string(),
-  /**
-   * Adın altındaki cümle — kategoride `tagline` (05.17), koleksiyonda `description`. **`null` =
-   * yazılmamış** ve öyle taşınır: yedek metin UYDURULMAZ (ada düşmek "Börekler / Börekler" gibi bir
-   * tekrar üretirdi — şema künyesinin kendi kuralı); ekran altyazısız çizer.
-   */
+  /** Kategoride `tagline`, koleksiyonda `description`; `null` yazılmamış demektir ve yedek uydurulmaz, ada düşmek tekrar üretirdi. */
   subtitle: z.string().nullable(),
   /**
-   * Kaç ürün — **kataloğun sayacağıyla AYNI ölçüt** (aktif ürün; koleksiyonda aktif ÜYE). Üyelik/
-   * kayıt sayısını basmak kolay olurdu ve yalan söylerdi: müşteri "14 ürün" okuyup 9 görürdü.
-   *
-   * `positive`, `min(0)` değil: ürünü kalmamış bant HİÇ taşınmaz (web koleksiyon bandının kuralı —
-   * tıklanınca boş katalog açan bir kapı, kapı değildir). Kural gevşerse önce bu kilit gevşetilir.
+   * Kataloğun sayacağıyla aynı ölçüt (aktif ürün), yoksa müşteri "14 ürün" okuyup 9 görürdü. `positive`, çünkü ürünü kalmamış bant
+   * boş katalog açan bir kapı olurdu ve hiç taşınmaz.
    */
   productCount: z.number().int().positive(),
   image: CatalogImageSchema,
   /**
-   * Bu kesitte yürürlükte olan KAMPANYA (08.44) — `null` = yok, ekran rozet çizmez.
-   *
-   * **Tutar değil, kampanyanın kendisi taşınır.** Kampanya ürün fiyatına yazılamaz: motor kazananı
-   * tüm sepet üzerinden tek-en-büyük seçer ve kalemlere oransal dağıtır, yani sepetten bağımsız
-   * olmayan bir indirim birim fiyat olarak VAAT EDİLEMEZ (`08.44` görev satırında sayısal örneği
-   * var). Rozet bir bilgidir, bir fiyat sözü değil.
-   *
-   * `label` `null` ise operatör kampanyaya müşteri adı yazmamıştır (MB-22a) — ekran adsız konuşur.
-   * `minBasketCents` doluysa kampanyanın eşiği vardır ve cümle onu söylemek zorundadır; yoksa
-   * koşulsuzdur.
+   * Kesitte yürürlükteki kampanya; tutar değil kampanyanın kendisi taşınır, çünkü motor indirimi sepet üzerinden dağıtır ve birim fiyat
+   * sözü verilemez. `label` `null` ise ekran adsız konuşur, `minBasketCents` doluysa cümle eşiği söyler.
    */
   campaign: z
     .object({
@@ -85,83 +45,42 @@ export const HomeBandSchema = z.object({
 export type HomeBand = z.infer<typeof HomeBandSchema>;
 
 /**
- * Fırsat kartı — katalog kartının İNDİRİMLİ daraltması: `wasCents` burada ZORUNLU (web'in
- * `StorefrontOffer extends StorefrontProduct` daraltmasının telidir). Kartın fırsat sayılmasının
- * tek ölçütü motorun teklifi kazandırmış olmasıdır; uç bu alanı hesaplamaz, yalnız süzer.
- *
- * ⚠ Yer bilinmezken teklif TUTARI hiç okunmaz (`catalog.ts` `UNKNOWN_PLACE` sözü) — mobil istemci
- * posta kodu gönderemediği sürece bu dizi BOŞ gelir; ekran bölümü çizmez. Yer çözümü
- * `@lezzet/application`a terfi edince (21.6 B) uç yeri çözer ve dizi dolmaya başlar.
+ * Katalog kartının indirimli daraltması, `wasCents` zorunlu; kartın fırsat sayılmasının tek ölçütü motorun teklifi kazandırmasıdır.
+ * Yer bilinmezken teklif tutarı okunmaz ve dizi boş gelir.
  */
 export const HomeOfferSchema = CatalogProductSchema.extend({ wasCents: z.number().int() });
 export type HomeOffer = z.infer<typeof HomeOfferSchema>;
 
 /**
- * Hazır paket kartı — gezinme kapısı, ama artık **YERİ DE OLAN** bir kapı (kullanıcı bulgusu 10.08).
- *
- * ── STOK/YER EKSENİ 10.08'DE AÇILDI ──────────────────────────────────────────
- * Kart 10.08'e kadar beş alan taşıyordu (slug · ad · fiyat · kalem sayısı · görsel) ve bu bir
- * KÖRLÜKTÜ: rota dışındaki müşteri, o adrese hiç gidemeyecek bir paketi normal bir kart olarak
- * görüyordu — kataloğun ürün kartı aynı soruyu 21.20'de yanıtlamışken (`stockStatus`). Alanın
- * yokluğunun eski gerekçesi ("web'in stok zinciri terfi etmedi, kopyası yasak") 09.08'de düştü:
- * kural `@lezzet/application`'a taşındı (`listStorefrontPackages` → `toCard`) ve kapı `soldOut` ·
- * `route` ÜRETİYOR. Taşımamak artık bilgiyi saklamak olurdu.
- *
- * ── İKİ EKSEN, İKİ ALAN: "TÜKENDİ" ≠ "BURAYA GELEMEZ" ────────────────────────
- * Tek bayrakta toplamak ölçülmüş bir arıza sınıfıdır (denetim 08.08): öbür depoda duran malı
- * "tükendi" ilan eder. Bu yüzden:
- *   · `soldOut` **AĞ GENELİDİR** — "hiç var mı" (C3). Yerden bağımsız, evrensel bir hâl; kartın
- *     kendi durum rozetidir ve posta kodu girilmemişken de doğrudur.
- *   · `route` **YERE BAĞLIDIR** — "bana nasıl gelir". `null` = yer bilinmiyor (posta kodu
- *     gönderilmedi ya da çözülemedi): yol da bilinmiyor ve ziyaretçiye bilmediğimiz bir şey
- *     söylenmez (CLAUDE §1 — ölçülemeyen değer sıfır DEĞİLDİR; `local` varsaymak "geliyor" demek,
- *     `unavailable` varsaymak "gelmiyor" demek olurdu, ikisi de uydurma).
- *
- * ── PAKETTE ROTA KİLİDİ ÖZELDİR (DOMAIN §6/K32) ──────────────────────────────
- * Paket BÖLÜNMEZ: kalemlerinden BİRİ bile kargolanamıyorsa (soğuk zincir) paketin TAMAMI rota
- * içine kilitlenir ve rota dışı müşteriye hiç gidemez. Kilidin kendisi (`inRouteOnly`) kartta
- * TAŞINMAZ, sonucu taşınır: rota dışı müşteride motor zaten `not_shippable_here` döndürür
- * (`decideBundleAgainstWarehouse` — yerelde tam takım yoksa ve paket kargolanamıyorsa). Kilidi
- * ayrı bir alan olarak da göndermek, yer bilinmezken bile "yalnız bölge içi" yazdırma ihtimali
- * doğururdu; kartın işi kısıtı ilan etmek değil, MÜŞTERİNİN adresine ne olduğunu söylemek.
- * (Kısıtın kendisi paket DETAYINDA `shippable` olarak duruyor — orada yeri var.)
- *
- * `itemCount` paket İÇERİĞİNİN satır sayısıdır ("5 ürün" — adet toplamı değil); `positive`:
- * içeriksiz paket kart olamaz (boş kutu satılmaz, işaretlense bile taşınmaz).
+ * Hazır paket kartı: `soldOut` ağ geneli ("hiç var mı"), `route` yere bağlıdır ("bana nasıl gelir"); iki eksen ayrı alandır, çünkü tek
+ * bayrak öbür depodaki malı "tükendi" ilan ederdi. Gövde açıklamayı, içeriği ve paketin kalıcı teslim gerçeğini taşır.
  */
 export const HomePackageSchema = z.object({
   slug: z.string(),
   name: z.string(),
-  /** Paketin TEK fiyatı (TTC, ham cent) — kalem toplamına eşitliği paketin kendi kısıtı. */
+  /** Paketin tek fiyatı (TTC, cent). */
   priceCents: z.number().int(),
+  /** İçeriğin satır sayısı, adet toplamı değil; içeriksiz paket kart olamaz. */
   itemCount: z.number().int().positive(),
   image: CatalogImageSchema,
-  /**
-   * **Hiçbir depoda tam takım yok** — BİR kalem bile yetmiyorsa paket tükendi (paket bütün
-   * satılır, "yarısı var" hâli yok). Ölçüsü AĞ GENELİ ve öyle kalmalı (C3).
-   */
+  /** Bir kalem bile hiçbir depoda yetmiyorsa paket tükendi; paket bütün satılır. */
   soldOut: z.boolean(),
-  /**
-   * **Bu adrese hangi yolla gelir** — kararı `decideBundleAgainstWarehouse` motoru verir, uç
-   * yalnız taşır. `null` = yer bilinmiyor (üstteki künye).
-   *
-   * Dört hâlin künyesi tanımın yanında (`CartLineRouteEnum`). Ekranın okuduğu ayrım şudur:
-   * `local`/`shipping` iyi haberdir (sessiz kalınır), `not_shippable_here` ve `unavailable` ise
-   * kartın söylemesi gereken şeydir — hangisinin "bu adrese gönderemiyoruz", hangisinin
-   * "bölgenizde şu an yok" diye okunacağına yerin rota içi olup olmadığı karar verir
-   * (`elsewhereReasonOf`, `@lezzet/helper` — web ve native uygulama tek cümle sözlüğü).
-   */
+  /** Bu adrese hangi yolla gelir, kararı motorun (`decideBundleAgainstWarehouse`); `null` = yer bilinmiyor. */
   route: CartLineRouteEnum.nullable(),
+  /** Paketin açıklaması; girilmemişse boş. */
+  description: z.string(),
+  /** Soğuk ya da donuk bir kalem var mı; kargoya uygunluktan türetilmez, donuk ürün de kargolanabilir. */
+  coldChain: z.boolean(),
+  /** Kargolanamayan bir kalem paketin tamamını bölge içine kilitler; kartın alt satırı bunu yere bakmadan söyler. */
+  inRouteOnly: z.boolean(),
+  /** Kartın içerik satırı ve foto yığını; görsel tam çerçeve kümesi yerine tek küçük resim adresidir, liste cevabı hafif kalsın. */
+  items: z.array(z.object({ name: z.string(), unitLabel: z.string(), qty: z.number().int().positive(), thumbUrl: z.string().nullable() })),
 });
 export type HomePackage = z.infer<typeof HomePackageSchema>;
 
 /**
- * Tarif kartı — "Sofradan Fikirler" şeridinin öğesi. İçerik kartıdır: fiyat/stok TAŞIMAZ (o
- * birleştirme tarif DETAYININ işi ve web okumasıyla birlikte terfi edecek).
- *
- * `duration`/`serves` SERBEST METİNDİR, sayı değil (05.16 veri modeli: "35 dk" · "3–4 kişilik";
- * hesap yok, birim çekimi dile bağlı). Ekranın "dakika sayısı" beklentisi şemaya bilerek
- * alınmadı — sayı tutulmuyor ki metinden sayı türetmek uydurmak olurdu.
+ * "Sofradan Fikirler" şeridinin içerik kartı, fiyat ve stok taşımaz. `duration` ve `serves` serbest metindir, çünkü sayı tutulmuyor ve
+ * metinden sayı türetmek uydurmak olurdu.
  */
 export const HomeRecipeSchema = RecipeSchema.pick({ slug: true }).extend({
   name: z.string(),
@@ -189,19 +108,8 @@ export const HomeSchema = z.object({
   recipes: z.array(HomeRecipeSchema),
   packages: z.array(HomePackageSchema),
   /**
-   * **Keşif turunda bu kişiye kalan kart sayısı** (MB-58b) — `0` ise vitrin daveti HİÇ çizmez.
-   * Aday kümesi operatörün eliyle büyür ve bugün küçüktür; hepsini oylamış müşteriye davet
-   * göstermek, açtığında boş çıkan bir tura çağırmaktır.
-   *
-   * SAYI, BAYRAK DEĞİL: "çizeyim mi" kararı sayıdan türer (`> 0`), tersi türemez — ve destenin
-   * boyu okumanın zaten elindeki veridir (`countDiscoverDeck`, deste kuran kuralın aynısı).
-   *
-   * DAVETİN CÜMLESİNE GİRMEZ: kart "N kart kaldı" ya da "N puan kazanırsınız" DEMEZ. Kazanç
-   * `points_feedback_candidate` ayarıdır, bu sayı değil; ikisini çarpıp ekrana yazmak MB-15'te
-   * kapatılan arıza sınıfını geri getirir (ayar değişince ekran vermediğimiz ödülü vaat eder).
-   *
-   * Ziyaretçide de doludur ve dolu olması gerekir: tur misafire açık (MB-75) ve aday hiç yoksa
-   * davet ona da gösterilmemeli. Ziyaretçide eleme YOK, yani sayı aday sayısının kendisidir.
+   * Keşif turunda bu kişiye kalan kart sayısı; `0` ise davet çizilmez, çünkü boş çıkan tura çağırmak olurdu. Davetin cümlesine girmez:
+   * kazanç ayardan gelir ve sayıyla çarpılıp yazılsa ayar değişince ekran verilmeyen ödülü vaat ederdi.
    */
   discoverCards: z.number().int().min(0),
 });

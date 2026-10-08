@@ -270,6 +270,8 @@ export interface StorefrontPackageItem {
   unitLabel: string;
   qty: number;
   image: StorefrontImage;
+  /** Kare@200 küçük resim; liste kartının foto yığını tam çerçeve kümesi yerine bunu taşır. */
+  thumbUrl: string | null;
 }
 
 /**
