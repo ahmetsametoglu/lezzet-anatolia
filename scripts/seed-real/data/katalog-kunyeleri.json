@@ -156,6 +156,7 @@
       "fr": "Baklava d'Antep",
       "de": "Antep-Baklava"
     },
+    "status": "passive",
     "description": {
       "tr": "Antep'in küçük kesimi: lokmalar minik, fıstık bol, şerbet ölçülü. Kahvenin yanına bir tane derken üç tane gittiğini fark edersiniz.",
       "fr": "La coupe courte d'Antep : petites bouchées, pistache généreuse, sirop mesuré. On en prend une avec le café, on en compte trois.",
@@ -262,6 +263,7 @@
       "fr": "Gâteau profiterole chocolat noir",
       "de": "Profiterole-Torte Zartbitter"
     },
+    "status": "passive",
     "description": {
       "tr": "Pastanın üstünü kaplayan profiterol topları ve üzerine akan bitter çikolata sosu. Doğum günü masasına konduğunda soru sorulmaz.",
       "fr": "Des choux à la crème couvrent le gâteau, nappés d'une sauce au chocolat noir. Posé sur la table d'anniversaire, il ne soulève aucune question.",
@@ -297,6 +299,7 @@
       "fr": "Baklava au chocolat",
       "de": "Baklava mit Schokolade"
     },
+    "status": "passive",
     "description": {
       "tr": "Klasik baklava hamuru, arasında çikolata. Şerbetin yerini kakaonun aldığı bu yorum, tatlıyı ilk kez deneyenlerin en kolay sevdiği.",
       "fr": "La pâte à baklava classique, du chocolat entre les feuilles. Cette version, moins sirupeuse et plus cacaotée, séduit dès la première bouchée.",
@@ -569,6 +572,7 @@
       "fr": "Baklava froid à la pistache",
       "de": "Kaltes Baklava mit Pistazie"
     },
+    "status": "passive",
     "description": {
       "tr": "Sütle ıslatılmış baklava, üzeri kakaolu — soğuk servis edilir. Şerbetli tatlıyı ağır bulanların yazın keşfettiği o serin yorum.",
       "fr": "Un baklava imbibé de lait, saupoudré de cacao, servi froid. La version fraîche que découvrent l'été ceux qui trouvent le sirop trop lourd.",
@@ -953,6 +957,7 @@
       "fr": "Gâteau caramel et biscuit",
       "de": "Karamell-Keks-Torte"
     },
+    "status": "passive",
     "description": {
       "tr": "Karamelize bisküvi kırıkları ve karamel kreması kat kat. Tanıdık bir tat, pasta boyunda — çocukların da büyüklerin de ortak noktası.",
       "fr": "Des éclats de biscuit caramélisé et une crème au caramel, couche après couche. Un goût familier, en format gâteau — petits et grands d'accord.",
@@ -986,6 +991,7 @@
       "fr": "Baklava carré",
       "de": "Quadrat-Baklava"
     },
+    "status": "passive",
     "description": {
       "tr": "Kare kesim, düzgün sıralar, eşit paylar. Tepsiden alırken kimsenin gözü ötekinin diliminde kalmaz — sunumu kadar tadı da derli toplu.",
       "fr": "Coupe carrée, rangées nettes, parts égales. Personne ne lorgne la part du voisin — une présentation aussi soignée que le goût.",
@@ -1021,6 +1027,7 @@
       "fr": "Baklava assorti",
       "de": "Baklava gemischt"
     },
+    "status": "passive",
     "description": {
       "tr": "Fıstıklı, cevizli ve çikolatalı bir arada. Hangisini seveceğinizi bilmiyorsanız ya da sofrada herkesin kendi tercihi varsa doğru tepsi bu.",
       "fr": "Pistache, noix et chocolat réunis. Le bon plateau quand on ne sait pas encore ce qu'on préfère — ou quand chacun à table a son idée.",
@@ -1192,6 +1199,7 @@
       "fr": "Gâteau latte",
       "de": "Latte-Torte"
     },
+    "status": "passive",
     "description": {
       "tr": "Beyaz kremalı katların üstünde karamel sosu. Adı gibi sakin bir pasta — kahvenin yanında, ikindi sofrasının tatlısı olmaya uygun.",
       "fr": "Des couches de crème blanche, un filet de caramel sur le dessus. Un gâteau calme comme son nom — parfait avec un café, l'après-midi.",
@@ -1461,6 +1469,7 @@
       "fr": "Baklava moule",
       "de": "Muschel-Baklava"
     },
+    "status": "passive",
     "description": {
       "tr": "Adını kıvrımından alan midye baklava, içinde fıstık ve kaymakla. Tek lokmalık — elle alınır, ikram tabağında en çabuk biten odur.",
       "fr": "Le baklava « moule » doit son nom à sa courbe ; à l'intérieur, pistache et crème. Une bouchée, prise à la main — la première à disparaître.",
@@ -1721,6 +1730,7 @@
       "fr": "Cheesecake basque brûlé",
       "de": "Baskischer Cheesecake"
     },
+    "status": "passive",
     "description": {
       "tr": "Bask usulü: üstü bilerek yakılmış, içi akışkan kalmış cheesecake. Karamelize kabuğun altındaki o yumuşaklık için yapılıyor.",
       "fr": "À la basque : surface volontairement brûlée, cœur resté coulant. Tout est fait pour la douceur qui attend sous la croûte caramélisée.",
