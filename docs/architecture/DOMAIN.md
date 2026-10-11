@@ -198,7 +198,7 @@ Bir müşteriye ürünün **birim fiyatı** adaylar karşılaştırılarak belir
 
 Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` satırı bunun yanlış aracıdır.
 
-- Yalnız `order_source=door/manual` siparişlerde ve yalnız **yetkili** (admin) kullanıcıda: kalem fiyat alanı liste fiyatıyla **dolu gelir**, pazarlık varsa üstüne yazılır. Pazarlık yoksa hiçbir ek adım yok. **Kurye fiyat değiştiremez** — fiyat sipariş oluşurken bellidir.
+- Yalnız `order_source=door/manual` siparişlerde ve yalnız **yönetici** (admin) rolündeki personelde: kalem fiyat alanı liste fiyatıyla **dolu gelir**, pazarlık varsa üstüne yazılır. Pazarlık yoksa hiçbir ek adım yok. Kural web masasında ve mobil yerinde satışta aynıdır: kurye ya da depocu olan yönetici de pazarlık yapar; yönetici olmayanın fiyat alanı kilitlidir ve sunucu onun pazarlıklı fiyatını reddeder (11.10). **Teslimdeki kurye fiyat değiştiremez** — fiyat sipariş oluşurken bellidir.
 - **İz kaydı:** kim değiştirdi, liste fiyatı neydi, ne girildi — "kapıda toplam ne kadar pazarlık indirimi verdim" raporu türetilir.
 - **Marj uyarısı engellemez:** girilen fiyat hedef marjın altındaysa mevcut uyarı gösterilir, işlem engellenmez (karar satıcının).
 - Aynı müşteriye sürekli aynı özel fiyat veriliyorsa doğru araç **müşteriye özel fiyat**tır (yukarıdaki çözüm sırası).

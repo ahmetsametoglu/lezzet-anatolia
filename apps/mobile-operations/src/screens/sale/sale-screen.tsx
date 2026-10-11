@@ -20,7 +20,9 @@ import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { money, parseAmountToCents } from '@/lib/operations/money';
+import { negotiatesPrice } from '@/lib/operations/sections';
 import { fillCopy } from '@/screens/operations/copy';
+import { useOperationsSections } from '@/screens/operations/sections-context';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { saleCopy } from './copy';
 import { useWarehouseStatus } from '@/screens/warehouse/warehouse-status';
@@ -54,6 +56,7 @@ export function SaleScreen() {
   /* Çevrimdışı kilidi depo ekranlarının sinyalinden okunur: hat kapalıyken fiyat ve kalan stok bayattır ve bayat fiyatla yazılan satış
      yanlış paradır. */
   const { offline } = useWarehouseStatus();
+  const canNegotiate = negotiatesPrice(useOperationsSections());
 
   const draftSelection = sale.draft === null ? null : selectionOf(sale.draft);
   const draftPriceCents = sale.draft === null ? null : parseAmountToCents(sale.draft.priceText);
@@ -317,6 +320,7 @@ export function SaleScreen() {
                     <TextInput
                       value={sale.draft.priceText}
                       onChangeText={sale.setDraftPrice}
+                      editable={canNegotiate}
                       keyboardType="decimal-pad"
                       accessibilityLabel={t.drawer.priceField}
                       style={styles.priceInput}
@@ -324,9 +328,11 @@ export function SaleScreen() {
                     />
                     <Text style={styles.priceCurrency}>€</Text>
                   </View>
-                  <Text style={styles.hint}>
-                    {fillCopy(t.drawer.priceHint, { price: money(draftSelection.listPriceCents) })}
-                  </Text>
+                  {canNegotiate ? (
+                    <Text style={styles.hint}>
+                      {fillCopy(t.drawer.priceHint, { price: money(draftSelection.listPriceCents) })}
+                    </Text>
+                  ) : null}
                   {draftPriceCents === null ? <Text style={styles.warnText}>{t.drawer.invalidPrice}</Text> : null}
                 </View>
               </>

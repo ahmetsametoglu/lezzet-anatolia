@@ -107,6 +107,10 @@ sale.use('*', doorSaleOpen);
 sale.post('/on-site', async (c) => {
   const parsed = OnSiteSaleRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
+  // Pazarlık yönetici yetkisidir (DOMAIN §5): kurye ya da depocu olan yönetici yazar. Yönetici olmayanın fiyat alanı ekranda kilitli;
+  // elle kurulan istek burada düşer ve satış yazılmaz.
+  const negotiated = parsed.data.lines.some((line) => line.negotiatedUnitPriceCents !== undefined);
+  if (negotiated && !c.get('staff').roles.includes('admin')) return fail(c, 'forbidden', 403);
 
   const outcome = await sellOnSite(serviceDb(), {
     warehouseId: c.get('warehouseId'),

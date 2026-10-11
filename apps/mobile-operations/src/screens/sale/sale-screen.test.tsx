@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { SaleCatalogProduct, SalePlace, SaleVariant, StaffWarehouse } from '@lezzet/types';
 
@@ -11,6 +12,7 @@ import { resetToast } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { resetWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { chooseWarehouse, resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
+import type { OperationsSection } from '@/lib/operations/sections';
 
 /*
   Yerinde satışın para iddiaları: pazarlık fiyatı yalnız dokunulan kalemle gider, değişmeyen kalemin fiyatını sunucu çözer;
@@ -150,19 +152,33 @@ function postBody(): {
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
 }
 
-async function renderSale(place: SalePlace = 'facility') {
+/** Satış ekranı pazarlık yetkisini oturumdan okur (yönetici = Yönetim bölümü); varsayılan oturum yönetici olmayan depocudur. */
+function withSession(children: ReactNode, sections: OperationsSection[] = ['warehouse']) {
+  return (
+    <OperationsSessionProvider
+      value={{ sections, userName: 'Deniz Arslan', userEmail: 'depo@example.test', warehouses: [], resolvedWarehouseId: null }}
+    >
+      {children}
+    </OperationsSessionProvider>
+  );
+}
+
+async function renderSale(place: SalePlace = 'facility', sections: OperationsSection[] = ['warehouse']) {
   // Katalog + sepet AYNI sağlayıcı altında birlikte çizilir: akış testleri rota geçişini değil,
   // iki yüzeyin ORTAK durumunu sınar (gezinme expo-router'ın işi, bizim iddiamız değil).
   await render(
-    <SaleProvider place={place}>
-      <SaleScreen />
-      <SaleCartScreen />
-      {/* Fiş de aynı sağlayıcının altında, çünkü satış yazılınca ekran `/sale/receipt`e geçer ve sonuç orada okunur; geçişin
-          kendisi de burada ölçülür. */}
-      <SaleReceiptScreen />
-      {/* Toast taşıyıcısı testte de çizilir, çünkü olumsuz cevaplar bu kanaldan geçer. */}
-      <ToastHost />
-    </SaleProvider>,
+    withSession(
+      <SaleProvider place={place}>
+        <SaleScreen />
+        <SaleCartScreen />
+        {/* Fiş de aynı sağlayıcının altında, çünkü satış yazılınca ekran `/sale/receipt`e geçer ve sonuç orada okunur; geçişin
+            kendisi de burada ölçülür. */}
+        <SaleReceiptScreen />
+        {/* Toast taşıyıcısı testte de çizilir, çünkü olumsuz cevaplar bu kanaldan geçer. */}
+        <ToastHost />
+      </SaleProvider>,
+      sections,
+    ),
   );
   await waitFor(() => expect(screen.getByTestId(`sale-product-${TEK_ID}`)).toBeTruthy());
 }
@@ -225,9 +241,9 @@ it('dokunulmamış fiyat İSTEKTE YOK; satış yazılınca sepet sıfırlanır v
   expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // satış kapandı, sepet boş
 });
 
-it('pazarlık fiyatı yalnız DEĞİŞTİRİLEN kalemde gider', async () => {
+it('pazarlık fiyatı yalnız DEĞİŞTİRİLEN kalemde gider (yönetici)', async () => {
   withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 400, referenceNo: null, paymentRecorded: true });
-  await renderSale();
+  await renderSale('facility', ['warehouse', 'management']);
 
   await fireEvent.press(screen.getByTestId(`sale-product-${TEK_ID}`));
   await waitFor(() => expect(screen.getByTestId('sale-drawer-price')).toBeTruthy());
@@ -240,6 +256,23 @@ it('pazarlık fiyatı yalnız DEĞİŞTİRİLEN kalemde gider', async () => {
   await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(true));
 
   expect(postBody().lines).toEqual([{ variantId: TEK_VARYANT, qty: 1, negotiatedUnitPriceCents: 400 }]);
+});
+
+it('yönetici olmayan personel fiyatı değiştiremez — satış liste fiyatıyla gider', async () => {
+  withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 500, referenceNo: null, paymentRecorded: true });
+  await renderSale();
+
+  await fireEvent.press(screen.getByTestId(`sale-product-${TEK_ID}`));
+  await waitFor(() => expect(screen.getByTestId('sale-drawer-price')).toBeTruthy());
+  await fireEvent.changeText(screen.getByTestId('sale-drawer-price'), '4,00');
+  await fireEvent.press(screen.getByTestId('sale-drawer-confirm'));
+  await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
+  await pickCash();
+
+  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(true));
+
+  expect(postBody().lines).toEqual([{ variantId: TEK_VARYANT, qty: 1 }]);
 });
 
 it('yetersiz stok cevabı adı ve kalanıyla görünür — sepet BOZULMAZ', async () => {
@@ -468,9 +501,11 @@ describe('ilk yük iskeleti (06.09)', () => {
   it('KATALOG iskeletle açılır — halka çizilmez', async () => {
     const release = withPendingNetwork();
     await render(
-      <SaleProvider place="facility">
-        <SaleScreen />
-      </SaleProvider>,
+      withSession(
+        <SaleProvider place="facility">
+          <SaleScreen />
+        </SaleProvider>,
+      ),
     );
 
     expect(screen.getByTestId('sale-loading')).toBeOnTheScreen();
@@ -693,9 +728,11 @@ describe('araçtan satış (01.09 · kullanıcı kararı)', () => {
     /* "Eşleşen ürün yok" cümlesi kuryeyi olmayan bir ürünü aramaya gönderirdi; doğru cümle malın nereden geleceğini söyler. */
     fetchMock.mockImplementation(() => Promise.resolve(ok({ products: [], total: 0, nextCursor: null })));
     await render(
-      <SaleProvider place="van">
-        <SaleScreen />
-      </SaleProvider>,
+      withSession(
+        <SaleProvider place="van">
+          <SaleScreen />
+        </SaleProvider>,
+      ),
     );
 
     await waitFor(() => expect(screen.getByTestId('sale-van-empty')).toBeTruthy());
@@ -714,9 +751,11 @@ describe('kapı satışı kapalı depo', () => {
       } as unknown as Response),
     );
     await render(
-      <SaleProvider place="facility">
-        <SaleScreen />
-      </SaleProvider>,
+      withSession(
+        <SaleProvider place="facility">
+          <SaleScreen />
+        </SaleProvider>,
+      ),
     );
 
     await waitFor(() => expect(screen.getByTestId('sale-closed')).toBeTruthy());

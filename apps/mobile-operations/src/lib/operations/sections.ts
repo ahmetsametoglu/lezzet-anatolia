@@ -58,6 +58,14 @@ export function operationsSectionsOf(roles: readonly UserRole[]): OperationsSect
 }
 
 /**
+ * Pazarlıklı fiyat yazabilir mi: yetki yönetici rolünündür (DOMAIN §5) ve o rol yalnız "Yönetim" bölümünü açar, bu yüzden kurye ya da
+ * depocu olan yönetici de yazar. Kural sunucuda da durur; ekran yalnız alanı kilitler.
+ */
+export function negotiatesPrice(sections: readonly OperationsSection[]): boolean {
+  return sections.includes(SECTION_OF_ROLE.admin);
+}
+
+/**
  * Sekme çubuğu görünür mü? Tasarımın kuralı birebir (v2:1097 `tabsVisible: … rolTabs.length > 1`):
  * TEK bölümü olan kullanıcıya çubuk ÇİZİLMEZ — tek seçenekli bir gezinme çubuğu, seçim varmış gibi
  * görünen bir süstür ve ekranın 60 px'ini yer.

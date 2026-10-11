@@ -41,6 +41,8 @@ let depocu: SignedInUser;
 let aracsizKurye: SignedInUser;
 /** Deposu QUALITE olan depocu; kapı satışı orada kapalıdır. */
 let qualiteDepocu: SignedInUser;
+/** Depocu da olan yönetici — pazarlık yetkisi rolden gelir, satış yerinden değil. */
+let yoneticiDepocu: SignedInUser;
 let qualiteDepoId: string;
 let facilityId: string;
 let vehicleId: string;
@@ -100,6 +102,7 @@ beforeAll(async () => {
   depocu = await createSignedInUser({ prefix: 'sale', label: 'depocu', roles: ['warehouse'], warehouseIds: [facilityId] });
   aracsizKurye = await createSignedInUser({ prefix: 'sale', label: 'aracsiz', roles: ['courier'], warehouseIds: [facilityId] });
   qualiteDepocu = await createSignedInUser({ prefix: 'sale', label: 'qualite', roles: ['warehouse'], warehouseIds: [qualiteDepoId] });
+  yoneticiDepocu = await createSignedInUser({ prefix: 'sale', label: 'yonetici', roles: ['admin', 'warehouse'], warehouseIds: [facilityId] });
 
   /* Kapıda satış malı kuryenin seferinin aracından düşer, bu yüzden fikstürün seferi var; `aracsizKurye` bilerek sefersiz,
      `no_vehicle` dalını o sınar. */
@@ -134,7 +137,7 @@ afterAll(async () => {
   );
   await purgeTestData(db, {
     productIds: [productId, sadeceTesisProductId], categoryIds: [categoryId],
-    profileIds: [kurye.profileId, depocu.profileId, aracsizKurye.profileId, qualiteDepocu.profileId],
+    profileIds: [kurye.profileId, depocu.profileId, aracsizKurye.profileId, qualiteDepocu.profileId, yoneticiDepocu.profileId],
     warehouseIds: [facilityId, vehicleId, baskaDepoId, qualiteDepoId],
   });
 });
@@ -175,6 +178,22 @@ describe('POST /sale/on-site', () => {
     expect(row).toMatchObject({
       warehouse_id: vehicleId, customer_id: ANONYMOUS_BUYER_ID, delivery_type: 'pickup', order_source: 'door',
     });
+  });
+
+  it('PAZARLIK yönetici yetkisidir — depocunun pazarlıklı fiyatı reddedilir, satış yazılmaz', async () => {
+    const once = await anonimSiparisSayisi();
+    const res = await post(depocu, { lines: [{ variantId, qty: 1, negotiatedUnitPriceCents: 100 }], paymentMethod: 'cash' });
+    expect(res.status).toBe(403);
+    expect(await anonimSiparisSayisi()).toBe(once);
+  });
+
+  it('depocu da olan YÖNETİCİ pazarlık yapar — satış pazarlıklı fiyatla yazılır', async () => {
+    const data = await envelopeData<OnSiteSaleResponse>(
+      await post(yoneticiDepocu, { lines: [{ variantId, qty: 1, negotiatedUnitPriceCents: 400 }], paymentMethod: 'cash' }),
+    );
+    expect(data.status).toBe('ok');
+    if (data.status !== 'ok') return;
+    expect(data.totalCents).toBe(400);
   });
 
   it('DEPOCU da satabiliyor — aynı kapı, farklı depo', async () => {
