@@ -123,6 +123,8 @@ export interface CustomerDetail {
   codAllowed: boolean;
   /** Gel-al izni: depodan teslim yalnız işaretli müşteriye sunulur. */
   pickupAllowed: boolean;
+  /** Personel e-postayı değiştirebilir mi; girişe bağlı kayıtta e-posta giriş anahtarıdır (`staffCanEditEmail`). */
+  emailEditable: boolean;
   /** Müşterinin işi; QUALITE yalnız onaylı B2B şirkette olur. */
   business: UserProfile['business'];
   /** Genel fiyat kuralı; ikisi birlikte dolu ya da boş. */

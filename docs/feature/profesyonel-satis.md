@@ -120,7 +120,7 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - E-posta değiştirerek miras (S0, bugün çalışıyor): girişe bağlanmamış kaydın e-postasını yönetici değiştirir; müşteri o
   e-postayla girer. Müşteri ayrıca boş hesap açtıysa boş hesap GDPR silmeyle kapanır (giriş silinir, e-posta boşalır),
   e-posta ofisin kaydına yazılır, müşteri yeniden girer.
-- Girişe bağlı kayıtta e-posta salt okunur olur; bugün değiştirilebiliyor ve profil e-postası girişten ayrışıyor.
+- Girişe bağlı kayıtta e-posta salt okunur (**tamamlandı**): düzenleme penceresi alanı kilitler, sunucu değişikliği reddeder.
 - SIRET ile devir: onay kartı aynı SIRET'li kaydı gösterir, tek düğme yukarıdaki adımları sırayla yapar.
 - Davet bağlantısı (S2) sonradır.
 

@@ -554,6 +554,7 @@ E-posta bağlamak istemeyen müşteriye, **aynı konuşmada**, sistemin üretti�
 - **Doğrulama yöntemleri:** Google (OAuth) ve e-posta + OTP.
 - **WhatsApp ile giriş yoktur.** Masaüstündeki müşterinin WhatsApp'la ilgisi yok; telefondaki müşterinin cihazında Google ya da posta hesabı zaten açık. Üstelik numara devredilebilen, zayıf bir anahtardır: hesabı yalnız ona dayandırmak yukarıdaki çapa tasarımının koruduğu durumu kendi eliyle üretirdi. WhatsApp bildirim, mesajlaşma ve sipariş kanalıdır; WhatsApp kimliği hesaba **numara bağlamayla** takılır (§10).
 - **Supabase Auth yalnız kimlik/oturum motorudur.** Doğrulama maili (OTP) dahil **tüm e-posta `packages/email`'den default şablonla** gönderilir (Auth "send email" hook → `packages/email`); Supabase'in yerleşik mail şablon/gönderim yapısı **kullanılmaz**.
+- **Girişe bağlı kaydın e-postasını personel değiştirmez:** e-posta giriş anahtarının kopyasıdır; değişirse profil girişten ayrışır ve yeni adresle açılan giriş kayda bağlanamaz (e-posta tekil). Girişsiz kaydın e-postası değiştirilebilir ve miras böyle kurulur: müşteri o adresle girince kayıt ve siparişleri ona bağlanır.
 - Hangi yoldan girilirse girilsin (Google / e-posta) kişi **aynı `Customer`'da birleşir**; WhatsApp'tan açılan taslak da numara hesaba bağlanınca aynı kayda birleşir — yukarıdaki bul-veya-oluştur ve `company_info`'dan kanal türetme kuralları aynen geçerli.
 
 ---

@@ -38,6 +38,8 @@ interface CustomerEditDialogProps {
   codAllowed: boolean;
   /** Gel-al izni — depodan teslim yalnız işaretli müşteriye sunulur; detaydan gelir. */
   pickupAllowed: boolean;
+  /** Girişe bağlı kayıtta `false`: e-posta giriş anahtarıdır, alan salt okunur durur. */
+  emailEditable: boolean;
   /** Müşterinin işi — detaydan gelir. */
   business: Business;
   /** B2B onayı var mı; QUALITE yalnız onaylı şirkete verilir. */
@@ -61,6 +63,7 @@ export function CustomerEditDialog({
   preferredLanguage,
   codAllowed,
   pickupAllowed,
+  emailEditable,
   business,
   b2bApproved,
   priceRuleBasis,
@@ -151,8 +154,18 @@ export function CustomerEditDialog({
           >
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} mono inputMode="tel" placeholder="+33…" disabled={saving} />
           </FieldShell>
-          <FieldShell label="E-posta">
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" disabled={saving} />
+          <FieldShell
+            label="E-posta"
+            labelAside={
+              emailEditable ? undefined : <span className="font-ops-body text-ops-xs text-ops-muted">girişe bağlı · değişmez</span>
+            }
+          >
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              inputMode="email"
+              disabled={saving || !emailEditable}
+            />
           </FieldShell>
         </div>
 

@@ -14,7 +14,8 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { isPointsEligible } from '@lezzet/domain-core';
+import { isPointsEligible, staffCanEditEmail } from '@lezzet/domain-core';
+import { normalizeEmail } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, type Discount, type DiscountCode, type KeysetCursor } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
@@ -133,6 +134,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
         creditLimitCents: profile.creditLimitCents,
         codAllowed: profile.codAllowed,
         pickupAllowed: profile.pickupAllowed,
+        emailEditable: staffCanEditEmail(profile),
         business: profile.business,
         priceRuleBasis: profile.priceRuleBasis,
         priceRulePercent: profile.priceRulePercent,
@@ -277,11 +279,19 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
     const kuralHatasi = input.priceRuleBasis ? priceRuleError(input.priceRuleBasis, input.priceRulePercent) : null;
     if (kuralHatasi) throw new Error(kuralHatasi);
 
-    await new UserProfileService(serviceDb()).update({
+    const profiles = new UserProfileService(serviceDb());
+    const mevcut = await profiles.getById(customerId);
+    if (!mevcut) throw new Error('Müşteri bulunamadı.');
+    const email = input.email?.trim() || null;
+    if (!staffCanEditEmail(mevcut) && normalizeEmail(email ?? '') !== normalizeEmail(mevcut.email ?? '')) {
+      throw new Error('Bu kayıt bir girişe bağlı; e-posta giriş anahtarıdır ve buradan değiştirilmez.');
+    }
+
+    await profiles.update({
       id: customerId,
       name,
       phone: input.phone?.trim() || null,
-      email: input.email?.trim() || null,
+      email,
       preferredLanguage: input.preferredLanguage,
       country: input.country,
       type: input.type,
