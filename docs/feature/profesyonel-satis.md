@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); uygulama Faz 0'da.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 tamamlandı, sıradaki Faz 1.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -80,7 +80,7 @@ tek kuralın düzeltilmesi; şema yok) · **S2** eklemeli şema (yeni tablo, kol
 
 | Faz | İş | Seviye | Var olan akışın davranışı |
 |---|---|---|---|
-| 0 | Zemin onarımı: vadeli işaret sunucuda, peşin havale kalkar, mobilde pazarlık yalnız yönetici | S1 | Dar değişir; meşru akış etkilenmez |
+| 0 | Zemin onarımı: vadeli işaret sunucuda, peşin havale kalkar, mobilde pazarlık yalnız yönetici — **tamamlandı** | S1 | Dar değişir; meşru akış etkilenmez |
 | 1 | Profesyonel kayıt (SIRET) ve miras | S0 + S1 | Değişmez |
 | 2 | Mobilde sipariş girişi | Tasarım + S1 | Web masası ortak katmana taşınır, davranış aynı |
 | 3 | Araçtan profesyonele vadeli satış | S1 + hızlı satış kapısında dar değişiklik | Anonim yerinde satış aynı |
@@ -94,7 +94,10 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - Peşin havale kalkar: havale yalnız vadeli siparişte; müşteri ödeme adımından (masaüstü, mobil web, native) ve operasyon
   masasından ayrı "Havale ile öde" seçeneği çıkar (`packages/domain-core/src/payment/checkout-options.ts`).
 - Mobil araçtan satış, yönetici olmayandan gelen pazarlıklı fiyatı reddeder; ekranda fiyat düzenleme yalnız yöneticiye görünür.
-- Belgeler koda uyar: DOMAIN §5 (pazarlık), §7 (peşin havale, limit aşımı), §10 (birleştirme ekranı, SIRET adayı).
+- Belgeler koda uyar: DOMAIN §5 (pazarlık) ve §7 (peşin havale, limit aşımı). §10'daki SIRET adayı cümlesi Faz 1'de kodla birlikte
+  doğrulanır.
+- **Açık:** tasarım dosyası (`design/01-musteri/ekranlar/Musteri - Checkout.dc.html`) peşin "Havale ile öde" kartını hâlâ
+  çiziyor; kod kararı izliyor, tasarımın da güncellenmesi gerekir.
 
 **Faz 1 — profesyonel kayıt ve miras**
 - Yeni kayıtta SIRET: resmî kayıttan unvan ve adres (`packages/application/src/b2b/company-registry.ts`), `company_info`'ya
