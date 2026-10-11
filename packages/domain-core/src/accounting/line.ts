@@ -73,7 +73,7 @@ export function vatSplitOf(amountCents: number, pricesIncludeVat: boolean, vatRa
  * Kalemin ücretlenen tutarı (siparişin fiyat tabanında, cent): teslim edilen eksi müşteride kalan, ödeme türetiminin tanımı. Müşteride kalan
  * mal stoktan ve maliyetten çıkar ama ciroya girmez; kasa fişi de aynı tanımı kullanır.
  */
-export function chargedAmountCents(item: AccountingLine): number {
+function chargedAmountCents(item: AccountingLine): number {
   return fulfilledLineAmountCents(fulfilledLineOf(item));
 }
 

@@ -333,8 +333,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 }
 
 /**
- * Kâr raporuyla aynı sayı için motorun dökümü; burada ikinci formül yok. Maliyetler sipariş anında yazılır, mal maliyeti
- * hazırlıkta parti fiyatıyla kesinleşir; bilinmeyen maliyet kârı gizler, sıfır sayılmaz.
+ * Kâr raporuyla aynı sayı için motorun dökümü; burada ikinci formül yok. Satırlar motorun maliyetlerinden kurulur, çünkü hangi
+ * maliyetin bu siparişe düştüğüne (iptalde mal ve kargo düşmez) motor karar verir; bilinmeyen maliyet kârı gizler, sıfır sayılmaz.
  */
 function financeOf(order: Order, items: readonly OrderItem[]): OrderFinanceView {
   const contribution = orderContribution(
@@ -343,6 +343,7 @@ function financeOf(order: Order, items: readonly OrderItem[]): OrderFinanceView 
       // Satış günü teslim günü, yoksa açılış günü; hesaba girmez, çıktıyı damgalar ki rapor aynı kaydı aynı günle görsün.
       saleDate: order.deliveryDate ?? order.createdAt.slice(0, 10),
       channel: order.channel,
+      status: order.status,
       vatTreatment: order.vatTreatment,
       pricesIncludeVat: order.pricesIncludeVat,
       shippingFeeCents: order.shippingFeeCents,
@@ -355,38 +356,40 @@ function financeOf(order: Order, items: readonly OrderItem[]): OrderFinanceView 
     items,
   );
 
+  const cogsCents = toCents(contribution.costs.cogs);
   const rows: OrderFinanceView['rows'] = [
-    { label: 'Satış (KDV hariç)', amountCents: toCents(contribution.revenue), kind: 'sale' },
+    {
+      label: contribution.estimate ? 'Satış (KDV hariç, tahmini)' : 'Satış (KDV hariç)',
+      amountCents: toCents(contribution.revenue),
+      kind: 'sale',
+    },
   ];
-  if (order.cogsAmountCents !== null) {
-    rows.push(
-      order.cogsIsEstimate
-        ? { label: 'Mal maliyeti (tahmini)', amountCents: order.cogsAmountCents, kind: 'estimate' }
-        : { label: 'Mal maliyeti', amountCents: order.cogsAmountCents, kind: 'expense' },
-    );
-  }
-  const costs: Array<[string, number | null]> = [
-    ['Dağıtım payı', order.deliveryCostCents],
-    ['Ödeme komisyonu', order.paymentFeeCents],
-    ['Ambalaj', order.packagingCostCents],
+  const costs: Array<[string, number]> = [
+    [order.cogsIsEstimate ? 'Mal maliyeti (tahmini)' : 'Mal maliyeti', cogsCents],
+    ['Dağıtım payı', toCents(contribution.costs.delivery)],
+    ['Ödeme komisyonu', toCents(contribution.costs.paymentFee)],
+    ['Ambalaj', toCents(contribution.costs.packaging)],
   ];
   for (const [label, amountCents] of costs) {
-    if (amountCents !== null && amountCents > 0) rows.push({ label, amountCents, kind: 'expense' });
+    if (amountCents > 0) rows.push({ label, amountCents, kind: 'expense' });
   }
 
   return {
     rows,
     profitCents: contribution.costsKnown ? toCents(contribution.contribution ?? 0) : null,
+    profitIsEstimate: contribution.estimate || (order.cogsIsEstimate && cogsCents > 0),
     marginPercent: contribution.marginPct,
-    costNote: costNoteOf(order),
+    costNote: costNoteOf(order, contribution.estimate),
   };
 }
 
 /** Kârın neden gösterilmediğini ya da neden tahmini olduğunu söyler; bilinmeyen maliyet sıfır diye geçmez. */
-function costNoteOf(order: Order): string | null {
+function costNoteOf(order: Order, estimate: boolean): string | null {
+  if (order.status === 'cancelled') return 'İptal edilen sipariş: satış yok, mal depoya döner; yalnız ödeme komisyonu gerçek giderdir.';
   if (order.cogsAmountCents === null) return 'Mal maliyeti bilinmiyor: ürünün bu depoda alış fiyatı kayıtlı partisi yok.';
   if (order.deliveryCostCents === null) return 'Kargo maliyeti koli taşıyıcıya bildirilince yazılır; kâr o zaman hesaplanır.';
   if (order.packagingCostCents === null) return 'Ambalaj maliyeti bu siparişe yazılmamış; kâr hesaplanamıyor.';
+  if (estimate) return 'Hazırlık bitmedi: satış sipariş edilen adetten, mal maliyeti son alış fiyatından; ikisi hazırlıkta kesinleşir.';
   if (order.cogsIsEstimate) return 'Mal maliyeti son alış fiyatıyla tahmini; hazırlıkta çıkan partinin fiyatıyla kesinleşir.';
   return null;
 }

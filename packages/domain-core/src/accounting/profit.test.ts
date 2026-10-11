@@ -159,6 +159,29 @@ describe('sipariş katkı payı', () => {
     expect(result.isGiftOrder).toBe(true);
     expect(result.contribution).toBe(12); // ikram olması kârı değiştirmez
   });
+
+  it('hazırlığı bitmemiş siparişin cirosu sipariş edilen adetten okunur — maliyetle aynı adet, sahte zarar yok', () => {
+    // Henüz hiçbir şey toplanmadı; maliyet sipariş anında 8 € yazıldı. Ciro 0 sayılsaydı kart −8 € zarar gösterirdi.
+    const result = orderContribution(closed({ status: 'preparing', cogsAmountCents: 800 }), [
+      line({ unitPriceCents: 2110, fulfilledQty: 0 }),
+    ]);
+
+    expect(result.revenue).toBe(20);
+    expect(result.contribution).toBe(12);
+    expect(result.estimate).toBe(true);
+  });
+
+  it('iptal edilen siparişte mal, kargo ve ambalaj gider değildir; sağlayıcı komisyonu giderdir', () => {
+    const result = orderContribution(
+      closed({ status: 'cancelled', cogsAmountCents: 800, deliveryCostCents: 818, packagingCostCents: 120, paymentFeeCents: 45 }),
+      [line({ unitPriceCents: 2110, fulfilledQty: 0 })],
+    );
+
+    expect(result.revenue).toBe(0);
+    expect(result.costs).toEqual({ cogs: 0, delivery: 0, paymentFee: 0.45, packaging: 0 });
+    expect(result.contribution).toBe(-0.45);
+    expect(result.estimate).toBe(false);
+  });
 });
 
 describe('eksik maliyet 0 SAYILMAZ', () => {

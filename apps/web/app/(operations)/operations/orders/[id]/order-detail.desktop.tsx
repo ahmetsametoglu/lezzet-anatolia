@@ -368,19 +368,12 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               <div className="flex flex-col gap-1.5 px-3.5 py-[11px]">
                 {order.finance.rows.map((row) => (
                   <div key={row.label} className="flex items-baseline gap-2.5">
-                    {/* Tahmini maliyet sönük ve eksisiz: kâra girmez, çıkarmanın parçası gibi görünmemeli. */}
                     <span
-                      className={`mr-auto font-ops-body text-ops-xs ${
-                        row.kind === 'sale' ? 'font-medium text-ops-ink' : row.kind === 'estimate' ? 'text-ops-muted' : 'text-ops-body'
-                      }`}
+                      className={`mr-auto font-ops-body text-ops-xs ${row.kind === 'sale' ? 'font-medium text-ops-ink' : 'text-ops-body'}`}
                     >
                       {row.label}
                     </span>
-                    <span
-                      className={`font-ops-mono text-ops-xs ${
-                        row.kind === 'expense' ? 'text-ops-red' : row.kind === 'estimate' ? 'text-ops-muted' : 'text-ops-ink'
-                      }`}
-                    >
+                    <span className={`font-ops-mono text-ops-xs ${row.kind === 'expense' ? 'text-ops-red' : 'text-ops-ink'}`}>
                       {row.kind === 'expense' ? '−' : ''}
                       {money(row.amountCents)}
                     </span>
@@ -390,7 +383,9 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                 {order.finance.profitCents !== null ? (
                   <>
                     <div className="flex items-baseline gap-2.5 border-t border-ops-line-soft pt-2">
-                      <span className="mr-auto font-ops-display text-ops-xs font-semibold text-ops-ink">Kâr</span>
+                      <span className="mr-auto font-ops-display text-ops-xs font-semibold text-ops-ink">
+                        {order.finance.profitIsEstimate ? 'Tahmini kâr' : 'Kâr'}
+                      </span>
                       <span
                         className={`font-ops-mono text-ops-lead font-medium ${
                           order.finance.profitCents > 0 ? 'text-ops-olive-dark' : 'text-ops-red'

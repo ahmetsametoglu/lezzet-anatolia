@@ -1,5 +1,6 @@
 import { fromCents, toCents } from '@lezzet/helper';
 import type { Channel, OrderSale } from '@lezzet/types';
+import { isFulfillmentSettled } from '../order/status-machine';
 import { saleNetCents, type SaleVatBasis } from './export';
 import { lineNetCents, type AccountingLine } from './line';
 
@@ -31,6 +32,8 @@ export interface OrderContribution {
   marginPct: number | null;
   /** Mal, teslimat ve paketleme maliyeti biliniyor mu; `false` ise kâr hesaplanmaz, ciro "fiyatlanmamış" durur. */
   costsKnown: boolean;
+  /** Hazırlık kesinleşmedi: ciro sipariş edilen adetten okunur, kâr tahminidir. */
+  estimate: boolean;
 }
 
 export interface VariantProfit {
@@ -92,22 +95,38 @@ function marginOf(contributionCents: number, revenueCents: number): number | nul
 export type ContributionInput = SaleVatBasis &
   Pick<
     OrderSale,
-    'id' | 'saleDate' | 'channel' | 'isGiftOrder' | 'cogsAmountCents' | 'deliveryCostCents' | 'paymentFeeCents' | 'packagingCostCents'
+    | 'id'
+    | 'saleDate'
+    | 'channel'
+    | 'status'
+    | 'isGiftOrder'
+    | 'cogsAmountCents'
+    | 'deliveryCostCents'
+    | 'paymentFeeCents'
+    | 'packagingCostCents'
   >;
 
-/** Bir siparişin katkı payı; maliyetler sipariş anında yazılmış değerlerdir, sonradan değişen ayar onları oynatmaz. */
+/**
+ * Bir siparişin katkı payı; maliyetler sipariş anında yazılmış değerlerdir, sonradan değişen ayar onları oynatmaz. Ciro maliyetle aynı
+ * adetten okunur: hazırlık kesinleşmeden sipariş edilen, sonra teslim edilen. İptalde mal depoya döner ve araç, ambalaj kullanılmaz;
+ * sağlayıcının aldığı komisyon ise gerçek giderdir.
+ */
 export function orderContribution(sale: ContributionInput, items: readonly AccountingLine[]): OrderContribution {
-  const revenue = saleNetCents(sale, items);
-  const costsKnown = sale.cogsAmountCents !== null && sale.deliveryCostCents !== null && sale.packagingCostCents !== null;
+  const cancelled = sale.status === 'cancelled';
+  const estimate = !cancelled && !isFulfillmentSettled(sale.status);
+  const revenue = cancelled ? 0 : saleNetCents(sale, items, !estimate);
+  const cogsCents = cancelled ? 0 : sale.cogsAmountCents;
+  const deliveryCents = cancelled ? 0 : sale.deliveryCostCents;
+  const packagingCents = cancelled ? 0 : sale.packagingCostCents;
+  const costsKnown = cogsCents !== null && deliveryCents !== null && packagingCents !== null;
 
   // Toplam cent üstünden alınır; kalemleri tek tek euro'ya çevirmek yuvarlama biriktirirdi.
-  const costCents =
-    (sale.cogsAmountCents ?? 0) + (sale.deliveryCostCents ?? 0) + (sale.paymentFeeCents ?? 0) + (sale.packagingCostCents ?? 0);
+  const costCents = (cogsCents ?? 0) + (deliveryCents ?? 0) + (sale.paymentFeeCents ?? 0) + (packagingCents ?? 0);
   const costs: DirectCosts = {
-    cogs: fromCents(sale.cogsAmountCents ?? 0),
-    delivery: fromCents(sale.deliveryCostCents ?? 0),
+    cogs: fromCents(cogsCents ?? 0),
+    delivery: fromCents(deliveryCents ?? 0),
     paymentFee: fromCents(sale.paymentFeeCents ?? 0),
-    packaging: fromCents(sale.packagingCostCents ?? 0),
+    packaging: fromCents(packagingCents ?? 0),
   };
   const contributionCents = revenue - costCents;
 
@@ -121,6 +140,7 @@ export function orderContribution(sale: ContributionInput, items: readonly Accou
     contribution: costsKnown ? fromCents(contributionCents) : null,
     marginPct: costsKnown ? marginOf(contributionCents, revenue) : null,
     costsKnown,
+    estimate,
   };
 }
 

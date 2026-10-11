@@ -1,8 +1,8 @@
 import { fromCents, toCents } from '@lezzet/helper';
 import type { Business, Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
 import { chargedShippingParts } from '../delivery/shipping-fee';
-import { chargedQtyOf, fulfilledLineOf } from '../payment/payment-status';
-import { chargedAmountCents, type AccountingLine } from './line';
+import { chargedQtyOf, fulfilledLineAmountCents, fulfilledLineOf } from '../payment/payment-status';
+import type { AccountingLine } from './line';
 import { vatByRate } from '../pricing/vat-base';
 import { isZeroRated } from '../tax/vat-treatment';
 
@@ -129,11 +129,13 @@ export type SaleVatBasis = Pick<OrderSale, 'pricesIncludeVat' | 'vatTreatment' |
 /**
  * Satışın oran bazında KDV kırılımı; aktarım satırının da kâr raporunun da tek zemini. Ücretlenen kalem ve kargo payı kasa fişindeki
  * tanımla aynıdır; dönüşüm oran başına bir kez uygulanır (`vatByRate`), çünkü kalem kalem çevirmek kuruş artığı biriktirirdi.
+ * Hazırlık kesinleşmemişse (`settled` yanlış) kalemler borçla aynı kuralla sipariş edilen adetten okunur.
  */
-export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[]): ExportVatLine[] {
+export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[], settled = true): ExportVatLine[] {
   const charged = items
-    .filter((item) => chargedQtyOf(fulfilledLineOf(item)) > 0)
-    .map((item) => ({ vatRate: item.vatRate, amountCents: chargedAmountCents(item) }));
+    .map((item) => ({ line: fulfilledLineOf(item), vatRate: item.vatRate }))
+    .filter(({ line }) => chargedQtyOf(line, settled) > 0)
+    .map(({ line, vatRate }) => ({ vatRate, amountCents: fulfilledLineAmountCents(line, settled) }));
   const shipping = chargedShippingParts(
     sale.shippingFeeCents,
     charged.map((part) => ({ vatRate: part.vatRate, totalCents: part.amountCents })),
@@ -153,8 +155,8 @@ export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[])
  * Satışın KDV hariç cirosu (cent), kalemler ve kargo. Kâr raporu da bunu çağırır, çünkü ayrı bir formül aynı siparişin cirosunu
  * aktarımda başka, kâr raporunda başka çıkarırdı.
  */
-export function saleNetCents(sale: SaleVatBasis, items: readonly AccountingLine[]): number {
-  return vatLinesOf(sale, items).reduce((sum, line) => sum + toCents(line.net), 0);
+export function saleNetCents(sale: SaleVatBasis, items: readonly AccountingLine[], settled = true): number {
+  return vatLinesOf(sale, items, settled).reduce((sum, line) => sum + toCents(line.net), 0);
 }
 
 /**

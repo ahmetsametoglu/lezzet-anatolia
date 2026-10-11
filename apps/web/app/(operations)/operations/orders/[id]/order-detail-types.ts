@@ -147,15 +147,14 @@ export interface OrderLinkView {
   cta: string;
 }
 
-/** "Finansal" kartının satırı (rol kapılı, `OrderFinanceView`); gider satırları pozitif taşınır, eksi işareti gösterimin işidir. */
+/**
+ * "Finansal" kartının satırı (rol kapılı, `OrderFinanceView`); gider satırları pozitif taşınır, eksi işareti gösterimin işidir. Tahmini
+ * tutar ayrı tür değildir: kârdan düşüldüğü için gider gibi çizilir, tahmin olduğu etikette yazar.
+ */
 export interface OrderFinanceRow {
   label: string;
   amountCents: number;
-  /**
-   * `estimate` = henüz sabitlenmemiş, **kâra girmeyen** maliyet (parti alışından tahmin). Ayrı bir
-   * tür, çünkü kapanışta yazılacak sayıyla aynı güvende değil ve ekran ikisini aynı gösteremez.
-   */
-  kind: 'sale' | 'expense' | 'estimate';
+  kind: 'sale' | 'expense';
 }
 
 /**
@@ -164,8 +163,10 @@ export interface OrderFinanceRow {
  */
 export interface OrderFinanceView {
   rows: OrderFinanceRow[];
-  /** Katkı payı: ciro − doğrudan giderler. Maliyetler kapanışta sabitlenmemişse `null`. */
+  /** Katkı payı: ciro − doğrudan giderler. Maliyetler bilinmiyorsa `null`. */
   profitCents: number | null;
+  /** Hazırlık kesinleşmedi ya da mal maliyeti son alış fiyatından: kâr kesin değil, tahminidir. */
+  profitIsEstimate: boolean;
   /** Katkı payının ciroya oranı (%) — kârlılık raporuyla AYNI tanım. Kâr yoksa `null`. */
   marginPercent: number | null;
   /** Kâr neden hesaplanmıyor — kart susmaz, bilmediğini söyler. Hesaplanıyorsa `null`. */
