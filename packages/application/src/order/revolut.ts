@@ -60,6 +60,12 @@ export async function revolutConfigFromSecrets(db: Db): Promise<RevolutConfig | 
   return { secretKey, mode: mode.data };
 }
 
+/** Gizli anahtardan kurulan istemci; web, mobil API ve arka plan işleri aynı yoldan kurar. */
+export async function revolutClientFromSecrets(db: Db): Promise<RevolutClient | null> {
+  const config = await revolutConfigFromSecrets(db);
+  return config ? revolutClient(config) : null;
+}
+
 export function revolutClient(config: RevolutConfig): RevolutClient {
   const fetchImpl = config.fetchImpl ?? fetch;
   return {

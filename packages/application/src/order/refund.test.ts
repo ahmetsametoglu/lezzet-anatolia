@@ -597,4 +597,34 @@ describe('müşteride kaldı ve iade haberi', () => {
     await retryRefund(db, orderId, { effects: { notifyException, refunder: async () => ({ status: 'ok', refundId: `re_${stamp}` }) } });
     expect(notifyException).toHaveBeenCalledWith(orderId, 'order_refunded', { refundedAmountCents: 1000 });
   });
+
+  it('karta iade düşerse yönetime sipariş başına tek zil düşer; yeniden deneme de düşerse ikinci zil olmaz', async () => {
+    const admin = await new UserProfileService(db).insert({ name: `İade zili ${stamp}`, roles: ['admin'] });
+    createdProfiles.push(admin.id);
+    const { orderId, itemId } = await sendOut(2);
+    await recordOrderPayment(db, {
+      orderId,
+      accountId: providerAccount,
+      amountCents: 2000,
+      method: 'online',
+      meta: { providerRef: `pi_zil_${stamp}` },
+    });
+    await deliverOrder(db, orderId);
+    const failing = { refunder: async () => ({ status: 'failed' as const, error: 'card_declined' }) };
+
+    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'restock', note: 'geri geldi' }], {
+      effects: failing,
+    });
+    await retryRefund(db, orderId, { effects: failing });
+
+    const { data, error } = await db
+      .from('notification')
+      .select('payload')
+      .eq('profile_id', admin.id)
+      .eq('kind', 'refund_blocked')
+      .eq('target_id', orderId);
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    expect(data![0]!.payload).toMatchObject({ amountCents: 1000, reason: 'provider_failed' });
+  });
 });

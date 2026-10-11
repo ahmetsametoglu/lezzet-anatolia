@@ -4,6 +4,7 @@ import { captureError, SOURCES } from '@lezzet/observability';
 import type { OrderBox, OrderStatus, Shipment, ShipmentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { deliverOrder } from '../order/fulfillment';
+import { refundShortfallOnDeparture } from '../order/refund';
 import { transitionOrder } from '../order/transition';
 import type { OrderEffects } from '../order/effects';
 import type { ShippingRateProvider } from './port';
@@ -157,6 +158,7 @@ export async function siparisiTasi(
   if (yolaCikisGerek) {
     const sonuc = await transitionOrder(db, { orderId: order.id, to: 'out_for_delivery', actorId: null, effects });
     if (sonuc.status !== 'ok') return null;
+    await refundShortfallOnDeparture(db, order.id, effects);
     if (hedef === 'out_for_delivery') return 'out_for_delivery';
   } else if (hedef === 'out_for_delivery') {
     return null; // zaten yolda ya da ötesinde — yazacak bir şey yok

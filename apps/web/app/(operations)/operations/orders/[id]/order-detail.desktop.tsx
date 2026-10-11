@@ -38,11 +38,12 @@ interface OrderDetailDesktopProps {
   order: OrderDetailView;
   onAdvance: (to: OrderStatus) => void;
   onDecision: (decision: OrderDecision) => void;
+  onRetryRefund: () => void;
   busy: boolean;
   error: string | null;
 }
 
-export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }: OrderDetailDesktopProps) {
+export function OrderDetailDesktop({ order, onAdvance, onDecision, onRetryRefund, busy, error }: OrderDetailDesktopProps) {
   // Geçiş şeridi kapalı başlar: birincil geçiş üst barda, gerisi istendiğinde açılır.
   const [nextOpen, setNextOpen] = useState(false);
   const primary = order.allowedNext[0] ?? null;
@@ -197,6 +198,23 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                 </div>
               ))}
             </div>
+
+            {order.payment.refundRetryable ? (
+              <div className="mx-3.5 mb-3 flex items-center gap-2.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3.5 py-2.5">
+                <span className="flex-none font-ops-display text-ops-xs font-semibold text-ops-red">İade yapılamadı</span>
+                <span className="mr-auto font-ops-body text-ops-xs text-ops-red">
+                  {money(order.payment.refundDueCents)} müşteriye dönmedi; kendiliğinden yapılan iade düştü.
+                </span>
+                <button
+                  type="button"
+                  onClick={onRetryRefund}
+                  disabled={busy}
+                  className="flex-none cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-red underline hover:text-ops-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  İadeyi yeniden dene
+                </button>
+              </div>
+            ) : null}
 
             {order.payment.overdue ? (
               <div className="mx-3.5 mb-3 flex items-center gap-2.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3.5 py-2.5">

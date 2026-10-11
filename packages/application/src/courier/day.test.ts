@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AccountService, AddressService, CategoryService, DeliveryZoneService, OrderService, ProductService,
   ReservationService, StockService, UserProfileService, VehicleService, WarehouseService, serviceDb,
@@ -40,6 +40,7 @@ let productId: string;
 let categoryId: string;
 let stockId: string;
 let accountId: string;
+let providerAccountId: string;
 /** Sefer akışının rotası: başlatma bölgeyi talep eder, bölgesiz sipariş görünmez. */
 let zoneId: string;
 /** İkinci deponun rotası: kapsam süzgecinin "görmemesi gereken" tarafı, negatif kanıt. */
@@ -90,6 +91,7 @@ beforeAll(async () => {
     city: 'Strasbourg',
   })).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
+  providerAccountId = (await new AccountService(db).insert({ name: `Kurye testi sağlayıcı ${stamp}`, type: 'provider' })).id;
   // Rota HER GÜN koşar (weekdays 1-7): testin hangi gün koştuğu davranışı değiştirmesin.
   zoneId = (await new DeliveryZoneService(db).insert({
     name: `Kurye testi rotası ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
@@ -135,7 +137,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [accountId],
+    accountIds: [accountId, providerAccountId],
     warehouseIds: [warehouseId, foreignWarehouseId],
     // Araç `restrict` FK'lerle korunuyor ve sefer ona bağlı; purge sırayı biliyor (`cleanup.ts`).
     vehicleIds,
@@ -158,6 +160,8 @@ async function dispatched(
     /* Adresin anlık görüntüsüne eklenecek alanlar: kapı doğrulaması (`doorCheckOf`) adres tablosundan değil bu kayıttan okur.
        Tip kolon gibi geniş, çünkü daraltmak motorun bir gün öğreneceği alanı fikstürden dışarıda bırakırdı. */
     snapshot?: Record<string, unknown>;
+    /* Kutuya giren adet; sipariş edilenden azsa depocu eksiği beyan edip kutuyu kapatır ve sipariş eksik hazır olur. */
+    picked?: number;
   } = {},
 ) {
   const qty = opts.qty ?? 2;
@@ -192,10 +196,12 @@ async function dispatched(
   await advanceOrder(db, order.id, ['confirmed', 'preparing']);
   const box = await openBox(db, { orderId: order.id, warehouseId });
   if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const picked = opts.picked ?? qty;
   const sealed = await sealBox(db, {
     boxId: box.box.boxId,
     warehouseId,
-    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty: picked }] }],
+    declareShort: picked < qty,
   });
   if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
   if (opts.load !== false) {
@@ -458,6 +464,26 @@ describe('araç tekelliği: bir araç, bir kurye', () => {
     });
 
     expect(farkli.status).toBe('vehicle_mismatch');
+  });
+});
+
+describe('yola çıkışta hazırlık eksiği', () => {
+  it('online ödenmiş siparişte eksik çıkan malın parası sefer başlayınca karta kendiliğinden döner', async () => {
+    const { orderId } = await dispatched({ upTo: 'ready', qty: 2, picked: 1 });
+    await recordOrderPayment(db, {
+      orderId,
+      accountId: providerAccountId,
+      amountCents: 2000,
+      method: 'online',
+      meta: { providerRef: `pi_kurye_${stamp}` },
+    });
+    const refunder = vi.fn(async () => ({ status: 'ok' as const, refundId: `re_kurye_${stamp}` }));
+
+    mustStart(await startCourierDay(db, { courierId, zoneId, effects: { refunder } }));
+
+    expect(refunder).toHaveBeenCalledTimes(1);
+    expect(refunder).toHaveBeenCalledWith(expect.objectContaining({ paymentRef: `pi_kurye_${stamp}`, amountCents: 1000 }));
+    expect(await orders.getById(orderId)).toMatchObject({ status: 'out_for_delivery', amountRefundedCents: 1000 });
   });
 });
 

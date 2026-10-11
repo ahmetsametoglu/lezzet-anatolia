@@ -82,6 +82,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   // Eşleşmenin kararı web'deki Para ekranında verilir.
   pennylane_match_stuck: 'management',
   pennylane_match_removed: 'management',
+  // Düşen iade web'deki sipariş detayından yeniden denenir.
+  refund_blocked: 'money',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

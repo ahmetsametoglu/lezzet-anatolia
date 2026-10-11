@@ -749,8 +749,8 @@ warehouse.get('/returns', async (c) => {
 });
 
 /**
- * Rampada dönen malın akıbeti; kapı web iade penceresiyle aynıdır ve depocuya kapsamla (`warehouseScope`) açılır. `effects`
- * geçirilmez: müşteri haberi ve sağlayıcı iadesi buradan çıkmaz, yazılamayan iade `refundBlocked` ile döner.
+ * Rampada dönen malın akıbeti; kapı web iade penceresiyle aynıdır ve depocuya kapsamla (`warehouseScope`) açılır. Online ödemenin
+ * parası buradan karta kendiliğinden döner; müşteri haberi buradan çıkmaz, yazılamayan iade `refundBlocked` ile döner.
  */
 warehouse.post('/returns/:orderId', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -762,6 +762,7 @@ warehouse.post('/returns/:orderId', async (c) => {
   const outcome = await adjustFulfillment(serviceDb(), orderId.data, parsed.data.adjustments, {
     actorId: c.get('staff').id,
     warehouseScope: [c.get('warehouseId')],
+    effects: mobileOrderEffects(serviceDb()),
   });
 
   const body: z.input<typeof WarehouseReturnResponseSchema> = outcome;

@@ -1,4 +1,4 @@
-import { ProductVariantService, StockService, WarehouseService } from '@lezzet/database';
+import { OrderService, ProductVariantService, StockService, WarehouseService } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { TicketType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -409,5 +409,29 @@ export async function notifyShippingDataMissing(db: SupabaseClient, input: Shipp
     }
   } catch (err) {
     yut(err, 'shipping_data_missing');
+  }
+}
+
+/**
+ * Karta iade düştü ya da yazılamadı: para müşteriye dönmedi ve kendiliğinden yapılan iadede bunu gören kimse yok. Sipariş başına tek zil;
+ * yeniden deneme de düşerse aynı satır kalır, operatör sipariş sayfasından yeniden dener.
+ */
+export async function notifyRefundBlocked(
+  db: SupabaseClient,
+  input: { orderId: string; amountCents: number; reason: string },
+): Promise<void> {
+  try {
+    const order = await new OrderService(db).getById(input.orderId);
+    if (!order) return;
+    await dispatchStaffNotification(db, {
+      kind: 'refund_blocked',
+      roles: ['admin', 'accounting'],
+      warehouseId: order.warehouseId,
+      target: { type: 'order', id: order.id },
+      payload: { referenceNo: order.referenceNo, amountCents: input.amountCents, reason: input.reason },
+      dedupeKey: `refund-blocked:${order.id}`,
+    });
+  } catch (err) {
+    yut(err, 'refund_blocked');
   }
 }

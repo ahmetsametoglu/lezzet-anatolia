@@ -517,12 +517,14 @@ export {
   readRevolutPayout,
   refundRevolutOrder,
   revolutClient,
+  revolutClientFromSecrets,
   revolutConfigFromSecrets,
   revolutFeeOf,
   revolutGateway,
   revolutSessionCreator,
 } from './order/revolut';
 export type { RevolutClient, RevolutConfig } from './order/revolut';
+export { revolutRefunderWith } from './order/revolut-refunder';
 // ── Paket (bundle) çözümü ──
 export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
 // Tarif malzeme okumasının tek kapısı.

@@ -253,6 +253,8 @@ export interface OrderDetailView {
     openCents: number;
     /** Peşin ödenmişse iade edilecek fark. */
     refundDueCents: number;
+    /** Kendiliğinden yazılması gereken iade düşmüş: borç sipariş depodan çıktıktan ya da iptalden sonra hâlâ duruyor. */
+    refundRetryable: boolean;
     dueDate: string | null;
     overdue: boolean;
     /** Siparişin KDV rejimi: ters yükümlülükte vergi hiç yoktur; toplamın etiketi `moneyCells`te kurulur. */

@@ -104,7 +104,14 @@ export function OrderDetailClient({ order }: OrderDetailClientProps) {
         </div>
       ) : null}
 
-      <OrderDetailDesktop order={order} onAdvance={onAdvance} onDecision={onDecision} busy={busy} error={error} />
+      <OrderDetailDesktop
+        order={order}
+        onAdvance={onAdvance}
+        onDecision={onDecision}
+        onRetryRefund={() => run(retryRefundAction(order.id))}
+        busy={busy}
+        error={error}
+      />
       {dialog === 'cancel' ? (
         <CancelDialog
           order={order}

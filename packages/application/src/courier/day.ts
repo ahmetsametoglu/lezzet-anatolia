@@ -29,6 +29,7 @@ import { customerCardsOf } from './names';
 import { listCourierRoutes } from './routes';
 import { ensureStopOrder } from './stop-order';
 import { notifyStatusEffect, type OrderEffects } from '../order/effects';
+import { refundShortfallOnDeparture } from '../order/refund';
 import { resolveLocalizedText } from '@lezzet/types';
 import type {
   DiscardDeliveryRunResult,
@@ -537,6 +538,7 @@ export async function startCourierDay(
       result.started.push(claim.orderId);
       /* Haber durak başına; zaten yoldaki durak `alreadyOut`a düştüğü için yeniden başlatmada haber tekrarlanmaz. */
       await notifyStatusEffect(input.effects, claim.orderId, 'out_for_delivery');
+      await refundShortfallOnDeparture(db, claim.orderId, input.effects);
     } else {
       result.stale.push({ orderId: claim.orderId, currentStatus: transitioned.currentStatus });
     }

@@ -43,6 +43,7 @@ import {
   dueDayOf,
   defaultsToDiscardOnReturn,
   fulfilledLineAmountCents,
+  hasLeftWarehouse,
   isFulfillmentSettled,
   isOverdue,
   isTerminal,
@@ -256,6 +257,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       refundedCents: order.amountRefundedCents,
       openCents: derivation.amountToCollectCents,
       refundDueCents: derivation.refundDueCents,
+      // İade depodan çıkışta ve iptalde kendiliğinden yazılır; o andan sonra hâlâ borç varsa iade düşmüştür ve elle yeniden denenir.
+      refundRetryable: derivation.refundDueCents > 0 && (hasLeftWarehouse(order.status) || order.status === 'cancelled'),
       dueDate: order.onAccount ? dueDayOf(order.createdAt, termDays) : null,
       overdue: isOverdue(order, termDays, now),
       vatTreatment: order.vatTreatment,

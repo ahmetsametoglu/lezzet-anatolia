@@ -2,6 +2,7 @@ import { AccountService, MoneyMovementService, OrderService } from '@lezzet/data
 import { canTransition, planRefund, refundSourcesOf, type RefundLeg, type RefundPlan } from '@lezzet/domain-core';
 import type { AccountType, FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { notifyRefundBlocked } from '../notification/staff-events';
 import { kickOrderRegister } from '../register/sync';
 import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
 import { notifyExceptionEffect, notifyStatusEffect, providerRefunder, type OrderEffects } from './effects';
@@ -256,9 +257,18 @@ export async function retryRefund(
 }
 
 /**
+ * Sipariş depodan çıktı (araç yola çıktı, koli kargoya verildi): hazırlıkta eksik çıkan malın parası kendiliğinden iade edilir. Kutu
+ * artık açılamaz, karşılanan tutar kesinleşmiştir; kasanın düzeltme fişi de bu anda yazılır. Borç yoksa hiçbir şey yazılmaz.
+ */
+export async function refundShortfallOnDeparture(db: SupabaseClient, orderId: string, effects?: OrderEffects): Promise<void> {
+  await settleRefund(db, orderId, { effects, description: 'Hazırlık eksiği — iade' });
+}
+
+/**
  * Ödeme durumunu tazeler, borç varsa iadeyi yazar ve hareketten sonraki hâli döner; tutar türetimden gelir, elle verilen tutar
  * yerine geçer. Para birden çok yoldan geldiyse iade motorun planıyla parçalara bölünür; her parçada önce sağlayıcı çağrısı, sonra
- * hareket, çünkü para dönmeden hareket yazılsa defter kapanmış görünürdü.
+ * hareket, çünkü para dönmeden hareket yazılsa defter kapanmış görünürdü. Yazılamayan iade yönetime haber verir, çünkü kendiliğinden
+ * yapılan iadede onu ekranda gören yoktur.
  */
 async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOptions): Promise<RefundOutcome | null> {
   const before = await syncOrderPaymentStatus(db, orderId);
@@ -275,22 +285,27 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
   const dueCents = opts.refundAmountCents ?? before.derivation.refundDueCents;
   if (dueCents <= 0) return outcome();
 
+  const blocked = async (reason: RefundBlockReason): Promise<RefundOutcome> => {
+    await notifyRefundBlocked(db, { orderId, amountCents: dueCents - refundedAmountCents, reason });
+    return outcome(reason);
+  };
+
   const plan = await refundPlanOf(db, orderId, dueCents, opts.refundAccountId ?? null);
   // Hesap türetilemiyorsa iade yazılamaz ama düzeltme geçerlidir: borç `amountToCollect`'in negatifi olarak zaten görünür.
-  if (plan.legs.length === 0) return outcome(plan.routeType === 'provider' ? 'provider_ref_missing' : 'no_account');
+  if (plan.legs.length === 0) return blocked(plan.routeType === 'provider' ? 'provider_ref_missing' : 'no_account');
 
   try {
     for (const leg of plan.legs) {
       const written = await writeRefundLeg(db, orderId, leg, opts);
       // Yazılan parçalar geçerlidir; kalan borç açıkta görünür ve yeniden deneme onu yeni planla kapatır.
-      if (written.status === 'blocked') return outcome(written.reason);
+      if (written.status === 'blocked') return await blocked(written.reason);
       refundedAmountCents += written.refundedCents;
       state = { paymentStatus: written.after.paymentStatus, amountToCollectCents: written.after.derivation.amountToCollectCents };
     }
   } finally {
     if (refundedAmountCents > 0) kickOrderRegister(db, orderId);
   }
-  return outcome(plan.uncoveredCents > 0 ? 'no_account' : undefined);
+  return plan.uncoveredCents > 0 ? blocked('no_account') : outcome();
 }
 
 /** Siparişin paraları ve operatörün seçtiği yol motorun planından geçer; bilinmeyen yol iadeyi durdurur, tahminle yazılmaz. */

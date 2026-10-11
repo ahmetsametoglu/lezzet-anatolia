@@ -1,13 +1,15 @@
 import { notifyOrderException, notifyOrderStatus, type OrderEffects } from '@lezzet/application';
 import type { Db } from '@lezzet/database';
+import { providerRefunder } from './revolut';
 
 /**
- * Durum geçişinin yan etkileri, web `webOrderEffects`inin mobil ikizi; ikisi aynı paket kapılarını çağırır. `refunder` yok, çünkü
- * sipariş açma ve kapıda teslim zincirinde sağlayıcı iadesi adımı yok; kayıtsız port süreç başına bir kez uyarır.
+ * Durum geçişinin yan etkileri, web `webOrderEffects`inin mobil ikizi; ikisi aynı paket kapılarını çağırır. Kapıdaki ret, depo dönüşü
+ * ve yola çıkıştaki hazırlık eksiği online ödemenin parasını kendiliğinden iade eder, bu yüzden sağlayıcı portu buradadır.
  */
 export function mobileOrderEffects(db: Db): OrderEffects {
   return {
     notifyStatus: (orderId, status) => notifyOrderStatus(db, orderId, status),
+    refunder: providerRefunder(),
   };
 }
 

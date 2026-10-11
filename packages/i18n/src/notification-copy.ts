@@ -336,6 +336,16 @@ export function pennylaneBlockReasonLabel(reason: string): string {
   return PENNYLANE_ENGELI[reason] ?? reason;
 }
 
+/** Karta iadenin düşme sebebi, operatörün diliyle (`RefundBlockReason`); tanınmayan kod olduğu gibi kalır. */
+const IADE_ENGELI: Record<string, string> = {
+  provider_failed: 'Revolut iadeyi reddetti',
+  provider_unavailable: 'Revolut bağlantısı yok',
+  provider_ref_missing: 'kart ödemesinin künyesi yok',
+  no_account: 'iadenin döneceği hesap bulunamadı',
+};
+
+const euro = (cents: number): string => new Intl.NumberFormat(INTL_LOCALE.tr, { style: 'currency', currency: 'EUR' }).format(cents / 100);
+
 const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => StaffNotificationBrief>> = {
   /* Kapanmayan kasa günü yasal bir açıktır; sebebi sayıyla söylenir, ayrıntısı kurulum kartında ve hata kaydında. */
   register_day_unclosed: (p) => ({
@@ -388,6 +398,19 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     label: 'Muhasebe',
     title: `Belge Pennylane'de farklı${typeof p.number === 'string' ? ` — ${p.number}` : ''}`,
     subtitle: "Pennylane'deki açık kalan bizdekinden ayrıldı, elle bakın",
+  }),
+  /* Para müşteriye dönmedi ve kendiliğinden yapılan iadede bunu gören yok; yeniden deneme sipariş sayfasında. */
+  refund_blocked: (p) => ({
+    tone: 'alert',
+    label: 'Para',
+    title: `Karta iade yapılamadı${referans(p)}`,
+    subtitle:
+      [
+        typeof p.amountCents === 'number' ? euro(p.amountCents) : null,
+        typeof p.reason === 'string' ? (IADE_ENGELI[p.reason] ?? p.reason) : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || null,
   }),
   /* Eşleşme kendiliğinden yeniden denenir; haber Para ekranını hesabın o gününe açar. */
   pennylane_match_stuck: (p) => ({

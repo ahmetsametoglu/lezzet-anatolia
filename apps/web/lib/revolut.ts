@@ -1,8 +1,7 @@
 import 'server-only';
 import {
   integrationSecrets,
-  revolutClient,
-  revolutConfigFromSecrets,
+  revolutClientFromSecrets,
   revolutGateway,
   type PaymentGateway,
   type RevolutClient,
@@ -15,8 +14,7 @@ import { serviceDb } from '@lezzet/database';
  * anahtar okuyucunun kısa önbelleği dolunca geçmeli.
  */
 export async function webRevolutClient(): Promise<RevolutClient | null> {
-  const config = await revolutConfigFromSecrets(serviceDb());
-  return config ? revolutClient(config) : null;
+  return revolutClientFromSecrets(serviceDb());
 }
 
 /** Ödemenin durumu, iptali ve iadesi; anahtarsız ortamda `null` ve çağıran "sorulamadı" der, "ödenmedi" demez. */

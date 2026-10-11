@@ -3,6 +3,7 @@ import { canTransition } from '@lezzet/domain-core';
 import type { Order } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyStatusEffect, type OrderEffects } from '../order/effects';
+import { refundShortfallOnDeparture } from '../order/refund';
 
 /**
  * **ARACA YÜKLEME OKUTMASI** (23.8 · karar §1.11) — kurye kutunun QR'ını okutur; kutu rotasına
@@ -174,5 +175,6 @@ async function openStopIfRunDeparted(
   if (!transitioned.ok) return false;
   // Haber TAM ŞİMDİ ve bir kez: durak yola çıktı. Tekrar kilidi `notifyOrderStatus`ta (geçiş başına tek).
   await notifyStatusEffect(input.effects, order.id, 'out_for_delivery');
+  await refundShortfallOnDeparture(db, order.id, input.effects);
   return true;
 }

@@ -406,7 +406,7 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 - **Kapıda (kurye):** kurye o an eksik/reddedilen kalemi işaretler.
 
 **Para çözümü ödemenin yapılıp yapılmadığına göre dallanır:**
-- **Peşin ödendiyse** (online/kargo) → fark **otomatik iade** (`amount_refunded` artar).
+- **Peşin ödendiyse** (online/kargo) → fark **otomatik iade** (`amount_refunded` artar), onay beklemez. Hazırlık eksiğinin iadesi sipariş depodan çıkınca yazılır (araç yola çıkınca, koli kargoya verilince), çünkü kutu o ana kadar yeniden açılabilir; kapıdaki ret teslimde, rampaya dönen mal depo işleminde iade edilir. İade yazılamazsa yönetime zil düşer ve sipariş sayfasından yeniden denenir.
 - **Kapıda ödenecekse** → tahsil edilecek tutar karşılanan tutara **düşürülür**, o tahsil edilir.
 
 Ödeme durumu bu tutarlardan **türetilir** (§7). Karşılanamayan kalemin ayrılmış stoğu, stok gerçeğine göre düzeltilir (fiziksel yoksa ayrılmış geri bırakılır — bkz. §4).

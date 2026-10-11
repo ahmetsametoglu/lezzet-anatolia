@@ -1,6 +1,12 @@
 import { OrderBoxService, WebhookEventService, serviceDb } from '@lezzet/database';
-import { notifyOrderStatus, sendcloudProvider, syncShipmentStatus } from '@lezzet/application';
-import { logger } from '@lezzet/observability';
+import {
+  notifyOrderStatus,
+  revolutClientFromSecrets,
+  revolutRefunderWith,
+  sendcloudProvider,
+  syncShipmentStatus,
+} from '@lezzet/application';
+import { logger, SOURCES } from '@lezzet/observability';
 import { parseWebhookIdentity, verifyWebhookSignature } from '@lezzet/sendcloud';
 import type { OrderEffects, ShippingRateProvider } from '@lezzet/application';
 import type { Context } from 'hono';
@@ -19,11 +25,14 @@ import type { AppEnv } from '../context';
 const webhookSecret = (): string | undefined => process.env.SENDCLOUD_WEBHOOK_SECRET || process.env.SENDCLOUD_SECRET_KEY || undefined;
 
 /**
- * Müşteri haberi — port her yüzeyde ayrı bağlanır (`application/order/effects.ts` künyesi:
+ * Müşteri haberi ve karta iade — port her yüzeyde ayrı bağlanır (`application/order/effects.ts` künyesi:
  * *"port kayıt yeri değil KARAR yeridir"*). Kargo kulvarında haberi tetikleyen tek yer burasıdır:
- * "yola çıktı" ve "teslim edildi" mesajlarını taşıyıcının olayı doğuruyor.
+ * "yola çıktı" ve "teslim edildi" mesajlarını taşıyıcının olayı doğuruyor; koli yola çıkınca hazırlık eksiğinin parası da döner.
  */
-const effects: OrderEffects = { notifyStatus: (orderId, status) => notifyOrderStatus(serviceDb(), orderId, status) };
+const effects: OrderEffects = {
+  notifyStatus: (orderId, status) => notifyOrderStatus(serviceDb(), orderId, status),
+  refunder: revolutRefunderWith(() => revolutClientFromSecrets(serviceDb()), SOURCES.webhook),
+};
 
 /**
  * Rotaya bağlanan hâl. Sağlayıcı **her istekte** kuruluyor, mount anında değil: env sonradan
