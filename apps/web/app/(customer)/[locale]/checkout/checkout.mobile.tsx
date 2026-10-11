@@ -9,7 +9,7 @@ import { Chip } from '@/components/customer/phone-kit/chip';
 import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
 import { Note } from '@/components/customer/phone-kit/note';
 import { FormInputField } from '@/components/customer/form/form-input-field';
-import { PhoneOptionRow } from './components/phone-option-row';
+import { OptionRow } from '@/components/customer/phone-kit/option-row';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SummaryPanel, type SummaryRow } from '@/components/customer/phone-kit/summary-panel';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
@@ -244,7 +244,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
               <Eyebrow text={copy.address.eyebrow} />
               {pickedWarehouse ? (
                 <div className="flex flex-col gap-2" data-testid="checkout-pickup-place">
-                  <PhoneOptionRow
+                  <OptionRow
                     label={copy.address.pickupTitle}
                     description={`${pickedWarehouse.name} · ${pickedWarehouse.addressLine}`}
                     selected
@@ -257,7 +257,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                   )}
                 </div>
               ) : selectedAddress ? (
-                <PhoneOptionRow
+                <OptionRow
                   label={addressTitle(selectedAddress)}
                   description={addressLine(selectedAddress)}
                   detail={addressContact(selectedAddress) ?? undefined}
@@ -294,7 +294,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                     dokunuş bir şey değiştirmez — satırlar düğme değil. Kapalı yolun sebebi kırmızı. */}
                 {!isPickup && (
                   <>
-                    <PhoneOptionRow
+                    <OptionRow
                       label={copy.delivery.door}
                       description={
                         isRoute
@@ -307,7 +307,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                       disabled={!isRoute}
                       descriptionTone={isRoute || doorClosedHere ? 'muted' : 'danger'}
                     />
-                    <PhoneOptionRow
+                    <OptionRow
                       label={copy.delivery.shipping}
                       description={isRoute ? copy.delivery.shippingUnavailable : copy.delivery.shippingBody.replace('{fee}', feeLabel)}
                       selected={!isRoute}
@@ -353,7 +353,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
               <section className="flex flex-col gap-2">
                 <Eyebrow text={copy.payment.eyebrow} />
                 {paymentOptions.map((option) => (
-                  <PhoneOptionRow
+                  <OptionRow
                     key={option.key}
                     label={option.label}
                     description={option.body}

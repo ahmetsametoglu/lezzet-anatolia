@@ -19,15 +19,13 @@ interface OptionRowProps {
   detail?: string;
   selected: boolean;
   onPress: () => void;
-  /** Satırın ikincil eylemi (kayıtlı adresi düzenlemek): kısa dokunuş seçer, uzun basma düzenler ve titreşimi ayrıdır. */
-  onLongPress?: () => void;
-  /** Köşedeki silik ipucu: uzun basma görünmez bir harekettir, ipucusuz yalnız bilen bulur; ekran okuyucuya da ipucu olarak gider. */
-  hint?: string;
   disabled?: boolean;
   /** Alt satır kapalı yolun sebebini mi bildiriyor: sebep hata kırmızısıyla yazılır, çünkü soluk gri cümleyi müşteri fark etmiyor. */
   descriptionTone?: 'muted' | 'danger';
   /** Başlığın sağındaki rozet ("varsayılan"). */
   trailing?: ReactNode;
+  /** Satırın ikinci eylemi (kayıtlı adresi düzenlemek): seçim yüzeyinin dışında durur ki ekran okuyucu onu ayrı bir düğme olarak bulsun. */
+  action?: ReactNode;
   testID?: string;
 }
 
@@ -38,23 +36,22 @@ export function OptionRow({
   detail,
   selected,
   onPress,
-  onLongPress,
-  hint,
   disabled = false,
   descriptionTone = 'muted',
   trailing,
+  action,
   testID,
 }: OptionRowProps) {
-  return (
+  const tone = [selected ? styles.selected : styles.idle, disabled ? styles.disabled : undefined];
+  const surface = (
     <PressableSurface
       onPress={onPress}
-      onLongPress={onLongPress}
       feedback="scale"
       disabled={disabled}
       selected={selected}
-      style={[styles.row, selected ? styles.selected : styles.idle, disabled ? styles.disabled : undefined]}
+      grow={action !== undefined}
+      style={action === undefined ? [styles.row, styles.frame, ...tone] : styles.row}
       accessibilityLabel={[label, badge, description, detail].filter((part) => part !== undefined).join(' · ')}
-      accessibilityHint={hint}
       testID={testID}
     >
       <View style={styles.head}>
@@ -72,8 +69,15 @@ export function OptionRow({
         <Text style={[styles.description, descriptionTone === 'danger' ? styles.dangerDescription : null]}>{description}</Text>
       )}
       {detail === undefined ? null : <Text style={styles.description}>{detail}</Text>}
-      {hint === undefined ? null : <Text style={styles.hint}>{hint}</Text>}
     </PressableSurface>
+  );
+  if (action === undefined) return surface;
+  // Çerçeve iki düğmeyi birlikte sarar: eylem kartın içinde görünür ama seçim yüzeyinin parçası değildir.
+  return (
+    <View style={[styles.frame, styles.withAction, ...tone]}>
+      {surface}
+      <View style={styles.action}>{action}</View>
+    </View>
   );
 }
 
@@ -83,8 +87,19 @@ const styles = StyleSheet.create((theme) => ({
     // Şablon: `padding:13px 15px` — ikisi de ölçekte ara değer, en yakın duraklara çekildi.
     paddingVertical: theme.space.xl,
     paddingHorizontal: theme.space['3xl'],
+  },
+  frame: {
     borderRadius: theme.radius.control,
     borderWidth: theme.border.base,
+  },
+  withAction: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  /** Eylem başlık satırının hizasında, sağ dolgu kartınkiyle aynı. */
+  action: {
+    paddingTop: theme.space.xl,
+    paddingRight: theme.space['3xl'],
   },
   selected: {
     backgroundColor: theme.colors['sand-150'],
@@ -120,25 +135,20 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: theme.space['2xs'],
     paddingHorizontal: theme.space.md,
   },
+  /** Rozet yazısı koyu zeytin, çünkü açık zeytin kendi zemininde okunma eşiğinin altında kalır. */
   badgeLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['badge-sm'],
-    color: theme.colors.olive,
+    color: theme.colors['olive-dark'],
   },
   dangerDescription: {
     color: theme.colors.error,
   },
+  /** Alt satır gövde renginde, çünkü adres okunması gereken bilgidir ve soluk ton kart zemininde eşiğin altında kalır. */
   description: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
-    color: theme.colors.muted,
-  },
-  /** Silik ipucu — sağ alt köşe, yardımcı kademe; `helper` yalnız gerçek yardımcı rolde. */
-  hint: {
-    alignSelf: 'flex-end',
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    color: theme.colors.muted,
+    color: theme.colors.body,
   },
 }));

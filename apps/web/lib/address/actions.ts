@@ -2,38 +2,25 @@
 
 import { AddressService, serviceDb } from '@lezzet/database';
 import type { Address, AddressInsert } from '@lezzet/types';
-import { readPickupOffer, type AddressPointCandidate } from '@lezzet/application';
+import { listCustomerAddresses, readPickupOffer, type AddressPointCandidate } from '@lezzet/application';
 import { currentCustomerId } from '@/lib/guard';
 import { writePickupCookie } from '@/lib/delivery/pickup-cookie';
-import { addAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
+import { addAddress, deleteAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
 import { readPlaceSnapshot } from '@/lib/delivery/read-place';
 import type { PlaceSnapshot } from '@/lib/delivery/place-types';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
 /**
- * Teslimat adresinin eylemleri — **sepet paneli, başlıktaki hap ve ödeme ekranı** aynı üç kapıdan
- * geçer (kullanıcı kararı 13.09: adres sepette seçilir/eklenir/düzenlenir, ödeme ekranı yalnız
- * gösterir).
- *
- * Neden `lib/`de: üç sayfa aynı eylemi çağırıyor; sayfa klasöründe duran bir action ötekilerden
- * çapraz import edilirdi (`CLAUDE §2`: paylaşılan yardımcı `lib/`). Hesap sayfasının kendi eylemleri
- * yerinde duruyor — orada silme ve fatura işareti de var ve sayfa tazelemesi (`revalidatePath`)
- * o sayfaya özgü.
- *
- * **Her yazan eylem yerin YENİ anlık görüntüsünü de döner** (`PlaceSnapshot`): adres değişince yer
- * değişir (kod başka bölgeye düşebilir) ve istemci bunu ikinci bir turla sormak zorunda kalmamalı —
- * yazan taraf cevabı zaten biliyor. `readPlaceSnapshot` istek kapsamlı önbellekli; yazma bu
- * istekte ilk okumadan ÖNCE koştuğu için taze okur.
- *
- * Kimlik oturumdan; adres kimliği istemciden gelir ve sahiplik kapıda sınanır (`ownedAddress`) —
- * başkasının adresi için de "bulunamadı".
+ * Teslimat adresinin eylemleri: sepet, başlıktaki hap ve ödeme aynı kapılardan geçtiği için `lib/`de durur. Her yazan eylem yerin yeni
+ * anlık görüntüsünü de döner, çünkü adres değişince yer de değişir ve istemci bunu ikinci bir turla sormamalı.
  */
 
+/** Native ile aynı sıra (varsayılan başta, sonra en yeni): servisin tek sıralaması ikincil sırayı belirsiz bırakır. */
 export async function listMyAddressesAction(): Promise<CustomerResult<Address[]>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    return { data: await new AddressService(serviceDb()).listByCustomer(customerId), errorKey: null };
+    return { data: await listCustomerAddresses(serviceDb(), customerId), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
@@ -43,12 +30,9 @@ export interface SaveAddressInput {
   /** `null` = yeni adres; dolu = var olanı düzenle. */
   id: string | null;
   fields: Omit<AddressInsert, 'customerId'>;
-  /**
-   * Kaydedilen adres SEÇİLİ (varsayılan) adres olsun mu. Sepetten eklenen adres için `true`:
-   * müşteri adresi oraya göndermek için ekliyor, ikinci bir "şimdi seç" adımı sormak gereksiz.
-   */
+  /** Kaydedilen adres seçili olsun mu; sepetten eklenen adres için `true`, çünkü müşteri onu oraya göndermek için ekliyor. */
   makeDefault: boolean;
-  /* Seçilen önerinin koordinatı (11.9) — bir ADAY, beyan değil; kapı süzgeçten geçirir. */
+  /** Seçilen önerinin koordinatı: bir aday, beyan değil; kapı süzgeçten geçirir. */
   point?: AddressPointCandidate | null;
 }
 
@@ -56,12 +40,10 @@ export async function saveMyAddressAction(input: SaveAddressInput): Promise<Cust
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    // Varsayılan bayrağı gövdeyle GİTMEZ (`updateAddress` ayıklıyor, `addForCustomer` ilk adres
-    // kuralını kendi uyguluyor); seçim aşağıda kendi yolundan yazılır.
+    // Varsayılan bayrağı gövdeyle gitmez, çünkü ilk adres kuralı ve ayıklama kapıların içinde; seçim aşağıda kendi yolundan yazılır.
     const saved =
       input.id === null ? await addAddress(customerId, input.fields, input.point) : await updateAddress(customerId, input.id, input.fields, input.point);
-    // Varsayılan TEKİLDİR: servis eskisini düşürür, ekran o kuralı bilmez. Zaten varsayılansa
-    // ikinci bir yazma yok.
+    // Varsayılan tekildir ve eskisini servis düşürür; zaten varsayılansa ikinci bir yazma yok.
     const address = input.makeDefault && !saved.isDefault ? await new AddressService(serviceDb()).setDefault(saved.id) : saved;
     return { data: { address, snapshot: await readPlaceSnapshot() }, errorKey: null };
   } catch (err) {
@@ -94,6 +76,18 @@ export async function selectMyPickupAction(warehouseId: string | null): Promise<
     const accepted = warehouseId === null ? null : ((await readPickupOffer(serviceDb(), customerId, warehouseId)).warehouse?.id ?? null);
     if (warehouseId !== null && accepted === null) throw new CustomerError('pickup_unavailable');
     await writePickupCookie(accepted);
+    return { data: await readPlaceSnapshot(), errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/** Adres seçicinin düzenleme çekmecesinden silme; varsayılan silinirse en yeni adres varsayılan olur (`deleteAddress`). */
+export async function deleteMyAddressAction(addressId: string): Promise<CustomerResult<PlaceSnapshot>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    await deleteAddress(customerId, addressId);
     return { data: await readPlaceSnapshot(), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };

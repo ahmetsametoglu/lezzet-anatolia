@@ -350,7 +350,8 @@ export function AddressForm({
     }
   };
 
-  const saveLabel = defaultChoice ? t.save : t.saveAndSelect;
+  // Düzenleme seçimi değiştirmez; "kaydet ve seç" yalnız yeni adreste doğrudur.
+  const saveLabel = defaultChoice || initial ? t.save : t.saveAndSelect;
   const saveButton = compact ? (
     <PrimaryButton label={saveLabel} shape="block" disabled={!complete || busy} onClick={() => void save()} />
   ) : (

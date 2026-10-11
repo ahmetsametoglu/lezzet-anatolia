@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { Address, Business, CheckoutPickup, Country } from '@lezzet/types';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
-import { saveMyAddressAction, selectMyAddressAction, selectMyPickupAction, type SaveAddressInput } from '@/lib/address/actions';
+import { deleteMyAddressAction, saveMyAddressAction, selectMyAddressAction, selectMyPickupAction, type SaveAddressInput } from '@/lib/address/actions';
 import { writePlaceAnswer } from '@/lib/delivery/place-store';
 import type { DeliveryPlace, DeliveryZoneSummary, PlaceAddress, PlaceLookup, PlaceSnapshot, PlaceUnresolved } from '@/lib/delivery/place-types';
 
@@ -49,6 +49,8 @@ interface PlaceContextValue {
   selectPickup: (warehouseId: string | null) => Promise<boolean>;
   /** Adres ekler ya da düzenler; kaydedilen adres seçiliyse yer ona göre yeniden kurulur. */
   saveAddress: (input: SaveAddressInput) => Promise<{ ok: true; address: Address } | { ok: false; errorKey: string | null }>;
+  /** Kayıtlı adresi siler; silinen adres seçiliyse yer yeni varsayılan adrese göre yeniden kurulur. */
+  removeAddress: (addressId: string) => Promise<{ ok: true } | { ok: false; errorKey: string | null }>;
   /**
    * Kapıya teslim ettiğimiz yerler, sayfa açılırken sunucuda okunmuş hâlde gelir: panel kendi açılışında çekseydi liste gecikmeyle
    * belirirdi. Küme operatörün kurduğu ve veriyle büyümeyen bir listedir, bir kez okunur.
@@ -200,8 +202,18 @@ export function PlaceProvider({
     [adopt, track],
   );
 
+  const removeAddress = useCallback(
+    async (addressId: string) => {
+      const { data, errorKey } = await track(deleteMyAddressAction(addressId));
+      if (!data) return { ok: false as const, errorKey };
+      adopt(data);
+      return { ok: true as const };
+    },
+    [adopt, track],
+  );
+
   const [panelOpen, setPanelOpen] = useState(false);
-  // Sayfa değişince panel kapanır (v1 `go()` → `yerPanel:false`): açık panel yeni sayfanın üstünde
+  // Sayfa değişince panel kapanır: açık panel yeni sayfanın üstünde
   // sorulmamış bir soru gibi durmasın.
   const pathname = usePathname();
   useEffect(() => setPanelOpen(false), [pathname]);
@@ -230,6 +242,7 @@ export function PlaceProvider({
       pickup,
       selectPickup,
       saveAddress,
+      removeAddress,
       zones,
       business,
     }),
@@ -246,6 +259,7 @@ export function PlaceProvider({
       pickup,
       selectPickup,
       saveAddress,
+      removeAddress,
       zones,
       business,
     ],

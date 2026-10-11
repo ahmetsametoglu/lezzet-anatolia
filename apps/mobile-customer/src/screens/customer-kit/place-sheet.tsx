@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import type { MeAddress } from '@/lib/api/addresses';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { addressDefaultsOf } from './address-form';
 import { AddressPickerSheet } from './address-picker-sheet';
@@ -30,6 +31,7 @@ export function PlaceSheet({ visible, onClose, showZonesLink = false, testID }: 
   const pickupPoints = usePickupPoints(status === 'ready' && address !== null);
   const selectedPickupId = useSelectedPickupWarehouse();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<MeAddress | null>(null);
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 
   if (address === null) {
@@ -40,8 +42,9 @@ export function PlaceSheet({ visible, onClose, showZonesLink = false, testID }: 
 
   return (
     <>
+      {/* Düzenleme formu seçicinin yerine açılır ve kapanınca seçici geri gelir: düzeltme sepetten çıkmadan biter. */}
       <AddressPickerSheet
-        visible={visible}
+        visible={visible && editing === null}
         addresses={addresses}
         selectedId={address.id}
         onSelect={selectDeliveryAddress}
@@ -52,10 +55,12 @@ export function PlaceSheet({ visible, onClose, showZonesLink = false, testID }: 
           onClose();
           setAdding(true);
         }}
+        onEdit={setEditing}
         onClose={onClose}
         testID={idOf('picker')}
       />
       <NewAddressSheet visible={adding} onClose={() => setAdding(false)} testID={idOf('address')} />
+      <EditAddressSheet address={editing} onClose={() => setEditing(null)} testID={idOf('edit')} />
     </>
   );
 }
@@ -81,6 +86,30 @@ export function NewAddressSheet({ visible, onClose, testID }: NewAddressSheetPro
         onClose();
       }}
       defaults={addressDefaultsOf(me)}
+      testID={testID}
+    />
+  );
+}
+
+interface EditAddressSheetProps {
+  /** Düzenlenen adres; `null` = kapalı. */
+  address: MeAddress | null;
+  onClose: () => void;
+  testID?: string;
+}
+
+/** Düzenleme çekmecesi: kayıt ya da silme listeyi tazeler; silinen adres seçiliyse yer varsayılan adrese düşer. */
+function EditAddressSheet({ address, onClose, testID }: EditAddressSheetProps) {
+  const { addresses, publish } = useAddresses(false);
+  return (
+    <AddressSheet
+      target={address === null ? null : { editing: address }}
+      addresses={addresses}
+      onClose={onClose}
+      onSaved={(next) => {
+        publish(next);
+        onClose();
+      }}
       testID={testID}
     />
   );

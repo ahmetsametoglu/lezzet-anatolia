@@ -8,7 +8,7 @@ import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CheckoutViewProps } from '../checkout-types';
 import { carrierToneClassOf } from '../use-service-points.hook';
-import { PhoneOptionRow } from './phone-option-row';
+import { OptionRow } from '@/components/customer/phone-kit/option-row';
 import { PhonePointCard } from './phone-point-card';
 import { PhoneServicePointPicker } from './phone-service-point-picker';
 
@@ -102,7 +102,7 @@ export function PhoneShippingChoice(props: CheckoutViewProps) {
             option.tracked ? copy.carrier.tracked : null,
           ].filter((part): part is string => part !== null);
           return (
-            <PhoneOptionRow
+            <OptionRow
               key={option.code}
               label={option.carrierName}
               badge={view.home.length === 2 ? (index === 0 ? copy.carrier.cheapest : copy.carrier.fastest) : undefined}
@@ -128,7 +128,7 @@ export function PhoneShippingChoice(props: CheckoutViewProps) {
             </div>
           </>
         ) : (
-          <PhoneOptionRow
+          <OptionRow
             label={copy.point.choose}
             description={copy.point.mapHint}
             selected={false}

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import messages from './address-picker-messages.json';
+import addressCopy from '@lezzet/i18n/customer/address';
 import { AddressPickerSheet } from './address-picker-sheet';
 
 /*
@@ -34,19 +34,50 @@ it('depo kartı listelenir; dokununca seçim yazılır ve çekmece kapanır', as
       selectedId="adr-1"
       onSelect={jest.fn()}
       onAddNew={jest.fn()}
+      onEdit={jest.fn()}
       onClose={onClose}
       pickupPoints={[point]}
       selectedPickupId={null}
       onSelectPickup={onSelectPickup}
     />,
   );
-  expect(screen.getByText(messages.tr.pickupOption)).toBeTruthy();
+  expect(screen.getByText(addressCopy.tr.pickupOption)).toBeTruthy();
   await fireEvent.press(screen.getByTestId('address-pick-warehouse-wh-1'));
   expect(onSelectPickup).toHaveBeenCalledWith('wh-1');
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('teklif yoksa depo kartı hiç çizilmez', async () => {
-  await render(<AddressPickerSheet visible addresses={[address]} selectedId="adr-1" onSelect={jest.fn()} onAddNew={jest.fn()} onClose={jest.fn()} />);
-  expect(screen.queryByText(messages.tr.pickupOption)).toBeNull();
+  await render(
+    <AddressPickerSheet visible addresses={[address]} selectedId="adr-1" onSelect={jest.fn()} onAddNew={jest.fn()} onEdit={jest.fn()} onClose={jest.fn()} />,
+  );
+  expect(screen.queryByText(addressCopy.tr.pickupOption)).toBeNull();
+});
+
+/* Düzenle seçimle karışırsa müşteri adresini düzeltmek isterken onu seçmiş ve çekmeceyi kapatmış olur; depo müşterinin adresi değildir. */
+it('Düzenle adresi seçmeden formu ister; depo kartında Düzenle yoktur', async () => {
+  const onSelect = jest.fn();
+  const onEdit = jest.fn();
+  const onClose = jest.fn();
+  await render(
+    <AddressPickerSheet
+      visible
+      addresses={[address]}
+      selectedId="adr-1"
+      onSelect={onSelect}
+      onAddNew={jest.fn()}
+      onEdit={onEdit}
+      onClose={onClose}
+      pickupPoints={[point]}
+      selectedPickupId={null}
+      onSelectPickup={jest.fn()}
+    />,
+  );
+
+  await fireEvent.press(screen.getByTestId('address-edit-adr-1'));
+
+  expect(onEdit).toHaveBeenCalledWith(address);
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+  expect(screen.queryByTestId('address-edit-wh-1')).toBeNull();
 });

@@ -13,6 +13,7 @@ import { useAccount } from '@/components/customer/account/account-context';
 import { errorText } from '@/lib/customer-error-text';
 import { AddressForm, addressDefaultsOf, toAddressFields, toFormInput } from './address-form';
 import { useDeliveryPlace } from './place-context';
+import { PhoneAddressList } from './phone-address-list';
 import { useMyAddresses } from './use-my-addresses.hook';
 import messages from '@lezzet/i18n/customer/address';
 import placeMessages from './place-messages.json';
@@ -24,7 +25,7 @@ import placeMessages from './place-messages.json';
 interface AddressPickerDialogProps {
   locale: Locale;
   onClose: () => void;
-  /** Mobil web forku — çekmece ve tek sütun (`Dialog placement`, `AddressForm compact`). */
+  /** Mobil web forku: native adres çekmecesinin listesi ve formun kendi çekmecesi. */
   compact?: boolean;
   /** Doğrudan formla açılış: sepet panelinin "+ Adres ekle"si ve "Düzenle"si. */
   initialMode?: 'list' | 'new' | 'edit';
@@ -36,13 +37,12 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
   const t = messages[locale];
   const account = useAccount();
   const notify = useToast();
-  const { address: current, saveAddress, pickup, selectPickup } = useDeliveryPlace();
+  const { address: current, saveAddress, removeAddress, pickup, selectPickup } = useDeliveryPlace();
   const pickedWarehouseId = pickup?.selectedWarehouseId ?? null;
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode === 'new' ? { kind: 'new' } : { kind: 'list' });
-  // "Düzenle" ile açıldıysa form SEÇİLİ adresin tam satırıyla açılır (alıcı, telefon burada).
-  // `current`/`initialMode` yalnız AÇILIŞTA okunur: seçici açıkken seçim değişince form yeniden kurulmaz.
-  const { addresses, failed, busy, choose } = useMyAddresses((rows) => {
+  // "Düzenle" açılışı formu seçili adresin tam satırıyla kurar; yalnız açılışta, ki seçici açıkken seçim değişince form yeniden kurulmasın.
+  const { addresses, failed, busy, choose, reload } = useMyAddresses((rows) => {
     if (initialMode !== 'edit' || !current) return;
     const row = rows.find((a) => a.id === current.id);
     if (row) setMode({ kind: 'edit', address: row });
@@ -58,10 +58,12 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
     if (!(await selectPickup(id))) return setError(errorText(t.errors, null));
     onClose();
   };
+  /** Form listeden açıldıysa listeye döner, sepetin "Düzenle"sinden açıldıysa kapanır. */
+  const leaveForm = () => (initialMode === 'list' ? setMode({ kind: 'list' }) : onClose());
 
   const save = async (id: string | null, input: Parameters<typeof toAddressFields>[0]) => {
     setError(null);
-    /* Çağrı dönmediyse (sunucuya ulaşılamadı, bağlantı koptu) genel cümleye düşer: ret yutulmaz, müşteriye söylenir. */
+    // Dönmeyen çağrı genel cümleye düşer ki ret yutulmasın.
     const result = await saveAddress({
       id,
       fields: toAddressFields(input),
@@ -70,10 +72,20 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
       point: input.point,
     }).catch(() => ({ ok: false as const, errorKey: null }));
     if (!result.ok) return setError(errorText(t.errors, result.errorKey));
-    // Yeni adres için iş bitti: müşteri adresi oraya göndermek için ekledi, listeye dönmesine
-    // gerek yok. Düzenlemede de aynı — seçim değişmedi, yalnız satır güncellendi.
+    // Yeni adres seçilmiş olur, iş biter; mobil webde düzeltilen adres listeye döner, native çekmece gibi.
     if (id === null) notify(t.savedToast.replace('{name}', addressTitle(result.address)));
-    onClose();
+    if (!compact || id === null) return onClose();
+    await reload();
+    leaveForm();
+  };
+
+  const remove = async (id: string) => {
+    setError(null);
+    const result = await removeAddress(id).catch(() => ({ ok: false as const, errorKey: null }));
+    if (!result.ok) return setError(errorText(t.errors, result.errorKey));
+    notify(t.form.deleted);
+    await reload();
+    leaveForm();
   };
 
   const title = mode.kind === 'new' ? t.newTitle : mode.kind === 'edit' ? t.editTitle : t.pickerTitle;
@@ -84,17 +96,21 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
       compact,
       frame: false,
       defaultChoice: false,
-      // Hata FORMUN içinde çizilir: çekmecede (mobil web) pencerenin kendi satırı hiç çizilmiyordu.
+      // Hata formun içinde çizilir, çünkü mobil webde pencerenin kendi satırı görünmez.
       error,
-      onCancel: () => (initialMode === 'list' ? setMode({ kind: 'list' }) : onClose()),
+      onCancel: leaveForm,
     };
-    // Mobil webde form KENDİ çekmecesini açıyor (`AddressForm compact` künyesi); ikinci bir kabuk
-    // çizilmez. Masaüstünde form bu pencerenin içinde durur.
+    // Mobil webde form kendi çekmecesini açar, ikinci kabuk çizilmez.
     const form =
       mode.kind === 'new' ? (
         <AddressForm {...formProps} defaults={addressDefaultsOf(account ? { name: account.name, phone: null } : null)} onSave={(input) => save(null, input)} />
       ) : (
-        <AddressForm {...formProps} initial={toFormInput(mode.address)} onSave={(input) => save(mode.address.id, input)} />
+        <AddressForm
+          {...formProps}
+          initial={toFormInput(mode.address)}
+          onSave={(input) => save(mode.address.id, input)}
+          onDelete={() => remove(mode.address.id)}
+        />
       );
     if (compact) return form;
     return (
@@ -104,8 +120,27 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
     );
   }
 
+  if (compact) {
+    return (
+      <Dialog title={title} closeLabel={placeMessages[locale].close} onClose={onClose} placement="sheet">
+        <PhoneAddressList
+          locale={locale}
+          addresses={addresses}
+          failed={failed}
+          selectedId={pickedWarehouseId === null ? (current?.id ?? null) : null}
+          pickup={pickup}
+          error={error}
+          onPick={(id) => void pick(id)}
+          onPickPickup={(id) => void pickPickup(id)}
+          onEdit={(address) => setMode({ kind: 'edit', address })}
+          onAdd={() => setMode({ kind: 'new' })}
+        />
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog title={title} closeLabel={placeMessages[locale].close} onClose={onClose} maxWidth={460} placement={compact ? 'sheet' : 'center'}>
+    <Dialog title={title} closeLabel={placeMessages[locale].close} onClose={onClose} maxWidth={460}>
       <p className="font-sans text-note leading-relaxed text-body">{t.pickerBody}</p>
 
       {failed && <span className="font-sans text-note font-semibold text-terracotta">{t.failed}</span>}
@@ -195,7 +230,7 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
       {error && <span className="font-sans text-note font-semibold text-terracotta">{error}</span>}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-100 pt-3">
-        <Button variant="secondary" size="sm" compact={compact} disabled={busy} onClick={() => setMode({ kind: 'new' })}>
+        <Button variant="secondary" size="sm" disabled={busy} onClick={() => setMode({ kind: 'new' })}>
           {t.add}
         </Button>
         <Link href="/account" className="cursor-pointer font-sans text-note font-semibold text-muted hover:text-olive">

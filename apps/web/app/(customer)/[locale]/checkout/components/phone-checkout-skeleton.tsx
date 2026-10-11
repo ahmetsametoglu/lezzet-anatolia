@@ -1,12 +1,8 @@
 import { Skeleton, SkeletonRegion } from '@/components/customer/ui/skeleton';
 
 /*
-  ÖDEME SEÇENEKLERİNİN İSKELETİ — TELEFON: seçenekler sunucudan gelirken üç bölümün yerini tutar (teslimat adresi ·
-  teslimat yolu · ödeme yolu), her biri üstbaşlık + iki satır. "En az makul" sayı çiziliyor çünkü fazlasını çizmek
-  cevap gelince satır kaybettirir; tutar özeti burada yok, ekran onu beklerken de çiziyor.
-
-  Kabuk `PhoneOptionRow`un gerçek ölçüleri (dolgu, köşe, boştaki çerçeve) — rota iskeleti (`loading.tsx`) ile ekranın
-  kendi bekleme karesi aynı parçayı çizsin ki geçişte bölümler kaymasın.
+  Seçenek bölümü başına iki satır çizilir, çünkü fazlası cevap gelince satır kaybettirir. Kabuk `OptionRow`un ölçüleriyle çizilir ki rota
+  iskeleti (`loading.tsx`) ile ekranın kendi bekleme karesi arasında bölümler kaymasın.
 */
 export function PhoneCheckoutSkeleton({ label }: { label?: string }) {
   return (
