@@ -8,7 +8,7 @@ import { CustomerChannels } from '@/components/operation/ui/customer-channels';
 import { orderChatContext } from '@/components/operation/ui/customer-channel-model';
 import { money, percent, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { DOOR_CHECK_NOTE } from '@/components/operation/ui/labels';
-import { statusLabel, statusTone } from '../orders-labels';
+import { isOffPathStatus, statusLabel, statusTone } from '../orders-labels';
 import { OrderLines } from './components/order-lines';
 import {
   boxTrailOf,
@@ -113,7 +113,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, onRetryRefund
               onClick={() => onAdvance(next)}
               disabled={busy}
               className={`cursor-pointer rounded-ops-btn border px-3.5 py-2 font-ops-display text-ops-sm font-semibold outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                next === 'cancelled' || next === 'returned'
+                isOffPathStatus(next)
                   ? 'border-ops-red-line bg-ops-white text-ops-red hover:bg-ops-red-bg'
                   : 'border-ops-olive-line bg-ops-white text-ops-olive-dark hover:bg-ops-olive-bg'
               }`}

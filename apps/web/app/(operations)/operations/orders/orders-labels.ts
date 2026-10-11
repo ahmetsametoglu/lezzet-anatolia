@@ -30,6 +30,11 @@ export function statusTone(status: OrderStatus): OpsTone {
   return STATUS_TONE[status];
 }
 
+/** Siparişi ana yolundan çıkaran durum: zaman çizelgesinde ayrı çizilir, geçiş şeridinde kırmızıdır ve onay ister. */
+export function isOffPathStatus(status: OrderStatus): boolean {
+  return status === 'cancelled' || status === 'returned';
+}
+
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   online: 'online',
   cash: 'nakit',

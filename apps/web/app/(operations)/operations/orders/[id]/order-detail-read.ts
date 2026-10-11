@@ -63,7 +63,7 @@ import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { readCustomerTrust } from '@/lib/customer/trust';
 import { blockReasonOf } from '@/lib/register/labels';
 import { ticketsLink } from '../../tickets/tickets-url';
-import { methodLabel } from '../orders-labels';
+import { isOffPathStatus, methodLabel } from '../orders-labels';
 import type {
   OrderBundleGroup,
   OrderDetailView,
@@ -611,7 +611,7 @@ function timelineOf(
       who: log.actorId ? (actorNames.get(log.actorId) ?? 'Personel') : 'Sistem',
       when: log.createdAt,
       skipped: false,
-      offPath: log.toStatus === 'cancelled' || log.toStatus === 'returned',
+      offPath: isOffPathStatus(log.toStatus),
       warn: false,
       current: false,
     });

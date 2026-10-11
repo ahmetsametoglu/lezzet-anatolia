@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderStatus } from '@lezzet/types';
 import { adjustFulfillmentAction, advanceOrderStatusAction, cancelOrderAction, retryRefundAction } from '../actions';
+import { isOffPathStatus } from '../orders-labels';
 import { CancelDialog } from './components/cancel-dialog';
 import { DecisionDialog } from './components/decision-dialog';
+import { TransitionConfirmDialog } from './components/transition-confirm-dialog';
 import { OrderDetailDesktop } from './order-detail.desktop';
 import type { OrderDetailView } from './order-detail-types';
 
@@ -35,6 +37,7 @@ export function OrderDetailClient({ order }: OrderDetailClientProps) {
   /** İşlem geçti ama iade yazılamadı — hata değil, tamamlanmamış bir sonuç. */
   const [notice, setNotice] = useState<{ text: string; retryable: boolean } | null>(null);
   const [dialog, setDialog] = useState<OrderDecision | null>(null);
+  const [confirmTo, setConfirmTo] = useState<OrderStatus | null>(null);
 
   /**
    * Her yazma yolu aynı kapıdan döner: hata ekranda kalır, başarı sayfayı tazeler. İade yazılamadıysa ayrı ve kalıcı bir uyarı
@@ -59,7 +62,13 @@ export function OrderDetailClient({ order }: OrderDetailClientProps) {
       .finally(() => setBusy(false));
   };
 
-  const onAdvance = (to: OrderStatus) => run(advanceOrderStatusAction(order.id, order.status, to));
+  const advance = (to: OrderStatus, onDone?: () => void) => run(advanceOrderStatusAction(order.id, order.status, to), onDone);
+
+  const onAdvance = (to: OrderStatus) => {
+    if (!isOffPathStatus(to)) return advance(to);
+    setError(null);
+    setConfirmTo(to);
+  };
 
   const onDecision = (decision: OrderDecision) => {
     setError(null);
@@ -128,6 +137,16 @@ export function OrderDetailClient({ order }: OrderDetailClientProps) {
           error={error}
           onClose={() => setDialog(null)}
           onConfirm={onConfirmDecision}
+        />
+      ) : null}
+      {confirmTo ? (
+        <TransitionConfirmDialog
+          order={order}
+          to={confirmTo}
+          busy={busy}
+          error={error}
+          onClose={() => setConfirmTo(null)}
+          onConfirm={() => advance(confirmTo, () => setConfirmTo(null))}
         />
       ) : null}
     </>
