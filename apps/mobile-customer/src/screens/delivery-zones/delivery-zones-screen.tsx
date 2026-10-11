@@ -1,9 +1,11 @@
 import { useRouter } from 'expo-router';
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { joinCountries } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
+import messages from '@lezzet/i18n/customer/delivery-zones';
+import type { Country, DeliveryAreaList } from '@lezzet/types';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
@@ -11,23 +13,23 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Note } from '@/components/ui/note';
 import { SectionHeader } from '@/components/ui/section-header';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
-import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
+import { PostalCodeFields } from '@/screens/customer-kit/postal-code-fields';
+import { usePostalCodeDraft } from '@/screens/customer-kit/use-postal-code-draft.hook';
 import { useDeliveryTerms } from '@/screens/customer-kit/use-delivery-terms.hook';
-import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
-import messages from './messages.json';
 import { useDeliveryZones } from './use-delivery-zones.hook';
 
 /*
-  Teslimat bölgeleri, "nereye gidiyorsunuz?" sorusunun cevabı: liste posta kodudur, çünkü müşterinin elindeki tek anahtar kendi
-  kodudur ve bölge adı operasyonun rota etiketidir. Satır başına tek yer (`Strasbourg (67000 · 67100)`), ülke öbekleri altında, çünkü
-  yüzlerce kod düz listede okunmaz; kendi kodunu denemek vitrin başlığındaki aynı posta kodu çekmecesiyle yapılır.
+  Teslimat bölgeleri, "nereye gidiyorsunuz?" sorusunun cevabı: önce müşterinin kendi kodu sorulur, çünkü asıl soru "benim kodum var mı"
+  ve cevabı listenin altında kalmamalı. Yerler ülke kartlarında kapalı gelir ki liste büyüdükçe sayfa uzamasın.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
+type Area = DeliveryAreaList['areas'][number];
 
 export function DeliveryZonesScreen() {
   const locale = useAppLocale();
@@ -35,14 +37,12 @@ export function DeliveryZonesScreen() {
   const { theme } = useUnistyles();
   const router = useRouter();
   const zones = useDeliveryZones();
-
-  const zipSheet = useSheet();
-  /* Çekmecenin başlangıç değeri cihazda SAKLI koddur — sayfa kendi başına bir kod tutmaz. */
+  /* Kod kartı cihazda saklı kodla açılır, ki müşteri kendi cevabını yazmadan görsün; sayfa kodu kaydetmez, yalnız sorar. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const form = usePostalCodeDraft(onboarding?.postalCode ?? null, onboarding?.country ?? null, true);
+  const [open, setOpen] = useState<Partial<Record<Country, boolean>>>({});
 
-  /* KAPANIŞ CÜMLESİNİN ÜLKELERİ: okuma bitmediyse ya da düştüyse ülkesiz hâl yazılır — boş bir
-     parantez ya da "undefined" basmaktansa cümleyi bir tık genel kurmak doğrusu. Küme BOŞ dönerse
-     (hiç kargo deposu yok) yine ülkesiz hâl: "hiçbir yere" diye yazmayız, susarız. */
+  /* Okuma bitmediyse, düştüyse ya da hiç kargo deposu yoksa cümle ülkesiz kurulur; boş parantez ya da "hiçbir yere" yazılmaz. */
   const terms = useDeliveryTerms();
   const shippingCountries = terms.status === 'ready' ? terms.terms.shippingCountries : [];
   const closing =
@@ -50,32 +50,21 @@ export function DeliveryZonesScreen() {
       ? t.closingNoShipping
       : t.closing.replace('{countries}', joinCountries(shippingCountries, t.countries, t.and));
 
+  const countOf = (n: number) => (n === 1 ? t.placeCountOne : t.placeCount.replace('{n}', String(n)));
+
   const list =
     zones.status === 'loading' ? (
-      /* Halka yerine listenin iskeleti bekler, çünkü beklenen şey bir işlem değil bir yerleşim ve halka onu tutmadığı için liste
-         gelince sayfa bir anda uzardı. */
+      /* Halka yerine kartların iskeleti bekler: beklenen bir yerleşim ve halka onu tutmadığı için liste gelince sayfa bir anda uzardı. */
       <View
         style={styles.groups}
         testID="zones-loading"
         accessible
         accessibilityRole="progressbar"
-        /* Ekran okuyucuya TEK ses: rol + ad + meşgul. Ad korundu çünkü halkanın yerini alan bu
-           blok, ekranda yazılı hiçbir şey taşımıyor — "ilerleme çubuğu" tek başına neyin
-           beklendiğini söylemezdi. */
         accessibilityLabel={t.loading}
         accessibilityState={{ busy: true }}
       >
         {[0, 1].map((group) => (
-          <View key={group} style={styles.group}>
-            <Skeleton width="38%" height={theme.text.h2 * theme.text['h1--line-height']} tone="deep" />
-            {[0, 1, 2, 3].map((row) => (
-              <Skeleton
-                key={row}
-                width={row % 2 === 0 ? '86%' : '72%'}
-                height={theme.text.body * theme.text['lead--line-height']}
-              />
-            ))}
-          </View>
+          <Skeleton key={group} width="100%" height={theme.text['card-title-sm'] + theme.space['2xl'] * 2} radius="card" tone="deep" />
         ))}
       </View>
     ) : zones.status === 'error' ? (
@@ -84,8 +73,7 @@ export function DeliveryZonesScreen() {
         <TextAction label={t.retry} onPress={zones.retry} testID="zones-retry" />
       </View>
     ) : zones.areas.length === 0 ? (
-      /* `fill={false}`: kaydırma kabının içinde bir gövde parçası — üstünde başlık, altında açıklama
-         blokları var; ortalama onları aşağı iterdi. */
+      /* `fill={false}`: kaydırma kabının içinde bir gövde parçası; ortalama üstündeki ve altındaki blokları iterdi. */
       <EmptyState
         fill={false}
         icon={<Icon name="truck" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
@@ -95,20 +83,21 @@ export function DeliveryZonesScreen() {
       />
     ) : (
       <View style={styles.groups} testID="zones-list">
-        {zones.areas.map((area) => (
-          <View key={area.country} style={styles.group}>
-            {/* Ülke adı EKRANIN sözlüğünden: sunucu ülke KODU gönderiyor (`FR`) — cümleyi kuran
-                taraf her zaman ekran (uç biçimli metin göndermez, katalog kartının kuralı). */}
-            <Text style={styles.country}>{t.countries[area.country]}</Text>
-            {area.places.map((place, index) => (
-              /* Anahtar ad ve sıraya bağlı, çünkü adsız öbek `null` taşır ve iki ülke aynı yer adını taşıyabilir. */
-              <Text key={`${place.name ?? ''}-${index}`} style={styles.placeLine} testID={`zones-place-${index}`}>
-                {/* Adı olmayan öbek YALNIZ kodlarıyla çizilir (sözleşmenin `name: null` hâli):
-                    yer kaydı yok diye kodu gizlemek, gittiğimiz bir yeri saklamak olurdu. */}
-                {place.name === null ? place.codes.join(' · ') : `${place.name} (${place.codes.join(' · ')})`}
-              </Text>
-            ))}
+        <View style={styles.summary}>
+          <View style={styles.summaryEyebrow}>
+            <SectionHeader eyebrow={t.listEyebrow} testID="zones-section" />
           </View>
+          <Text style={styles.count}>{countOf(zones.areas.reduce((sum, area) => sum + area.places.length, 0))}</Text>
+        </View>
+        {zones.areas.map((area) => (
+          <AreaCard
+            key={area.country}
+            area={area}
+            name={t.countries[area.country]}
+            count={countOf(area.places.length)}
+            open={open[area.country] === true}
+            onToggle={() => setOpen((current) => ({ ...current, [area.country]: !current[area.country] }))}
+          />
         ))}
       </View>
     );
@@ -120,35 +109,63 @@ export function DeliveryZonesScreen() {
         left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="zones-back" />}
         testID="zones-appbar"
       />
-      <ScrollView contentContainerStyle={styles.content} testID="zones-scroll">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="zones-scroll">
         <Text style={styles.intro}>{t.intro}</Text>
-        <SectionHeader eyebrow={t.listEyebrow} testID="zones-section" />
+        <View style={styles.codeCard}>
+          <Text style={styles.codeTitle}>{t.codeTitle}</Text>
+          <PostalCodeFields form={form} testID="zones-code" />
+        </View>
         {list}
-        {/* Kod denemesi listenin ALTINDA: önce "nerelere gidiyoruz" cevaplanır, sonra "peki ben
-            neredeyim" sorulur. Üstte dursaydı sayfa, cevabını verdiği soruyu geri sorardı. */}
-        <TextAction
-          label={t.tryCode}
-          onPress={zipSheet.open}
-          accessibilityHint={t.tryCodeHint}
-          testID="zones-try-code"
-        />
-        {/* Kapanış cümlesi kargo yolunu açıkça söyler ki liste "burada yoksanız satmıyoruz" diye okunmasın; ülkeler kargo depolarından
-            türer, okuma düşerse cümle ülkesiz hâliyle ayakta kalır. */}
+        {/* Kapanış cümlesi kargo yolunu açıkça söyler ki liste "burada yoksanız satmıyoruz" diye okunmasın. */}
         <Note tone="warm" description={closing} testID="zones-closing" />
       </ScrollView>
+    </View>
+  );
+}
 
-      {/* Çekmece İLK AÇILIŞTA kurulur (bandın aynı kararı) — gerekçe `use-sheet.hook`ta. */}
-      {zipSheet.mounted ? (
-        <PostalCodeSheet
-          visible={zipSheet.visible}
-          code={onboarding?.postalCode ?? null}
-          country={onboarding?.country ?? null}
-          onClose={zipSheet.close}
-          // Bağlantı ÇİZİLMEZ: müşteri zaten o sayfada — kendine götüren bir kapı ölü kapıdır.
-          showZonesLink={false}
-          testID="zones-zip"
-        />
-      ) : null}
+interface AreaCardProps {
+  area: Area;
+  /** Ülke adı ekranın sözlüğünden; sunucu yalnız ülke kodu gönderir. */
+  name: string;
+  count: string;
+  open: boolean;
+  onToggle: () => void;
+}
+
+/** Ülke kartı: başlıkta yer sayısı, açılınca yerler iki sütunda; satırlar eşit hizalı ki göz satırı izleyebilsin. */
+function AreaCard({ area, name, count, open, onToggle }: AreaCardProps) {
+  const rows: Area['places'][] = [];
+  for (let i = 0; i < area.places.length; i += 2) rows.push(area.places.slice(i, i + 2));
+
+  return (
+    <View style={styles.card}>
+      <PressableSurface
+        onPress={onToggle}
+        feedback="opacity"
+        style={styles.cardHead}
+        accessibilityLabel={`${name}, ${count}`}
+        testID={`zones-area-${area.country}`}
+      >
+        <Text style={styles.cardName}>{name}</Text>
+        <Text style={styles.cardCount}>{count}</Text>
+        <Text style={styles.cardSign}>{open ? '–' : '+'}</Text>
+      </PressableSurface>
+      {!open ? null : (
+        <View style={styles.cardBody}>
+          {rows.map((row, rowIndex) => (
+            <View key={rowIndex} style={[styles.row, rowIndex < rows.length - 1 && styles.rowRule]}>
+              {row.map((place, index) => (
+                /* Adı olmayan yer yalnız kodlarıyla çizilir: yer kaydı yok diye kodu gizlemek gittiğimiz bir yeri saklamak olurdu. */
+                <View key={`${place.name ?? ''}-${index}`} style={styles.cell} testID={`zones-place-${area.country}-${rowIndex * 2 + index}`}>
+                  {place.name === null ? null : <Text style={styles.placeName}>{place.name}</Text>}
+                  <Text style={styles.placeCodes}>{place.codes.join(' · ')}</Text>
+                </View>
+              ))}
+              {row.length === 1 ? <View style={styles.cell} /> : null}
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -168,30 +185,87 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
     lineHeight: theme.text.helper * theme.text['lead--line-height'],
-    color: theme.colors.muted,
-  },
-  /** Saran rozet ızgarası — kodlar aynı boyda, göz bir bakışta tarar. */
-  codes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: theme.space.lg,
-    rowGap: theme.space.lg,
-  },
-  /** Ülke öbekleri — aralarındaki nefes, satır aralığından BÜYÜK: hiyerarşi boşlukla okunur. */
-  groups: { gap: theme.space['4xl'] },
-  group: { gap: theme.space.md },
-  country: {
-    fontFamily: theme.font.display[theme.text['h2--font-weight']],
-    fontSize: theme.text.h2,
     color: theme.colors.ink,
-    marginBottom: theme.space['2xs'],
   },
-  /** Tek satır: "Strasbourg (67000 · 67100 · 67200)". Sarabilir; sarınca da tek blok kalır. */
-  placeLine: {
-    fontFamily: theme.font.body[400],
+  codeCard: {
+    backgroundColor: theme.colors['sand-250'],
+    borderRadius: theme.radius.card,
+    padding: theme.space['3xl'],
+    gap: theme.space.lg,
+  },
+  codeTitle: {
+    fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
+    fontSize: theme.text['card-title-sm'],
+    color: theme.colors.ink,
+  },
+  groups: { gap: theme.space.lg },
+  summary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+  },
+  summaryEyebrow: { flex: 1 },
+  count: {
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
+  card: {
+    backgroundColor: theme.colors['sand-250'],
+    borderRadius: theme.radius.card,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+    paddingHorizontal: theme.space['3xl'],
+    paddingVertical: theme.space['2xl'],
+  },
+  cardName: {
+    flex: 1,
+    fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
+    fontSize: theme.text['card-title-sm'],
+    color: theme.colors.ink,
+  },
+  cardCount: {
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
+  cardSign: {
+    fontFamily: theme.font.body[600],
     fontSize: theme.text.body,
-    lineHeight: theme.text.body * theme.text['lead--line-height'],
-    color: theme.colors.body,
+    color: theme.colors.ink,
+    minWidth: theme.space.xl,
+    textAlign: 'center',
+  },
+  /** Kesik ayraçta renk `borderColor`a verilir: iOS tek kenara özgü renkte kesik kenarı çizmiyor. */
+  cardBody: {
+    borderTopWidth: theme.border.base,
+    borderColor: theme.colors['sand-400'],
+    borderStyle: 'dashed',
+    paddingHorizontal: theme.space['3xl'],
+  },
+  row: {
+    flexDirection: 'row',
+    gap: theme.space['2xl'],
+    paddingVertical: theme.space.md,
+  },
+  rowRule: {
+    borderBottomWidth: theme.border.base,
+    borderColor: theme.colors['sand-400'],
+    borderStyle: 'dashed',
+  },
+  cell: { flex: 1, gap: theme.space['2xs'] },
+  placeName: {
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
+  placeCodes: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors.ink,
   },
   errorBlock: {
     gap: theme.space.lg,

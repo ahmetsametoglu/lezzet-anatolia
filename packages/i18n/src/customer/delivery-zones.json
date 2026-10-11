@@ -3,7 +3,10 @@
     "back": "Geri",
     "title": "Nerelere gidiyoruz",
     "intro": "Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla getiriyoruz. Aracımız şu posta kodlarına gidiyor.",
-    "listEyebrow": "Posta kodları",
+    "codeTitle": "Posta kodunuz",
+    "listEyebrow": "Aracımızın gittiği yerler",
+    "placeCount": "{n} yer",
+    "placeCountOne": "1 yer",
     "countries": {
       "FR": "Fransa",
       "DE": "Almanya"
@@ -16,8 +19,6 @@
       "title": "Henüz ilan edilmiş posta kodu yok",
       "body": "Aracımızın gittiği posta kodlarını yakında burada yayınlayacağız."
     },
-    "tryCode": "Kendi posta kodumu deneyeyim",
-    "tryCodeHint": "Posta kodunuzu girin, teslimat şeklini söyleyelim",
     "closing": "Diğer bütün ürünleri {countries} adreslerine kargoyla gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz.",
     "closingNoShipping": "Diğer bütün ürünleri kargoyla da gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz."
   },
@@ -25,7 +26,10 @@
     "back": "Retour",
     "title": "Où nous livrons",
     "intro": "Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre camion réfrigéré. Voici les codes postaux qu'il dessert.",
-    "listEyebrow": "Codes postaux",
+    "codeTitle": "Votre code postal",
+    "listEyebrow": "Où passe notre camion",
+    "placeCount": "{n} lieux",
+    "placeCountOne": "1 lieu",
     "countries": {
       "FR": "France",
       "DE": "Allemagne"
@@ -38,8 +42,6 @@
       "title": "Aucun code postal annoncé pour l'instant",
       "body": "Nous publierons ici très bientôt les codes postaux desservis par notre camion."
     },
-    "tryCode": "Essayer mon code postal",
-    "tryCodeHint": "Saisissez votre code postal, nous vous indiquons le mode de livraison",
     "closing": "Tous les autres produits sont expédiés par transporteur en {countries} — vous pouvez commander même si vous n'êtes pas sur la liste.",
     "closingNoShipping": "Tous les autres produits partent aussi par transporteur — vous pouvez commander même si vous n'êtes pas sur la liste."
   },
@@ -47,7 +49,10 @@
     "back": "Zurück",
     "title": "Wohin wir liefern",
     "intro": "Produkte mit Kühlkette – Tiefkühl- und Frischware – bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug. Es fährt diese Postleitzahlen an.",
-    "listEyebrow": "Postleitzahlen",
+    "codeTitle": "Ihre Postleitzahl",
+    "listEyebrow": "Wohin unser Fahrzeug fährt",
+    "placeCount": "{n} Orte",
+    "placeCountOne": "1 Ort",
     "countries": {
       "FR": "Frankreich",
       "DE": "Deutschland"
@@ -60,8 +65,6 @@
       "title": "Noch keine Postleitzahl veröffentlicht",
       "body": "Die von unserem Fahrzeug belieferten Postleitzahlen veröffentlichen wir hier in Kürze."
     },
-    "tryCode": "Meine Postleitzahl prüfen",
-    "tryCodeHint": "Geben Sie Ihre Postleitzahl ein, wir nennen Ihnen die Lieferart",
     "closing": "Alle übrigen Produkte versenden wir nach {countries} – Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen.",
     "closingNoShipping": "Alle übrigen Produkte verschicken wir auch – Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen."
   }

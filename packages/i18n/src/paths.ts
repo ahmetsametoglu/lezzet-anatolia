@@ -45,6 +45,8 @@ export const PATHNAMES = {
   // Ziyaretçi "keşfet" diye arar, "aday ürün" diye değil.
   '/discover': { fr: '/decouverte', de: '/entdecken', tr: '/kesfet' },
   '/professionals': { fr: '/professionnels', de: '/geschaeftskunden', tr: '/profesyoneller' },
+  // Soğuk zincir aracının gittiği yerler; posta kodu çekmecesindeki "Nerelere gidiyorsunuz?" bağlantısının hedefi.
+  '/delivery-zones': { fr: '/zones-de-livraison', de: '/liefergebiete', tr: '/teslimat-bolgeleri' },
   // Yasal sayfalar tek `[slug]` değil: dile göre değişmesi gereken segmentin kendisi (`mentions-legales` · `impressum`).
   '/legal/terms': { fr: '/mentions-legales', de: '/impressum', tr: '/yasal-bilgiler' },
   '/legal/sales': { fr: '/conditions-generales-de-vente', de: '/agb', tr: '/satis-kosullari' },

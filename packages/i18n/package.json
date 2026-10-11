@@ -13,6 +13,7 @@
     "./customer/size": "./src/customer/size.json",
     "./customer/catalog": "./src/customer/catalog.json",
     "./customer/place": "./src/customer/place.json",
+    "./customer/delivery-zones": "./src/customer/delivery-zones.json",
     "./customer/address": "./src/customer/address.json",
     "./customer/product": "./src/customer/product.json",
     "./customer/packages": "./src/customer/packages.json",

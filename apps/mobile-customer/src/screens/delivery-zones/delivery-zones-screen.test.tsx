@@ -1,16 +1,18 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import messages from '@lezzet/i18n/customer/delivery-zones';
+
+import * as onboardingStore from '@/lib/onboarding/onboarding-store';
 import { DeliveryZonesScreen } from './delivery-zones-screen';
-import messages from './messages.json';
 
 /*
-  Ekranın üç hâli (yükleniyor, dolu, boş), hata ve tekrar deneme ile posta kodu çekmecesi gerçek hook ve taklit `fetch` ile sınanır ki veri
+  Ekranın üç hâli (yükleniyor, dolu, boş), hata ve tekrar deneme ile kod kartı gerçek hook ve taklit `fetch` ile sınanır ki veri
   sözleşmeden geçsin. Boş liste ile hata ayrı sınanır, çünkü tek dala inseler ekran çalışan sistemi arızalı ya da arızayı "bölge yok" gösterirdi.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
 
-// Cihazda saklı kod yok — çekmece boş taslakla açılır, yer çözümü (beş hane) tetiklenmez.
+// Varsayılan: cihazda saklı kod yok, kod kartı boş açılır ve yer çözümü (beş hane) tetiklenmez.
 jest.mock('@/lib/onboarding/onboarding-store');
 
 // Ad `mock` ile başlamak ZORUNDA: `jest.mock` fabrikası dosyanın tepesine kaldırılıyor.
@@ -85,9 +87,8 @@ describe('DeliveryZonesScreen', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('http://api.test/api/v1/places/zones');
   });
 
-  /* Liste ülke, yer ve kodlar diye öbeklidir: ülke başlığı ekranın sözlüğünden gelir (uç kod gönderir), yer adı öbeği başlıklar, kodlar
-     rozet olarak basılır. */
-  it('kodları ÜLKE ve YER adına göre öbekli listeler; kapanış cümlesi durur', async () => {
+  /* Ülke kartları kapalı gelir ki liste büyüdükçe sayfa uzamasın; ülke adı ekranın sözlüğünden gelir, çünkü uç yalnız kod gönderir. */
+  it('ülke kartları kapalı gelir, açılınca yerleri kodlarıyla gösterir; kapanış cümlesi durur', async () => {
     fetchMock.mockResolvedValue(
       okResponse({
         areas: [
@@ -100,11 +101,18 @@ describe('DeliveryZonesScreen', () => {
     await render(<DeliveryZonesScreen />);
 
     expect(await screen.findByTestId('zones-list')).toBeOnTheScreen();
-    expect(screen.getByText(t.countries.FR)).toBeOnTheScreen();
-    expect(screen.getByText(t.countries.DE)).toBeOnTheScreen();
-    // Satır başına tek yer: ad ve parantez içinde kodları.
-    expect(screen.getByText('Strasbourg (67000 · 67100)')).toBeOnTheScreen();
-    expect(screen.getByText('Kehl (77694)')).toBeOnTheScreen();
+    // Ülke adı kod kartının çipinde de geçtiği için kartın kendi içinde aranır.
+    expect(screen.getByTestId('zones-area-FR')).toHaveTextContent(new RegExp(t.countries.FR));
+    expect(screen.getByTestId('zones-area-DE')).toHaveTextContent(new RegExp(t.countries.DE));
+    expect(screen.getByText(t.placeCount.replace('{n}', '2'))).toBeOnTheScreen();
+    expect(screen.queryByText('Strasbourg')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('zones-area-FR'));
+
+    expect(screen.getByText('Strasbourg')).toBeOnTheScreen();
+    expect(screen.getByText('67000 · 67100')).toBeOnTheScreen();
+    // Öteki kart kendi kendine açılmaz.
+    expect(screen.queryByText('Kehl')).toBeNull();
     // Kapanış cümlesinin ülkeleri kargo depolarından türer; ekran yalnız yer tutucuyu doldurur.
     expect(await screen.findByText(closingWith('Fransa ve Almanya'))).toBeOnTheScreen();
   });
@@ -117,10 +125,10 @@ describe('DeliveryZonesScreen', () => {
     );
 
     await render(<DeliveryZonesScreen />);
+    await fireEvent.press(await screen.findByTestId('zones-area-FR'));
 
-    // Adsız öbek YALNIZ kodlarıyla, parantezsiz.
-    expect(await screen.findByText('67999')).toBeOnTheScreen();
-    expect(screen.getByText(t.countries.FR)).toBeOnTheScreen();
+    // Adsız yer yalnız kodlarıyla çizilir.
+    expect(screen.getByText('67999')).toBeOnTheScreen();
   });
 
   it('boş liste HATA DEĞİLDİR: kendi cümlesiyle söylenir', async () => {
@@ -141,27 +149,31 @@ describe('DeliveryZonesScreen', () => {
 
     expect(await screen.findByTestId('zones-error')).toBeOnTheScreen();
     // Sayfanın kalanı yerinde: hata yalnız listenin hâlidir.
-    expect(screen.getByTestId('zones-try-code')).toBeOnTheScreen();
+    expect(screen.getByTestId('zones-code-field')).toBeOnTheScreen();
 
     // `await`li dokunuş: tekrar deneme yeni bir uçuş başlatıyor, cevabı beklenmezse React
     // "act(...) dışında güncelleme" uyarısı basar.
     await fireEvent.press(screen.getByTestId('zones-retry'));
 
-    await waitFor(() => expect(screen.getByText('Colmar (68000)')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('zones-area-FR')).toBeOnTheScreen());
     expect(screen.queryByTestId('zones-error')).toBeNull();
   });
 
-  it('"kendi kodumu deneyeyim" ORTAK çekmeceyi açar (ikinci bir alan yazılmadı)', async () => {
-    fetchMock.mockResolvedValue(okResponse({ areas: [{ country: 'FR', places: [{ name: 'Strasbourg', codes: ['67000'] }] }] }));
+  /* Müşteri kendi kodunun cevabını yazmadan görür; kart cihazda saklı kodla ve onun ülkesiyle açılır. */
+  it('kod kartı cihazda saklı kodla dolu açılır', async () => {
+    // Anlık durum sabit referans olmalı: `useSyncExternalStore` her çağrıda yeni nesne görürse sonsuz döngüye girer.
+    const saved = { done: true, locale: 'tr', postalCode: '77694', country: 'DE' } as const;
+    const snapshot = jest.spyOn(onboardingStore, 'getOnboardingSnapshot').mockReturnValue(saved);
+    fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
     await render(<DeliveryZonesScreen />);
-    await screen.findByTestId('zones-list');
 
-    expect(screen.queryByTestId('zones-zip-sheet')).toBeNull();
-    await fireEvent.press(screen.getByTestId('zones-try-code'));
-
-    expect(await screen.findByTestId('zones-zip-sheet')).toBeOnTheScreen();
-    expect(screen.getByTestId('zones-zip-field')).toHaveProp('value', '');
+    expect(screen.getByTestId('zones-code-field')).toHaveProp('value', '77694');
+    // Yer saklı kodun ülkesinde sorulur: aynı kod iki ülkede de bulunabilir.
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => /77694/.test(String(url)) && /country=DE/.test(String(url)))).toBe(true),
+    );
+    snapshot.mockRestore();
   });
 
   it('geri düğmesi yığından çıkarır', async () => {

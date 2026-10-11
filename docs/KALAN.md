@@ -58,8 +58,7 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
   - Görev kapandı; koddaki `BEKLEYEN(08.44)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (08.58) ~~**MOBİL WEB v1 — kabuk birebir, ekranlar sırayla**~~ → **MOBİL WEB — telefon görünümü native uygulamanın tasarımına (kullanıcı kararı 14.09)** *(kullanıcı isteği 13.09: öteki şerit masaüstünü `Musteri Web v1.dc.html`'e taşırken mobil web `Musteri Mobil v1.dc.html`'e; sıra ve dosya ayrımı kullanıcıyla konuşuldu)*
   - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): yalnız bir yüzeyde olanlar: puan geçmişindeki
-    "yolda olan puanlar" bloğu (yalnız native), K.33. Teslimat bölgeleri sayfası PWA'ya da gelecek; posta kodu listesi büyüdükçe
-    uzadığı için önce Claude Design'da yeniden tasarlanır (kullanıcı kararı).
+    "yolda olan puanlar" bloğu (yalnız native), K.33.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 - [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, katalog ~0,54 sn (DB'siz yasal sayfa ~0,16 sn).
   Supabase istekleri Cloudflare'in Paris düğümünden geçiyor (açık bağlantıda istek ~45–55 ms) ve sıralı her okuma bir tur ekliyor.
@@ -180,6 +179,9 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
   ekrandan çıkınca ya da uygulama kapanınca kayboluyor; kısmi kayıttan sonra tamamlanan satır boş açılıyor ve kayıt silinmiş
   sanılıyor (sahada ölçüldü, test sunucusu).
 
+- [ ] (K.72) [hedef: web] **Teslimat bölgeleri sayfasının masaüstü tasarımı yok** — sayfa telefon için kuruldu (14a + 14f,
+  `design/07-kesif/Kesif - Teslimat Bolgeleri.dc.html`); masaüstünde bağlantısı yok, adresle açılırsa telefon düzeni dar sütunda
+  çiziliyor. Neden: `Musteri Web v1.dc.html`'de bu sayfanın karşılığı yok, masaüstü düzeni tasarımda verilmeden kurulmaz.
 - [x] (21.6) **Katalog okuma uçları:** `GET /api/v1/categories` (tek tur) + `GET /api/v1/products` (keyset imleç + arama/kategori/sıralama) + `GET /api/v1/products/:slug` (çeşit/aile/benzer) — oturumsuz gezilebilir (public), depo süzgeci ve fiyat kuralı WEB İLE AYNI çekirdekten; web lib'inde kalan orkestrasyon varsa YENİDEN YAZILMAZ, terfi raporlanır (tüzük §3.1).
   - Görev kapandı; koddaki `BEKLEYEN(21.6)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [x] (21.7) **Katalog ekranı — ilk gerçek ekran:** v3 tasarımından birebir; kategori çipleri + 2 sütun kare kart ızgarası (`ProductPhotoCard`) + keyset sonsuz kaydırma + iskelet/boş/hata durumları; ekran başına messages (fr/de/tr, cihaz dili eşlemesi); fiyat cihazda biçimlenir. Ticari bağlamın uca bağlanmasıyla (21.6 kapanışı) aynı turda, iki ajan paralel.
