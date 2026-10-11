@@ -6,14 +6,7 @@ import { courierDay, courierRoute, startResult, takenRouteRun } from './courier-
 import { CourierRoutePickScreen } from './route-pick-screen';
 
 /*
-  K · SEFER VE ARAÇ SEÇİMİ (v3:17).
-
-  ── NE ÖLÇÜLÜYOR ────────────────────────────────────────────────────────────
-  Bu ekranın taşıdığı üç karar: ÇOKLU seçim (araç birden çok seferi birden taşır), seferi açılmış
-  rotanın seçilemezliği (K3 — rota+gün başına tek sefer) ve düğmenin SEFER KURDUĞU, başlatmadığı.
-
-  Seçim 31.08'e kadar gün ekranının gövdesindeydi ve testleri de oradaydı; kullanıcı tasarımı
-  gösterip ayrımı istedi (*"giriş ekranı bu olması gerekmiyor mu?"*). Ölçüm ekranla birlikte taşındı.
+  Sefer ve araç seçimi: çoklu seçim, seferi açılmış ya da işi olmayan rotanın seçilemezliği ve düğmenin seferi kurup başlatmadığı.
 */
 
 const mockNavigate = jest.fn();
@@ -106,8 +99,7 @@ describe('K · sefer ve araç seçimi', () => {
     await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
     await fireEvent.press(screen.getByTestId(`courier-route-${ZONE_B}`));
 
-    /* Özet bir gösterge değil ONAY: kurye basmadan önce ne yüklediğini görür — ve v3:17'den beri
-       ÜÇ sayıda: sefer · durak · KUTU. Hacim en somut olanı ve tek satırlık cümlede hiç yoktu. */
+    /* Özet bir onaydır: kurye basmadan önce ne yüklediğini sefer, durak ve kutu olarak görür. */
     const summary = screen.getByTestId('courier-route-pick-summary');
     expect(summary).toHaveTextContent(/2/);
     expect(summary).toHaveTextContent(/7/);
@@ -129,14 +121,8 @@ describe('K · sefer ve araç seçimi', () => {
   });
 
   /*
-    İŞİ OLMAYAN ROTA SEÇİLEMEZ (kullanıcı kararı 01.09).
-
-    Kullanıcı cihazda dört tane `0 durak · 0 kutu · 0 tahsilat` rota gördü ve sordu: *"seferde
-    herhangi bir durak, kutu veya tahsilat objesi yoksa inaktif olmalı değil mi?"* İş olmayan
-    seferi kurmak, akşam kapatılacak boş bir kayıt açmaktan başka bir şey yapmıyor.
-
-    Test ÜÇ SAYIYI DA sıfırlıyor: kural üçünün birden sıfır olmasına bakıyor, yalnız durağa değil —
-    kutusu hazırlanmış ama durağı damgalanmamış rota kapanmamalı (bir alttaki test onu çiviliyor).
+    İşi olmayan sefer akşam kapatılacak boş bir kayıt açar. Test üç sayıyı da sıfırlar, çünkü kural üçüne birden bakar: kutusu
+    hazır ama durağı damgalanmamış rota seçilebilir kalmalı.
   */
   it('İŞİ OLMAYAN rota seçilemez ve sebebini söyler', async () => {
     mockPick([courierRoute({ zoneId: ZONE_B, zoneName: 'Güney rotası', stopCount: 0, boxCount: 0, collectionCount: 0 })]);
@@ -162,13 +148,7 @@ describe('K · sefer ve araç seçimi', () => {
     expect(screen.getByTestId('courier-route-pick-summary')).toHaveTextContent(/2\s*kutu/);
   });
 
-  /*
-    GERİ GETİRİLECEK KUTU AYRI SATIR (kullanıcı kararı 05.09) — üç sayının İÇİNE karışmıyor.
-
-    Üç sayı ("5 durak · 7 kutu · 2 tahsilat") "bugün ne taşıyacağım"ı söylüyor; bu satır ise araçta
-    yanlışlıkla duran malı. İçeri karışsaydı kurye onu teslim edilecek bir kutu sanar ve akşam
-    sayısı tutmazdı.
-  */
+  /* Geri getirilecek kutu üç sayıya karışsaydı kurye onu teslim edilecek kutu sanar ve akşam sayısı tutmazdı. */
   it('İPTAL EDİLMİŞ ARAÇTAKİ KUTU ayrı satırda söylenir — yük sayısına karışmaz', async () => {
     mockPick([courierRoute({ zoneId: ZONE_B, stopCount: 3, boxCount: 4, returningBoxCount: 2 })]);
 
@@ -191,14 +171,7 @@ describe('K · sefer ve araç seçimi', () => {
     expect(screen.queryByTestId(`courier-route-returning-${ZONE_B}`)).toBeNull();
   });
 
-  /*
-    TEK ADAY KENDİLİĞİNDEN İŞARETLİDİR — AMA BIRAKILABİLİR (kullanıcı bulgusu 01.09:
-    *"üç Eylül'dekini bana zorla seçtirtiyor, bırakamıyorum"*).
-
-    Kural boş listeyi iki ayrı şey sayıyordu: "henüz seçmedim" ve "işaretini kaldırdım". Kurye
-    işareti kaldırınca liste boşalıyor, kural yeniden devreye giriyor ve aynı rotayı geri
-    işaretliyordu — dokunuşun ekranda hiçbir etkisi olmuyordu.
-  */
+  /* Boş seçim "henüz seçmedim" ile "işaretini kaldırdım"ı ayırmazsa kural bırakılan tek adayı geri işaretler ve dokunuş etkisiz kalır. */
   it('kendiliğinden işaretlenen TEK aday BIRAKILABİLİR', async () => {
     mockPick([courierRoute({ zoneId: ZONE_B })]);
 
@@ -214,18 +187,14 @@ describe('K · sefer ve araç seçimi', () => {
     expect(screen.getByTestId('courier-route-pick-cta')).toBeDisabled();
   });
 
-  /* Bu ve alttaki üç test TEK rota kuruyor, yani rota kendiliğinden işaretli gelir ("tek adayda
-     soru sorulmaz"). Karta AYRICA basılıyordu ve 01.09'a kadar bu zararsızdı: dokunuş ham listeye
-     ekliyor, seçim yine aynı kalıyordu. Bırakma düzeltilince (kullanıcı bulgusu) o basış artık
-     işaretİ KALDIRIYOR — testler seçili bir kartı bırakıp seçili sanıyordu. Basışlar kalktı. */
+  /* Bu ve alttaki üç test tek rota kurar, rota kendiliğinden işaretli gelir; karta ayrıca basmak işareti kaldırırdı. */
   it('ARAÇ KARARI VERİLMEDEN sefer kurulmaz — düğme eksiği söyler (v3:17)', async () => {
     mockPick([courierRoute({ stopCount: 3 })]);
 
     await renderPick();
     await waitFor(() => expect(screen.getByTestId('courier-route-pick-cta')).toBeOnTheScreen());
 
-    /* Rota seçili ama araç kararı yok: düğme pasif ve NEDEN pasif olduğunu yazıyor. Tek bir
-       "önce sefer seç" etiketi, kuryeye hangi adımın eksik olduğunu söylemiyordu. */
+    /* Rota seçili ama araç kararı yok: düğme pasif ve nedenini yazar, tek bir etiket hangi adımın eksik olduğunu söylemezdi. */
     expect(screen.getByTestId('courier-route-pick-cta')).toHaveTextContent(/Önce araç seç/);
     await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
     expect(fetchMock.mock.calls.find(([url]) => String(url).includes('/day/start'))).toBeUndefined();
@@ -265,14 +234,8 @@ describe('K · sefer ve araç seçimi', () => {
   });
 
   /*
-    SEFER, ROTANIN GÜNÜNE AÇILIR (kullanıcı bulgusu 01.09, cihazda ölçüldü).
-
-    İstek GÜNÜN tarihini taşıyordu ve seçim ekranı ÜÇ GÜN listeliyor. Kurye ileri bir günün
-    rotasını seçince sefer BUGÜNE açılıyor, uç da siparişleri seferin gününe göre damgaladığı için
-    hiçbir sipariş bulunamıyordu: kartta "1 durak · 2 kutu" yazan rotadan BOŞ bir sefer doğuyordu.
-
-    Fikstürün günü (`2026-08-10`) `/courier/day` cevabının gününden (`2026-08-08`) BİLEREK farklı —
-    ikisi aynı olsaydı test kuralın bozulduğunu göremezdi.
+    İstek ekranın gününü taşısaydı ileri bir günün rotası bugüne açılır ve siparişsiz boş bir sefer doğardı. Fikstürün günü
+    `/courier/day` cevabının gününden bilerek farklı, aynı olsaydı test bozulmayı göremezdi.
   */
   it('sefer ROTANIN gününe kurulur, bugüne değil', async () => {
     mockPick([courierRoute({ day: '2026-08-10' })]);
@@ -289,20 +252,34 @@ describe('K · sefer ve araç seçimi', () => {
     });
   });
 
-  it('SEFER KURULUNCA YÜKLEMEYE GEÇİLİR — düğmenin verdiği söz tutulur', async () => {
-    /*
-      ── KULLANICI BULGUSU 01.09 ──────────────────────────────────────────────
-      *"Rotanın sorumluluğunu alıyor ama hâlâ rota sayfasında kalıyor. Ne olduğunu anlayamıyor
-      bile kullanıcı."* Kurma başarılıydı, seçim listesi boşalıyor, düğme pasifleşiyordu — yani
-      ekran "bir şey oldu" demiyordu bile; kurye geri gidip bakmadan işin olup olmadığını
-      bilemiyordu.
+  it('aynı rotanın iki günü ayrı seçilir ve ikisi için ayrı gün seferi kurulur', async () => {
+    mockPick([courierRoute({ day: '2026-08-08', stopCount: 3 }), courierRoute({ day: '2026-08-11', stopCount: 2 })]);
 
-      Gidilecek yeri DÜĞMENİN KENDİSİ söylüyor: *"Seferleri kur — N sefer **yüklemeye geçer**"*
-      (v3 `03-Sefer-ve-Arac/03`). Bir tur boyunca araçtaki seferlere gidiyordu; oysa o ekran
-      tasarımın akışında yüklemeden SONRA geliyor (`02-Aractaki-Seferler` karelerinde bütün
-      seferler tam yüklü). `dismissTo` çünkü bu ekrana iki yoldan gelinir; `navigate` araçtaki
-      seferlerden gelindiğinde yığında iki kopya bırakırdı.
-    */
+    await renderPick();
+    await waitFor(() => expect(screen.getAllByTestId(`courier-route-${courierRoute().zoneId}`)).toHaveLength(2));
+    const [today, later] = screen.getAllByTestId(`courier-route-${courierRoute().zoneId}`);
+
+    // Seçim rota kimliğiyle tutulsaydı tek dokunuş iki günü birden işaretlerdi.
+    await fireEvent.press(today!);
+    expect(screen.getByTestId('courier-route-pick-summary')).toHaveTextContent(/1\s*sefer/);
+    expect(screen.getByTestId('courier-route-pick-summary')).toHaveTextContent(/3\s*durak/);
+
+    await fireEvent.press(later!);
+    await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
+    await fireEvent.press(screen.getByTestId(`courier-vehicle-${VEHICLE}`));
+    await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
+
+    await waitFor(() => {
+      const dates = fetchMock.mock.calls
+        .filter(([url]) => String(url).includes('/day/start'))
+        .map(([, init]) => (JSON.parse(String(init?.body)) as { date?: string }).date);
+      expect(dates.sort()).toEqual(['2026-08-08', '2026-08-11']);
+    });
+  });
+
+  it('SEFER KURULUNCA YÜKLEMEYE GEÇİLİR — düğmenin verdiği söz tutulur', async () => {
+    /* Gidilecek yeri düğmenin sözü söyler ("yüklemeye geçer"); `dismissTo`, çünkü bu ekrana iki yoldan gelinir ve `navigate` yığında
+       iki kopya bırakırdı. */
     mockPick([courierRoute({ stopCount: 3 })], undefined, startResult());
 
     await renderPick();

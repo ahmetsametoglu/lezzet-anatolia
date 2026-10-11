@@ -62,9 +62,9 @@ interface UseCourierDayResult {
   routes: CourierRoute[];
   /** Kuryenin deposunun araçları — biri seçilir, kurulan seferlere yazılır. */
   vehicles: CourierVehicle[];
-  /** Araca alınacak olarak işaretlenen rotalar; tek aday varsa kendiliğinden işaretlidir, çünkü tek adayda soru sorulmaz. */
-  selectedZoneIds: string[];
-  toggleRoute: (zoneId: string) => void;
+  /** Araca alınacak olarak işaretlenen rota satırları (`routeKeyOf`); tek aday varsa kendiliğinden işaretlidir, çünkü tek adayda soru sorulmaz. */
+  selectedRouteKeys: string[];
+  toggleRoute: (routeKey: string) => void;
   selectedVehicleId: string | null;
   selectVehicle: (vehicleId: string | null) => void;
   /**
@@ -136,6 +136,11 @@ export function isRoutePickable(route: CourierRoute): boolean {
   return isRouteFree(route) && routeHasWork(route);
 }
 
+/** Seçim satırının kimliği: aynı rota birden çok günde listelenir ve her gün ayrı seferdir, rota kimliği tek başına satırı ayırmaz. */
+export function routeKeyOf(route: Pick<CourierRoute, 'day' | 'zoneId'>): string {
+  return `${route.day}:${route.zoneId}`;
+}
+
 /**
  * Dört listenin cümlesi: "seferi başlat"ın kısmi başarısı okunur hâle gelir; ortaktır, çünkü `startCourierDay` ve `departCourierRun` aynı şekli döndürür.
  */
@@ -185,7 +190,7 @@ export function useCourierDay(): UseCourierDayResult {
   const [runs, setRuns] = useState<CourierRunDetail[]>([]);
   const [routes, setRoutes] = useState<CourierRoute[]>([]);
   const [vehicles, setVehicles] = useState<CourierVehicle[]>([]);
-  const [pickedZoneIds, setPickedZoneIds] = useState<string[]>([]);
+  const [pickedRouteKeys, setPickedRouteKeys] = useState<string[]>([]);
   /*
     Seçime dokunuldu mu: boş liste "henüz seçmedim" ile "işaretini kaldırdım"ı ayırmalı, yoksa tek adayın işareti kaldırılınca kural onu geri işaretler.
     Dokunulduktan sonra seçim ne ise odur, boş da olabilir.
@@ -272,45 +277,45 @@ export function useCourierDay(): UseCourierDayResult {
    * Aday boşta ve işi olan rotadır; elle seçim yoksa ve tek aday varsa o kendiliğinden işaretlidir.
    */
   const free = routes.filter(isRoutePickable);
-  const freeIds = new Set(free.map((route) => route.zoneId));
-  const explicit = pickedZoneIds.filter((id) => freeIds.has(id));
-  const selectedZoneIds = pickTouched ? explicit : free.length === 1 ? [free[0]!.zoneId] : [];
+  const freeKeys = new Set(free.map(routeKeyOf));
+  const explicit = pickedRouteKeys.filter((key) => freeKeys.has(key));
+  const selectedRouteKeys = pickTouched ? explicit : free.length === 1 ? [routeKeyOf(free[0]!)] : [];
 
   /* Dokunuş ETKİN seçimin üstüne yazılır, ham listenin değil: kendiliğinden işaretlenmiş rota
-     `pickedZoneIds`te YOKTUR ve ham listeye göre çalışan bir tersleme onu "ekle" diye okurdu —
+     `pickedRouteKeys`te YOKTUR ve ham listeye göre çalışan bir tersleme onu "ekle" diye okurdu —
      yani ilk dokunuş hiçbir şey yapmamış gibi görünürdü. */
   const toggleRoute = useCallback(
-    (zoneId: string) => {
+    (routeKey: string) => {
       setPickTouched(true);
-      setPickedZoneIds(
-        selectedZoneIds.includes(zoneId)
-          ? selectedZoneIds.filter((id) => id !== zoneId)
-          : [...selectedZoneIds, zoneId],
+      setPickedRouteKeys(
+        selectedRouteKeys.includes(routeKey)
+          ? selectedRouteKeys.filter((key) => key !== routeKey)
+          : [...selectedRouteKeys, routeKey],
       );
     },
-    [selectedZoneIds],
+    [selectedRouteKeys],
   );
 
   /**
    * Seferleri kur: her rota için ayrı sefer ve ayrı istek, çünkü seferler birbirine bağlı değildir ve yarım başarı meşru ve görünür olmalı.
-   * Her istek kendi rotasının gününü taşır (rota bulunamazsa gün gitmez, sunucu bugüne düşer); günün tarihi gitseydi sonraki günün rotası boş sefer doğururdu.
+   * Her istek kendi satırının gününü taşır; günün tarihi gitseydi sonraki günün rotası boş sefer doğururdu.
    */
   const openRuns = useCallback(async (): Promise<'ok' | 'partial' | 'failed'> => {
-    if (starting || selectedZoneIds.length === 0) return 'failed';
+    const picked = routes.filter((route) => selectedRouteKeys.includes(routeKeyOf(route)));
+    if (starting || picked.length === 0) return 'failed';
     setStarting(true);
     setStartNotice(null);
 
     {
       const results = await Promise.all(
-        selectedZoneIds.map((zoneId) => {
-          const gun = routes.find((route) => route.zoneId === zoneId)?.day ?? date;
-          return startCourierDay({
-            zoneId,
+        picked.map((route) =>
+          startCourierDay({
+            zoneId: route.zoneId,
             depart: false,
-            ...(gun === null ? {} : { date: gun }),
+            date: route.day,
             ...(pickedVehicleId === null ? {} : { vehicleId: pickedVehicleId }),
-          });
-        }),
+          }),
+        ),
       );
       setStarting(false);
 
@@ -324,11 +329,11 @@ export function useCourierDay(): UseCourierDayResult {
             : fillCopy(t.day.openRuns.partial, { n: String(opened), k: String(failed) }),
         canRetry: false,
       });
-      setPickedZoneIds([]);
+      setPickedRouteKeys([]);
       await load();
       return opened === 0 ? 'failed' : failed === 0 ? 'ok' : 'partial';
     }
-  }, [date, load, pickedVehicleId, routes, selectedZoneIds, setStartNotice, starting]);
+  }, [load, pickedVehicleId, routes, selectedRouteKeys, setStartNotice, starting]);
 
   /**
    * **SEFERİ YOLA ÇIKAR** — araçtaki seferlerden biri. Bu, müşteriye haberin gittiği andır ve
@@ -417,7 +422,7 @@ export function useCourierDay(): UseCourierDayResult {
   );
 
   /** Eski tek-rota seçiminin halefi — başlatma isteği hâlâ tek rota gönderiyor. */
-  const selectedZoneId = selectedZoneIds[0] ?? null;
+  const selectedZoneId = routes.find((route) => routeKeyOf(route) === selectedRouteKeys[0])?.zoneId ?? null;
 
   /**
    * Başlatma isteğinin rotası: sefer açıkken seferin kendi rotası (tek sebep "kalanları yola çıkar"), yoksa seçilen rota; kapanan seferin rotası yeniden açılamaz.
@@ -450,9 +455,8 @@ export function useCourierDay(): UseCourierDayResult {
       }
 
       if (result.data.status === 'already_started') {
-        /* Bu dal artık YALNIZ "o rota bugün kapandı/başkasında" demek: aynı kuryenin AÇIK seferine
-           ikinci basış uçta catch-up claim'e dönüştü ve `ok` döner. İki hâlin de sonucu aynı —
-           yeni sefer açılmadı, o yüzden ikisi de uyarı tonunda. */
+        /* Bu dal yalnız "o rota bugün kapandı ya da başkasında" demektir (aynı kuryenin açık seferine ikinci basış `ok` döner); yeni
+           sefer açılmadığı için uyarı tonundadır. */
         const { referenceNo, mine } = result.data;
         setStartNotice({
           tone: 'warn',
@@ -503,7 +507,7 @@ export function useCourierDay(): UseCourierDayResult {
       // Kilit sunucunun kaydından gelir: sefer açıldıysa duraklar açılır — hiçbir durak yola
       // çıkmasa da. "Açılmamış say" demek, var olan bir seferi ekranda yok saymak olurdu.
       setRun(result.data.run);
-      setPickedZoneIds([]);
+      setPickedRouteKeys([]);
       setStartNotice(noticeOfStart(result.data));
 
       // Cevap "durum değişti" diyor; listenin de aynı gerçeği göstermesi gerekir (iskelet YOK —
@@ -611,7 +615,7 @@ export function useCourierDay(): UseCourierDayResult {
     runs,
     routes,
     vehicles,
-    selectedZoneIds,
+    selectedRouteKeys,
     toggleRoute,
     selectedVehicleId: pickedVehicleId,
     selectVehicle: setPickedVehicleId,

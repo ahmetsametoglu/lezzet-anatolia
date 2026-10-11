@@ -20,25 +20,11 @@ import { timeOf } from '@/lib/operations/stamp';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { courierCopy } from './copy';
 import { dayTagOf } from './day-tag';
-import { isRouteFree, routeHasWork, useCourierDay } from './use-courier-day.hook';
+import { isRouteFree, routeHasWork, routeKeyOf, useCourierDay } from './use-courier-day.hook';
 
 /*
-  K · SEFER VE ARAÇ SEÇİMİ (v3:17) — kurulacak seferlerin seçildiği ekran.
-
-  ── NEDEN AYRI EKRAN (kullanıcı bulgusu 31.08) ──────────────────────────────
-  Seçim önce GÜN EKRANININ gövdesine gömülüydü: araç boşken gün ekranı doğrudan rota kartlarını
-  çiziyordu. Kullanıcı tasarımı gösterip sordu — *"giriş ekranı bu olması gerekmiyor mu?"* — ve
-  haklıydı: v3:15'in boş hâli bir REHBERDİR (üç adım: seç → yükle → başlat) ve seçime ancak
-  düğmeyle geçilir. İkisi bir ekrana sığdırıldığında kurye "ne yapacağım" sorusunun cevabını
-  hiç görmüyor, doğrudan bir listeyle karşılaşıyordu.
-
-  Ayrım işlevsel de: bu ekran sefer AÇIKKEN de gerekiyor (araca ikinci sefer eklemek), yani gün
-  ekranının boş hâline bağlı olamaz.
-
-  ── ÜÇ BLOK, ÜÇ AYRI KARAR ─────────────────────────────────────────────────
-  ARAÇ (tek seçim) · ARACA ALINACAK SEFERLER (çoklu seçim, güne göre gruplu) · ARACA ALINACAKLAR
-  (seçimin toplamı). Sonuncusu bir özet değil bir ONAY: kurye düğmeye basmadan önce ne yüklediğini
-  görür.
+  Kurulacak seferlerin seçildiği ekran: araç (tek seçim), seferler (çoklu, güne göre gruplu) ve seçimin toplamı.
+  Gün ekranından ayrıdır, çünkü sefer açıkken de araca sefer eklemek için açılır.
 */
 
 const t = courierCopy;
@@ -47,23 +33,8 @@ const t = courierCopy;
 const PICK_SKELETON = { vehicle: 62, route: 96 } as const;
 
 /**
- * **ÖZET BLOĞUNUN YÜKSEKLİĞİ — iki hâlde de aynı** (kullanıcı kararı 01.09).
- *
- * Blok iki ayrı şey çiziyor: seçim yokken kesikli bir bekleyiş kutusu, seçim varken üç sayılık
- * özet. İkisi farklı yükseklikteydi ve her işaretlemede altındaki her şey zıplıyordu —
- * kullanıcının istediği şey bu zıplamanın bitmesi: *"o bölümün yüksekliği ile seçilince ortaya
- * çıkan bilgi kartının yüksekliği aynı olmalı."*
- *
- * Değer DOLU hâlin ölçülmüş doğal yüksekliği: cihazda **305 px @3x = 102 dp** (Poco, iki hâl aynı
- * turda ölçüldü; boş hâl 65 dp'ydi). Tasarımın kendi hesabıyla da aynı kapıya çıkıyor (v3:17 dolu
- * blok ≈ 100 px). Taban olarak (`minHeight`) iki stile de veriliyor, yani dolu hâl büyürse buradaki
- * sayı da onunla güncellenir.
- *
- * Tasarımda ikisi eşit DEĞİL (≈100 ↔ ≈70 px) — bu bilinçli bir sapma ve sebebi HAREKET: tasarım
- * duran bir kare, ekran ise seçimle değişen canlı bir yüzey.
- *
- * *(İlk denemede 85 yazılmıştı: ölçüm tek bir sütundan alınmış ve kartın yuvarlatılmış köşesine
- * denk gelmişti. Doğrusu satır satır, tüm genişlikte taranarak bulundu.)*
+ * Özet bloğunun iki hâli (bekleyiş kutusu ve üç sayılık özet) aynı tabanı taşır ki işaretleme altındaki öğeleri zıplatmasın.
+ * Değer dolu hâlin doğal yüksekliğidir (dp); dolu hâl büyürse bu sayı da onunla güncellenir.
  */
 const SUMMARY_BOX_MIN_HEIGHT = 102;
 
@@ -71,39 +42,17 @@ export function CourierRoutePickScreen() {
   const router = useRouter();
   const day = useCourierDay();
   const userName = useOperationsUserName();
-  /*
-    ARAÇ SEÇİMİ ÇEKMECEDE (v3:17 `openArac` → `sheetArac` · kullanıcı bulgusu 31.08).
-
-    Araçlar sayfaya düz bir liste olarak seriliyordu ve iki şeyi birden bozuyordu: sayfanın ilk
-    bloğu bir SEÇİM değil bir KARAR olmalı ("araç seçildi mi"), ve dört araçlı bir depoda liste
-    rota bölümünü ekranın dışına itiyordu. Tasarımın deseni tek satır + çekmece: satır kararın
-    HÂLİNİ söyler, çekmece kararı ALIR.
-  */
+  /* Araç seçimi tek satır + çekmece: satır kararın hâlini söyler ve dört araçlı depoda liste rota bölümünü ekran dışına itmez. */
   const [vehicleSheet, setVehicleSheet] = useState(false);
-  /*
-    "ARAÇSIZ DEVAM ET" AÇIK BİR SEÇİMDİR, seçimsizlik değil (v3:17 `aracKey === 'yok'`).
-    `selectedVehicleId === null` iki ayrı şeyi birden anlatıyordu: "henüz seçmedim" ve "araçsız
-    gideceğim". İkisi ayrılmadan CTA "önce araç seç" diyemez — ya hiç demez ya da araçsız gitmeye
-    karar vermiş kuryeyi sonsuza kadar bekletirdi.
-  */
+  /* "Araçsız devam" açık bir seçimdir: `null` araç "henüz seçmedim" ile "araçsız gideceğim"i ayıramaz, düğme eksiği ancak böyle söyler. */
   const [noVehicle, setNoVehicle] = useState(false);
-  /*
-    LİSTENİN ALTINDAKİ BOŞLUK ÖLÇÜLÜR, TAHMİN EDİLMEZ (kullanıcı bulgusu 01.09).
-
-    Yapışkan çubuk mutlak konumlu ve listenin son kartını örtüyordu: *"aşağıda açılan bir bölüm
-    var"* — kullanıcının gördüğü şey, "Araca alınacaklar" özetinin yarısı düğmenin arkasında
-    kalmış hâliydi (cihazda ölçüldü: kartın üst 30 dp'si görünüyor, üç hücrelik ızgarası hiç
-    görünmüyor). Boşluk `space['9xl']` (70) yazılıydı; çubuğun kendisi düğme + ÜÇ SATIR DİPNOT
-    taşıdığı için gerçek yüksekliği bunun iki katına yakın.
-
-    İlk hâl `0`: çubuk ölçülene kadar bir kare boyunca boşluk yok ve bu doğru — uydurma bir
-    başlangıç değeri, ölçüm gelince listeyi zıplatırdı.
-  */
+  /* Listenin alt boşluğu yapışkan çubuğun ölçülen yüksekliğidir, çünkü çubuk dipnotla birlikte büyür ve sabit bir değer son kartı örter.
+     İlk değer 0: uydurma bir başlangıç, ölçüm gelince listeyi zıplatırdı. */
   const [barHeight, setBarHeight] = useState(0);
   const vehicle = day.vehicles.find((row) => row.vehicleId === day.selectedVehicleId) ?? null;
   const vehicleDecided = vehicle !== null || noVehicle;
 
-  const picked = day.routes.filter((route) => day.selectedZoneIds.includes(route.zoneId));
+  const picked = day.routes.filter((route) => day.selectedRouteKeys.includes(routeKeyOf(route)));
   const pickedStops = picked.reduce((sum, route) => sum + route.stopCount, 0);
   const pickedBoxes = picked.reduce((sum, route) => sum + route.boxCount, 0);
   const ready = picked.length > 0 && vehicleDecided;
@@ -115,8 +64,7 @@ export function CourierRoutePickScreen() {
   const header = (
     <OperationsStackHeader
       title={t.routePick.title}
-      /* BAĞLAM SATIRI TASARIMIN CÜMLESİ (v3:17 "Marc Lemoine · Strasbourg Merkez deposu"): kim ve
-         hangi depo. "araca ne alacağını seç" bir yönergeydi ve zaten ekranın başlığında yazıyor. */
+      /* Bağlam satırı kim ve hangi depo; yönerge zaten başlıkta yazıyor. */
       subtitle={
         warehouseName === null
           ? t.routePick.contextPlain
@@ -142,9 +90,8 @@ export function CourierRoutePickScreen() {
 
   return (
     <View style={styles.screen} testID="courier-route-pick">
-      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
-          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE — dışarıda kalsaydı mikro şerit inince
-          altında asılı kalırdı. */}
+      {/* Başlık kaydırıcının içinde, çünkü yapışkan mikro başlık ve alt çubuk gizlemesi bu kaptan beslenir; dışarıda kalsaydı mikro
+          şerit inince altında asılı kalırdı. */}
       <OperationsScreenScroll
         title={t.routePick.title}
         caption={operationsCopy.sections.courier.tab}
@@ -177,7 +124,8 @@ export function CourierRoutePickScreen() {
           />
         ) : (
           day.routes.map((route, index) => {
-            const selected = day.selectedZoneIds.includes(route.zoneId);
+            const key = routeKeyOf(route);
+            const selected = day.selectedRouteKeys.includes(key);
             /* GÜN ETİKETİ grup başlığı olarak (v3:17): araç birden çok günün seferini alabiliyor
                ve hangi günün rotasını işaretlediği kartın üstünde yazmalı. */
             const dayHead =
@@ -185,22 +133,16 @@ export function CourierRoutePickScreen() {
                 <Text style={styles.dayTag}>{dayTagOf(route.day, t)}</Text>
               ) : null;
             return (
-              <Fragment key={route.zoneId}>
+              <Fragment key={key}>
                 {dayHead}
-                <RouteCard route={route} selected={selected} onPress={() => day.toggleRoute(route.zoneId)} />
+                <RouteCard route={route} selected={selected} onPress={() => day.toggleRoute(key)} />
               </Fragment>
             );
           })
         )}
 
-        {/*
-          ARACA ALINACAKLAR — ÜÇ SÜTUN, AYRAÇLI (v3:17 `grid-template-columns:1fr 1fr 1fr`).
-
-          Tek satırlık bir cümleydi ("2 sefer · 8 durak") ve kutu sayısı hiç yoktu. Bu blok bir
-          özet değil bir ONAY: kurye düğmeye basmadan önce ne yüklediğini üç ayrı sayıda görür ve
-          hacim (kutu) o üçlünün en somut olanı. Seçim yokken bölüm başlığı da çizilmez — tasarımda
-          boş hâl kendi kesikli kutusudur, üstünde başlık yok.
-        */}
+        {/* Toplam bir onaydır: kurye düğmeye basmadan ne yüklediğini sefer, durak ve kutu olarak görür. Seçim yokken başlık çizilmez,
+            boş hâl kendi kesikli kutusudur. */}
         {picked.length === 0 ? (
           <View style={styles.summaryIdleBox} testID="courier-route-pick-summary">
             <Text style={styles.summaryIdle}>{t.routePick.summaryIdle}</Text>
@@ -219,9 +161,7 @@ export function CourierRoutePickScreen() {
       </OperationsScreenScroll>
 
       <OperationsStickyBar onHeight={setBarHeight}>
-        {/* DÜĞME EKSİĞİ SÖYLER (v3:17 `seferCtaLabel`): sefer yoksa "önce sefer seç", sefer var
-            ama araç kararı yoksa "önce araç seç". Tek bir pasif etiket, kuryeye hangi adımın
-            eksik olduğunu söylemiyordu. */}
+        {/* Düğme eksik adımı söyler (önce sefer, sonra araç); tek bir pasif etiket hangi adımın eksik olduğunu söylemezdi. */}
         <PrimaryButton
           label={
             day.starting
@@ -233,25 +173,8 @@ export function CourierRoutePickScreen() {
                   : fillCopy(t.day.openRuns.cta, { n: String(picked.length) })
           }
           /*
-            SEFER KURULDU → EKRAN DEĞİŞİR (01.09 · kullanıcı bulgusu).
-
-            Kurma başarılı olduğunda ekran yerinde kalıyordu: *"rotanın sorumluluğunu alıyor ama
-            hâlâ rota sayfasında kalıyor, ne olduğunu anlayamıyor bile."* Seçim listesi boşalmış,
-            düğme pasifleşmiş bir sayfada bırakılan kurye, işin olup olmadığını ancak geri gidip
-            bakarak anlıyordu.
-
-            Gidilecek yer DÜĞMENİN KENDİ SÖZÜ: *"Seferleri kur — N sefer **yüklemeye geçer**"*
-            (v3 `03-Sefer-ve-Arac/03`). Bir tur boyunca araçtaki seferlere gidiyordu ve o ekran
-            tasarımın akışında yüklemeden SONRA geliyor (`02-Aractaki-Seferler` karelerinde bütün
-            seferler 7/7 · 4/4 · 9/9 yüklü). Kutular rampada dururken kuryeyi başlatma ekranına
-            götürmek, düğmenin verdiği sözü tutmamaktı.
-
-            `dismissTo` bilinçli — bu ekrana ya gün ekranından ya ARAÇTAKİ SEFERLER'den gelinir;
-            `navigate` ikinci yolda yığında iki kopya bırakırdı, `dismissTo` varsa geri döner,
-            yoksa yerine geçer.
-
-            YARIM başarıda da gidiyoruz: en az bir sefer kurulduysa araç değişti ve yüklenecek kutu
-            doğdu. Hiçbiri kurulmadıysa kalınır — yapılacak iş bu ekranda.
+            Kurulan sefer yüklemeye götürür, düğmenin sözü bu; yarım başarıda da gidilir, çünkü en az bir sefer kurulduysa yüklenecek kutu doğmuştur.
+            `dismissTo`, çünkü bu ekrana gün ekranından ya da araçtaki seferlerden gelinir ve `navigate` ikinci yolda yığında iki kopya bırakırdı.
           */
           onPress={() => {
             void day.openRuns().then((outcome) => {
@@ -266,18 +189,12 @@ export function CourierRoutePickScreen() {
         {/* Kurulan seferin BAŞLAMADIĞINI düğmenin altında söylüyoruz: bu ekran müşteriye haber
             göndermiyor ve kurye onu bilmeli (v3:17'nin kendi dipnotu). */}
         <Text style={styles.footnote}>{t.day.openRuns.footnote}</Text>
-        {/* Sefer kurmanın SONUCU burada değil TOAST'ta (kullanıcı kararı 01.09): düğmenin altına
-            asılan cümle bir sonraki eyleme kadar duruyordu ve dipnotla karışıyordu — ikisi de aynı
-            puntoda, alt alta iki gri satır. Dipnot bir KURAL (her zaman doğru), sonuç bir OLAY. */}
+        {/* Kurmanın sonucu bildirimde (toast) söylenir: dipnot her zaman doğru bir kural, sonuç bir olaydır ve alt alta iki gri satır
+            birbirine karışırdı. */}
       </OperationsStickyBar>
 
-      {/*
-        ARAÇ ÇEKMECESİ (v3:17 `sheetArac`) — radyo satırları + "araçsız devam et".
-
-        Araçsız seçenek KESİKLİ çerçeveli ve listenin sonunda: meşru bir seçim ama varsayılan
-        değil. Araç kaydı hiç yoksa liste boş kalır ve açıklama bunu söyler — boş bir çekmece,
-        kuryeye kendi hatasıymış gibi görünürdü.
-      */}
+      {/* Araçsız seçenek kesikli çerçeveli ve listenin sonunda: meşru ama varsayılan değil. Araç kaydı yoksa açıklama bunu söyler, boş
+          çekmece kuryeye kendi hatasıymış gibi görünürdü. */}
       <BottomSheet
         visible={vehicleSheet}
         title={t.day.vehicle.sheetTitle}
@@ -320,13 +237,7 @@ export function CourierRoutePickScreen() {
   );
 }
 
-/**
- * **ARAÇ KAPISI** (v3:17 `c.aracSatir`) — ekranın ilk satırı ve bir KARARIN hâli.
- *
- * Üç renk, üç anlam: seçilmemişken SICAK (amber — "burada eksik bir adım var"), araç seçilince
- * YEŞİL, "araçsız devam" seçilince NÖTR. Renk kuryeye eksiği söylüyor; düz bir liste bunu
- * söyleyemezdi çünkü listenin kendisi hiçbir hâl taşımıyor.
- */
+/** Araç kapısı ekranın ilk satırıdır ve kararın hâlini renkle söyler: seçilmemiş amber, araç seçili yeşil, araçsız nötr. */
 function VehicleGate({
   value,
   state,
@@ -410,10 +321,8 @@ function SummaryCell({ value, label, first = false }: { value: number; label: st
 }
 
 /**
- * Rota kartı — ÇOKLU seçim, o yüzden solda onay KUTUSU var (v3:17). Tek seçimde kenarlık yeterdi;
- * çoklu seçimde kurye "kaçını işaretledim" sorusunu tek bakışta cevaplayabilmeli.
- *
- * Seferi açılmış rota seçilemez (K3) ve pasif çizilir — kimin sürdüğü kartın kendisinde yazar.
+ * Rota kartı; çoklu seçim olduğu için solda onay kutusu var, kurye kaçını işaretlediğini tek bakışta görür.
+ * Seferi açılmış rota seçilemez ve pasif çizilir, kimin sürdüğü kartta yazar.
  */
 function RouteCard({
   route,
@@ -424,32 +333,22 @@ function RouteCard({
   selected: boolean;
   onPress: () => void;
 }) {
-  /* İKİ AYRI SEBEP, İKİ AYRI CÜMLE (kullanıcı kararı 01.09): rota ya BAŞKASINDA olduğu için ya da
-     İŞİ OLMADIĞI için seçilemez. İkisi de kartı pasifleştiriyor ama aynı şey değiller — tek bir
-     "seçilemez" hâli, kuryeye yarın gelip gelmemesi gerektiğini söylemezdi.
-
-     CÜMLE GÜN SÖYLEMEZ (kullanıcı bulgusu 01.09: *"yarında da bugün iş yok diyor"*): liste ÜÇ GÜN
-     taşıyor ve kart zaten bir gün başlığının altında duruyor. "Bugün iş yok" yazan bir kart,
-     yarının satırında düpedüz yanlış bilgidir. */
+  /* Seçilemezliğin iki sebebi (başkasında · işi yok) ayrı cümledir; tek "seçilemez" hâli kuryeye yarın gelip gelmeyeceğini söylemezdi.
+     Cümle gün söylemez, çünkü liste üç gün taşır ve kart zaten gün başlığının altındadır. */
   const free = isRouteFree(route);
   const hasWork = routeHasWork(route);
   const pickable = free && hasWork;
-  /* ÜÇ SAYI (v3:17 `r.ozet`): "5 durak · 7 kutu · 2 tahsilat". Depo adı buradan ÇIKTI ve
-     başlığa gitti — liste zaten tek deponun, her kartta tekrarlanması bir bilgi değil bir
-     gürültüydü. Yerine gelen iki sayı kuryenin seçerken sorduğu asıl soruları cevaplıyor:
-     "araca sığar mı" ve "kaç kez para sayacağım". */
+  /* Üç sayı kuryenin seçerken sorduğu soruları cevaplar (araca sığar mı, kaç kez para sayacağım); depo adı başlıkta, çünkü liste tek
+     deponun. */
   const meta = fillCopy(t.routePick.routeMeta, {
     stops: String(route.stopCount),
     boxes: String(route.boxCount),
     collections: String(route.collectionCount),
   });
-  /* ÜÇÜNCÜ SATIR HÂLİ SÖYLER (v3:17 `r.not`): boşta · araca alınacak · kimin sürdüğü. Yalnız
-     "alınmış" hâli yazılıydı; seçilebilir kartlar sessizdi ve işaretlemenin ne değiştirdiği
-     karttan okunamıyordu. */
+  /* Üçüncü satır kartın hâlini söyler (boşta · araca alınacak · kimin sürdüğü), işaretlemenin ne değiştirdiği karttan okunsun diye. */
   const note = !free
     ? [
-        /* KAPANMIŞ SEFER "sürüyor" DEMEZ (31.08): rota alınmış ama iş BİTMİŞ — geçmiş zaman
-           kipiyle yazılmazsa kurye o rotanın hâlâ yolda olduğunu sanır. */
+        /* Kapanmış sefer geçmiş zamanla yazılır, yoksa kurye rotanın hâlâ yolda olduğunu sanır. */
         fillCopy(route.run?.closed === true ? t.routePick.takenClosed : t.routePick.taken, {
           courier: route.run?.courierName ?? t.routePick.someone,
         }),
@@ -471,19 +370,15 @@ function RouteCard({
       accessibilityLabel={route.zoneName}
       testID={`courier-route-${route.zoneId}`}
     >
-      {/* İŞARET YALNIZ SEÇİLİYKEN ÇİZİLİR (cihazda ölçüldü 31.08): saydam renkli bir ✓ yazılıydı
-          ve cihazda saydam olmadı — dört kutu da işaretli görünüyordu, yani ekran "hepsini
-          seçtim" diyordu. Görünmemesi gereken şey renklendirilmez, HİÇ ÇİZİLMEZ. */}
+      {/* İşaret yalnız seçiliyken çizilir: saydam renkli bir işaret cihazda görünür kalır ve her kutuyu işaretli gösterir. */}
       <View style={[styles.check, selected ? styles.checkOn : styles.checkOff]}>
         {selected ? <Text style={styles.checkMark}>✓</Text> : null}
       </View>
       <View style={styles.rowText}>
         <Text style={[styles.cardTitle, pickable ? null : styles.cardTitleTaken]}>{route.zoneName}</Text>
         <Text style={styles.rowMeta}>{meta}</Text>
-        {/* GERİ GETİRİLECEK KUTU AYRI SATIR (kullanıcı kararı 05.09) — üç sayının İÇİNE
-            karışmıyor. Üç sayı "bugün ne taşıyacağım"ı söylüyor; bu ise araçta yanlışlıkla duran
-            malı. İçeri karışsaydı kurye onu teslim edilecek bir kutu sanar, akşam sayısı tutmazdı.
-            Sıfırsa hiç çizilmez: olmayan bir işi duyurmak her kartı uyarıya çevirirdi. */}
+        {/* Geri getirilecek kutu ayrı satırdır: üç sayıya karışsaydı kurye onu teslim edilecek kutu sanar ve akşam sayısı tutmazdı.
+            Sıfırsa çizilmez. */}
         {route.returningBoxCount > 0 ? (
           <Text style={styles.returning} testID={`courier-route-returning-${route.zoneId}`}>
             {fillCopy(t.routePick.returningBoxes, { n: String(route.returningBoxCount) })}
@@ -504,9 +399,7 @@ function RouteCard({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
   list: {
-    /* EKRANIN YAN NEFESİ 20 (v3:17 — hem araç satırı `margin:0 20px` hem rota listesi
-       `padding:0 20px`). 14 yazılıydı ve kartlar tasarımdan 6 px geniş çiziliyordu; fark tek
-       başına küçük ama ekranın tamamını sıkışık gösteriyor (kullanıcı bulgusu 01.09). */
+    /* Yan boşluk tasarımın 20 px'idir; araç satırı ve rota listesi aynı kenarı taşır. */
     paddingHorizontal: operationsTheme.space['5xl'],
     /* DİKEY BOŞLUK BURADA DEĞİL: yapışkan çubuğun ÖLÇÜLEN yüksekliği satır içinde ekleniyor
        (künyesi `barHeight` durumunda). Sabit bir değer bırakmak, iki doğruluk kaynağı olurdu. */
@@ -531,16 +424,10 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.olive,
   },
-  /* ── ARAÇ KAPISI (v3:17 `c.aracSatir`) ─────────────────────────────────────
-     Üç hâl, üç renk üçlüsü. Amber hâlin ikon karesi tasarımda #f2ddc2 — envanterde karşılığı YOK
-     ve tasarımın TAMAMINDA bir kez geçiyor (ölçüldü: 1 kullanım). Tek kullanımlık bir değer token
-     hak etmez (CLAUDE §3'ün envanter kuralı), o yüzden kare nötr kalıyor ve amber kimliği kartın
-     zemininden, kenarından, metninden ve ikonun çizgi renginden geliyor — dördü aynı aileden. */
+  /* Araç kapısının üç hâli üç renk üçlüsüdür. Amber hâlin ikon karesi nötr kalır, çünkü tasarımdaki tek kullanımlık rengin token
+     karşılığı yok; amber kimliği zemin, kenar, metin ve ikon çizgisinden gelir. */
   gate: {
-    /* ÖLÇÜLER v3:17'NİN KENDİ SAYILARI (kullanıcı bulgusu 01.09 — "yükseklik tasarımdan az"):
-       `padding:13px 15px` · `gap:12px`. Üçü de `lg`(10) yazılıydı, yani satır her eksende
-       birkaç piksel eziliyordu ve toplamda 49 px yüksekliğinde çiziliyordu (tasarım ≈65).
-       13 ve 15 ölçeğin arasına düşüyor, en yakın basamaklara yuvarlandı (`metrics.ts`in kuralı). */
+    /* Ölçüler tasarımın `padding:13px 15px` · `gap:12px` değerleri, ölçeğin en yakın basamaklarına yuvarlandı. */
     paddingVertical: operationsTheme.space.xl,
     paddingHorizontal: operationsTheme.space['3xl'],
     borderRadius: operationsTheme.radius.card,
@@ -562,10 +449,7 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors['warning-bg'],
   },
   gateIcon: {
-    /* Tasarım 36×36 · köşe 12. Kare `space` ölçeğinden (30) okunuyordu ve hem küçüktü hem yanlış
-       aileden: bu bir BOŞLUK değil, satırın baş karesi. `listAvatar` (34) aynı rolün resmî durağı
-       ve Δ2 — dosyanın "yakın ölçü ayrı ad almaz" kuralı. Köşe `tight`(8) değil `badge`(12):
-       resmî mobil sette rozet kademesi zaten 12. */
+    /* Kare satırın baş öğesidir, boşluk değil: ölçü `listAvatar` (tasarım 36), köşe `badge` (12). */
     width: operationsTheme.size.listAvatar,
     height: operationsTheme.size.listAvatar,
     borderRadius: operationsTheme.radius.badge,
@@ -582,8 +466,7 @@ const styles = StyleSheet.create({
   },
   gateValue: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    /* Tasarım 13,5/700 — `button` kademesinin ta kendisi. `helper`(12) yazılıydı: satırın taşıdığı
-       KARAR (hangi araç) ekranın en küçük yazısıyla söyleniyordu. */
+    /* Tasarım 13,5/700 = `button` kademesi; satırın taşıdığı karar (hangi araç) ekranın en küçük yazısıyla söylenmez. */
     fontSize: operationsTheme.text.button,
   },
   gateValue_picked: { color: operationsTheme.colors.ink },
@@ -602,14 +485,7 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
-  /*
-    ÖLÇÜLER TASARIM GÖRÜNTÜSÜNDEN (kullanıcı bulgusu 01.09: *"araç seçme çekmecesi ile tasarım
-    arası ölçü farkları var"*). `03-Sefer-ve-Arac/02` karesinden piksel ölçüldü (@2×, tasarım px):
-    satır YÜKSEKLİĞİ 94 · yan dolgu 17 · radyo 28 · radyo–metin arası 12.
-
-    Bizde satır ~52 idi: aynı satır tasarımdan kırk piksel kısaydı ve çekmece sıkışık okunuyordu.
-    Yükseklik dolgudan geliyor (sabit bir sayı yazılmadı): 30+30 dolgu + iki satır metin ≈ 96.
-  */
+  /* Satır ölçüleri tasarım karesinden: yükseklik dolgudan gelir (sabit sayı yazılmaz), yan dolgu 17, radyo 28, radyo–metin arası 12. */
   option: {
     minHeight: operationsTheme.size.controlLg,
     paddingVertical: operationsTheme.space['8xl'],
@@ -642,7 +518,7 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.ink,
   },
   radio: {
-    /* Boşluk ölçeğinden (22) alınıyordu; bu bir aralık değil ÖĞENİN kendi ölçüsü ve tasarımda 28. */
+    /* Öğenin kendi ölçüsü (tasarımda 28), boşluk ölçeğinden okunmaz. */
     width: operationsTheme.size.radioMark,
     height: operationsTheme.size.radioMark,
     borderRadius: operationsTheme.radius.pill,
@@ -705,15 +581,13 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
   },
-  /** Alınmış rota — kimin sürdüğü UYARI değil bir GERÇEK; terracotta, hata kırmızısı değil. */
-  /* GERİ GETİRİLECEK KUTU (05.09) — `rowMeta`nın ölçüsü, terracotta rengi. Yük sayılarıyla aynı
-     boyda çünkü aynı ailedendir (kartın "ne taşıyacağım" bloğu); rengi ayrı çünkü aynı iş değil:
-     bu satır bir uyarı, ötekiler bir ölçü. */
+  /* Geri getirilecek kutu yük sayılarıyla aynı boyda ama terracotta: aynı aileden, ama bir ölçü değil bir uyarı. */
   returning: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.terracotta,
   },
+  /** Kimin sürdüğü bir uyarı değil bir olgu; bu yüzden hata kırmızısı değil terracotta. */
   takenNoteBusy: { color: operationsTheme.colors.terracotta },
   takenNoteOn: { color: operationsTheme.colors['olive-dark'] },
   /** Sefer künyesi sağ uçta — kartın en sessiz öğesi (v3:17 `#b3ab97`). */
@@ -728,9 +602,7 @@ const styles = StyleSheet.create({
     padding: operationsTheme.space.xl,
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,
-    /* AÇIKÇA `solid` (cihazda ölçüldü 31.08): boş hâlin kesikli kutusuyla aynı konumda çizildiği
-       için RN kenar stilini devralıyor ve dolu özet de kesikli görünüyordu. Varsayılana
-       güvenmek, iki hâlin sırasına güvenmek demek. */
+    /* Açıkça `solid`: dolu özet boş hâlin kesikli kutusuyla aynı yerde çizilir ve RN kenar stilini devralır. */
     borderStyle: 'solid',
     borderColor: operationsTheme.colors['sand-300'],
     backgroundColor: operationsTheme.colors.panel,
