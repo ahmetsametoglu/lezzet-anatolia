@@ -336,7 +336,7 @@ export function pennylaneBlockReasonLabel(reason: string): string {
   return PENNYLANE_ENGELI[reason] ?? reason;
 }
 
-/** Karta iadenin düşme sebebi, operatörün diliyle (`RefundBlockReason`); tanınmayan kod olduğu gibi kalır. */
+/** İadenin düşme sebebi, operatörün diliyle (`RefundBlockReason`); tanınmayan kod olduğu gibi kalır. */
 const IADE_ENGELI: Record<string, string> = {
   provider_failed: 'Revolut iadeyi reddetti',
   provider_unavailable: 'Revolut bağlantısı yok',
@@ -403,7 +403,7 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
   refund_blocked: (p) => ({
     tone: 'alert',
     label: 'Para',
-    title: `Karta iade yapılamadı${referans(p)}`,
+    title: `İade yapılamadı${referans(p)}`,
     subtitle:
       [
         typeof p.amountCents === 'number' ? euro(p.amountCents) : null,

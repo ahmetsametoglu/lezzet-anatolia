@@ -413,7 +413,7 @@ export async function notifyShippingDataMissing(db: SupabaseClient, input: Shipp
 }
 
 /**
- * Karta iade düştü ya da yazılamadı: para müşteriye dönmedi ve kendiliğinden yapılan iadede bunu gören kimse yok. Sipariş başına tek zil;
+ * İade düştü ya da yazılamadı: para müşteriye dönmedi ve kendiliğinden yapılan iadede bunu gören kimse yok. Sipariş başına tek zil;
  * yeniden deneme de düşerse aynı satır kalır, operatör sipariş sayfasından yeniden dener.
  */
 export async function notifyRefundBlocked(

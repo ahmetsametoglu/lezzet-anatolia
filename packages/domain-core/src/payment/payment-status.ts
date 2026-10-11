@@ -1,6 +1,6 @@
 import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
 import { chargedShippingParts } from '../delivery/shipping-fee';
-import { isFulfillmentSettled } from '../order/status-machine';
+import { hasLeftWarehouse, isFulfillmentSettled } from '../order/status-machine';
 import { grossTotalCents } from '../pricing/vat-base';
 
 /**
@@ -107,6 +107,14 @@ export function derivePaymentStatus(input: PaymentDerivationInput): PaymentDeriv
     refundDueCents,
     amountToCollectCents,
   };
+}
+
+/**
+ * Kendiliğinden yapılması gereken karta iade düşmüş mü: online ödemede iade depodan çıkışta, teslimde ve iptalde kendiliğinden denenir,
+ * sonra kalan borç düşmüş iadedir. Nakit, kapıda kart ve havale fazlası kendiliğinden iade edilmez, operatör "İade başlat"la yazar.
+ */
+export function isRefundStuck(order: Pick<Order, 'status' | 'paymentMethod'>, refundDueCents: number): boolean {
+  return refundDueCents > 0 && order.paymentMethod === 'online' && (hasLeftWarehouse(order.status) || order.status === 'cancelled');
 }
 
 function statusOf(net: number, fulfilled: number, refunded: number): PaymentStatus {

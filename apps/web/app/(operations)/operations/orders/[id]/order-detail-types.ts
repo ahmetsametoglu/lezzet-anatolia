@@ -253,7 +253,7 @@ export interface OrderDetailView {
     openCents: number;
     /** Peşin ödenmişse iade edilecek fark. */
     refundDueCents: number;
-    /** Kendiliğinden yazılması gereken iade düşmüş: borç sipariş depodan çıktıktan ya da iptalden sonra hâlâ duruyor. */
+    /** Kendiliğinden yapılması gereken karta iade düşmüş (`isRefundStuck`); sipariş sayfasından yeniden denenir. */
     refundRetryable: boolean;
     dueDate: string | null;
     overdue: boolean;

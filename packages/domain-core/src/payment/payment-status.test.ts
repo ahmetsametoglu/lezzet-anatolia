@@ -3,6 +3,7 @@ import {
   derivePaymentStatus,
   derivePaymentStatusForOrder,
   fulfilledLineAmountCents,
+  isRefundStuck,
   type ChargedLine,
   type PaymentDerivationInput,
 } from './payment-status';
@@ -200,5 +201,20 @@ describe('KDV hariç fiyatta borç', () => {
   it("kapıda reddedilen adet KDV'siyle birlikte düşer", () => {
     const r = derivePaymentStatus(input({ pricesIncludeVat: false, lines: [line({ fulfilledQty: 1 })], collectedCents: 0 }));
     expect(r.amountToCollectCents).toBe(1055);
+  });
+});
+
+describe('düşmüş karta iade', () => {
+  it('online ödemede depodan çıkış ya da iptalden sonra kalan borç düşmüş iadedir', () => {
+    expect(isRefundStuck({ status: 'out_for_delivery', paymentMethod: 'online' }, 1000)).toBe(true);
+    expect(isRefundStuck({ status: 'cancelled', paymentMethod: 'online' }, 1000)).toBe(true);
+    // Kutu yola çıkana kadar yeniden açılabilir; iade henüz denenmedi.
+    expect(isRefundStuck({ status: 'ready', paymentMethod: 'online' }, 1000)).toBe(false);
+    expect(isRefundStuck({ status: 'delivered', paymentMethod: 'online' }, 0)).toBe(false);
+  });
+
+  it('kapıda fazla alınan nakit düşmüş iade sayılmaz — kendiliğinden iade edilmez', () => {
+    expect(isRefundStuck({ status: 'completed', paymentMethod: 'cash' }, 100)).toBe(false);
+    expect(isRefundStuck({ status: 'completed', paymentMethod: 'bank_transfer' }, 100)).toBe(false);
   });
 });

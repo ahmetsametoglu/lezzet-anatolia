@@ -72,7 +72,7 @@ export const AppNotificationKindEnum = z.enum([
   'pennylane_match_removed',
   /** Belgenin açık kalanı Pennylane'dekinden ayrıldı; kısmi ödeme ya da Pennylane'de yapılan eşleşme doğurur, düzeltme elle. */
   'pennylane_document_different',
-  /** Kendiliğinden yapılan karta iade düştü ya da yazılamadı; para müşteriye dönmedi, operatör sipariş sayfasından yeniden dener. */
+  /** Kendiliğinden yapılan iade düştü ya da yazılamadı; para müşteriye dönmedi, operatör sipariş sayfasından yeniden dener. */
   'refund_blocked',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
