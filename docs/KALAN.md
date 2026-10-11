@@ -58,7 +58,7 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
   - Görev kapandı; koddaki `BEKLEYEN(08.44)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (08.58) ~~**MOBİL WEB v1 — kabuk birebir, ekranlar sırayla**~~ → **MOBİL WEB — telefon görünümü native uygulamanın tasarımına (kullanıcı kararı 14.09)** *(kullanıcı isteği 13.09: öteki şerit masaüstünü `Musteri Web v1.dc.html`'e taşırken mobil web `Musteri Mobil v1.dc.html`'e; sıra ve dosya ayrımı kullanıcıyla konuşuldu)*
   - Karar bekleyen farklar (kullanıcıya görselle sorulur, düzeltmeler tek grupta): yalnız bir yüzeyde olanlar: puan geçmişindeki
-    "yolda olan puanlar" bloğu (yalnız native), K.33.
+    "yolda olan puanlar" bloğu (yalnız native).
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 - [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, katalog ~0,54 sn (DB'siz yasal sayfa ~0,16 sn).
   Supabase istekleri Cloudflare'in Paris düğümünden geçiyor (açık bağlantıda istek ~45–55 ms) ve sıralı her okuma bir tur ekliyor.
@@ -375,8 +375,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
     değil içindekini anlatıyor (kutuda kaç parça, dilim mi adet mi) ve ikizi "adet" kolonu tabloda duruyor.
   - Ürünün aktif olmamasına sebep olan eksikler diyalogda bir yerde yazmalı.
   - Alerjenlerde "alerjen eklenmez" düğmesiyle alerjen listesi aynı anda görünüyor; varsayılan boş hâlden olabilir, incelenecek.
-- [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı, yalnız ChatGPT düğmesi) yalnız masaüstü web'de var; telefon
-  görünümüne ve native'e alınıp alınmayacağı tek yüzeyli bölümlerle birlikte sorulacak.
 - [ ] (K.34) [hedef: operasyon] Ülkeye göre ürün etiketi: bazı ürünlerin üzerinde satıldığı ülkenin zorunlu bilgisi yok. Etiketin
   hangi ülke için yeterli olduğu ürün ürün, gerekirse varyant varyant tutulacak; önce Fransa ve Almanya, satış açılan her ülke
   sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
