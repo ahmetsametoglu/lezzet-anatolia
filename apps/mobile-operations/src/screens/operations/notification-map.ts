@@ -84,6 +84,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   pennylane_match_removed: 'management',
   // Düşen iade web'deki sipariş detayından yeniden denenir.
   refund_blocked: 'money',
+  // Aktarım farkı web'deki Para ekranında ve Revolut'un aktarım raporunda incelenir.
+  payout_unexplained: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

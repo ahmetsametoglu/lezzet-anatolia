@@ -4,7 +4,7 @@ import {
   type CompanyProfit, type OrderContribution, type SoldLine, type VariantProfit,
 } from '@lezzet/domain-core';
 import { fromCents } from '@lezzet/helper';
-import type { Business, OrderItem, OrderSale } from '@lezzet/types';
+import { CARD_FEE_NATURE, type Business, type OrderItem, type OrderSale } from '@lezzet/types';
 
 /**
  * Kârlılık kapısı (DOMAIN §12): karar motorun, okuma servisin, birleştiren yer burasıdır. Hediye siparişler dahildir, çünkü patron
@@ -76,15 +76,15 @@ export async function productProfits(period: ProfitPeriod, business?: Business):
 }
 
 /**
- * Şirket P&L: katkı paylarının toplamından fire ve genel gider bir kez düşülür. Genel gider yalnız `expense` hareketleridir, stok alımı
- * (`purchase`) girmez, çünkü malın maliyeti satıldığı anda COGS olarak düşülür ve aynı para iki kez gider yazılırdı.
+ * Şirket P&L: katkı paylarının toplamından fire ve genel gider bir kez düşülür. Genel gider yalnız `expense` hareketleridir; stok alımı
+ * (`purchase`) ve kart komisyonu girmez, çünkü ikisi de sipariş kârında (COGS ve `paymentFee`) zaten düşülür.
  */
 export async function companyPnl(period: ProfitPeriod, business?: Business): Promise<CompanyProfit> {
   const db = serviceDb();
   const [contributions, products, totals] = await Promise.all([
     orderProfits(period, business),
     productProfits(period, business),
-    new MoneyMovementService(db).periodTotals(period.from, period.to, business),
+    new MoneyMovementService(db).periodTotals(period.from, period.to, business, { excludeNatures: [CARD_FEE_NATURE] }),
   ]);
 
   // Toplama cent'te ve tamsayıdadır, euro'ya yalnız motorun girdisi için inilir.

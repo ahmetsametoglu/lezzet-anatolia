@@ -525,6 +525,8 @@ export {
 } from './order/revolut';
 export type { RevolutClient, RevolutConfig } from './order/revolut';
 export { revolutRefunderWith } from './order/revolut-refunder';
+export { recordPaymentFee } from './order/payment-fee';
+export { reconcileRecentPayouts } from './order/payout-statement';
 // ── Paket (bundle) çözümü ──
 export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
 // Tarif malzeme okumasının tek kapısı.

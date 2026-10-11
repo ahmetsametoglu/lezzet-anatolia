@@ -435,3 +435,25 @@ export async function notifyRefundBlocked(
     yut(err, 'refund_blocked');
   }
 }
+
+/**
+ * Kart aktarımının raporunda defterin açıklayamadığı işlem var: aktarım tutarı defterdeki tahsilat, iade ve komisyonla tutmaz. Aktarım
+ * başına tek zil, çünkü rapor yeniden okunsa da aynı fark aynı aktarımındır.
+ */
+export async function notifyPayoutUnexplained(
+  db: SupabaseClient,
+  input: { payoutId: string; rowCount: number; amountCents: number },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'payout_unexplained',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { payoutId: input.payoutId, rowCount: input.rowCount, amountCents: input.amountCents },
+      dedupeKey: `payout-unexplained:${input.payoutId}`,
+    });
+  } catch (err) {
+    yut(err, 'payout_unexplained');
+  }
+}

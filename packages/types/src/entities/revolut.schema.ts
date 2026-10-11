@@ -62,6 +62,17 @@ export const RevolutApiPayoutSchema = z.object({
 });
 export type RevolutApiPayout = z.infer<typeof RevolutApiPayoutSchema>;
 
+/** Aktarım listesi (`GET /api/payouts`). */
+export const RevolutApiPayoutListSchema = z.array(RevolutApiPayoutSchema);
+
+/** Rapor üretimi (`/api/report-runs`); dosya yalnız `completed` iken ve üretimden sonraki 24 saat indirilir. */
+export const RevolutReportRunSchema = z.object({
+  report_run_id: z.string(),
+  status: z.string(),
+  file_url: z.string().optional(),
+});
+export type RevolutReportRun = z.infer<typeof RevolutReportRunSchema>;
+
 /** Webhook gövdesi: olay ve kimlik; ayrıntı siparişi ya da aktarımı okuyarak alınır. */
 export const RevolutWebhookEventSchema = z.object({
   event: z.string(),

@@ -49,7 +49,13 @@ export class RevolutError extends Error {
 
 export interface RevolutClient {
   readonly mode: RevolutMode;
-  request(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown, opts?: { idempotencyKey?: string }): Promise<unknown>;
+  /** `accept` yalnız JSON dışı cevapta (rapor dosyası CSV'dir) verilir; JSON olmayan cevap metin olarak döner. */
+  request(
+    method: 'GET' | 'POST' | 'PATCH',
+    path: string,
+    body?: unknown,
+    opts?: { idempotencyKey?: string; accept?: string },
+  ): Promise<unknown>;
 }
 
 /** Anahtar ya da kip yoksa istemci yoktur: sağlayıcıya bağlanamayan akış "ödendi" ya da "ödenmedi" diyemesin. */
@@ -78,7 +84,7 @@ export function revolutClient(config: RevolutConfig): RevolutClient {
           headers: {
             Authorization: `Bearer ${config.secretKey}`,
             'Revolut-Api-Version': API_VERSION,
-            Accept: 'application/json',
+            Accept: opts?.accept ?? 'application/json',
             ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
             ...(opts?.idempotencyKey ? { 'Idempotency-Key': opts.idempotencyKey } : {}),
           },

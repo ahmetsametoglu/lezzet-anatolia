@@ -1,4 +1,4 @@
-import { confirmOnlinePayment, kickOrderRegister, linkAwaitingTransfers, type PaymentGateway } from '@lezzet/application';
+import { confirmOnlinePayment, kickOrderRegister, linkAwaitingTransfers, recordPaymentFee, type PaymentGateway } from '@lezzet/application';
 import {
   AccountService,
   MoneyMovementService,
@@ -10,7 +10,7 @@ import {
 } from '@lezzet/database';
 import { validateMovement } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
-import { CARD_FEE_NATURE, type MoneyMovementInsert } from '@lezzet/types';
+import type { MoneyMovementInsert } from '@lezzet/types';
 import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
 import { revolutPaymentGateway } from '../revolut';
 import { webPaymentEffects } from './transition';
@@ -117,34 +117,15 @@ async function confirmPayment(
 
   // İade dalında tahsilat yazılmadığı için komisyon da yazılmaz.
   if (outcome.action !== 'refunded' && accountId && event.fee) {
-    await recordPaymentFee(db, { orderId: event.orderId, accountId, paymentRef: event.paymentRef, fee: event.fee });
+    await recordPaymentFee(db, {
+      orderId: event.orderId,
+      accountId,
+      paymentRef: event.paymentRef,
+      feeCents: event.fee.feeCents,
+      meta: { providerPaymentId: event.fee.paymentId },
+    });
   }
   return { status: 'ok', action: outcome.action };
-}
-
-/**
- * Sağlayıcı komisyonu: havuzdan çıkan gider ve siparişin `paymentFee` alanı; yazım anahtarı ödemedir ki ikinci olay ikinci satır
- * doğurmasın. Gider satırına sipariş bağı yazılmaz, çünkü siparişin tahsilat toplamı o bağdan türer; bağ künyede durur.
- */
-async function recordPaymentFee(
-  db: ReturnType<typeof serviceDb>,
-  input: { orderId: string; accountId: string; paymentRef: string; fee: { feeCents: number; paymentId: string } },
-): Promise<void> {
-  if (input.fee.feeCents <= 0) return;
-  await new MoneyMovementService(db).insertOnce({
-    accountId: input.accountId,
-    direction: 'out',
-    amountCents: input.fee.feeCents,
-    type: 'expense',
-    nature: CARD_FEE_NATURE,
-    description: 'Kart ödemesi komisyonu',
-    meta: { providerRef: input.paymentRef, providerPaymentId: input.fee.paymentId, orderId: input.orderId },
-    source: 'system',
-    idempotencyKey: `card-fee:${input.paymentRef}`,
-  });
-  const orders = new OrderService(db);
-  const order = await orders.getById(input.orderId);
-  if (order && order.paymentFeeCents == null) await orders.update({ id: order.id, paymentFeeCents: input.fee.feeCents });
 }
 
 /**

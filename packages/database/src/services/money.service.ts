@@ -307,19 +307,42 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /**
-   * Sağlayıcı künyesinden hareketi bulur; iade olayı bize sipariş kimliğiyle değil yalnız ödeme kimliğiyle gelir. Tekillik aranmaz,
-   * en yenisi alınır: aynı ödemenin bütün hareketleri aynı siparişe aittir.
+   * Sağlayıcı künyesinden siparişe bağlı hareketi bulur (iade olayı yalnız ödeme kimliğiyle gelir); aynı ödemenin bütün hareketleri aynı
+   * siparişe ait olduğu için en yenisi alınır. Komisyon gideri aynı künyeyi taşır ama siparişe bağlanmadığı için dışarıda kalır.
    */
   async findByProviderRef(providerRef: string): Promise<MoneyMovement | null> {
     const { data, error } = await this.supabase
       .from('money_movement')
       .select('*')
       .eq('meta->>providerRef', providerRef)
+      .not('order_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(1);
     if (error) throw error;
     // `parseRows` ile, çünkü para eşlemesi ondadır; ham `parse` euro satırı cent şemasıyla doğrulamaya kalkıp düşerdi.
     return data?.[0] ? (this.parseRows([data[0]])[0] ?? null) : null;
+  }
+
+  /** Künyeler için siparişe bağlı hareketlerin sipariş ve hesabı (künye başına en yenisi); aktarım raporu satırlarını siparişe bağlar. */
+  async listOrderMovementsByProviderRefs(
+    providerRefs: readonly string[],
+  ): Promise<Array<{ providerRef: string; orderId: string; accountId: string }>> {
+    if (providerRefs.length === 0) return [];
+    const { data, error } = await this.supabase
+      .from('money_movement')
+      .select('order_id,account_id,meta')
+      .in('meta->>providerRef', [...providerRefs])
+      .not('order_id', 'is', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const byRef = new Map<string, { providerRef: string; orderId: string; accountId: string }>();
+    for (const row of (data ?? []) as Array<{ order_id: string; account_id: string; meta: Record<string, unknown> | null }>) {
+      const ref = row.meta?.['providerRef'];
+      if (typeof ref === 'string' && !byRef.has(ref))
+        byRef.set(ref, { providerRef: ref, orderId: row.order_id, accountId: row.account_id });
+    }
+    return [...byRef.values()];
   }
 
   /** Önbelleği kaynaktan yeniden kurar; hareket silinir ya da düzeltilirse tek çağrıyla gerçeğe dönülür. */
@@ -360,15 +383,30 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return this.getAll({ supplierId }, { orderBy: 'valueDate' });
   }
 
-  /** Dönem toplamları tipe göre — kâr ve nakit akışı raporlarının girdisi; satırlar dönemle sınırlı, toplama uygulamada. */
-  async periodTotals(from: string, to: string, business?: Business): Promise<PeriodTotal[]> {
-    let query = this.supabase.from('money_movement').select('type,direction,amount').gte('value_date', from).lte('value_date', to);
+  /**
+   * Dönem toplamları tipe göre — kâr ve nakit akışı raporlarının girdisi; satırlar dönemle sınırlı, toplama uygulamada. `excludeNatures`
+   * başka yerde sayılan türü dışarıda bırakır; süzgeç bellekte, çünkü türü boş satırı SQL'in `not in`i de dışarıda bırakırdı.
+   */
+  async periodTotals(
+    from: string,
+    to: string,
+    business?: Business,
+    opts: { excludeNatures?: readonly string[] } = {},
+  ): Promise<PeriodTotal[]> {
+    let query = this.supabase.from('money_movement').select('type,direction,amount,nature').gte('value_date', from).lte('value_date', to);
     if (business) query = query.eq('business', business);
     const { data, error } = await query;
     if (error) throw error;
 
+    const excluded = new Set(opts.excludeNatures ?? []);
     const buckets = new Map<string, PeriodTotal>();
-    for (const row of (data ?? []) as Array<{ type: MovementType; direction: 'in' | 'out'; amount: string | number }>) {
+    for (const row of (data ?? []) as Array<{
+      type: MovementType;
+      direction: 'in' | 'out';
+      amount: string | number;
+      nature: string | null;
+    }>) {
+      if (row.nature !== null && excluded.has(row.nature)) continue;
       const key = `${row.type}:${row.direction}`;
       const current = buckets.get(key) ?? { type: row.type, direction: row.direction, totalCents: 0, count: 0 };
       // Toplama cent'te ve tamsayıda, çünkü euro toplamı her satırda kayan nokta artığı biriktirirdi.

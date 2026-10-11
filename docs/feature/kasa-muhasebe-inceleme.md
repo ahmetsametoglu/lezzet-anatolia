@@ -14,7 +14,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
 | 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
 | 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Yapıldı |
-| 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Konuşulacak |
+| 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Yapıldı |
 | 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Konuşulacak |
 | 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Konuşulacak |
 | 10 | Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor | Düşük | Konuşulacak |
@@ -223,12 +223,14 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 7. Şirket kârında kart komisyonu iki kez düşülüyor
 
-**Durum:** Konuşulacak · **Ağırlık:** orta
+**Durum:** Yapıldı (11.10) · **Ağırlık:** orta
 
 - **Mevcut durum:** Online kart komisyonu hem gider hareketi olarak hem siparişin komisyon alanına yazılır. Sipariş kârı
   komisyon alanını düşer; şirket kârı dönemin bütün gider hareketlerini genel gider sayar.
 - **Problem:** Her online kart ödemesinin komisyonu şirket kârından iki kez düşülür. İç rapordur, resmî muhasebeyi etkilemez.
 - **Olması gereken:** Komisyon bir kez düşülür: ya genel giderden komisyon hareketi ayrılır ya da sipariş kârında sayılmaz.
+- **Karar (11.10):** komisyon sipariş kârında kalır, şirket kârının genel gideri `kart-komisyonu` hareketini saymaz. Siparişin
+  komisyon alanı bütün kart ödemelerinin toplamıdır. Ödeme anında boş gelen komisyon aktarım raporundan yazılır (`para.md`).
 - **Kanıt:** `apps/web/lib/order/payment-webhook.ts:122-141` · `packages/domain-core/src/accounting/profit.ts:96-109` ·
   `apps/web/lib/accounting/profit.ts:91-93`.
 

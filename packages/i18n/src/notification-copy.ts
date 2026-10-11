@@ -412,6 +412,19 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
         .filter(Boolean)
         .join(' · ') || null,
   }),
+  /* Defterde karşılığı olmayan işlem aktarımı defterden ayırır; hangi işlem olduğu Revolut panelindeki aktarım raporunda okunur. */
+  payout_unexplained: (p) => ({
+    tone: 'alert',
+    label: 'Para',
+    title: 'Kart aktarımı defterle tutmuyor',
+    subtitle:
+      [
+        typeof p.rowCount === 'number' ? `${p.rowCount} işlem defterde yok` : null,
+        typeof p.amountCents === 'number' ? euro(p.amountCents) : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || null,
+  }),
   /* Eşleşme kendiliğinden yeniden denenir; haber Para ekranını hesabın o gününe açar. */
   pennylane_match_stuck: (p) => ({
     tone: 'alert',

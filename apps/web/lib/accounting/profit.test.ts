@@ -4,7 +4,7 @@ import {
   StockMovementService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
-import { quickSale } from '@lezzet/application';
+import { quickSale, recordPaymentFee } from '@lezzet/application';
 import { companyPnl, orderProfits, productProfits } from './profit';
 
 /**
@@ -52,12 +52,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // **SIRA: defter → parti → sipariş** (06.14) — künye `packages/application/src/courier/day.test.ts`te.
-  //
-  // Burada eskiden `stock_adjustment` siliniyordu; o tablo artık YOK ve satır sessizce başarısız
-  // oluyordu (`delete()` hatayı yutuyor). Görünmemesinin sebebi buydu: kapı satışı deftere
-  // `counter_sale` yazıyor, o satır hem partiyi hem siparişi `restrict` ile tutuyor, yani ikisi de
-  // silinemiyordu ve teardown her koşuda yarım kalıyordu.
+  // Sıra defter → parti → sipariş: kapı satışının `counter_sale` satırı partiyi ve siparişi `restrict` ile tutar.
   await purgeVariantStock(db, [cheapVariant, costlyVariant]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await purgeTestData(db, {
@@ -143,6 +138,19 @@ describe('şirket P&L', () => {
     expect(round2(after.directCosts - before.directCosts)).toBeGreaterThanOrEqual(8);
     // Genel gider farkı YALNIZ kira kadar — 500 €'luk stok alımı girmedi.
     expect(round2(after.overhead - before.overhead)).toBe(120);
+  });
+
+  it('kart komisyonu bir kez düşülür — sipariş kârında; genel gidere ikinci kez girmez', async () => {
+    await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 200 });
+    const before = await companyPnl(TODAY);
+
+    const order = await sell(cheapVariant, 1, 2110);
+    expect(await recordPaymentFee(db, { orderId: order.id, accountId: cashAccount, paymentRef: `kom_${stamp}`, feeCents: 45 })).toBe(true);
+
+    const after = await companyPnl(TODAY);
+    expect(round2(after.overhead - before.overhead)).toBe(0);
+    // 2 € mal maliyeti + 0,45 € komisyon; sipariş kârı komisyonu taşır.
+    expect(round2(after.directCosts - before.directCosts)).toBeGreaterThanOrEqual(2.45);
   });
 
   it('kanal kırılımı katkı payı seviyesindedir', async () => {

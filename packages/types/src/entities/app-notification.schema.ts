@@ -74,6 +74,8 @@ export const AppNotificationKindEnum = z.enum([
   'pennylane_document_different',
   /** Kendiliğinden yapılan iade düştü ya da yazılamadı; para müşteriye dönmedi, operatör sipariş sayfasından yeniden dener. */
   'refund_blocked',
+  /** Kart aktarımının raporunda defterin açıklayamadığı işlem var (bilinmeyen ödeme, ters ibraz, ücret); aktarım defterle tutmaz. */
+  'payout_unexplained',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -100,6 +102,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'pennylane_match_removed',
   'pennylane_document_different',
   'refund_blocked',
+  'payout_unexplained',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

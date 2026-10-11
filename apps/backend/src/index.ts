@@ -36,6 +36,7 @@ import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations
 import { SWEEP_UNPAID_DRAFTS, sweepUnpaidDraftsJob } from './jobs/sweep-unpaid-drafts';
 import { SHIPMENT_WATCH, shipmentWatchJob } from './jobs/shipment-watch';
 import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
+import { PAYOUT_STATEMENT, payoutStatementJob } from './jobs/payout-statement';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
 import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
@@ -229,6 +230,14 @@ cron.schedule('25 * * * *', () => {
 cron.schedule('50 5 * * 1', () => {
   void runJob(SHIPMENT_ORPHAN, shipmentOrphanJob);
 }, { timezone: 'Europe/Paris' });
+
+/*
+  Kart aktarımı raporu saatte bir: aktarım günün herhangi bir anında tamamlanabilir ve rapor üretimi zaman alır; işlenen aktarım bir
+  kez işlenir, düşen sonraki turda yeniden alınır. 45 geçe, saat başı ve öteki saatlik işlerle aynı dakikaya düşmesin.
+*/
+cron.schedule('45 * * * *', () => {
+  void runJob(PAYOUT_STATEMENT, payoutStatementJob);
+});
 
 // Asistan önerilerinin süre süpürmesi saatte bir: öneri ömrü saat mertebesinde ve tur görüntüyü değil kaydı düzeltir, geçmişte
 // "süresi doldu" ile "reddettim" ayrı görünsün.
