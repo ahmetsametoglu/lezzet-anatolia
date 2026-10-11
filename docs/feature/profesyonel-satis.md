@@ -28,6 +28,10 @@ uygundur. Sistemde ayrı bir satış rolü yoktur: siparişi personel girer, tes
 | 13 | **Bir şirkete birden çok kişinin girmesi kapsam dışı** | Bir kayda tek giriş bağlanır. |
 | 14 | **Müşteri ayrıca boş bir hesap açtıysa boş hesap silinir** | Boş hesap GDPR silmeyle kapanır (giriş silinir, e-posta boşalır), e-posta ofisin açtığı kayda yazılır, müşteri yeniden girer ve kayıt ona bağlanır; birleştirme kullanılmaz. |
 | 15 | **Yeni profesyonel kayıt yöneticinin işlemlerini bekler; mevcut akış değişmez** | Sahada açılan kayıt, yönetici B2B onayını ve vade iznini (limit, süre) verene kadar perakende fiyatla ve peşin yollarla alır; QUALITE müşterisi sayılmaz, vadeli sipariş giremez. |
+| 16 | **Limit aşılınca vadeli sipariş yazılmaz; yönetici limiti artırınca seçenek açılır** | Bugünkü davranış: ödeme seçenekleri her okumada müşterinin güncel limitinden hesaplanır. Tek seferlik geçirme yolu kurulmaz. |
+| 17 | **Satış faturası taslak ve onayla başlar** | Teslimden sonra taslak kendiliğinden hazırlanır, ofis onaylayınca kesinleşir; akış sürtünmesiz olmalı (§5, Faz 4). İleride onay kendiliğinden verilebilir, yapı aynı kalır. |
+| 18 | **Varsayılan fatura modu teslim başına** | Her teslimden sonra bir fatura; ay sonu toplu fatura müşteri başına seçilen bir ayardır. |
+| 19 | **Fatura iki görünümle, tek numara sırasıyla kesilir** | QUALITE ve Lezzet Anatolie için ayrı Pennylane şablonu (logo, ticari ad); numara sırası ortak. Mevzuat tek ve kesintisiz sırayı ister; Pennylane'de numaralandırma şablondan bağımsızdır (§3). |
 
 ## 2. Saha akışları
 
@@ -57,6 +61,13 @@ uygundur. Sistemde ayrı bir satış rolü yoktur: siparişi personel girer, tes
   bitiminden 30 gün. Dilimler ayın 1–10'u, 11–20'si ve 21'inden ay sonuna kadarıdır.
 - **E-fatura:** almak 01.09.2026'dan beri zorunlu, göndermek bizim boyumuzda 01.09.2027'den ([`kasa-muhasebe.md`](kasa-muhasebe.md) §1).
   Fatura alıcıya SIREN'iyle yönlenir; alıcının SIREN'i faturada zorunlu yazı olur.
+- **Fatura teslimde kesilir** (Code de commerce L441-9: satıcı faturayı satış gerçekleşir gerçekleşmez verir). Kesinleşen fatura
+  değiştirilmez; sonraki iade ya da şikâyet alacak notuyla düzeltilir.
+- **Numaralandırma** tek, kronolojik ve kesintisiz bir sıradır; ayrı seriler ancak faaliyet koşulları gerektiriyorsa ve ayrı
+  önekle olur (BOI-TVA-DECLA-30-20-20-10 §70–100). Satıcının adı (QUALITE), adresi ve KDV numarası zorunludur.
+- **E-fatura gönderimi:** Pennylane onaylı platformdur. Gönderim şirket ayarlarından bir kez açılır (Paramètres › Transmission de
+  factures; şirket yöneticisi ya da muhasebeci açar, şirketin imzalı alım rızası ya da açan kişinin kimlik doğrulaması gerekir).
+  Sonra Pennylane'den gönderilen fatura müşterinin seçtiği platforma gider, fatura ve ödeme verisi vergi idaresine iletilir.
 
 ## 4. Bugünkü durum (ölçüldü, 11.10)
 
@@ -134,7 +145,15 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   kararı bu fazda güncellenir.
 - İçerik teslim edilen miktarlardan; KDV kırılımı ve ters yükleme ibaresi muhasebe dökümünün hesabından
   (`packages/domain-core/src/accounting/export.ts`).
-- Teslim başına modda fatura teslimden hemen sonra, ay sonu modunda ayın son günü kesilir.
+- **Taslak ve onay (karar 17):** teslim biter bitmez sistem taslağı teslim edilen miktarlardan kendisi hazırlar; kimse veri girmez.
+  Ofis tek bir "Kesilecek faturalar" listesinde onaylar. Dikkat isteyen taslak işaretli gelir (kapıda geri çevrilen kalem,
+  pazarlıklı fiyat, eksik fatura bilgisi); işaretsizler tek düğmeyle topluca kesilir. Onaylanmayan taslak ertesi sabah panoda
+  görünür, çünkü fatura teslimde kesilmeli (§3). Düzeltme siparişte yapılır ve taslak yeniden hesaplanır; faturaya elle tutar
+  yazılmaz. Taslak bizde durur, Pennylane'e yalnız onaylanan fatura gider. Kesildikten sonraki iade alacak notu taslağı olarak
+  aynı listeye düşer.
+- Teslim başına modda (varsayılan, karar 18) taslak teslimden hemen sonra, ay sonu modunda ayın son günü hazırlanır.
+- Şablon işten seçilir (QUALITE · Lezzet Anatolie, karar 19); iki şablonda da yasal ad QUALITE ve SIREN görünür. Pennylane
+  şablon sayısı plana bağlı (Essentiel'de en çok 5).
 - Vade günü tek kuralla: fatura günü + müşterinin vadesi, ama faturadaki ilk teslimin on günlük diliminin bitiminden 30
   günü geçmez.
 - Fatura numarası siparişe yazılır (`order.invoice_no`); Pennylane faturayı müşteriye e-postayla gönderir. Faturadan sonra
@@ -145,15 +164,17 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - Bir havale birden çok faturayı, bir fatura birden çok havaleyi kapatır; tutar satın almadaki kuralla bağlanır.
 - Siparişler ödendi olsun diye banka satırı aracı hesaba transfer olur, aracı hesapta faturanın siparişlerine tahsilat
   yazılır. Aracı hesap sıfırlanır, banka parayı bir kez sayar, siparişin ödeme hesabı değişmez (Revolut Merchant düzeni).
+  Aracı hesap yalnız bizde durur ve Pennylane'e eşlenmez; Pennylane'de havale doğrudan müşteri faturalarına eşlenir, muhasebeciye
+  giden veri de oradan çıkar.
 - Eşleşme Pennylane'deki müşteri faturasına yazılır; vadeli frenin açık bakiyesi ve gecikmesi faturanın vade gününü okur.
 
 ## 6. Açık sorular
 
-1. Limit aşan vadeli sipariş müşteri yolunda reddedilir; yönetici elle girerken geçsin mi?
-2. Fatura teslimde kendiliğinden mi kesinleşsin, ofisin onayıyla mı? Kesinleşen fatura silinmez; düzeltme alacak notudur.
-3. Varsayılan fatura modu teslim başına mı, ay sonu mu?
-4. QUALITE ve Lezzet faturaları aynı Pennylane şirketinde, aynı numara serisinde mi?
-5. Muhasebeciye: satış faturasının Pennylane'de kesilmesi, aracı hesap düzeni, 2027 e-fatura gönderim kanalı.
+1. Fatura taslağını kim onaylar: yalnız yönetici mi, muhasebe rolü de mi?
+2. Onay nerede yapılır: yalnız web operasyonda mı, mobil yönetimde de mi?
+3. Bekleyen: şirketin e-fatura alım kaydının EBP'de olup olmadığını kullanıcı teyit ettiriyor; teyitten sonra Pennylane'de
+   gönderim açılır.
+4. Bekleyen: muhasebeciye giden dosyanın biçimi, muhasebeci istediğinde belirlenir.
 
 ## 7. Ölçülecekler
 
@@ -161,7 +182,8 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   raporlar) kontrol edilir.
 - Kapı satışında B2B nakdi ilk kez doğar; kasa planının onu kasa girişi olarak yazdığı ölçülür (`packages/application/src/register/`).
 - Aracı hesabın türü ve iade yolu: B2B iadesi bankadan havaleyle dönmeli (`packages/domain-core/src/payment/refund-method.ts`).
-- Aracı hesabın hareket dökümünde nasıl göründüğü muhasebeciye gösterilir.
+- API ile kesilen faturanın e-fatura gönderiminin nasıl tetiklendiği: yardım sayfası her faturada "Envoyer" diyor; Faz 4'te
+  sandbox'ta ölçülür.
 
 ## 8. Kaynaklar
 
@@ -171,3 +193,8 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - Pennylane: [müşteri faturası oluşturma](https://pennylane.readme.io/docs/create-a-customer-invoice-use-case) ·
   [otomatik ödeme eşleştirme](https://pennylane.readme.io/docs/automating-payment-matching) ·
   [faturaya hareket eşleme](https://pennylane.readme.io/reference/postcustomerinvoicematchedtransactions)
+- Pennylane yardım: [e-fatura deneyimi](https://help.pennylane.com/fr/articles/561209-decouvrir-l-experience-de-la-facturation-electronique-dans-pennylane) ·
+  [faturaları numaralandırma](https://help.pennylane.com/fr/articles/114356-numeroter-les-factures) ·
+  [fatura şablonları](https://help.pennylane.com/fr/articles/146118-creer-des-modeles-de-facture)
+- [BOFiP — faturanın zorunlu bilgileri ve numaralandırma](https://bofip.impots.gouv.fr/bofip/140-PGP.html)
+- [Legifrance — Code de commerce, faturalama (L441-9)](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000038411053/2019-04-26)
