@@ -6,10 +6,10 @@ import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { PageHeaderBar, PageHeaderHero, usePageHeader } from '@/components/ui/page-header';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,18 +45,19 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   const pending = card?.pendingNeighborAwards ?? [];
   const neighborPoints = card?.earnWays.find((way) => way.key === 'neighbor')?.points ?? null;
 
-  /* Başlık "sayfa başlığı" durağı (`‹` kendi satırında → eyebrow → 26px başlık), çünkü kaydırırken erişilebilir kalması gereken bir
-     eylem yok; alt başlık yok, sözü liste veriyor. */
-  const header = (
-    <View style={styles.header}>
-      <View style={styles.backRow}>
-        <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="points-history-back" />
-      </View>
-      <Text style={styles.eyebrow}>{upperIn(t.eyebrow, locale)}</Text>
-      <Text style={styles.title} accessibilityRole="header">
-        {t.title}
-      </Text>
+  const page = usePageHeader();
 
+  const bar = (
+    <PageHeaderBar
+      title={t.title}
+      collapsed={page.collapsed}
+      backLabel={t.back}
+      onBack={() => router.back()}
+      testID="points-history-back"
+    />
+  );
+  const header = (
+    <PageHeaderHero eyebrow={upperIn(t.eyebrow, locale)} title={t.title} onTitleLayout={page.onTitleLayout} style={styles.header}>
       {/* Bakiye başlıkta, çünkü müşteri buraya "puanlarım nerede" diye gelir; kart okunmadan çizilmez, yoksa bir an "0 puan"
           yazardı. */}
       {card === null ? null : (
@@ -78,13 +79,14 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
           ))}
         </View>
       )}
-    </View>
+    </PageHeaderHero>
   );
 
   /* Beş hâl de listenin yerine geçer, çünkü hiçbirinde kaydırılacak satır yok; boş hâller `fill` ile ortalanır. */
   if (history.status === 'loading') {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <View style={styles.skeletonBody} testID="points-history-loading">
           {[0, 1, 2, 3, 4, 5].map((row) => (
@@ -104,6 +106,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   if (history.status === 'guest') {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
@@ -122,6 +125,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   if (history.status === 'denied') {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
@@ -137,6 +141,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   if (history.status === 'error') {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
@@ -153,6 +158,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   if (history.entries.length === 0) {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
@@ -213,11 +219,14 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
 
   return (
     <View style={styles.screen}>
+      {bar}
       <FlatList
         data={groups}
         keyExtractor={(group) => group.id}
         renderItem={({ item }) => renderGroup(item)}
         ListHeaderComponent={header}
+        onScroll={page.onScroll}
+        scrollEventThrottle={16}
         ListFooterComponent={listFooter()}
         contentContainerStyle={styles.content}
         onEndReached={history.loadMore}
@@ -263,28 +272,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   headerPad: {
     paddingHorizontal: theme.space['4xl'],
   },
-  header: {
-    gap: theme.space.xs,
-    paddingTop: theme.space['3xl'],
-    paddingBottom: theme.space['2xl'],
-  },
-  /** Geri düğmesi: glif başlıkla hizalanır, sipariş ekranının aynı ölçüsü. */
-  backRow: {
-    flexDirection: 'row',
-    marginLeft: -theme.space['3xl'],
-  },
-  /** Eyebrow — siparişler ekranının ölçüleriyle BİREBİR (aynı header durağı, tek görünüm). */
-  eyebrow: {
-    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
-    fontSize: theme.text.eyebrow,
-    letterSpacing: theme.text.eyebrow * 0.18,
-    color: theme.colors.terracotta,
-  },
-  title: {
-    fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
-    fontSize: theme.text['page-title-sm'],
-    color: theme.colors.ink,
-  },
+  header: { paddingBottom: theme.space['2xl'] },
   /* BAKİYE SATIRI, KART DEĞİL: sayfanın kendi başlığının altında bir künye satırı gibi durur.
      Kutu yapmak, altındaki "yolda" bloğuyla iki kart üst üste gelmesi demekti. */
   balanceRow: {
@@ -323,7 +311,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.muted,
   },
   /* SATIR KUTU DEĞİL: hareketler bir liste, kart yığını değil — her satıra zemin ve çerçeve
-     vermek 200 satırlık bir arşivi okunamaz kılardı. Ayrım ince bir çizgiyle. */
+     vermek 200 satırlık bir arşivi okunamaz kılardı; ayrım ince bir çizgiyle. */
   row: {
     flexDirection: 'row',
     alignItems: 'center',

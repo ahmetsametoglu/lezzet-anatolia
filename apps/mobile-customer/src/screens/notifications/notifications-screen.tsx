@@ -6,10 +6,10 @@ import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import type { NotificationRow } from '@lezzet/mobile-kit/src/lib/api/notifications';
-import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { PageHeaderBar, PageHeaderHero, usePageHeader } from '@/components/ui/page-header';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
@@ -46,26 +46,31 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
   const feed = useNotifications(meState.status === 'ready' && meState.me !== null ? meState.me.id : null);
 
   // "Tümünü okundu say" yalnız okunmamış varken: işi kalmamış bir eylem çizilmez.
+  const page = usePageHeader();
+
+  const bar = (
+    <PageHeaderBar
+      title={shared.title}
+      collapsed={page.collapsed}
+      backLabel={t.back}
+      onBack={() => router.back()}
+      testID="notifications-back"
+    />
+  );
   const header = (
-    <View style={styles.header}>
-      <View style={styles.backRow}>
-        <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="notifications-back" />
-      </View>
-      <Text style={styles.eyebrow}>{upperIn(t.eyebrow, locale)}</Text>
-      <Text style={styles.title} accessibilityRole="header">
-        {shared.title}
-      </Text>
+    <PageHeaderHero eyebrow={upperIn(t.eyebrow, locale)} title={shared.title} onTitleLayout={page.onTitleLayout} style={styles.header}>
       {feed.status === 'ready' && feed.unread > 0 ? (
         <PressableSurface onPress={feed.markAllRead} feedback="opacity" style={styles.markAll} testID="notifications-mark-all">
           <Text style={styles.markAllLabel}>{shared.markAll}</Text>
         </PressableSurface>
       ) : null}
-    </View>
+    </PageHeaderHero>
   );
 
   if (feed.status === 'loading') {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <View style={styles.skeletonBody} testID="notifications-loading">
           {/* İskelet gelen kartın yerini tutar: ikon dairesi, başlık ve cümle. */}
@@ -86,6 +91,7 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
   if (feed.status === 'guest') {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
@@ -102,6 +108,7 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
   if (feed.status === 'error') {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
@@ -118,6 +125,7 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
   if (feed.rows.length === 0) {
     return (
       <View style={styles.screen}>
+        {bar}
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
@@ -196,12 +204,15 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
 
   return (
     <View style={styles.screen}>
+      {bar}
       <FlatList
         data={feed.rows}
         keyExtractor={(row) => row.id}
         renderItem={({ item }) => renderRow(item)}
         ItemSeparatorComponent={RowGap}
         ListHeaderComponent={header}
+        onScroll={page.onScroll}
+        scrollEventThrottle={16}
         ListFooterComponent={listFooter}
         contentContainerStyle={styles.content}
         onEndReached={feed.loadMore}
@@ -231,27 +242,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   headerPad: {
     paddingHorizontal: theme.space['4xl'],
   },
-  header: {
-    gap: theme.space.xs,
-    paddingTop: theme.space['3xl'],
-    paddingBottom: theme.space['2xl'],
-  },
-  backRow: {
-    flexDirection: 'row',
-    marginLeft: -theme.space['3xl'],
-  },
-  eyebrow: {
-    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
-    fontSize: theme.text.eyebrow,
-    letterSpacing: theme.text.eyebrow * 0.18,
-    color: theme.colors.terracotta,
-    textTransform: 'uppercase',
-  },
-  title: {
-    fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
-    fontSize: theme.text['page-title-sm'],
-    color: theme.colors.ink,
-  },
+  header: { paddingBottom: theme.space['2xl'] },
   markAll: {
     alignSelf: 'flex-start',
     paddingVertical: theme.space.xs,

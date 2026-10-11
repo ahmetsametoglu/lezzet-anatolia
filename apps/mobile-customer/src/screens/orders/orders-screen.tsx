@@ -1,15 +1,15 @@
 import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
-import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { PageHeaderBar, PageHeaderHero, usePageHeader } from '@/components/ui/page-header';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
@@ -23,13 +23,11 @@ import { OrdersSkeleton } from './orders-skeleton';
 import { useOrders } from './use-orders.hook';
 
 /*
-  Siparişlerim: misafir kapısı, iskelet, ağ hatası, boş durum ve sipariş kartları; liste keyset + sonsuz kaydırmayla büyür ve kuyruk
-  hatası satırları düşürmez. Kart bütünüyle basılabilir; ödeme bekleyen sipariş detay yerine ödeme ekranını açar.
+  Siparişlerim: liste keyset + sonsuz kaydırmayla büyür ve kuyruk hatası satırları düşürmez. Misafir doğrudan girişe gider, PWA'daki
+  sayfanın davranışı.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
-
-/* İskeletin kart sayısı `orders-skeleton`ın kendi sabiti; yükseklik kartın yapısından kendiliğinden çıkar. */
 
 interface OrdersScreenProps {
   /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
@@ -44,43 +42,22 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
   const router = useRouter();
   const orders = useOrders(locale);
 
-  /* Geri oku: ekran hep yığında açılır ve yığın ekranında sekme çubuğu yok, dönüşün görünür yolu bu. */
-  const header = (
-    <View style={styles.header}>
-      <View style={styles.backRow}>
-        <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="orders-back" />
-      </View>
-      <Text style={styles.eyebrow}>{upperIn(t.eyebrow, locale)}</Text>
-      <Text style={styles.title} accessibilityRole="header">
-        {t.title}
-      </Text>
-    </View>
+  const page = usePageHeader();
+
+  // Ekran hep yığında açılır ve yığında sekme çubuğu yok; dönüşün görünür yolu geri satırı.
+  const bar = (
+    <PageHeaderBar title={t.title} collapsed={page.collapsed} backLabel={t.back} onBack={() => router.back()} testID="orders-back" />
   );
+  const hero = <PageHeaderHero eyebrow={upperIn(t.eyebrow, locale)} title={t.title} onTitleLayout={page.onTitleLayout} style={styles.hero} />;
 
-  /* Misafir · iskelet · hata · boş — dördü de listenin YERİNE geçer, içine değil: hiçbirinde
-     kaydırılacak bir satır yok ve `FlatList` kabuğu boşuna kurulmaz. */
-  if (orders.status === 'guest') {
-    return (
-      <View style={styles.screen}>
-        <View style={styles.headerPad}>{header}</View>
-        <EmptyState
-          icon={<Icon name="orders" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
-          title={t.guest.title}
-          description={t.guest.body}
-          action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="orders-login" />}
-          testID="orders-guest"
-        />
-      </View>
-    );
-  }
+  if (orders.status === 'guest') return <Redirect href="/login" />;
 
-  /* İLK YÜK: başlık GERÇEK kalır (geri düğmesi çalışır), kartların yerini skeleton tutar. Blok
-     ekrandan `orders-skeleton`a taşındı: kartın içi hiç tanınmıyordu ve yüksekliği tek ham sayı
-     olarak yazılıydı — kartın dolgusu değiştiğinde sessizce yanlışa düşerdi. */
+  /* İskelet, hata ve boş hâl listenin yerine geçer, çünkü hiçbirinde kaydırılacak satır yok. */
   if (orders.status === 'loading') {
     return (
       <View style={styles.screen}>
-        <View style={styles.headerPad}>{header}</View>
+        {bar}
+        <View style={styles.headerPad}>{hero}</View>
         <View style={styles.skeletonBody}>
           <OrdersSkeleton testID="orders-loading" />
         </View>
@@ -91,7 +68,8 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
   if (orders.status === 'error') {
     return (
       <View style={styles.screen}>
-        <View style={styles.headerPad}>{header}</View>
+        {bar}
+        <View style={styles.headerPad}>{hero}</View>
         <EmptyState
           icon={<Icon name="connection-off" size={theme.size.errorIcon} color={theme.colors['sand-600']} />}
           title={t.error.title}
@@ -106,7 +84,8 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
   if (orders.orders.length === 0) {
     return (
       <View style={styles.screen}>
-        <View style={styles.headerPad}>{header}</View>
+        {bar}
+        <View style={styles.headerPad}>{hero}</View>
         <EmptyState
           icon={<Icon name="orders" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.empty.title}
@@ -166,9 +145,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
           <OrderStatusTag status={order.status} label={t.status[order.status]} />
         </View>
 
-        {/* Küçük resim yığını: soldan sağa binerek dizilir (kitin `stacked` varyantı). Küme
-            SUNUCUDA tekilleştirilip sınırlandı — "+N" de oradan gelir, listenin uzunluğundan
-            türetilmez (aynı ürünün iki boyu tek halkadır ve iki kez sayılmamalı). */}
+        {/* Küme ve "+N" sunucuda tekilleşir, listenin uzunluğundan türetilmez: aynı ürünün iki boyu tek halkadır. */}
         {order.thumbs.length === 0 ? null : (
           <View style={styles.thumbs}>
             {order.thumbs.map((thumb, index) => (
@@ -189,8 +166,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
 
         <View style={styles.cardBottom}>
           <Text style={styles.total}>{formatPrice(order.totalCents, locale)}</Text>
-          {/* Kart zaten basılabilir; bu yazı bir DÜĞME değil, nereye gidileceğini söyleyen bir
-              işaret — o yüzden kendi dokunma hedefini açmıyor (a11y'de tek satır kalsın). */}
+          {/* Kart zaten basılabilir; bu yazı düğme değil işaret, kendi dokunma hedefi yok ki a11y'de tek satır kalsın. */}
           <TextAction label={order.reference === null ? t.row.pay : t.row.detail} onPress={open} tone="terracotta" />
         </View>
       </PressableSurface>
@@ -199,11 +175,14 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
 
   return (
     <View style={styles.screen}>
+      {bar}
       <FlatList
         data={orders.orders}
         keyExtractor={keyOf}
         renderItem={({ item }) => renderOrder(item)}
-        ListHeaderComponent={header}
+        ListHeaderComponent={hero}
+        onScroll={page.onScroll}
+        scrollEventThrottle={16}
         ListFooterComponent={listFooter()}
         contentContainerStyle={styles.content}
         onEndReached={orders.loadMore}
@@ -234,32 +213,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingBottom: theme.space['5xl'],
     gap: theme.space.xl,
   },
-  header: {
-    // Tasarımın 3 px'i iki basamağın ortasında; eşitlikte ferah olan seçilir.
-    gap: theme.space.xs,
-    /* Üst pay sayfa dolgusu ile başlık bloğunun kendi payının toplamıdır; `insets.top` durum çubuğunu karşılar, bu pay onun üstüne binir. */
-    paddingTop: theme.space['3xl'],
-    paddingBottom: theme.space.xs,
-  },
-  /** Geri düğmesinin dairesi sayfanın sol dolgusuna taşar (tasarımda `margin-left:-8px`). */
-  backRow: {
-    flexDirection: 'row',
-    /* Glif başlıkla hizalanır: daire 40 dp ve glif ortalı olduğu için −16 glifin sol kenarını başlığın sol kenarına oturtur. */
-    marginLeft: -theme.space['3xl'],
-  },
+  hero: { paddingBottom: theme.space.xs },
   /* Başlık listede kaydırma kabının dolgusunu alır; kabın olmadığı dallarda dolgu sarmalayıcıdan gelir, başlığa konsa listede çift olurdu. */
   headerPad: { paddingHorizontal: theme.space['4xl'] },
-  eyebrow: {
-    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
-    fontSize: theme.text.eyebrow,
-    letterSpacing: theme.text.eyebrow * 0.18,
-    color: theme.colors.terracotta,
-  },
-  title: {
-    fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
-    fontSize: theme.text['page-title-sm'],
-    color: theme.colors.ink,
-  },
   skeletonBody: {
     paddingHorizontal: theme.space['4xl'],
     gap: theme.space.xl,
