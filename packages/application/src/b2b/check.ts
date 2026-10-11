@@ -26,6 +26,10 @@ export interface B2bDuplicateRow {
   phone: string | null;
   /** Taslak kayıt (WhatsApp telefonuyla açılmış) — mükerrer adaylarının en sık kaynağı. */
   isDraft: boolean;
+  /** Başvuruyla aynı SIRET: aday değil aynı iş yeridir ve başvurunun girişi bu kayda devredilebilir. */
+  sameSiret: boolean;
+  /** Bir girişe bağlı; bir kayıt tek giriş taşıdığı için devrin hedefi olamaz. */
+  hasLogin: boolean;
 }
 
 /**
@@ -38,6 +42,8 @@ export interface B2bCheckView {
   name: string;
   /** Hesabın sahibi — kapıda aranacak kişi ve mükerrer şüphesinin öznesi. */
   contactName: string;
+  /** Başvuru hesabı bir girişe bağlı mı; girişi olmayan hesabın devredecek girişi yoktur. */
+  hasLogin: boolean;
   /** Resmî künye adı (`company_info.legalName`) — ticari addan farklı olabilir. */
   legalName: string | null;
   /** Şirketin kimlik numarası, ADIYLA ve kaynağıyla (`b2bIdentity`). `null` = hiçbir numara yok. */
@@ -84,8 +90,15 @@ function billingAddressOf(addresses: Address[]): Address | null {
   return addresses.find((a) => a.isBilling) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
 }
 
-function toDuplicateRow(p: UserProfile): B2bDuplicateRow {
-  return { id: p.id, name: p.name, phone: p.phone, isDraft: p.isDraft };
+function toDuplicateRow(p: UserProfile, siret: string | null | undefined): B2bDuplicateRow {
+  return {
+    id: p.id,
+    name: p.name,
+    phone: p.phone,
+    isDraft: p.isDraft,
+    sameSiret: Boolean(siret) && p.companyInfo?.siret === siret,
+    hasLogin: p.authUserId !== null,
+  };
 }
 
 /**
@@ -155,6 +168,7 @@ export async function readB2bCheck(
     /* Hesabın kendi adı ayrı alanda: mükerrer şüphesinde ve kapıda aranacak kişide operatörün
        ihtiyacı olan şey İŞLETME değil KİŞİdir. */
     contactName: profile.name,
+    hasLogin: profile.authUserId !== null,
     // Künye de TAZE olanı gösterir: sinyaller tazeye bakarken başlık eskiyi yazsaydı, operatör
     // "kapalı" sinyalinin yanında eski unvanı okurdu ve hangisinin doğru olduğunu bilemezdi.
     legalName: (fresh ?? profile.companyInfo)?.legalName ?? null,
@@ -170,6 +184,6 @@ export async function readB2bCheck(
     status: b2bStatusOf(profile),
     signals,
     flag: b2bFlag(signals),
-    duplicates: duplicates.map(toDuplicateRow),
+    duplicates: duplicates.map((p) => toDuplicateRow(p, profile.companyInfo?.siret)),
   };
 }

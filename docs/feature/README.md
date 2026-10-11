@@ -29,5 +29,5 @@ dosya özelliğin tek kaydı olur: kararlar, yol haritası ve açık işler orad
 - `kasa-muhasebe-inceleme.md` — 13. kararın iki ajanlı incelemesinin 16 bulgusu (07.10): her madde mevcut durum, problem,
   olması gereken ve kanıtla; kullanıcıyla tek tek konuşuluyor, karar ve sonuç maddenin altında.
 - `profesyonel-satis.md` — personelin profesyonel müşteri adına sipariş girmesi (web ve mobil, araçtan vadeli satış dahil),
-  satış faturasının Pennylane'de kesilmesi ve havalenin faturalara bağlanması: **kararlar alındı 11.10**, Faz 0 tamamlandı.
+  satış faturasının Pennylane'de kesilmesi ve havalenin faturalara bağlanması: **kararlar alındı 11.10**, Faz 0–1 tamamlandı.
   Ana iskelete dokunmayan altı fazlı yol haritası (dokunuş seviyesiyle), yasal zemin, açık sorular.

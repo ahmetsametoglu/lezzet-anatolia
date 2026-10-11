@@ -11,6 +11,7 @@ import {
   loadMoreCustomersAction,
   readCustomerDetailAction,
   readB2bCheckAction,
+  bindLoginToSiretRecordAction,
   readOrderSummaryAction,
   setB2bApprovalAction,
   setCustomerCreditAction,
@@ -349,6 +350,7 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
           key={`b2b-${selected.id}`}
           check={b2bCheck}
           error={b2bError}
+          writeError={saveError}
           saving={saving}
           onDecide={(approved, reason) =>
             void runWrite(
@@ -362,6 +364,22 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
                   setRowPatch((prev) => ({
                     ...prev,
                     [selected.id]: { ...prev[selected.id], b2bStatus: approved ? 'approved' : 'rejected' },
+                  }));
+                }
+                return sonuc;
+              },
+              () => setB2bOpen(false),
+            )
+          }
+          onHandOver={(targetId) =>
+            void runWrite(
+              async () => {
+                const sonuc = await bindLoginToSiretRecordAction(selected.id, targetId);
+                // Başvuru hesabı silindi; satır yeniden okunmadan silinmiş görünsün diye yerelde yamanır.
+                if (!sonuc.error) {
+                  setRowPatch((prev) => ({
+                    ...prev,
+                    [selected.id]: { ...prev[selected.id], anonymizedAt: new Date().toISOString(), b2bStatus: 'none' },
                   }));
                 }
                 return sonuc;

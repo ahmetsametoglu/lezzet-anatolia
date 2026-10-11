@@ -21,15 +21,19 @@ interface B2bApprovalDialogProps {
   check: B2bCheckView | null;
   /** Okuma hatası — yutulursa diyalog sonsuza kadar "Yükleniyor…" kalır. */
   error: string | null;
+  /** Yazım hatası; devir reddedilirse sebebi devir basamağında okunur. */
+  writeError: string | null;
   saving: boolean;
   /** Ret'te `reason` DOLU gelir (veri kısıtı gerekçesiz reddi zaten yazdırmıyor); onayda boş. */
   onDecide: (approved: boolean, reason: string) => void;
+  /** Başvurunun girişini aynı SIRET'li kayda taşır. */
+  onHandOver: (targetId: string) => void;
   onClose: () => void;
 }
 
-type Step = { kind: 'card' } | { kind: 'confirm'; approve: boolean };
+type Step = { kind: 'card' } | { kind: 'confirm'; approve: boolean } | { kind: 'handover'; target: B2bDuplicateRow };
 
-export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B2bApprovalDialogProps) {
+export function B2bApprovalDialog({ check, error, writeError, saving, onDecide, onHandOver, onClose }: B2bApprovalDialogProps) {
   const [step, setStep] = useState<Step>({ kind: 'card' });
   /** AI özeti: `undefined` = üretiliyor, `null` = üretilemedi. */
   const [summary, setSummary] = useState<string | null | undefined>(undefined);
@@ -71,8 +75,23 @@ export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B
           onBack={() => setStep({ kind: 'card' })}
           onConfirm={(reason) => onDecide(step.approve, reason)}
         />
+      ) : step.kind === 'handover' ? (
+        <HandoverStep
+          check={check}
+          target={step.target}
+          saving={saving}
+          error={writeError}
+          onBack={() => setStep({ kind: 'card' })}
+          onConfirm={() => onHandOver(step.target.id)}
+        />
       ) : (
-        <CheckPane check={check} saving={saving} summary={summary} onDecide={(approve) => setStep({ kind: 'confirm', approve })} />
+        <CheckPane
+          check={check}
+          saving={saving}
+          summary={summary}
+          onDecide={(approve) => setStep({ kind: 'confirm', approve })}
+          onHandOver={(target) => setStep({ kind: 'handover', target })}
+        />
       )}
     </Dialog>
   );
@@ -114,12 +133,14 @@ function CheckPane({
   saving,
   summary,
   onDecide,
+  onHandOver,
 }: {
   check: B2bCheckView;
   saving: boolean;
   /** AI özeti: `undefined` = hâlâ üretiliyor, `null` = üretilemedi, dize = cümle. */
   summary: string | null | undefined;
   onDecide: (approve: boolean) => void;
+  onHandOver: (target: B2bDuplicateRow) => void;
 }) {
   return (
     <div className="flex flex-col gap-3.5">
@@ -186,7 +207,12 @@ function CheckPane({
           </span>
           <div className="flex flex-col gap-1.5">
             {check.duplicates.map((d) => (
-              <DuplicateRow key={d.id} row={d} />
+              <DuplicateRow
+                key={d.id}
+                row={d}
+                // Devir boş başvuru hesabının girişini taşır; girişsiz başvurunun taşıyacağı, girişli kaydın alacağı yer yoktur.
+                onHandOver={check.hasLogin && d.sameSiret && !d.hasLogin ? () => onHandOver(d) : null}
+              />
             ))}
           </div>
         </div>
@@ -291,6 +317,48 @@ function ConfirmStep({
   );
 }
 
+/** Devir geri alınmaz (başvuru hesabı GDPR silmeyle kapanır), sonucu bu yüzden cümleyle yazılır ve ikinci kez sorulur. */
+function HandoverStep({
+  check,
+  target,
+  saving,
+  error,
+  onBack,
+  onConfirm,
+}: {
+  check: B2bCheckView;
+  target: B2bDuplicateRow;
+  saving: boolean;
+  error: string | null;
+  onBack: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3.5">
+      <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Girişi bu kayda bağla</span>
+      <p className="font-ops-body text-ops-sm leading-[1.6] text-ops-body">
+        {`${check.contactName || check.name} adına açılmış başvuru hesabı silinir ve e-postası "${target.name}" kaydına yazılır. Müşteri aynı e-postayla yeniden girince bu kayda ve siparişlerine bağlanır.`}
+      </p>
+      <p className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
+        Başvuru hesabında sipariş varsa devir yapılmaz. Silme geri alınmaz; onayı ve vadeyi devirden sonra bu kayıtta verirsiniz.
+      </p>
+      {error ? (
+        <p className="font-ops-body text-ops-xs text-ops-red" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-2 border-t border-ops-line pt-3">
+        <Button variant="secondary" onClick={onBack} disabled={saving}>
+          Vazgeç
+        </Button>
+        <Button variant="destructive" onClick={onConfirm} disabled={saving}>
+          {saving ? 'Bağlanıyor…' : 'Bağla'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** Sinyal hücresi — ikon durumu, değer bilgiyi taşır. */
 function SignalCell({ label, value, tone }: { label: string; value: string; tone: SignalTone }) {
   const ikon = tone === 'bad' ? '✕' : tone === 'warn' ? '!' : '✓';
@@ -324,7 +392,7 @@ function SignalCell({ label, value, tone }: { label: string; value: string; tone
  * Mükerrer aday satırı kaydı açar, birleştirmez: birleştirme akışı yok (`BEKLEYEN(09.10)`) ve çalışmayan bir "Birleştir" düğmesi
  * tutulmayan bir söz olurdu.
  */
-function DuplicateRow({ row }: { row: B2bDuplicateRow }) {
+function DuplicateRow({ row, onHandOver }: { row: B2bDuplicateRow; onHandOver: (() => void) | null }) {
   return (
     <div className="flex items-center gap-2.5 rounded-ops-card border border-ops-line bg-ops-white px-2.5 py-2">
       <span className="flex min-w-0 flex-col gap-px">
@@ -332,7 +400,13 @@ function DuplicateRow({ row }: { row: B2bDuplicateRow }) {
         <span className="truncate font-ops-mono text-ops-xs text-ops-muted">{row.phone ?? 'telefon yok'}</span>
       </span>
       <span className="ml-auto flex flex-none items-center gap-2">
+        {row.sameSiret ? <Badge tone="amber">Aynı SIRET</Badge> : null}
         {row.isDraft ? <Badge tone="neutral">Taslak</Badge> : null}
+        {onHandOver ? (
+          <Button variant="secondary" size="sm" onClick={onHandOver}>
+            Bu kayda bağla
+          </Button>
+        ) : null}
         <Link
           href={`${CUSTOMERS_PATH}?q=${encodeURIComponent(row.phone ?? row.name)}`}
           className="cursor-pointer font-ops-body text-ops-xs text-ops-olive underline decoration-ops-olive-line underline-offset-2"

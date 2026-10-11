@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import type { B2bCheckView } from '@lezzet/application';
 import { readB2bCheck, readB2bSummary } from '@lezzet/application';
+import { bindLoginToSiretRecord, type SiretHandoverOutcome } from '@lezzet/application/customer/siret-handover';
 import {
   AddressService,
   DiscountCodeService,
@@ -237,6 +238,36 @@ export async function setB2bApprovalAction(customerId: string, approved: boolean
     return { data: null, error: null };
   } catch (err) {
     return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGE) };
+  }
+}
+
+const HANDOVER_MESSAGE: Record<Exclude<SiretHandoverOutcome['status'], 'ok' | 'email_not_written'>, string> = {
+  not_found: 'Kayıt bulunamadı.',
+  applicant_not_bound: 'Başvuru hesabı bir girişe bağlı değil; taşınacak giriş yok.',
+  target_bound: 'Seçilen kayıt zaten bir girişe bağlı; bir kayıt tek giriş taşır.',
+  siret_mismatch: "İki kaydın SIRET'i aynı değil.",
+  applicant_has_orders: 'Başvuru hesabında sipariş var; hesap silinmez, devir yapılmaz.',
+};
+
+/**
+ * Başvuru hesabının girişini aynı SIRET'li kayda taşır; kural ortak kapıda (`bindLoginToSiretRecord`). Hesap silindikten sonra
+ * e-posta yazılamazsa adres cümlede döner ki düzenleme penceresinden elle yazılsın.
+ */
+export async function bindLoginToSiretRecordAction(applicantId: string, targetId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const outcome = await bindLoginToSiretRecord(serviceDb(), { applicantId, targetId });
+    if (outcome.status === 'ok' || outcome.status === 'email_not_written') revalidatePath(CUSTOMERS_PATH);
+    if (outcome.status === 'ok') return { data: null, error: null };
+    if (outcome.status === 'email_not_written') {
+      return {
+        data: null,
+        error: `Başvuru hesabı silindi ama e-posta kayda yazılamadı; kaydın düzenleme penceresinden ${outcome.email} yazın.`,
+      };
+    }
+    return { data: null, error: HANDOVER_MESSAGE[outcome.status] };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
   }
 }
 

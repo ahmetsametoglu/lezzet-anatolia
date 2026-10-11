@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); Faz 0 tamamlandı, sıradaki Faz 1.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya), sıradaki Faz 2.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -94,7 +94,7 @@ tek kuralın düzeltilmesi; şema yok) · **S2** eklemeli şema (yeni tablo, kol
 | Faz | İş | Seviye | Var olan akışın davranışı |
 |---|---|---|---|
 | 0 | Zemin onarımı: vadeli işaret sunucuda, peşin havale kalkar, mobilde pazarlık yalnız yönetici — **tamamlandı** | S1 | Dar değişir; meşru akış etkilenmez |
-| 1 | Profesyonel kayıt (SIRET) ve miras | S0 + S1 | Değişmez |
+| 1 | Profesyonel kayıt (SIRET) ve miras — **tamamlandı** (davet bağlantısı sonraya) | S0 + S1 | Değişmez |
 | 2 | Mobilde sipariş girişi | Tasarım + S1 | Web masası ortak katmana taşınır, davranış aynı |
 | 3 | Araçtan profesyonele vadeli satış | S1 + hızlı satış kapısında dar değişiklik | Anonim yerinde satış aynı |
 | 4 | Satış faturası Pennylane'de | S0 + S2 | Değişmez |
@@ -121,7 +121,8 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   e-postayla girer. Müşteri ayrıca boş hesap açtıysa boş hesap GDPR silmeyle kapanır (giriş silinir, e-posta boşalır),
   e-posta ofisin kaydına yazılır, müşteri yeniden girer.
 - Girişe bağlı kayıtta e-posta salt okunur (**tamamlandı**): düzenleme penceresi alanı kilitler, sunucu değişikliği reddeder.
-- SIRET ile devir: onay kartı aynı SIRET'li kaydı gösterir, tek düğme yukarıdaki adımları sırayla yapar.
+- SIRET ile devir (**tamamlandı**, web onay kartı): aynı SIRET'li girişsiz kaydın satırında "Bu kayda bağla" yukarıdaki
+  adımları sırayla yapar; başvuru hesabında sipariş varsa devir yapılmaz. Mobil onay ekranında düğme yok, tasarım ister.
 - Davet bağlantısı (S2) sonradır.
 
 **Faz 2 — mobilde sipariş girişi**
@@ -171,8 +172,10 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 
 ## 6. Açık sorular
 
-1. Fatura taslağını kim onaylar: yalnız yönetici mi, muhasebe rolü de mi?
-2. Onay nerede yapılır: yalnız web operasyonda mı, mobil yönetimde de mi?
+1. **Fatura teslimde kendiliğinden mi kesilir?** Karar 17 taslak ve onay der. Kullanıcının sorusu üzerine öneri: bilgisi tam
+   fatura teslimde kendiliğinden kesilir, işaretli olan (SIREN ya da fatura adresi eksik, onaysız kayıt) onay listesinde bekler.
+   Pennylane'de kesinleşen fatura düzenlenemez; düzeltme alacak notu ve yeni faturadır, müşteri kaydı ise güncellenebilir (§8).
+2. Onay bekleyen faturayı yönetici ve muhasebe rolü web operasyonda onaylar (varsayılan; mobil yönetime sonra eklenebilir).
 3. Bekleyen: şirketin e-fatura alım kaydının EBP'de olup olmadığını kullanıcı teyit ettiriyor; teyitten sonra Pennylane'de
    gönderim açılır.
 4. Bekleyen: muhasebeciye giden dosyanın biçimi, muhasebeci istediğinde belirlenir.
@@ -183,14 +186,18 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   raporlar) kontrol edilir.
 - Kapı satışında B2B nakdi ilk kez doğar; kasa planının onu kasa girişi olarak yazdığı ölçülür (`packages/application/src/register/`).
 - Aracı hesabın türü ve iade yolu: B2B iadesi bankadan havaleyle dönmeli (`packages/domain-core/src/payment/refund-method.ts`).
-- API ile kesilen faturanın e-fatura gönderiminin nasıl tetiklendiği: yardım sayfası her faturada "Envoyer" diyor; Faz 4'te
-  sandbox'ta ölçülür.
+- API ile kesilen faturanın e-fatura gönderimi: API'de faturayı alıcının platformuna gönderen ayrı uç var
+  (`POST customer_invoices/{id}/send_to_pa`); tetik ve hata dönüşleri Faz 4'te sandbox'ta ölçülür.
 
 ## 8. Kaynaklar
 
 - [DGCCRF — Les délais de paiement interprofessionnels](https://nouvelle-aquitaine.dreets.gouv.fr/sites/nouvelle-aquitaine.dreets.gouv.fr/IMG/pdf/brochure-delais-paiments.pdf)
 - [BOFiP — dönemsel fatura](https://bofip.impots.gouv.fr/doctrine/pgp/13245-PGP%23Facturation_periodique_39)
 - [FNFE-MPE — L'Annuaire](https://fnfe-mpe.org/wp-content/uploads/2025/12/Lannuaire-v1.1-1.pdf)
+- Pennylane API: [faturayı kesinleştirme](https://pennylane.readme.io/reference/finalizecustomerinvoice) (kesinleşen fatura
+  düzenlenmez) · [alacak notunu faturaya bağlama](https://pennylane.readme.io/reference/linkcreditnote) ·
+  [müşteri kaydını güncelleme](https://pennylane.readme.io/reference/putcompanycustomer) ·
+  [e-faturayı platforma gönderme](https://pennylane.readme.io/reference/sendtopacustomerinvoice)
 - Pennylane: [müşteri faturası oluşturma](https://pennylane.readme.io/docs/create-a-customer-invoice-use-case) ·
   [otomatik ödeme eşleştirme](https://pennylane.readme.io/docs/automating-payment-matching) ·
   [faturaya hareket eşleme](https://pennylane.readme.io/reference/postcustomerinvoicematchedtransactions)
