@@ -19,6 +19,7 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (K.56) **Next 16: `middleware.ts` → `proxy.ts` ve üretim derlemesinin Turbopack'e geçişi** — `middleware` adı Next 16'da kullanımdan kalktı; `proxy` yalnız Node'da çalışır, `instrumentation.ts`'teki edge ayrımı da onunla değişir. Derleme bugün `--webpack` ile; Turbopack derlemesinin test sunucusunun 3,7 GB belleğine sığdığı ölçülmedi.
 - [ ] (K.69) **Kontrast açıkları — `scripts/contrast-baseline.json`taki çiftler** (web müşteri, web operasyon açık/koyu, native müşteri/operasyon) okunabilirlik eşiğinin (4,5:1) altında; renk kademesi kararıyla kapanır, her değişiklik önce/sonra görüntüsüyle kullanıcıya sorulur. Düzelen çift listeden çıkar; `scripts/contrast.test.ts` listede olmayan yeni açığı düşürür.
 - [ ] (K.70) [hedef: web] **Sayfa taraması: ekranda çizilen yazının kontrastı** — müşteri ve operasyon sayfaları açık/koyu temada, masaüstü ve telefonda tarayıcıyla taranır (axe-core gibi). Neden: `scripts/contrast.test.ts` yalnız aynı sınıf dizisindeki ya da aynı stil nesnesindeki çifti görür; üst üste binen ayrı öğelerin gerçek rengini tarayıcı ölçer.
+- [ ] (K.73) **Kontrast testi kapalı (`scripts/contrast.test.ts`, `describe.skip`)** — kullanıcıya göre ölçüm sağlıklı çalışmıyor; dosya silinmedi, yalnız koşudan çıktı. Neyi yanlış ölçtüğü bulununca yeniden açılır; o zamana dek K.69'un tabanı kendiliğinden korunmuyor.
 
 ## 04 · Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama
 
