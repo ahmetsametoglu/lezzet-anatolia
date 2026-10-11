@@ -234,15 +234,20 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
-   * Mükerrer adaylar: aynı işletmenin farklı yazımla iki kez girişi, telefonun son haneleri ve ad benzerliğiyle.
+   * Mükerrer adaylar: aynı işletmenin farklı yazımla iki kez girişi; SIRET birebir, telefonun son haneleri ve ad benzerliğiyle.
    * Kesinlik iddiası yok, dönen şey adaydır ve karar admin'indir.
    */
   async findDuplicateCandidates(opts: {
     excludeId: string;
     phone?: string | null;
     name?: string | null;
+    siret?: string | null;
   }): Promise<UserProfile[]> {
     const gruplar: string[] = [];
+
+    // Künye SIRET'i yalnız haneleriyle saklar; ayıklama aynı zamanda değeri süzgeç dilbilgisinden korur.
+    const siret = (opts.siret ?? '').replace(/\D/g, '');
+    if (siret) gruplar.push(`company_info->>siret.eq.${siret}`);
 
     // Son 8 hane: Fransız sabit/mobil numarasının ulusal kısmını taşır ve ülke kodu ile öndeki
     // sıfırın (0388… ↔ +33388…) farkından etkilenmez. Daha kısası (6) alakasız numaraları eşler.
@@ -252,7 +257,7 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     const ad = ilikeTerm(opts.name);
     if (ad) gruplar.push(ilikeContains('name', ad));
 
-    // Hiçbir ölçüt kurulamadıysa (telefon yok, ad boş) sorgu HİÇ atılmaz: ölçütsüz bir `or` grubu
+    // Hiçbir ölçüt kurulamadıysa (SIRET ve telefon yok, ad boş) sorgu HİÇ atılmaz: ölçütsüz bir `or` grubu
     // tüm müşterileri "aday" olarak döndürürdü.
     if (gruplar.length === 0) return [];
 

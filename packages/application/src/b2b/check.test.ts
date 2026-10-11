@@ -4,22 +4,8 @@ import { purgeTestData } from '@lezzet/database/testing';
 import { readB2bCheck } from './check';
 
 /**
- * **Onay kartının İKİNCİ okuması dış servise gitmez** (28.08).
- *
- * Ekran kart başına iki server action tetikliyor: `readB2bCheckAction` kartı çizer,
- * `b2bSummaryAction` AI cümlesini alır. İkincisi de bu fonksiyonu çağırıyordu ve dış servisleri
- * baştan soruyordu — kart başına **iki SIRET + iki VIES** sorgusu ve KDV damgasına ikinci yazım.
- * VIES'in eşzamanlılık sınırı olduğu için bu yalnız israf değil, `MS_MAX_CONCURRENT_REQ`
- * ihtimalini kendi elimizle artırmaktı.
- *
- * Testin sınadığı iki şey: **(a)** tazelemesiz okuma satıra DOKUNMUYOR, **(b)** ürettiği sinyal
- * tazelenmiş okumanınkiyle aynı cümleyi kuruyor. İkincisi taşıyıcı — AI özeti kartta yazandan
- * başka bir şey anlatırsa operatör hangisine inanacağını bilemez.
- *
- * Tazeleyen dal BİLEREK sınanmıyor: gerçek VIES ve resmî kayıt uçlarına çıkar, yani sonucu bizim
- * kodumuz değil o gün servislerin hâli belirler (ölçüldü 27–28.08: Fransa `MS_MAX_CONCURRENT_REQ`,
- * Almanya `MS_UNAVAILABLE`). Tazelemenin KENDİ kuralı ayrıca çivili —
- * `packages/application/src/b2b/vat-refresh.test.ts`.
+ * Kartın ikinci okuması (AI özeti) dış servise gitmez ve satıra dokunmaz, ama kartla aynı sinyali kurar. Tazeleyen dal gerçek
+ * VIES ve resmî kayıt uçlarına çıktığı için burada sınanmaz; kuralı `vat-refresh.test.ts`'te.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -32,11 +18,7 @@ afterAll(async () => {
   await purgeTestData(db, { profileIds: olusturulan });
 });
 
-/**
- * Her kaydın adı AYRI olmak zorunda — ilk yazımda hepsi aynı adı taşıyordu ve `Mükerrer` sinyali
- * onları haklı olarak birbirinin kopyası saydı; bayrak `bad`e döndü, test kırmızı. Dedektör
- * çalışıyordu, fikstür yanlıştı: dört B2B kaydını aynı adla açmak gerçek hayatta da mükerrerdir.
- */
+/** Her kaydın adı ayrıdır, çünkü aynı adla açılan kayıtları `Mükerrer` sinyali haklı olarak birbirinin kopyası sayar. */
 async function newB2b(vat: { number: string | null; valid: boolean | null; checkedAt: string | null }) {
   const sira = olusturulan.length;
   const profile = await profiles.insert({
@@ -97,5 +79,33 @@ describe('readB2bCheck · refreshExternal: false', () => {
 
   it('olmayan müşteride null döner (ekran "kart okunamadı" der)', async () => {
     expect(await readB2bCheck(db, '00000000-0000-4000-8000-000000000000', { refreshExternal: false })).toBeNull();
+  });
+});
+
+describe('readB2bCheck · mükerrer adayı', () => {
+  /** Ad ve telefon ortak değil: ofisin açtığı kayıtla başvuruyu birleştiren tek olgu SIRET. */
+  async function newCompany(label: string, siret: string) {
+    const profile = await profiles.insert({
+      roles: ['customer'],
+      type: 'company',
+      name: `${label} ${stamp}`,
+      email: null,
+      country: 'FR',
+      companyInfo: { legalName: `${label} SAS ${stamp}`, siret },
+    });
+    olusturulan.push(profile.id);
+    return profile;
+  }
+
+  it("aynı SIRET'li kayıt adı ve telefonu farklı olsa da aday çıkar; başka SIRET çıkmaz", async () => {
+    const siret = `9${String(stamp).slice(-13)}`;
+    const ofis = await newCompany('Ofis Kaydı', siret);
+    const baska = await newCompany('Komşu Şube', `8${String(stamp).slice(-13)}`);
+    const basvuru = await newCompany('Başvuru Hesabı', siret);
+
+    const view = await readB2bCheck(db, basvuru.id, { refreshExternal: false });
+    const adaylar = view?.duplicates.map((d) => d.id) ?? [];
+    expect(adaylar).toContain(ofis.id);
+    expect(adaylar).not.toContain(baska.id);
   });
 });

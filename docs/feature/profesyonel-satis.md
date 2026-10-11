@@ -107,15 +107,14 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - Peşin havale kalkar: havale yalnız vadeli siparişte; müşteri ödeme adımından (masaüstü, mobil web, native) ve operasyon
   masasından ayrı "Havale ile öde" seçeneği çıkar (`packages/domain-core/src/payment/checkout-options.ts`).
 - Mobil araçtan satış, yönetici olmayandan gelen pazarlıklı fiyatı reddeder; ekranda fiyat düzenleme yalnız yöneticiye görünür.
-- Belgeler koda uyar: DOMAIN §5 (pazarlık) ve §7 (peşin havale, limit aşımı). §10'daki SIRET adayı cümlesi Faz 1'de kodla birlikte
-  doğrulanır.
+- Belgeler koda uyar: DOMAIN §5 (pazarlık) ve §7 (peşin havale, limit aşımı).
 - **Açık:** tasarım dosyası (`design/01-musteri/ekranlar/Musteri - Checkout.dc.html`) peşin "Havale ile öde" kartını hâlâ
   çiziyor; kod kararı izliyor, tasarımın da güncellenmesi gerekir.
 
 **Faz 1 — profesyonel kayıt ve miras**
 - Yeni kayıtta SIRET: resmî kayıttan unvan ve adres (`packages/application/src/b2b/company-registry.ts`), `company_info`'ya
   yazılır. Kayıt açma ortak katmana iner; web ve mobil aynı fonksiyonu çağırır.
-- Aynı SIRET uyarısı kayıt açarken ve B2B onay kartında.
+- Aynı SIRET uyarısı B2B onay kartında (**tamamlandı**: aday listesi SIRET'e de bakar) ve kayıt açarken.
 - E-posta değiştirerek miras (S0, bugün çalışıyor): girişe bağlanmamış kaydın e-postasını yönetici değiştirir; müşteri o
   e-postayla girer. Müşteri ayrıca boş hesap açtıysa boş hesap GDPR silmeyle kapanır (giriş silinir, e-posta boşalır),
   e-posta ofisin kaydına yazılır, müşteri yeniden girer.

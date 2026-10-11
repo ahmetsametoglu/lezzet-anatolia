@@ -544,7 +544,7 @@ E-posta bağlamak istemeyen müşteriye, **aynı konuşmada**, sistemin üretti�
 Şirket, hesabını **kendisi açar**; toptan fiyatlar **onaya kadar görünmez** (SIRET herkese açık bilgidir — numarayı giren kişinin o şirket olduğunu kanıtlamaz; fiyat listesi onaysız açılırsa rakibe açılmış olur).
 
 - **Kayıt:** SIRET girilir → resmî kayıt API'sinden (Sirene/Annuaire des Entreprises, ücretsiz) unvan/adres/faaliyet kodu otomatik dolar; hesap anında oluşur, `b2b_approved=false`. Alman şirketleri elle doldurur + USt-IdNr VIES ile doğrulanır (muadil açık API yok).
-- **Onay kartı (admin):** sistem başvuruyu hazır sinyallerle sunar — şirket **aktif mi**, **faaliyet kodu** gıda/restoran mı, **kuruluş yılı**, adres **rota uyumu**, telefon/e-posta/SIRET **mükerrer** kontrolü, tek-tık Google/Haritalar linki, `packages/ai` tek cümlelik özet ("2016'dan beri aktif restoran, rota içinde — risk işareti yok"). Tipik karar ~15 saniye; **karar insanın** (tek dokunuş onay/ret).
+- **Onay kartı (admin):** sistem başvuruyu hazır sinyallerle sunar — şirket **aktif mi**, **faaliyet kodu** gıda/restoran mı, **kuruluş yılı**, adres **rota uyumu**, **mükerrer** adayı (aynı SIRET, aynı telefon ya da benzer ad; ofisin açtığı kayıt aynı iş yerini başka ad ve telefonla taşıyabilir, onları SIRET birleştirir), tek-tık Google/Haritalar linki, `packages/ai` tek cümlelik özet ("2016'dan beri aktif restoran, rota içinde — risk işareti yok"). Tipik karar ~15 saniye; **karar insanın** (tek dokunuş onay/ret).
 - Onay sonrası müşteri toptan fiyatları görür; **vade/limit yine ayrı ve elle** açılır (§7). Reddedilen kayıt B2C olarak kalabilir.
 
 ### Hesap ve doğrulama (kimlik nasıl kurulur)

@@ -68,15 +68,11 @@ function mapsHrefOf(address: Address | null): string | null {
 }
 
 /**
- * Posta kodu AKTİF bir teslim bölgesinde mi. Adres yoksa `null` döner — "rota dışı" DEĞİL,
- * ölçülemedi (CLAUDE.md §1): adressiz bir başvuruyu "rota dışı" saymak, onu kargo müşterisi gibi
- * göstermek olurdu.
+ * Adres yoksa `null` döner, "rota dışı" değil: adressiz başvuruyu rota dışı saymak onu kargo müşterisi gibi gösterirdi.
  */
 function inRouteOf(address: Address | null, zones: DeliveryZoneWithCodes[]): boolean | null {
   if (!address) return null;
-  // Eşleştirme MOTORUN işi (`domain-core/delivery`): kendi karşılaştırmamızı yazsaydık üçüncü bir
-  // kopya olurdu — ve zaten ayrışmıştı (motor `\s+` + büyük harf, buradaki yalnız `\s`). Aynı kural
-  // iki yerde yaşayamaz; biri güncellenir, öteki unutulur.
+  // Posta kodu eşleştirmesi motorundur; burada ikinci bir karşılaştırma yazılırsa ikisi ayrışır.
   return isInRoute({ country: address.country, postalCode: address.postalCode }, zones);
 }
 
@@ -137,6 +133,8 @@ export async function readB2bCheck(
       // Ad benzerliğinde TİCARİ ad değil künye adı da denenebilirdi; başvuruda operatörün gördüğü ad
       // `name`, mükerrer de o gözle aranır.
       name: profile.name,
+      // Ofisin açtığı kayıt aynı iş yerini başka ad ve telefonla taşıyabilir; ikisini birleştiren tek olgu SIRET'tir.
+      siret: profile.companyInfo?.siret,
     }),
     refreshExternal ? refreshedCompanyInfo(profile) : null,
     refreshExternal
@@ -158,16 +156,8 @@ export async function readB2bCheck(
 
   return {
     customerId,
-    /*
-      ── BAŞLIK İŞLETMENİN ADI, HESABIN SAHİBİNİNKİ DEĞİL (kullanıcı bulgusu 08.09) ─────────────
-      Bir tur `profile.name` yazılıydı ve SEED verisi kusuru saklıyordu: seed müşterilerinin profil
-      adı zaten şirket adıydı (*"Épicerie Madame"*), yani kişi ile işletme aynı görünüyordu. Gerçek
-      akıştan açılan ilk başvuruda ayrıştı — liste *"Antoine Muller"* diyordu, oysa onaylanan
-      `RESTAURANT SUVALIC`'ti. Operatör kuyruğu tararken hangi İŞLETMEYE baktığını göremiyordu.
-
-      Künye adı YOKSA hesabın adına düşülüyor: başvuru resmî kayıttan geçmemiş olabilir (AB yolu,
-      elle girilmiş künye) ve adsız bir satır kuyrukta hiçbir şey söylemez.
-    */
+    // Başlık işletmenin adıdır, çünkü operatör kuyrukta hangi işletmeye baktığını görmeli. Künye adı yoksa (AB yolu, elle
+    // girilmiş künye) hesabın adına düşülür, adsız satır kuyrukta hiçbir şey söylemez.
     name: (fresh ?? profile.companyInfo)?.legalName ?? profile.name,
     /* Hesabın kendi adı ayrı alanda: mükerrer şüphesinde ve kapıda aranacak kişide operatörün
        ihtiyacı olan şey İŞLETME değil KİŞİdir. */

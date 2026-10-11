@@ -13,21 +13,9 @@ import type { B2bCheckView, B2bDuplicateRow } from '@lezzet/application';
 import { CUSTOMERS_PATH } from '../customers-url';
 
 /**
- * B2B başvuru KONTROL KARTI — tasarımdaki "B2B Başvuru Onayı", ayrı sayfa değil DİYALOG.
- *
- * **Ayrı sayfa kaldırıldı** (kullanıcı kararı 30.07): onay, profesyonel müşterinin bir hâlidir. Ayrı
- * ekran hem menüde gereksiz bir yer açıyordu hem aynı müşteriyi iki yerde yaşatıyordu — ve onaydan
- * hemen sonra gelen iş (vade/limit) zaten müşteri detayındaydı. Kart artık o detayın içinden açılıyor.
- *
- * **~15 saniyelik karar** (tasarımın kendi ölçüsü): sinyal ızgarası tek bakışta okunur, düğmeler altta,
- * onay iki dokunuş uzakta. Sistem sinyal sunar, kararı admin verir — **otomatik onay yok** ve bu yüzden
- * ekranda "önerilen karar" da yok.
- *
- * **Onay = yalnız toptan fiyat.** Vade/limit açmaz; kart bunu altına yazıyor ve action da öyle davranıyor.
- *
- * Onay/ret ONAY BASAMAĞINDAN geçer: tasarımda ayrı bir doğrulama modalı var, burada aynı diyaloğun
- * içinde bir basamak olarak duruyor. İç içe iki diyalog yığmak yerine kartın gövdesi onay cümlesine
- * dönüşüyor — koruma aynı (yanlışlıkla tetiklenmiyor), katman bir eksik.
+ * B2B başvurusunun kontrol kartı; onay profesyonel müşterinin bir hâli olduğu için ayrı sayfa değil, müşteri detayından açılan
+ * diyalogdur. Sistem sinyal sunar, kararı admin verir: otomatik onay ve "önerilen karar" yoktur, onay ve ret iç içe ikinci bir
+ * diyalog yerine aynı diyalogdaki onay basamağından geçer.
  */
 interface B2bApprovalDialogProps {
   check: B2bCheckView | null;
@@ -43,7 +31,7 @@ type Step = { kind: 'card' } | { kind: 'confirm'; approve: boolean };
 
 export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B2bApprovalDialogProps) {
   const [step, setStep] = useState<Step>({ kind: 'card' });
-  /** AI özeti (09.11c): `undefined` = üretiliyor, `null` = üretilemedi. */
+  /** AI özeti: `undefined` = üretiliyor, `null` = üretilemedi. */
   const [summary, setSummary] = useState<string | null | undefined>(undefined);
 
   // Özet KART OKUMASINDAN AYRI düşer: kart hemen çizilsin, cümle sonra gelsin. Müşteri değişince
@@ -90,12 +78,7 @@ export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B
   );
 }
 
-/**
- * Kart beklerken — künye kutusu · AI kutusu · ALTI sinyal hücresi (2 kolon).
- *
- * Sinyal sayısı SABİT altı (motorun ürettiği kadar) ve bu iskeleti nadiren yanıltıcı yapan bir durum:
- * sayı veriye göre değişmiyor, yani gelen içerik iskeletle birebir aynı yeri kaplıyor.
- */
+/** Sinyal sayısı motorda sabit altıdır, bu yüzden iskelet gelen kartla aynı yeri kaplar. */
 function CardSkeleton() {
   return (
     <div className="flex flex-col gap-3.5" aria-hidden="true">
@@ -106,8 +89,7 @@ function CardSkeleton() {
       </SkeletonCard>
       <div className="flex flex-col gap-1.5 rounded-ops-card border border-dashed border-ops-line bg-ops-subtle px-3.5 py-3">
         <Skeleton className="h-2.5 w-48" />
-        {/* Gövde bir CÜMLE bekliyor (kaç satıra sarabileceği belli değil) → paragraf iskeleti:
-            son satırı kısa, yani tablo değil metin gibi okunuyor. */}
+        {/* Gövde kaç satıra saracağı belli olmayan bir cümle bekler; son satırı kısa iskelet metin gibi okunur. */}
         <SkeletonText lines={2} />
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -126,13 +108,7 @@ function CardSkeleton() {
   );
 }
 
-/**
- * Kontrol kartının GÖVDESİ — künye + VIES + karar düğmeleri.
- *
- * Adı `Card` idi ve paylaşılan kart primitifiyle (`ui/card.tsx`) çakışıyordu (denetim OP4): burası
- * bir kabuk değil bir içerik grubu (zemin/kenar yok), ama okuyan "kart primitifini mi kullanıyor"
- * diye duraklıyordu — ve primitif bir gün import edilseydi sessizce gölgelenirdi.
- */
+/** Kontrol kartının gövdesi; adı paylaşılan kart primitifini (`ui/card.tsx`) gölgelemesin diye `Card` değil. */
 function CheckPane({
   check,
   saving,
@@ -150,24 +126,18 @@ function CheckPane({
       {/* ── Künye ── Resmî ad ticari addan farklı olabilir ve fatura resmî ada çıkar. */}
       <div className="flex flex-wrap items-start gap-2.5 rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          {/* Başlık İŞLETMENİN adı (08.09): `name` künye adını taşıyor, künye yoksa hesabın adına
-              düşüyor — yedek zinciri kapıda, ekran ikinci kez kurmaz. */}
+          {/* Yedek zinciri (künye adı, yoksa hesabın adı) kapıda kurulur; ekran ikinci kez kurmaz. */}
           <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{check.name}</span>
-          {/* BAŞVURAN KİŞİ ayrı satırda ve yalnız işletmeden FARKLIYSA (kullanıcı bulgusu 08.09):
-              başlık işletmeye geçince kişi karttan düşmüştü; oysa kapıda aranacak ve mükerrer
-              şüphesinde bakılacak olan KİŞİdir. Aynıysa hesap işletme adına açılmış demektir. */}
+          {/* Kapıda aranacak ve mükerrer şüphesinde bakılacak olan kişidir; işletmeyle aynıysa hesap işletme adına açılmıştır. */}
           {check.contactName !== check.name ? (
             <span className="font-ops-body text-ops-xs text-ops-muted">Başvuran: {check.contactName}</span>
           ) : null}
-          {/* Adres artık FATURA adresi (kapının kararı 08.09): karar işletmenin yerine bakar, hesabın
-              eski ev adresine değil. Yedeğe düşüp düşmediğini kapı söylemiyor; etiket bu yüzden
-              satırın rolünü değil kendisini yazıyor. */}
+          {/* Karar işletmenin yerine bakar, bu yüzden kapı fatura adresini verir. Yedeğe düşüp düşmediği bilinmediği için etiket
+              satırın rolünü yazmaz. */}
           <span className="font-ops-body text-ops-xs text-ops-muted">
             {check.addressLine ?? 'kayıtlı adresi yok'}
           </span>
-          {/* Etiket MOTORDAN (`b2bIdentity`, 07.09): bir tur `SIRET` diye sabitti ve Alman bir
-              başvurunun KDV numarası bu adla etiketleniyordu; SIRET'i olmayan başvuruda ise satır
-              hiç çizilmiyor, şirketin numarası kartta görünmüyordu. */}
+          {/* Hangi numaranın hangi adla yazılacağı ülkeye bağlıdır, etiket bu yüzden motordan gelir (`b2bIdentity`). */}
           {check.identity ? (
             <span className="font-ops-mono text-ops-xs text-ops-muted">
               {check.identity.label} {check.identity.value}
@@ -182,10 +152,8 @@ function CheckPane({
         </div>
       </div>
 
-      {/* ── AI özeti (09.11c indi, 16.08) ── Cümle SİNYALLERDEN türetiliyor (`b2bSummaryTask`),
-          kart okumasından AYRI düşüyor: model çağrısı saniye mertebesinde ve kartın açılışı onu
-          beklememeli. Üretilemediğinde eski dürüst hâl korunur — uydurulmuş bir "okuma yardımı",
-          operatörün okumadığı bir özete güvenmesi demekti (CLAUDE.md §3). */}
+      {/* ── AI özeti ── Cümle sinyallerden türer ve kart okumasından ayrı gelir, çünkü model çağrısı saniyeler sürer. Üretilemezse
+          yerine bir şey uydurulmaz, operatör sinyallere yönlendirilir. */}
       <div className="flex flex-col gap-1 rounded-ops-card border border-ops-line border-dashed bg-ops-subtle px-3.5 py-3">
         <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
           AI özeti · okuma yardımı, karar değil
@@ -213,7 +181,7 @@ function CheckPane({
       {check.duplicates.length > 0 ? (
         <div className="flex flex-col gap-2 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3.5 py-3">
           <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-red">
-            Mükerrer olabilir: aşağıdaki kayıt(lar) aynı telefona ya da benzer ada sahip. Aynı işletmenin
+            Mükerrer olabilir: aşağıdaki kayıt(lar) aynı SIRET'e, aynı telefona ya da benzer ada sahip. Aynı işletmenin
             iki hesabı sipariş geçmişini ve cari bakiyeyi ikiye böler — onaydan önce ilişkiyi çözün.
           </span>
           <div className="flex flex-col gap-1.5">
@@ -242,18 +210,13 @@ function CheckPane({
       <p className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
         Onay yalnız <strong>toptan fiyatı</strong> açar — vade/limit ayrı karardır ve müşteri panelinden
         verilir. Ret kaydı silmez: hesap B2C olarak kalır.
-        {/* İKİ dış doğrulama da kart AÇILIRKEN tazeleniyor: resmî kayıt künyesi (04.08) ve KDV
-            numarası (27.08). Bugün kapanmış bir şirket dünkü "Aktif" ile görünmüyor; iptal edilmiş
-            bir numara da dünkü "Geçerli" ile görünmüyor. VIES cevap veremezse eski sonuç YAŞIYLA
-            gösteriliyor ("Geçerli · 12 gün önce"), silinmiyor — gerekçe `refreshVatNumberCheck`. */}
+        {/* Resmî kayıt künyesi ve KDV numarası kart açılırken tazelenir; VIES cevap veremezse eski sonuç yaşıyla gösterilir
+            (`refreshVatNumberCheck`). */}
       </p>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-ops-line pt-3">
-        {/* Onaylı kayıtta da düğmeler duruyor: onay geri alınabilir bir karardır (işletme kapanır,
-            ödememe çıkar) ve geri alma yolu kapatılırsa operatör kaydı elle bozmaya çalışır.
-            Kilit YALNIZ zaten verilmiş kararı tekrarlamayı engeller — bir tur `approved === false`
-            kilitliyordu ve o değer "reddedildi"yi değil "BEKLİYOR"u da taşıdığı için, reddedilmesi
-            gereken başvuru tam olarak reddedilemeyen başvuruydu (04.08). */}
+        {/* Onaylı kayıtta da düğmeler durur, çünkü onay geri alınabilir bir karardır (işletme kapanır, ödememe çıkar). Kilit
+            yalnız verilmiş kararın tekrarını engeller. */}
         <Button variant="primary" onClick={() => onDecide(true)} disabled={saving || check.status === 'approved'}>
           {check.status === 'approved' ? 'Onaylı' : 'Onayla'}
         </Button>
@@ -265,12 +228,7 @@ function CheckPane({
   );
 }
 
-/**
- * Onay basamağı — kararın SONUCU cümleyle yazılır, sonra tekrar sorulur.
- *
- * Cümle şart: "Onayla" düğmesi neyin açıldığını söylemiyor. Operatörün onaydan beklediği şey bazen
- * vade yetkisidir ve bu ekran tam o yanlış beklentiyi düzeltmek için var.
- */
+/** Onay basamağı kararın sonucunu cümleyle yazar, çünkü operatör onaydan bazen vade yetkisi bekler. */
 function ConfirmStep({
   check,
   approve,
@@ -300,9 +258,7 @@ function ConfirmStep({
           : `${check.name} reddedilecek; hesap B2C olarak kalır, toptan fiyat açılmaz.`}
       </p>
       {approve ? null : (
-        // GEREKÇE bir form alanı değil, kararın kendisidir: ret müşteriye e-postayla bildiriliyor ve
-        // gerekçesiz bir ret "neden" sorusunun cevabını hiçbir yerde bırakmıyordu. Aday künyesini
-        // düzeltip yeniden başvurabildiği için (ret ESKİR, silinmez) cümle ona yol da gösteriyor.
+        // Gerekçe müşteriye e-postayla gider; künyesini düzeltip yeniden başvurabildiği için cümle ona yol da gösterir.
         <label className="flex flex-col gap-1.5">
           <span className="font-ops-body text-ops-xs font-semibold text-ops-ink">
             Ret gerekçesi <span className="font-normal text-ops-red">(zorunlu)</span>
@@ -365,10 +321,8 @@ function SignalCell({ label, value, tone }: { label: string; value: string; tone
 }
 
 /**
- * Mükerrer aday satırı — kaydı AÇAR, birleştirmez.
- *
- * Bağ arama süzgeciyle müşteri listesine gider: `BEKLEYEN(09.10)` birleştirme akışı henüz yok ve
- * "Birleştir" yazan çalışmayan bir düğme, tutulmayan bir söz olurdu.
+ * Mükerrer aday satırı kaydı açar, birleştirmez: birleştirme akışı yok (`BEKLEYEN(09.10)`) ve çalışmayan bir "Birleştir" düğmesi
+ * tutulmayan bir söz olurdu.
  */
 function DuplicateRow({ row }: { row: B2bDuplicateRow }) {
   return (
