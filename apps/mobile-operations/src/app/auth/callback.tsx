@@ -8,7 +8,6 @@ import { handOffOAuthCode } from '@/screens/login/oauth-handoff';
   tasarım Google doğrulamasını girişin üstünde çiziyor ve sonucu orada gösteriyor (gerekçe `oauth-handoff.ts`).
   Rota yalnız kodu devreder ve girişe döner: tarayıcıdan dönüşte giriş yığında alttadır (`back`); uygulama
   tarayıcıdayken kapandıysa dönüş soğuk açılıştır ve giriş yeniden kurulur (`replace`).
-  BEKLEYEN(21.310): Supabase dönüş izin listesine `lezzetoperasyonu://**` (`supabase/config.toml`).
 */
 export default function AuthCallbackRoute() {
   const { code } = useLocalSearchParams<{ code?: string }>();

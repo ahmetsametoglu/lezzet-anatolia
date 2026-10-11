@@ -16,16 +16,12 @@ import { customerSand } from '@lezzet/design-tokens/customer';
    cihazın gördüğü temel değer, bu yüzden İngilizce. */
 const CAMERA_PERMISSION = 'The camera is used to scan product and parcel codes.';
 
-/* BEKLEYEN(21.310): operasyon ikonu tasarımı. O gelene dek müşteri uygulamasının görselleri okunur —
-   kopyalanmaz: tek kaynak, ikon gelince yalnız bu yollar değişir. */
-const SHARED_IMAGES = '../mobile-customer/assets/images';
-
 const config: ExpoConfig = {
   name: 'Lezzet Operasyonu',
   slug: 'lezzet-operasyonu',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: `${SHARED_IMAGES}/icon.png`,
+  icon: './assets/images/icon.png',
   scheme: 'lezzetoperasyonu',
   userInterfaceStyle: 'automatic',
   updates: {
@@ -40,9 +36,9 @@ const config: ExpoConfig = {
     package: 'com.lezzetanatolie.operasyon',
     adaptiveIcon: {
       backgroundColor: customerSand['sand-25'],
-      foregroundImage: `${SHARED_IMAGES}/android-icon-foreground.png`,
-      backgroundImage: `${SHARED_IMAGES}/android-icon-background.png`,
-      monochromeImage: `${SHARED_IMAGES}/android-icon-monochrome.png`,
+      foregroundImage: './assets/images/android-icon-foreground.png',
+      backgroundImage: './assets/images/android-icon-background.png',
+      monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
     googleServicesFile: './google-services.json',
@@ -52,8 +48,8 @@ const config: ExpoConfig = {
     'expo-notifications',
     [
       'expo-splash-screen',
-      // Boyut ve zemin müşteri uygulamasının ölçülmüş değerleri (164 dp · maskeli daire, künyesi orada).
-      { backgroundColor: customerSand['sand-25'], image: `${SHARED_IMAGES}/splash-icon.png`, imageWidth: 164 },
+      // İkon ailesi `scripts/brand-icons.py` ile `assets/brand/logo-master.png`den türer; 164 dp ve maskeli daire o betikte.
+      { backgroundColor: customerSand['sand-25'], image: './assets/images/splash-icon.png', imageWidth: 164 },
     ],
     // Gezinme çubuğunun kontrast perdesi kapalı — ölçüm ve gerekçe müşteri uygulamasının künyesinde.
     ['react-native-edge-to-edge', { android: { enforceNavigationBarContrast: false } }],

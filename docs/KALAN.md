@@ -11,23 +11,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 ## Acil — yayından önce
 
-Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en sonda.
-
-- [ ] (K.42) [hedef: web] Yasal metinlerin içeriği avukata (dil düzeltmesi yapıldı, içerik değişmedi — `packages/i18n/src/customer/legal.json`):
-  cayma hakkı bütün gıdalara kapalı yazılı, istisna yalnız çabuk bozulana; raf ömürlü kargoda 14 gün, bilgilendirme ve örnek form
-  (L221-28 4°, L221-5 · BGB §312g) · tüketici arabulucusu yok (L612-1) · Almanya'daki tüketiciye Rome I md. 6 şerhi · yasal garanti
-  kutusu (D211-2) ve tahmini süre maddesi (L216-1) · CGV sözleri: 48 saat bildirim, ikinci başarısız teslimatta iade yok, "çözümsüz
-  talep kapatmayız", stok yetmezse "iptal edilmez" (uygulama ödeme sonrası iptal edip iade ediyor) · CGV kapsamı taze ürünü saymıyor ·
-  künyede RCS yok · gizlilik: girişte "kabul edersiniz" (bilgilendirme olmalı), itiraz (md. 21) ve ölüm sonrası talimat hakkı,
-  ikamet ülkesi otoritesi (md. 77), yapay zekâ ve ölçümün hukuki dayanağı, saklama süreleri, "traceurs", maskeli e-posta da kişisel
-  veridir · Google yorumu yalnız memnun müşteriden isteniyor ve "doğrulanmış
-  yorum" bilgisi (L111-7-2) · B2B e-postasında "Reverse-Charge/autoliquidation" ibaresi (muhasebeci) · alerjen adları INCO/LMIV Ek II
-  resmî adıyla mı · "kenarları hafif yumuşamış olabilir" cümlesi (üretici teyidi).
-- [~] (21.310) **Operasyon uygulamasının (`apps/mobile-operations`, "Lezzet Operasyonu") kurulabilir sürümü** — personelin
-  telefonuna kurulur; müşteri uygulamasıyla ortak çekirdek `packages/mobile-kit`.
-  - Eksik: operasyon ikonu (tasarım bekliyor; o gelene dek müşteri uygulamasının görselleri okunuyor).
-- [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
-
 ## 00 · Monorepo İskeleti
 
 - [~] (00.9) **Playwright — önce GÖZ, sonra duman** (kullanıcı kararı 03.08; denetim etüdü)
