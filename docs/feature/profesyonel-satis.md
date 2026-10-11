@@ -27,6 +27,7 @@ uygundur. Sistemde ayrı bir satış rolü yoktur: siparişi personel girer, tes
 | 12 | **Toplu havale satın alma faturalarındaki gibi çözülür** | Havale faturalara bağlanır; bir havale birden çok faturayı, bir fatura birden çok havaleyi tutarıyla kapatır. |
 | 13 | **Bir şirkete birden çok kişinin girmesi kapsam dışı** | Bir kayda tek giriş bağlanır. |
 | 14 | **Müşteri ayrıca boş bir hesap açtıysa boş hesap silinir** | Boş hesap GDPR silmeyle kapanır (giriş silinir, e-posta boşalır), e-posta ofisin açtığı kayda yazılır, müşteri yeniden girer ve kayıt ona bağlanır; birleştirme kullanılmaz. |
+| 15 | **Yeni profesyonel kayıt yöneticinin işlemlerini bekler; mevcut akış değişmez** | Sahada açılan kayıt, yönetici B2B onayını ve vade iznini (limit, süre) verene kadar perakende fiyatla ve peşin yollarla alır; QUALITE müşterisi sayılmaz, vadeli sipariş giremez. |
 
 ## 2. Saha akışları
 
@@ -148,12 +149,11 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 
 ## 6. Açık sorular
 
-1. Sahada açılan yeni profesyonel kayıt, yönetici onayı ve vade açılana kadar yalnız kapıda ödemeyle mi alır?
-2. Limit aşan vadeli sipariş müşteri yolunda reddedilir; yönetici elle girerken geçsin mi?
-3. Fatura teslimde kendiliğinden mi kesinleşsin, ofisin onayıyla mı? Kesinleşen fatura silinmez; düzeltme alacak notudur.
-4. Varsayılan fatura modu teslim başına mı, ay sonu mu?
-5. QUALITE ve Lezzet faturaları aynı Pennylane şirketinde, aynı numara serisinde mi?
-6. Muhasebeciye: satış faturasının Pennylane'de kesilmesi, aracı hesap düzeni, 2027 e-fatura gönderim kanalı.
+1. Limit aşan vadeli sipariş müşteri yolunda reddedilir; yönetici elle girerken geçsin mi?
+2. Fatura teslimde kendiliğinden mi kesinleşsin, ofisin onayıyla mı? Kesinleşen fatura silinmez; düzeltme alacak notudur.
+3. Varsayılan fatura modu teslim başına mı, ay sonu mu?
+4. QUALITE ve Lezzet faturaları aynı Pennylane şirketinde, aynı numara serisinde mi?
+5. Muhasebeciye: satış faturasının Pennylane'de kesilmesi, aracı hesap düzeni, 2027 e-fatura gönderim kanalı.
 
 ## 7. Ölçülecekler
 
