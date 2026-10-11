@@ -337,8 +337,10 @@ gösterilen sıra aslında **siparişin verilme sırasıydı** — ekran olmayan
 | Rota-içi B2C | Online öde / Kapıda öde (nakit/kart) |
 | Gel-al (izinli müşteri) | Online öde / Depoda öde (kapıda ödeme kurallarıyla) |
 | Kargo (rota-dışı) B2C | Sadece online öde (peşin) |
-| B2B (credit yok) | Online öde / havale (peşin) |
-| B2B (credit var) | + Hesaba (vadeli) |
+| B2B (vade yok) | B2C ile aynı yollar; havale yok |
+| B2B (vade açık) | + Vadeli (havaleyle) |
+
+**Havale yalnız vadeli siparişin yöntemidir** (11.10, `docs/feature/profesyonel-satis.md`): peşin havale yoktur, çünkü sipariş havale beklenmeden hazırlanıp teslim edilir ve vade izni ile limit olmadan fiilen vadeye dönerdi. Sunucu "vadeli ⇔ havale" eşitliğini sipariş yazılırken denetler; ekranın seçeneği gizlemesi yetmez, çünkü istek elle kurulabilir ve kurye vadeli siparişte para istemez.
 
 Online: Revolut Merchant (SCA/3DS) — web'de "Öde"ye basınca müşteri Revolut'un ödeme sayfasına gider (satırlar, KDV, kart, Revolut Pay, Google/Apple Pay) ve başarılı ödemeden sonra siparişin sayfasına döner; native'de Revolut'un kart formu açılır. Kart bilgisi bize uğramaz. WhatsApp'ta payment link (canlı kanalla). Kapıda ödeme ayrıca değer tavanı ve `cod_allowed`'a tabidir (aşağıda).
 
@@ -369,12 +371,12 @@ Her siparişin ödeme durumu **ayrı bir eksendir** ve **türetilir**: `amount_c
 
 ### B2B vadeli satış (hesaba) — istisna, varsayılan değil
 
-- **Varsayılan peşin.** Hem B2C hem B2B siparişleri kural olarak peşin ödenir (online / kart / nakit / havale). Vadeli tahsilat operasyonel olarak dertli olduğu için **standart değildir** — ilke: "ödeyebilen alır."
-- **Vade bir müşteri yetkisidir, elle açılır.** `Customer.credit_enabled` yalnızca güvenilen müşteride admin tarafından açılır (varsayılan **kapalı**). Kapalıysa o müşteri vadeli sipariş veremez; checkout'ta yalnızca peşin yöntemler görünür.
+- **Varsayılan peşin.** Hem B2C hem B2B siparişleri kural olarak peşin ödenir (online / kart / nakit). Vadeli tahsilat operasyonel olarak dertli olduğu için **standart değildir** — ilke: "ödeyebilen alır."
+- **Vade bir müşteri yetkisidir, elle açılır.** `Customer.credit_enabled` yalnızca güvenilen müşteride admin tarafından açılır (varsayılan **kapalı**) ve yalnız onaylı işletmede geçerlidir: bireysel kayıtta izin verilmiş olsa da vade açılmaz. Kapalıysa o müşteri vadeli sipariş veremez; checkout'ta yalnızca peşin yöntemler görünür.
 - **Vadeli sipariş akışı:** sipariş `on_account=true` işaretlenir; peşin ödeme olmadan `confirmed` olur (stok yine `confirmed`'de ayrılır — "önce ayır" kuralı bozulmaz), `payment_status` `pending` kalır; sonra **banka havalesiyle** ödenir ve banka import eşleştirmesinde `paid` olur (bkz. §9).
 - **Limit ve vade süresi — müşteri bazında:** her müşterinin **kendi** limiti vardır (`Customer.credit_limit`, €) — tek genel limit yoktur; güven müşteriden müşteriye farklıdır ve admin limiti **her an değiştirebilir**. **Vade süresi** de müşteri bazında `payment_term_days` (girilmezse varsayılan 30 gün — sektör standardı, `Setting`'ten parametrik). **Açık bakiye ve gecikme saklanmaz, türetilir**: açık bakiye = ödenmemiş `on_account` siparişlerin toplamı; gecikmiş = vade süresini aşmış ödenmemiş sipariş.
 - **Otomatik fren:** açık bakiye + yeni sipariş limiti aşarsa **veya** gecikmiş sipariş varsa, checkout'ta "hesaba" seçeneği o müşteriye kapanır — diğer (peşin) yollar açık kalır. Limit aynı zamanda **stok kilitleme sigortasıdır**: vadeli rezervasyonun toplam değeri limiti aşamaz.
-- **Onay mekanizması:** limit içinde **otomatik** onay (limit, önceden verilmiş onaydır — B2B hızı bozulmaz); limit aşan vadeli sipariş otomatik reddedilmez, **admin'e düşer** — tek seferlik onay veya kalıcı limit artışı admin kararıdır.
+- **Onay mekanizması:** limit içinde **otomatik** onay (limit, önceden verilmiş onaydır — B2B hızı bozulmaz). Limit aşılınca vade seçeneği kapanır ve sunucu vadeli siparişi yazmaz; kalıcı limit artışı admin kararıdır. Limit aşan siparişe tek seferlik onay yolu kurulmadı (açık soru: `docs/feature/profesyonel-satis.md` §6).
 - **Limit kararı insanındır, sistem karne gösterir:** limit puana/skora göre otomatik belirlenmez ("ödül ≠ güven", §14). Sistem karar anında müşterinin **ödeme karnesini** türetip gösterir (toplam ciro, ortalama ödeme günü, gecikme sayısı) — öneri sistemden, karar admin'den (kısmi karşılamayla aynı ilke, §8).
 
 ---

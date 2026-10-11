@@ -15,20 +15,20 @@ const base = (over: Partial<CheckoutOptionsInput> = {}): CheckoutOptionsInput =>
 describe('kapıda ödeme (03.8)', () => {
   it('rota içi, tavan altı, izinli müşteri → nakit ve kart açık', () => {
     const r = resolveCheckoutOptions(base());
-    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card']);
+    expect(r.methods).toEqual(['online', 'cash', 'card']);
     expect(r.codBlockedReason).toBeNull();
   });
 
   it('kargoda kapıda ödeme yok — peşin', () => {
     const r = resolveCheckoutOptions(base({ deliveryType: 'shipping' }));
-    expect(r.methods).toEqual(['online', 'bank_transfer']);
+    expect(r.methods).toEqual(['online']);
     expect(r.codBlockedReason).toBe('shipping');
   });
 
   it('gel-al\'da tezgâhta ödeme kapıda ödemeyle AYNI kurala tabidir — kargo gibi kapanmaz', () => {
     // `shipping` dalına düşseydi müşteri depoda nakit/kart ödeyemezdi; tavan da uygulanmalı.
     const r = resolveCheckoutOptions(base({ deliveryType: 'pickup' }));
-    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card']);
+    expect(r.methods).toEqual(['online', 'cash', 'card']);
     expect(r.codBlockedReason).toBeNull();
     expect(resolveCheckoutOptions(base({ deliveryType: 'pickup', orderTotalCents: TAVAN + 1 })).codBlockedReason).toBe('over_limit');
   });
@@ -61,10 +61,34 @@ describe('ertelenmiş tahsilat yalnız işletmeye (kullanıcı kararı 04.08)', 
     expect(r.methods).toEqual(['online']);
   });
 
-  it('aynı sipariş işletmede havaleyi açar — fark yalnız kanal', () => {
-    const b2c = resolveCheckoutOptions(base({ channel: 'b2c' }));
-    const b2b = resolveCheckoutOptions(base({ channel: 'b2b' }));
+  it('aynı vade izniyle işletme havaleyi açar, bireysel açmaz — fark yalnız kanal', () => {
+    const vadeli = { creditEnabled: true, creditLimitCents: 999_999 };
+    const b2c = resolveCheckoutOptions(base({ channel: 'b2c', ...vadeli }));
+    const b2b = resolveCheckoutOptions(base({ channel: 'b2b', ...vadeli }));
     expect(b2b.methods.filter((m) => !b2c.methods.includes(m))).toEqual(['bank_transfer']);
+  });
+
+  it('bireysel kayıtta vade izni verilmiş olsa da vade açılmaz', () => {
+    const r = resolveCheckoutOptions(base({ channel: 'b2c', creditEnabled: true, creditLimitCents: 999_999 }));
+    expect(r).toMatchObject({ creditAvailable: false, creditBlockedReason: 'not_enabled' });
+  });
+});
+
+describe('havale yalnız vadeliye — peşin havale yok (11.10)', () => {
+  it('vade izni olmayan onaylı işletmede havale açılmaz', () => {
+    expect(resolveCheckoutOptions(base()).methods).not.toContain('bank_transfer');
+  });
+
+  it('vadesi açık işletmede havale açılır', () => {
+    const r = resolveCheckoutOptions(base({ creditEnabled: true, creditLimitCents: 999_999 }));
+    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card']);
+  });
+
+  it('limit aşımında ve gecikmede havale de kapanır', () => {
+    const asim = resolveCheckoutOptions(base({ orderTotalCents: 90_000, creditEnabled: true, creditLimitCents: 100_000, openBalanceCents: 20_000 }));
+    const gecikme = resolveCheckoutOptions(base({ creditEnabled: true, creditLimitCents: 999_999, hasOverdue: true }));
+    expect(asim.methods).not.toContain('bank_transfer');
+    expect(gecikme.methods).not.toContain('bank_transfer');
   });
 });
 
@@ -107,6 +131,6 @@ describe('iki fren birlikte', () => {
     const r = resolveCheckoutOptions(base({ orderTotalCents: 300_000, creditEnabled: true, creditLimitCents: 100_000 }));
     expect(r.codBlockedReason).toBe('over_limit');
     expect(r.creditRequiresApproval).toBe(true);
-    expect(r.methods).toEqual(['online', 'bank_transfer']);
+    expect(r.methods).toEqual(['online']);
   });
 });

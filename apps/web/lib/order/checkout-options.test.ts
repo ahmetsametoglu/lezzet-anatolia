@@ -44,9 +44,16 @@ beforeAll(async () => {
 
   const customer = await profiles.insert({ name: `Peşin müşteri ${stamp}` });
   customerId = customer.id;
-  const vadeli = await profiles.insert({ name: `Vadeli müşteri ${stamp}`, creditEnabled: true, creditLimitCents: 10000 });
+  // Vade yalnız onaylı işletmede açılır (DOMAIN §7): bireysel kayıtta izin verilmiş olsa da kapalı kalır.
+  const vadeli = await profiles.insert({
+    name: `Vadeli işletme ${stamp}`,
+    type: 'company',
+    b2bApproved: true,
+    creditEnabled: true,
+    creditLimitCents: 10000,
+  });
   creditCustomerId = vadeli.id;
-  // ONAYLI işletme: havale kapısının açılması için şirket olmak YETMEZ, başvurunun onaylanmış
+  // ONAYLI işletme: vade kapısının açılması için şirket olmak YETMEZ, başvurunun onaylanmış
   // olması gerekir — onaysız şirket kaydı zaten perakende fiyat görüyor.
   const isletme = await profiles.insert({ name: `İşletme ${stamp}`, type: 'company', b2bApproved: true });
   businessCustomerId = isletme.id;
@@ -143,8 +150,13 @@ describe('ödeme yöntemleri', () => {
     expect(r.codBlockedReason).toBe('shipping');
   });
 
-  it('ONAYLI işletmede havale açılır', async () => {
+  it('vade izni olmayan onaylı işletmede havale açılmaz — peşin havale yok', async () => {
     const r = await odemeCozumle({ customerId: businessCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    expect(r.methods).toEqual(['online', 'cash', 'card']);
+  });
+
+  it('vadesi açık onaylı işletmede havale açılır', async () => {
+    const r = await odemeCozumle({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card']);
   });
 

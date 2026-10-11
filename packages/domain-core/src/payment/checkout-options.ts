@@ -2,12 +2,12 @@ import type { Channel, DeliveryType, PaymentMethod } from '@lezzet/types';
 
 /**
  * Checkout ödeme seçenekleri: "bu müşteri bu siparişi nasıl ödeyebilir" kararı; iki fren birlikte çalışır: kapıda ödeme (tavan, `cod_allowed`, nakit sınırı uyarısı) ve vade (limit, gecikme).
- * Ertelenmiş tahsilat yalnız onaylı işletmeye açıktır, çünkü "mal gitsin, para sonra gelsin" diyen yöntemin arkasında vergi numarası ve vade kaydı olan bir muhatap gerekir.
+ * Ertelenmiş tahsilat yalnız vade izni olan onaylı işletmeye açıktır ve havale yalnız onun yöntemidir: teslimden sonra gelen paranın arkasında vergi numarası, vade kaydı ve limit olmalı.
  */
 
 export interface CheckoutOptionsInput {
   orderTotalCents: number;
-  /** Siparişi veren kim — ertelenmiş tahsilat (havale/çek) yalnız `b2b`'de açılır. */
+  /** Siparişi veren kim — vade ve havale yalnız `b2b`'de açılır. */
   channel: Channel;
   /** Rota içi teslimat mı — kargoda kapıda ödeme yoktur (peşin). */
   deliveryType: DeliveryType;
@@ -47,19 +47,11 @@ export interface CheckoutOptions {
 export function resolveCheckoutOptions(input: CheckoutOptionsInput): CheckoutOptions {
   const isBusiness = input.channel === 'b2b';
 
-  // Kart her zaman; havale YALNIZ işletmeye (künyedeki gerekçe).
-  const methods: PaymentMethod[] = isBusiness ? ['online', 'bank_transfer'] : ['online'];
-
   // ── Kapıda ödeme ────────────────────────────────────────────────────────────
   let codBlockedReason: CheckoutOptions['codBlockedReason'] = null;
   if (input.deliveryType === 'shipping') codBlockedReason = 'shipping';
   else if (input.codAllowed === false) codBlockedReason = 'customer_blocked';
   else if (input.orderTotalCents > input.codMaxCents) codBlockedReason = 'over_limit';
-
-  if (codBlockedReason === null) {
-    // Nakit ve kart mal ile aynı anda el değiştirir — iki kanalda da açık.
-    methods.push('cash', 'card');
-  }
 
   // Nakit yasal sınırı: engel değil, uyarı. Kart ayrı değerlendirilir.
   const cashWarning =
@@ -72,7 +64,8 @@ export function resolveCheckoutOptions(input: CheckoutOptionsInput): CheckoutOpt
   let creditRequiresApproval = false;
   let creditAvailable = false;
 
-  if (!input.creditEnabled) {
+  // Bireysel kayıtta vade izni verilmiş olsa da açılmaz (künyedeki gerekçe).
+  if (!isBusiness || !input.creditEnabled) {
     creditBlockedReason = 'not_enabled';
   } else if (input.hasOverdue) {
     // Gecikmiş sipariş varsa yeni vade açılmaz — diğer (peşin) yollar açık kalır.
@@ -88,6 +81,11 @@ export function resolveCheckoutOptions(input: CheckoutOptionsInput): CheckoutOpt
       creditAvailable = true; // limit içinde → otomatik onay (limit önceden verilmiş onaydır)
     }
   }
+
+  // Kart her zaman; havale yalnız açık vadeyle, çünkü peşin havale beklenmeden teslim edilir ve fiilen limitsiz vade olurdu.
+  const methods: PaymentMethod[] = creditAvailable ? ['online', 'bank_transfer'] : ['online'];
+  // Nakit ve kart mal ile aynı anda el değiştirir — iki kanalda da açık.
+  if (codBlockedReason === null) methods.push('cash', 'card');
 
   return { methods, creditAvailable, codBlockedReason, cashWarning, creditRequiresApproval, creditBlockedReason };
 }

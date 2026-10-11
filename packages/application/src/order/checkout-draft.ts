@@ -401,6 +401,11 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   if (!options.methods.includes(input.paymentMethod)) {
     return { status: 'payment_not_allowed', methods: options.methods };
   }
+  // Havale yalnız vadeli siparişin yöntemidir ve vadeli sipariş yalnız havaleyle kapanır; liste havaleyi yalnız açık vadede taşıdığı
+  // için bu eşitlik izinsiz vadeliyi de keser. Ekranın seçeneği gizlemesi yetmez: istek elle kurulabilir ve kurye vadelide para istemez.
+  if ((input.paymentMethod === 'bank_transfer') !== (input.onAccount === true)) {
+    return { status: 'payment_not_allowed', methods: options.methods };
+  }
   // Gel-al eşiği: araç çıkmadığı için yalnız kanal satırı (kargo kuralı) — kapı `pickup` türüyle okudu, karar onun.
   if (pickupWarehouse && !input.staff && !options.minBasketOk) {
     return { status: 'min_basket', missingCents: options.missingForMinBasketCents };
