@@ -104,10 +104,11 @@ export function AccountScreen({
     void Share.share({ message: t.referral.shareMessage.replace('{url}', wallet.inviteUrl) });
   };
 
-  /* Dil önce yerelde anında, sonra profilde değişir; ret gelirse arayüz de eski dile döner. */
+  /* Dil önce yerelde anında, sonra profilde değişir; ret gelirse arayüz de eski dile döner. Misafirin profili yok, seçim cihazda kalır. */
   const pickLanguage = (next: Locale) => {
     const previous = locale;
     void setAppLocale(next);
+    if (!signedIn) return;
     savePreference({ preferredLanguage: next }, () => void setAppLocale(previous));
   };
 
@@ -281,23 +282,56 @@ export function AccountScreen({
     await signOut();
   };
 
+  /* Dil ve yazı boyutu tek kartta: ikisi de "nasıl okuyorum" sorusunun cevabı ve girişten bağımsız, misafir de değiştirir. */
+  const readingCard = (
+    <View style={styles.settingsCard}>
+      <Text style={styles.cardTitle}>{t.language.title}</Text>
+      <View style={styles.languageRow}>
+        {LOCALES.map((option) => (
+          <Chip
+            key={option}
+            label={t.language[option]}
+            selected={locale === option}
+            onPress={() => pickLanguage(option)}
+            testID={`account-language-${option}`}
+          />
+        ))}
+      </View>
+      <View style={styles.settingsDivider}>
+        <Text style={styles.cardTitle}>{t.fontSize.title}</Text>
+      </View>
+      <View style={styles.languageRow}>
+        {FONT_SCALES.map((option) => (
+          <Chip
+            key={option}
+            label={t.fontSize[option]}
+            selected={fontScale === option}
+            onPress={() => pickFontScale(option)}
+            testID={`account-fontsize-${option}`}
+          />
+        ))}
+      </View>
+    </View>
+  );
+
   if (!signedIn) {
     return (
       <View style={styles.screen}>
         <Text style={styles.title} accessibilityRole="header">
           {t.title}
         </Text>
-        <EmptyState
-          icon={<Icon name="account" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
-          title={t.guest.title}
-          description={t.guest.body}
-          action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="account-login" />}
-          testID="account-guest"
-        />
-        {/* Misafirin bilgi kapısı: hesabı olmayan birinin belgeleri okuyabildiği tek yer burası. */}
-        <View style={styles.guestLegal}>
+        <ScrollView contentContainerStyle={styles.guestContent}>
+          <EmptyState
+            icon={<Icon name="account" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
+            title={t.guest.title}
+            description={t.guest.body}
+            action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="account-login" />}
+            testID="account-guest"
+          />
+          {readingCard}
+          {/* Misafirin bilgi kapısı: hesabı olmayan birinin belgeleri okuyabildiği tek yer burası. */}
           <LegalLinks testID="account-legal-guest" />
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -528,35 +562,7 @@ export function AccountScreen({
           />
         ) : null}
 
-        {/* Dil ve yazı boyutu tek kartta: ikisi de "nasıl okuyorum" sorusunun cevabı. */}
-        <View style={styles.settingsCard}>
-          <Text style={styles.cardTitle}>{t.language.title}</Text>
-          <View style={styles.languageRow}>
-            {LOCALES.map((option) => (
-              <Chip
-                key={option}
-                label={t.language[option]}
-                selected={locale === option}
-                onPress={() => pickLanguage(option)}
-                testID={`account-language-${option}`}
-              />
-            ))}
-          </View>
-          <View style={styles.settingsDivider}>
-            <Text style={styles.cardTitle}>{t.fontSize.title}</Text>
-          </View>
-          <View style={styles.languageRow}>
-            {FONT_SCALES.map((option) => (
-              <Chip
-                key={option}
-                label={t.fontSize[option]}
-                selected={fontScale === option}
-                onPress={() => pickFontScale(option)}
-                testID={`account-fontsize-${option}`}
-              />
-            ))}
-          </View>
-        </View>
+        {readingCard}
 
         <ChannelsCard
           channels={channels.channels}
@@ -824,11 +830,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space.sm,
     paddingHorizontal: theme.space['4xl'],
   },
-  /* Misafir duvarının altındaki bilgi bloğu — gövdenin (`content`) yatay dolgusuyla aynı hizada;
-     duvar hâli o kabı kullanmadığı için dolgu burada tekrar veriliyor. */
-  guestLegal: {
+  /* Karşılama boş alanı doldurur ki kart ve bilgi bağlantıları uzun ekranda dipte dursun. */
+  guestContent: {
+    flexGrow: 1,
     paddingHorizontal: theme.space['4xl'],
     paddingBottom: theme.space['4xl'],
+    gap: theme.space['2xl'],
   },
 
   profileCard: {

@@ -21,9 +21,10 @@ interface PointsHistoryClientProps {
   device: Device;
   first: PointsHistoryPage;
   rules: CustomerPointsRules;
+  balance: number;
 }
 
-export function PointsHistoryClient({ t, locale, device, first, rules }: PointsHistoryClientProps) {
+export function PointsHistoryClient({ t, locale, device, first, rules, balance }: PointsHistoryClientProps) {
   const resolved = useDevice(device);
   const [extra, setExtra] = useState<PointsEntry[]>([]);
   const [cursor, setCursor] = useState(first.nextCursor);
@@ -46,6 +47,6 @@ export function PointsHistoryClient({ t, locale, device, first, rules }: PointsH
     });
   };
 
-  const view = { t, locale, rules, entries: [...first.entries, ...extra], hasMore: cursor !== null, loading, failed, loadMore };
+  const view = { t, locale, rules, balance, entries: [...first.entries, ...extra], hasMore: cursor !== null, loading, failed, loadMore };
   return resolved === 'mobile' ? <PointsMobile {...view} /> : <PointsDesktop {...view} />;
 }

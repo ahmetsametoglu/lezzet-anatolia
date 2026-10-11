@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { serviceDb } from '@lezzet/database';
-import { readCustomerPointsHistory, readPointsRules } from '@lezzet/application';
+import { readCustomerPoints, readCustomerPointsHistory } from '@lezzet/application';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
@@ -13,7 +13,7 @@ import { POINTS_PAGE_SIZE, type Messages } from './points-types';
 import messages from './messages.json';
 
 /**
- * Puan geçmişi: kazanma yolları ayardan gelir (`readPointsRules`), çünkü ekrana gömülü sayı motorun uyguladığından bir gün
+ * Puan geçmişi: bakiye ve kazanma yolları hesap kartının okumasından gelir, native puan ekranı gibi; ekrana gömülü sayı motordan
  * ayrışırdı. Girişsiz ziyaretçi girişe, program dışı (B2B) profil hesaba döner; onun hesabında puan bölümü hiç yok.
  */
 interface PointsPageProps {
@@ -31,11 +31,11 @@ export default async function PointsHistoryPage({ params }: PointsPageProps) {
   if (!customerId) redirect(`/${locale}${routing.pathnames['/login'][locale]}`);
 
   const db = serviceDb();
-  const [history, rules] = await Promise.all([
+  const [history, card] = await Promise.all([
     readCustomerPointsHistory(db, { customerId, limit: POINTS_PAGE_SIZE }),
-    readPointsRules(db),
+    readCustomerPoints(db, customerId),
   ]);
-  if (history.status !== 'ok') redirect(`/${locale}${routing.pathnames['/account'][locale]}`);
+  if (history.status !== 'ok' || card.points === null) redirect(`/${locale}${routing.pathnames['/account'][locale]}`);
 
   return (
     <SiteFrame device={device} locale={locale} accountChrome={{ back: { label: t.back, href: '/account' }, title: t.title }}>
@@ -44,7 +44,8 @@ export default async function PointsHistoryPage({ params }: PointsPageProps) {
         locale={locale}
         device={device}
         first={{ entries: history.entries, nextCursor: history.nextCursor ?? null }}
-        rules={rules}
+        rules={card.points}
+        balance={card.points.balance}
       />
     </SiteFrame>
   );

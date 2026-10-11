@@ -18,28 +18,40 @@ type PointsCopy = LocalizedCopy<typeof pointsMessages>;
  * Puan geçmişinin telefon görünümü, native puan ekranının ikizi: aynı gün ve sebepteki hareketler tek satırda, kutusuz liste,
  * sona yaklaşınca kendiliğinden devam. Kazanma yolları burada değil hesap kartının çekmecesinde, native'deki gibi.
  */
-export function PointsMobile({ t, locale, entries, hasMore, loading, failed, loadMore }: PointsViewProps) {
+export function PointsMobile({ t, locale, balance, entries, hasMore, loading, failed, loadMore }: PointsViewProps) {
   const copy: PointsCopy = pointsMessages[locale];
   // Düşen istek kendiliğinden yinelenmez; devam "tekrar dene" ile müşterinin elinde.
   const { ref } = useLoadMore({ hasMore: hasMore && !failed, loading, onLoadMore: loadMore });
 
+  // Bakiye başlığın altında bir künye satırı, kart değil: müşteri buraya "puanım ne kadar" diye gelir.
+  const balanceRow = (
+    <div className="flex items-baseline justify-between px-4.5 pt-2 pb-5">
+      <span className="font-sans text-note text-muted">{copy.pending.balance}</span>
+      <span className="font-serif text-card-title text-olive">{balance}</span>
+    </div>
+  );
+
   if (entries.length === 0) {
     return (
-      <EmptyState
-        fill
-        icon={<MobileIcon name="star" size={80} className="text-sand-600" />}
-        title={copy.empty.title}
-        description={copy.empty.body}
-        action={<PrimaryButton label={copy.empty.cta} shape="pill" href="/account" />}
-      />
+      <>
+        {balanceRow}
+        <EmptyState
+          fill
+          icon={<MobileIcon name="star" size={80} className="text-sand-600" />}
+          title={copy.empty.title}
+          description={copy.empty.body}
+          action={<PrimaryButton label={copy.empty.cta} shape="pill" href="/account" />}
+        />
+      </>
     );
   }
 
   const groups = groupPointsHistory(entries, (entry) => formatOrderDate(entry.createdAt, locale, true));
 
   return (
-    <div className="flex flex-col px-4.5 pb-5">
-      <ul className="flex flex-col">
+    <div className="flex flex-col pb-5">
+      {balanceRow}
+      <ul className="flex flex-col px-4.5">
         {groups.map((group) => {
           const earned = group.points >= 0;
           return (
@@ -61,7 +73,7 @@ export function PointsMobile({ t, locale, entries, hasMore, loading, failed, loa
         })}
       </ul>
 
-      <div ref={ref} className="flex justify-center py-4 empty:py-0">
+      <div ref={ref} className="flex justify-center px-4.5 py-4 empty:py-0">
         {loading && <LoadingState label={t.loading} />}
         {failed && !loading && <PrimaryButton label={copy.tailRetry} shape="pill" onClick={loadMore} />}
       </div>

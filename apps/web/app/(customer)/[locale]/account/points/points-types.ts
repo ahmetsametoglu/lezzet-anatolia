@@ -10,6 +10,8 @@ export interface PointsViewProps {
   t: Messages;
   locale: Locale;
   rules: CustomerPointsRules;
+  /** Hesap kartının bakiyesi; telefon native gibi başlığın altında gösterir. */
+  balance: number;
   entries: PointsEntry[];
   hasMore: boolean;
   loading: boolean;

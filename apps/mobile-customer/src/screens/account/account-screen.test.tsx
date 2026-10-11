@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { setAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { resetPlaceNotices } from '@/lib/places/place-notice-store';
 import { AccountScreen } from './account-screen';
 import messages from '@lezzet/i18n/customer/account';
@@ -352,6 +353,27 @@ describe('AccountScreen', () => {
     await fireEvent.press(screen.getByTestId('account-login'));
 
     expect(mockPush).toHaveBeenCalledWith('/login');
+  });
+
+  /* Misafirin profili yok: dil seçimi profil yazımına giderse istek reddedilir ve arayüz eski dile geri döner. */
+  it('misafir dili değiştirebilir — seçim cihazda kalır, profil yazımı denenmez', async () => {
+    process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    fetchMock.mockReset().mockResolvedValue({
+      status: 401,
+      headers: { get: () => null },
+      json: async () => ({ data: null, error: { code: 'unauthorized', message: 'oturum yok' } }),
+    } as unknown as Response);
+    try {
+      await render(<AccountScreen signedIn={false} />);
+
+      await fireEvent.press(screen.getByTestId('account-language-fr'));
+
+      await waitFor(() => expect(screen.getByText(messages.fr.title)).toBeOnTheScreen());
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/me/preferences'))).toBe(false);
+    } finally {
+      await setAppLocale('tr');
+    }
   });
 
   /* "Buraya teslimat açılsın" vitrin bandıyla aynı kaydı (`zone_notice`) aynı uçtan bırakır; kampanya izni bunun yan
