@@ -11,7 +11,7 @@ import {
 } from '@lezzet/domain-core';
 import type { Address, CompanyInfo, Country, DeliveryZoneWithCodes, UserProfile } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { lookupCompanyBySiret } from './company-registry';
+import { companyInfoOf, lookupCompanyBySiret } from './company-registry';
 import { refreshVatNumberCheck } from './vat-check';
 
 /**
@@ -97,14 +97,7 @@ async function refreshedCompanyInfo(profile: UserProfile): Promise<CompanyInfo |
   if (!siret) return null;
   const record = await lookupCompanyBySiret(siret);
   if (record === 'not_found' || record === 'unavailable') return null;
-  return {
-    ...profile.companyInfo,
-    legalName: record.legalName,
-    siret: record.siret,
-    activityCode: record.activityCode,
-    foundedYear: record.foundedYear,
-    isActive: record.isActive,
-  };
+  return { ...profile.companyInfo, ...companyInfoOf(record) };
 }
 
 /**

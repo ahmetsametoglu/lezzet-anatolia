@@ -1,10 +1,6 @@
-// Elle sipariş girişi (09.8) — TELEFONLA/DM'den gelen siparişin masada yazıldığı ekranın tipleri.
-//
-// **Yerinde satış BURADA DEĞİL** (kullanıcı kararı 26.08): depo kapısında ve kuryenin aracından
-// yapılan satış native uygulamanın kurye/depo bölümünün işi — `DOMAIN §17` "Admin yerinde satış
-// yapmaz". Bu ekranın müşterisi telefondadır, malı kuryeyle ya da kargoyla gidecektir.
-//
-// Para her yerde KURUŞ (STACK §8).
+// Telefonla ya da mesajla gelen siparişin masada yazıldığı ekranın tipleri; para kuruştur (STACK §8). Yerinde satış burada değil,
+// native uygulamanın kurye ve depo bölümündedir (DOMAIN §17), çünkü bu ekranın müşterisi telefondadır ve malı kuryeyle gider.
+import type { StaffCompanyPreview } from '@lezzet/application/customer/staff-customer';
 import type { Channel, CustomerType, PaymentMethod } from '@lezzet/types';
 
 /** Müşteri arama sonucu — operatör telefonu ya da adı yazarak bulur. */
@@ -79,15 +75,10 @@ export interface DeliveryContext {
   warehouseId: string | null;
 }
 
-/** Yeni müşteri kaydı — telefonla gelen müşterinin hesabı olmayabilir, o yüzden auth'suz açılır. */
-export interface NewCustomerInput {
-  name: string;
-  phone: string;
-  email: string | null;
-  type: CustomerType;
-}
+/** SIRET yazılınca okunan önizleme; aynı SIRET'li kayıtlar seçici satırı olarak gelir ki tek dokunuşla seçilsin. */
+export type CompanyPreview = Omit<StaffCompanyPreview, 'existing'> & { existing: CustomerPickOption[] };
 
-/** Yeni adres — alıcı ve telefon ZORUNLU (22.08): kurye kapıda kimi soracağını bilmek zorunda. */
+/** Yeni adres; alıcı ve telefon zorunlu, çünkü kurye kapıda kimi soracağını ve arayacağını bilmek zorunda. */
 export interface NewAddressInput {
   recipient: string;
   phone: string;

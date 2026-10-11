@@ -545,6 +545,7 @@ E-posta bağlamak istemeyen müşteriye, **aynı konuşmada**, sistemin üretti�
 
 - **Kayıt:** SIRET girilir → resmî kayıt API'sinden (Sirene/Annuaire des Entreprises, ücretsiz) unvan/adres/faaliyet kodu otomatik dolar; hesap anında oluşur, `b2b_approved=false`. Alman şirketleri elle doldurur + USt-IdNr VIES ile doğrulanır (muadil açık API yok).
 - **Onay kartı (admin):** sistem başvuruyu hazır sinyallerle sunar — şirket **aktif mi**, **faaliyet kodu** gıda/restoran mı, **kuruluş yılı**, adres **rota uyumu**, **mükerrer** adayı (aynı SIRET, aynı telefon ya da benzer ad; ofisin açtığı kayıt aynı iş yerini başka ad ve telefonla taşıyabilir, onları SIRET birleştirir), tek-tık Google/Haritalar linki, `packages/ai` tek cümlelik özet ("2016'dan beri aktif restoran, rota içinde — risk işareti yok"). Tipik karar ~15 saniye; **karar insanın** (tek dokunuş onay/ret).
+- **Personelin açtığı kayıt:** sipariş masasında şirket kaydı SIRET'le açılır; künye ve fatura adresi aynı resmî kayıttan gelir ve kayıt aynı onay kuyruğuna girer. Aynı SIRET ya da e-postayla kayıt varsa yenisi açılmaz, var olan seçilir (iki kayıt sipariş geçmişini ve cari bakiyeyi böler); müşteri araması SIRET'le de bulur. Resmî kayıt cevap vermezse kayıt SIRET'le açılır, künyeyi onay kartı okur.
 - Onay sonrası müşteri toptan fiyatları görür; **vade/limit yine ayrı ve elle** açılır (§7). Reddedilen kayıt B2C olarak kalabilir.
 
 ### Hesap ve doğrulama (kimlik nasıl kurulur)

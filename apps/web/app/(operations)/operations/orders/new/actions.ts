@@ -1,8 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AddressService, ConversationService, UserProfileService, serviceDb } from '@lezzet/database';
-import { effectiveChannelOf, placeOrder } from '@lezzet/application';
+import { AddressService, ConversationService, serviceDb } from '@lezzet/database';
+import { placeOrder } from '@lezzet/application';
+import {
+  createStaffCustomer,
+  previewStaffCompany,
+  type StaffCustomerField,
+  type StaffCustomerInput,
+  type StaffCustomerOutcome,
+} from '@lezzet/application/customer/staff-customer';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/address';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -12,14 +19,15 @@ import {
   readDeliveryContext,
   searchCustomerOptions,
   searchVariantRows,
+  toCustomerOption,
 } from './new-order-read';
 import type { OrderSource } from '@lezzet/types';
 import type {
   AddressPickOption,
+  CompanyPreview,
   CustomerPickOption,
   DeliveryContext,
   NewAddressInput,
-  NewCustomerInput,
   VariantPickRow,
 } from './new-order-types';
 import type { PaymentMethod } from '@lezzet/types';
@@ -36,39 +44,43 @@ export async function searchCustomersAction(term: string): Promise<ActionResult<
   }
 }
 
-/**
- * Bul ya da oluştur akışının "oluştur" tarafı: kayıt `auth_user_id` olmadan ve `is_draft` işaretli açılır, çünkü doğrulanmamış
- * bir kimlik doğrulanmış gibi durmamalı ve müşteri bir gün kaydolursa aynı satır oturuma bağlanır. Telefon zorunlu ama benzersiz
- * değil (aile numarası meşru), bu yüzden operatör önce arar, çıkmazsa oluşturur.
- */
-export async function createCustomerAction(input: NewCustomerInput): Promise<ActionResult<CustomerPickOption>> {
+const INVALID_FIELD_MESSAGE: Record<StaffCustomerField, string> = {
+  name: 'Müşteri adı girilmeli.',
+  phone: 'Telefon girilmeli — kurye kapıda kimi arayacağını bilmek zorunda.',
+  email: 'E-posta geçersiz.',
+  siret: 'SIRET geçersiz: 14 hane olmalı ve kontrol hanesi tutmalı.',
+};
+
+/** Var olan kayıt adıyla anılır ki personel yenisini açmak yerine onu seçsin. */
+function staffCustomerError(outcome: Exclude<StaffCustomerOutcome, { status: 'ok' }>): string {
+  switch (outcome.status) {
+    case 'invalid':
+      return INVALID_FIELD_MESSAGE[outcome.field];
+    case 'taken':
+      return `Bu ${outcome.key === 'email' ? 'e-posta' : 'SIRET'} "${outcome.existing.name}" kaydında; aramadan o kaydı seçin.`;
+    case 'siret_not_found':
+      return 'Bu SIRET resmî kayıtta yok; numarayı kontrol edin.';
+  }
+}
+
+/** SIRET yazılınca resmî kayıt satırı ve aynı SIRET'li kayıtlar; personel kaydı açmadan doğru işletmeye baktığını görür. */
+export async function previewCompanyAction(siret: string): Promise<ActionResult<CompanyPreview>> {
   try {
     await requireAdmin();
-    const name = input.name.trim();
-    if (!name) throw new Error('Müşteri adı girilmeli.');
-    const phone = input.phone.trim();
-    if (!phone) throw new Error('Telefon girilmeli — kurye kapıda kimi arayacağını bilmek zorunda.');
+    const preview = await previewStaffCompany(serviceDb(), siret);
+    return { data: { registry: preview.registry, existing: preview.existing.map(toCustomerOption) }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
 
-    const row = await new UserProfileService(serviceDb()).insert({
-      name,
-      phone,
-      email: input.email?.trim() || null,
-      type: input.type,
-      // Doğrulanmamış kayıt: sayfanın başlık sayacı bunları ayrı gösterir.
-      isDraft: true,
-    });
-    return {
-      data: {
-        id: row.id,
-        name: row.name,
-        phone: row.phone,
-        email: row.email,
-        type: row.type,
-        channel: effectiveChannelOf(row),
-        isDraft: row.isDraft,
-      },
-      error: null,
-    };
+/** Bul ya da oluştur akışının "oluştur" tarafı; kural ortak kapıda (`createStaffCustomer`), burada yetki ve cümle. */
+export async function createCustomerAction(input: StaffCustomerInput): Promise<ActionResult<CustomerPickOption>> {
+  try {
+    await requireAdmin();
+    const outcome = await createStaffCustomer(serviceDb(), input);
+    if (outcome.status !== 'ok') return { data: null, error: staffCustomerError(outcome) };
+    return { data: toCustomerOption(outcome.profile), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

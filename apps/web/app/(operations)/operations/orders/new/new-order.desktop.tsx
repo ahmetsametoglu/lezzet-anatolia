@@ -329,9 +329,9 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
       {customerDialog && (
         <CustomerDialog
           onClose={() => setCustomerDialog(false)}
-          onCreated={(created) => {
-            setCustomerOptions([created]);
-            setCustomer(created);
+          onPicked={(picked) => {
+            setCustomerOptions([picked]);
+            setCustomer(picked);
             setCustomerDialog(false);
           }}
         />

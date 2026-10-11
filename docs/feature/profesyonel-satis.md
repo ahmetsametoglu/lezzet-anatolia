@@ -112,9 +112,11 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   çiziyor; kod kararı izliyor, tasarımın da güncellenmesi gerekir.
 
 **Faz 1 — profesyonel kayıt ve miras**
-- Yeni kayıtta SIRET: resmî kayıttan unvan ve adres (`packages/application/src/b2b/company-registry.ts`), `company_info`'ya
-  yazılır. Kayıt açma ortak katmana iner; web ve mobil aynı fonksiyonu çağırır.
-- Aynı SIRET uyarısı B2B onay kartında (**tamamlandı**: aday listesi SIRET'e de bakar) ve kayıt açarken.
+- Yeni kayıtta SIRET (**tamamlandı**, web sipariş masası): resmî kayıttan unvan ve fatura adresi `company_info`'ya yazılır, kayıt
+  onay kuyruğuna girer. Kayıt açma ortak katmanda (`packages/application/src/customer/staff-customer.ts`); mobil Faz 2'de aynı
+  fonksiyonu çağırır. Müşteri araması SIRET'le de bulur.
+- Aynı SIRET uyarısı (**tamamlandı**): B2B onay kartının aday listesi SIRET'e de bakar; kayıt açarken aynı SIRET ya da e-postayla
+  kayıt varsa yenisi açılmaz, pencere var olanı "Bu kaydı seç" ile önerir.
 - E-posta değiştirerek miras (S0, bugün çalışıyor): girişe bağlanmamış kaydın e-postasını yönetici değiştirir; müşteri o
   e-postayla girer. Müşteri ayrıca boş hesap açtıysa boş hesap GDPR silmeyle kapanır (giriş silinir, e-posta boşalır),
   e-posta ofisin kaydına yazılır, müşteri yeniden girer.

@@ -43,6 +43,25 @@ const CUSTOMERS_ONLY = { containsFilters: [{ field: 'roles', values: ['customer'
  */
 const B2B_DECIDED = { isNotNullFields: ['companyInfo'] };
 
+/**
+ * Künye SIRET'i yalnız haneleriyle saklar; ayıklama aynı zamanda değeri süzgeç dilbilgisinden korur. `null` = ölçüt kurulamadı.
+ */
+function siretClause(raw: string | null | undefined): string | null {
+  const siret = (raw ?? '').replace(/\D/g, '');
+  return siret ? `company_info->>siret.eq.${siret}` : null;
+}
+
+/**
+ * Serbest aramanın tek `or` grubu; liste ve seçici aynı grubu kurar. Yalnız rakam ve boşluktan oluşan, SIREN boyunda (9 hane) ya da
+ * daha uzun terim künyedeki SIRET'te de aranır: personel numarayı boşluklu yazar, harfli terimin içindeki rakamlar ise numara değildir.
+ */
+function searchGroup(safeTerm: string): string {
+  const fields: string[] = PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, safeTerm));
+  const digits = /^[\d\s]+$/.test(safeTerm) ? safeTerm.replace(/\s/g, '') : '';
+  if (digits.length >= 9) fields.push(ilikeContains('company_info->>siret', digits));
+  return fields.join(',');
+}
+
 /** İzin bayrağının jsonb yolu — `marketing_consent -> <kanal> ->> granted`. */
 const consentPath = (channel: MarketingChannel) => `marketing_consent->${channel}->>granted`;
 
@@ -140,7 +159,7 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
    */
   async list(
     opts: {
-      /** Ad · telefon · e-posta üzerinde harf-ayrımsız arama. Telefon KİMLİK anahtarıdır (WhatsApp). */
+      /** Ad · telefon · e-posta (ve uzun rakam dizisinde SIRET) üzerinde harf-ayrımsız arama. Telefon KİMLİK anahtarıdır (WhatsApp). */
       query?: string;
       type?: CustomerType;
       isDraft?: boolean;
@@ -180,7 +199,7 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
       keysetAfter: opts.cursor,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       // Arama alanları tek `or` grubudur, ayrı süzgeçler AND'lenirdi; `any` izni kendi `or` grubudur, yoksa "izinli VEYA aranan" süzülürdü.
-      orFilters: [...(term ? [PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, term)).join(',')] : []), ...izin.orFilters],
+      orFilters: [...(term ? [searchGroup(term)] : []), ...izin.orFilters],
       jsonPathFilters: izin.jsonPathFilters,
     });
   }
@@ -245,9 +264,8 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }): Promise<UserProfile[]> {
     const gruplar: string[] = [];
 
-    // Künye SIRET'i yalnız haneleriyle saklar; ayıklama aynı zamanda değeri süzgeç dilbilgisinden korur.
-    const siret = (opts.siret ?? '').replace(/\D/g, '');
-    if (siret) gruplar.push(`company_info->>siret.eq.${siret}`);
+    const siret = siretClause(opts.siret);
+    if (siret) gruplar.push(siret);
 
     // Son 8 hane: Fransız sabit/mobil numarasının ulusal kısmını taşır ve ülke kodu ile öndeki
     // sıfırın (0388… ↔ +33388…) farkından etkilenmez. Daha kısası (6) alakasız numaraları eşler.
@@ -263,6 +281,16 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
 
     const adaylar = await this.getAll({}, { ...CUSTOMERS_ONLY, orFilters: [gruplar.join(',')], limit: 20 });
     return adaylar.filter((p) => p.id !== opts.excludeId);
+  }
+
+  /**
+   * Aynı SIRET'i taşıyan müşteriler: personel yeni kayıt açmadan önce var olanı seçsin diye. Tekillik kısıtı yok, çünkü eski
+   * kayıtlarda iki satır olabilir; karar çağıranındır.
+   */
+  async listBySiret(siret: string): Promise<UserProfile[]> {
+    const clause = siretClause(siret);
+    if (!clause) return [];
+    return this.getAll({}, { ...CUSTOMERS_ONLY, orFilters: [clause], orderBy: 'createdAt', orderDirection: 'desc', limit: 10 });
   }
 
   /**
@@ -389,8 +417,8 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
-   * Müşteri araması (operasyon seçicileri): ad, telefon ve e-posta üzerinde tek `or` grubu, tavanlı. Rol süzgeci zorunlu
-   * (`CUSTOMERS_ONLY`), yoksa seçici personeli ve anonim alıcıyı da döndürürdü.
+   * Müşteri araması (operasyon seçicileri): listeyle aynı `or` grubu, tavanlı. Rol süzgeci zorunlu (`CUSTOMERS_ONLY`), yoksa seçici
+   * personeli ve anonim alıcıyı da döndürürdü.
    */
   async search(term: string, limit = 10): Promise<UserProfile[]> {
     const safe = ilikeTerm(term);
@@ -399,7 +427,7 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
       {},
       {
         ...CUSTOMERS_ONLY,
-        orFilters: [PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, safe)).join(',')],
+        orFilters: [searchGroup(safe)],
         orderBy: 'name',
         limit,
       },

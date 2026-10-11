@@ -1,25 +1,20 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { normalizeSiret } from '@lezzet/domain-core';
 import type { CustomerType } from '@lezzet/types';
+import { Button } from '@/components/operation/ui/button';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
 import { createAddressAction, createCustomerAction } from './actions';
 import type { AddressPickOption, CustomerPickOption } from './new-order-types';
+import { useCompanyPreview, type CompanyPreviewState } from './use-company-preview.hook';
 
 /**
- * Elle sipariş girişinin iki kayıt penceresi (09.8) — **müşteri bul-veya-oluştur**'un "oluştur"
- * tarafı ve onun adresi.
- *
- * İkisi de KABUK: doğrulama ve yazım action'da (`createCustomerAction` · `createAddressAction`).
- * Buradaki `blockedReason` yalnız düğmeyi erken kapatır ve sebebini yazar — bir KAPI DEĞİLDİR;
- * istemcide durdurulan hiçbir şey güvence sayılmaz.
- *
- * Ham `<input>` yerine ortak kit (`FieldShell` + `Input`): CLAUDE §2. RHF kullanılmıyor çünkü
- * form altı alanlı ve tek adımlı — `useForm` burada yalnız aynı iki değeri ileri geri kopyalardı
- * (`manual-order-dialog`ın 22.33'te verdiği kararla aynı gerekçe).
+ * Elle sipariş girişinin iki kayıt penceresi: müşteri bul-veya-oluştur'un "oluştur" tarafı ve adresi. İkisi de kabuktur; doğrulama
+ * ve yazım action'dadır, `blockedReason` yalnız düğmeyi erken kapatır ve güvence sayılmaz.
  */
 
 const CUSTOMER_TYPES = [
@@ -53,18 +48,33 @@ function TextField({
 const CUSTOMER_FORM_ID = 'new-order-customer-form';
 const ADDRESS_FORM_ID = 'new-order-address-form';
 
-interface CustomerDialogProps {
-  onClose: () => void;
-  onCreated: (customer: CustomerPickOption) => void;
+/** Düğmeyi SIRET yüzünden kapatan sebep; boş SIRET serbesttir, kayıt künyesiz açılır. */
+function siretBlockedReason(raw: string, company: CompanyPreviewState): string | null {
+  const digits = normalizeSiret(raw);
+  if (digits.length === 0) return null;
+  if (digits.length !== 14) return 'SIRET 14 hane olmalı';
+  if (company.kind === 'loading') return 'Resmî kayıt okunuyor';
+  if (company.kind !== 'ready') return null;
+  if (company.preview.existing.length > 0) return "Bu SIRET'le kayıt var";
+  return company.preview.registry === 'not_found' ? 'SIRET resmî kayıtta yok' : null;
 }
 
-export function CustomerDialog({ onClose, onCreated }: CustomerDialogProps) {
+interface CustomerDialogProps {
+  onClose: () => void;
+  /** Yeni açılan ya da aynı SIRET'le bulunan kayıt; ikisinde de sipariş o müşteriyle sürer. */
+  onPicked: (customer: CustomerPickOption) => void;
+}
+
+export function CustomerDialog({ onClose, onPicked }: CustomerDialogProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [type, setType] = useState<CustomerType>('individual');
+  const [siret, setSiret] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const isCompany = type === 'company';
+  const company = useCompanyPreview(isCompany ? siret : '');
 
   const submit = async () => {
     setSubmitting(true);
@@ -74,13 +84,14 @@ export function CustomerDialog({ onClose, onCreated }: CustomerDialogProps) {
       phone,
       email: email.trim() || null,
       type,
+      siret: isCompany ? siret.trim() || null : null,
     });
     setSubmitting(false);
     if (actionError || !data) {
       setError(actionError ?? 'Müşteri açılamadı.');
       return;
     }
-    onCreated(data);
+    onPicked(data);
   };
 
   return (
@@ -97,7 +108,9 @@ export function CustomerDialog({ onClose, onCreated }: CustomerDialogProps) {
           submitting={submitting}
           error={error}
           submitLabel="Müşteriyi aç"
-          blockedReason={!name.trim() ? 'Ad girilmeli' : !phone.trim() ? 'Telefon girilmeli' : null}
+          blockedReason={
+            !name.trim() ? 'Ad girilmeli' : !phone.trim() ? 'Telefon girilmeli' : isCompany ? siretBlockedReason(siret, company) : null
+          }
         />
       }
     >
@@ -119,8 +132,58 @@ export function CustomerDialog({ onClose, onCreated }: CustomerDialogProps) {
         <FieldShell label="Tip">
           <Select value={type} onChange={(v) => setType(v as CustomerType)} options={CUSTOMER_TYPES} />
         </FieldShell>
+        {isCompany ? (
+          <div className="flex flex-col gap-1.5">
+            <TextField label="SIRET" value={siret} onChange={setSiret} placeholder="907 496 640 00026" />
+            <CompanyPreviewLine state={company} onPick={onPicked} />
+          </div>
+        ) : null}
       </form>
     </Dialog>
+  );
+}
+
+/** SIRET'in altındaki tek satır; her hâlde bir cümle durur ki sonuç gelince alan yerinden oynamasın. */
+function CompanyPreviewLine({ state, onPick }: { state: CompanyPreviewState; onPick: (customer: CustomerPickOption) => void }) {
+  const muted = 'font-ops-body text-ops-xs leading-[1.5] text-ops-muted';
+  const alert = 'font-ops-body text-ops-xs leading-[1.5] text-ops-red';
+
+  if (state.kind === 'idle') return <p className={muted}>Resmî kayıttan unvan ve fatura adresi gelir; kayıt B2B onayını bekler.</p>;
+  if (state.kind === 'loading') return <p className={muted}>Resmî kayıt okunuyor…</p>;
+  if (state.kind === 'failed') return <p className={muted}>Önizleme okunamadı; kayıt açılırken resmî kayıt yeniden sorulur.</p>;
+
+  const { registry, existing } = state.preview;
+  if (existing.length > 0) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <p className={alert}>Bu SIRET&apos;le kayıt var; yenisini açmak yerine onu seçin.</p>
+        {existing.map((customer) => (
+          <div
+            key={customer.id}
+            className="flex items-center gap-2.5 rounded-ops-card border border-ops-line bg-ops-white px-2.5 py-2"
+          >
+            <span className="flex min-w-0 flex-col gap-px">
+              <span className="truncate font-ops-body text-ops-sm text-ops-ink">{customer.name}</span>
+              <span className="truncate font-ops-mono text-ops-xs text-ops-muted">{customer.phone ?? 'telefon yok'}</span>
+            </span>
+            <Button variant="secondary" size="sm" className="ml-auto" onClick={() => onPick(customer)}>
+              Bu kaydı seç
+            </Button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (registry === 'not_found') return <p className={alert}>Bu SIRET resmî kayıtta yok; numarayı kontrol edin.</p>;
+  if (registry === 'unavailable') {
+    return <p className={muted}>Resmî kayıt şu an okunamadı; kayıt SIRET&apos;le açılır, künye onay kartında okunur.</p>;
+  }
+  return (
+    <p className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
+      <span className="font-semibold text-ops-ink">{registry.legalName}</span>
+      {` · ${registry.line1}, ${registry.postalCode} ${registry.city}`}
+      {registry.isActive === false ? <span className="text-ops-red"> · kapalı</span> : null}
+    </p>
   );
 }
 
@@ -204,9 +267,7 @@ export function AddressDialog({ customerId, onClose, onCreated }: AddressDialogP
         <TextField label="Sokak" value={line1} onChange={setLine1} required />
         <TextField label="Bina / daire" value={line2} onChange={setLine2} />
         <div className="grid grid-cols-[1fr_1.6fr] gap-3">
-          {/* Posta kodu ROTAYI belirler: bölgeye düşmezse sipariş kargo olur ya da hiç açılamaz.
-              Şehirle tutarlılığı SUNUCU denetler (19.17) — burada serbest bırakılıyor, çünkü
-              hangisinin yanlış olduğunu ekran bilemez ve düzeltmek yerine sormak gerekir. */}
+          {/* Posta kodu rotayı belirler; şehirle tutarlılığı sunucu denetler, çünkü hangisinin yanlış olduğunu ekran bilemez. */}
           <TextField label="Posta kodu" value={postalCode} onChange={setPostalCode} required />
           <TextField label="Şehir" value={city} onChange={setCity} required />
         </div>

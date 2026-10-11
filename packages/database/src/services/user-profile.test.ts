@@ -7,11 +7,8 @@ import { UserProfileService } from './user-profile.service';
 import type { UserRole } from '@lezzet/types';
 
 /**
- * Kimlik profili ve adres servisleri (04.4/04.5) — DB üstünde. **Ayrı müşteri tablosu yoktur:**
- * müşteri bir roldür, kimlik `user_profiles`'ta yaşar; ticari alanlar aynı satırdadır.
- *
- * Kimlik KARARI burada test edilmez (motorun işi, `domain-core/identity`); burada satır kuralları
- * doğrulanır: anahtar tekilliği, varsayılan adres tekilliği, taslak/B2B işaretleri.
+ * Profil ve adres servislerinin satır kuralları: anahtar tekilliği, varsayılan adres tekilliği, taslak ve B2B işaretleri. Kimlik
+ * kararı motorun işidir (`domain-core/identity`) ve burada sınanmaz.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -20,7 +17,7 @@ const addresses = new AddressService(db);
 const stamp = Date.now();
 let customerId: string;
 const createdIds: string[] = [];
-/** Testin açtığı depolar — künye "sonunda toplanıyor" diyordu ama toplayan yoktu (denetim R). */
+/** Testin açtığı depolar; profillerden sonra toplanır. */
 const createdWarehouseIds: string[] = [];
 
 beforeAll(async () => {
@@ -44,11 +41,8 @@ describe('kimlik anahtarları tekildir (04.5)', () => {
   });
 
   it('AYNI telefon iki müşteriye yazılabilir — bu kolon artık kimlik anahtarı DEĞİL (04.10)', async () => {
-    // Kural TERSİNE döndü ve dönmesi gerekiyordu: `user_profiles_phone_key` kaldırıldı, çünkü
-    // tekillik doğrulanmamış bir dizeyi kimlik anahtarı sayıyordu — kayıtlı olmayan bir numara
-    // formdan önceden sahiplenilebiliyordu. Kolon bugün İLETİŞİM numarası ve aynı numarayı iki
-    // müşterinin taşıması meşru: aile telefonu, işyeri hattı, eşle ortak numara.
-    // Kimlik anahtarının tekilliği `customer_phone` testinde (`customer-phone.test.ts`).
+    // Kolon iletişim numarasıdır ve aynı numarayı iki müşterinin taşıması meşrudur (aile, iş yeri hattı); kimlik anahtarının
+    // tekilliği `customer-phone.test.ts`'te.
     const phone = `+3361111${String(stamp).slice(-4)}`;
     const first = await profiles.insert({ name: 'Telefonlu', phone });
     createdIds.push(first.id);
@@ -82,10 +76,7 @@ describe('varsayılanlar ve işaretler', () => {
     expect(await profiles.getById(company.id)).not.toBeNull();
   });
 
-  /**
-   * 08.7'nin kapattığı açık: ret ile "sırasını bekliyor" veride ayrışmıyordu ve reddedilen aday
-   * ekranda hiç gelmeyecek bir cevabı beklediğini okuyordu.
-   */
+  /** Ret ile "sırasını bekliyor" veride ayrışmazsa reddedilen aday hiç gelmeyecek bir cevabı beklediğini okur. */
   it('ret kuyruktan düşürür, gerekçeyi saklar ve hâli ayrıştırır', async () => {
     const company = await profiles.insert({
       name: `Reddedilen ${stamp}`,
@@ -127,7 +118,7 @@ describe('varsayılanlar ve işaretler', () => {
     });
 
     expect(yeniden.b2bPending).toBe(true);
-    // Ret SİLİNMEDİ — 09.11'in istediği geçmiş duruyor.
+    // Ret silinmez; onay kartı geçmişi gösterir.
     expect(yeniden.b2bRejectReason).toBe('SIRET doğrulanamadı');
     expect(yeniden.b2bRejectedAt).not.toBeNull();
   });
@@ -153,8 +144,7 @@ describe('varsayılanlar ve işaretler', () => {
     createdIds.push(company.id);
     await profiles.rejectB2b(company.id, { actorId: customerId, reason: 'Künye eksik' });
 
-    // Alakasız alan olarak `name` seçildi, telefon DEĞİL: telefon tekil indeksli ve aynı dosyadaki
-    // liste kurgusuyla çakışıyordu — testin ölçtüğü şeyle ilgisi olmayan bir kısıt ihlali.
+    // Künyeye dokunmayan herhangi bir alan yeter; ad seçildi.
     const adiDegisen = await profiles.update({ id: company.id, name: `Telefonlu ${stamp} (düzeltildi)` });
     expect(adiDegisen.b2bPending).toBe(false);
   });
@@ -174,11 +164,8 @@ describe('varsayılanlar ve işaretler', () => {
 });
 
 /**
- * Müşteri listesinin SUNUCU-TARAFLI arama ve daraltmaları (09.9).
- *
- * Süzgeç dizeleri PostgREST'e düz metin olarak gider: yanlışsa tip denetimi değil yalnız DB fark
- * eder. Ve en sinsi hata sessizdir — üç arama alanı `or` yerine AND'lenirse liste HER aramada boş
- * döner; kimse "müşteri yok" ile "sorgu yanlış" arasındaki farkı ekrandan göremez.
+ * Süzgeç dizeleri PostgREST'e düz metin gider; yanlışsa tip denetimi değil yalnız DB fark eder. Arama alanları `or` yerine
+ * AND'lenirse liste her aramada boş döner ve ekrandan "müşteri yok" ile "sorgu yanlış" ayırt edilemez.
  */
 describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
   const arananAd = `Zeytin Bistro ${stamp}`;
@@ -225,6 +212,20 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
     expect(page.rows.map((r) => r.id)).toContain(arananId);
   });
 
+  it("SIRET boşluklu yazılsa da künyeden bulunur; seçici SIREN'le de bulur", async () => {
+    const siret = `7${String(stamp).slice(-13)}`;
+    const sirket = await profiles.insert({
+      name: `Künyeli ${stamp}`,
+      type: 'company',
+      companyInfo: { legalName: `KÜNYELİ SAS ${stamp}`, siret },
+    });
+    createdIds.push(sirket.id);
+
+    const bosluklu = `${siret.slice(0, 3)} ${siret.slice(3, 6)} ${siret.slice(6, 9)} ${siret.slice(9)}`;
+    expect((await profiles.list({ query: bosluklu, limit: 50 })).rows.map((r) => r.id)).toContain(sirket.id);
+    expect((await profiles.search(siret.slice(0, 9))).map((r) => r.id)).toContain(sirket.id);
+  });
+
   it('eşleşmeyen terim BOŞ döner — "hepsini getir"e düşmez', async () => {
     // Sessiz başarısızlığın klasik hâli: süzgeç kurulamayınca liste süzgeçsiz döner ve operatör
     // aradığı müşteriyi bulduğunu sanır.
@@ -252,10 +253,7 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
   });
 
   it('PERSONEL listeye karışmaz — tek tablo, rolle ayrılır', async () => {
-    // `user_profiles` müşteriyi ve personeli birlikte taşıyor. Süzgeç olmasa müşteri ekranı depocuyu
-    // ve patronu da listelerdi — hem yanlış hem de "N müşteri" sayacını şişirir. Rol kümesi ÇOKLU
-    // olabildiği için ölçüt "içerir", eşitlik değil.
-    // Depocu kapsamsız açılamaz (DOMAIN §17) — testin kendi deposu, sonunda toplanıyor.
+    // Rol kümesi çoklu olabildiği için ölçüt "içerir"dir, eşitlik değil. Depocu kapsamsız açılamaz (DOMAIN §17), depo testindir.
     const depo = await createTestWarehouse(db, { label: 'PRF' });
     createdWarehouseIds.push(depo.id);
     const depocu = await profiles.insert({ name: `Depocu ${stamp}`, roles: ['warehouse'], warehouseIds: [depo.id] });
@@ -267,9 +265,7 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
   });
 
   it('listStaff: ÇOK ROLLÜ personel tek kez döner — dört tur bir tura indi (talep §5b)', async () => {
-    // Ekranlar bunu `STAFF_ROLES.map(listByRole)` ile kuruyordu ve kendi tekilleştirmesini
-    // yazıyordu; aynı kişi `admin` + `courier` taşıyabildiği için o adım şarttı. `overlaps` kesişim
-    // sorduğu için satır zaten bir kez dönüyor — tekilleştirmenin kendisi ortadan kalkıyor.
+    // `overlaps` kesişim sorduğu için çok rollü kişi tek satır döner; çağıranın tekilleştirmesi gerekmez.
     const depo = await createTestWarehouse(db, { label: 'STF' });
     createdWarehouseIds.push(depo.id);
     const cokRollu = await profiles.insert({
@@ -280,7 +276,7 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
     createdIds.push(cokRollu.id);
 
     const personel = await profiles.listStaff();
-    // Kendi satırımı sayıyorum: paylaşılan DB'de küresel sayıya bakmak başka ajanın verisine bağımlı olur (§4b).
+    // Paylaşılan DB'de küresel sayıya bakılmaz (§4b); yalnız kendi satırı sayılır.
     expect(personel.filter((p) => p.id === cokRollu.id)).toHaveLength(1);
     // Müşteri personel listesine karışmaz — ayrım rolde, tabloda değil.
     expect(personel.map((p) => p.id)).not.toContain(customerId);
@@ -311,11 +307,8 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
 });
 
 /**
- * **Pazarlama izni süzgeci** (`ANALYTICS §6` · operasyon şeridinin talebi 04.08) — analitikteki
- * "N kişi" sayısının gittiği liste.
- *
- * Sınanan şey jsonb yolunun çalışması DEĞİL yalnız; asıl sınanan **kanal ayrımı**: e-postaya izin
- * verenle WhatsApp'a izin veren aynı küme değil ve karıştırılmaları izinsiz gönderim demek.
+ * Analitikteki "N kişi" sayısının gittiği liste (`ANALYTICS §6`). Asıl sınanan kanal ayrımıdır: e-postaya ve WhatsApp'a izin
+ * verenler aynı küme değildir, karışmaları izinsiz gönderim demektir.
  */
 describe('pazarlama izni süzgeci (ANALYTICS §6)', () => {
   let epostaIzinli: string;
@@ -325,8 +318,7 @@ describe('pazarlama izni süzgeci (ANALYTICS §6)', () => {
   beforeAll(async () => {
     const e = await profiles.insert({ name: `İzin E ${stamp}`, email: `izin-e${stamp}@ornek.fr` });
     const w = await profiles.insert({ name: `İzin W ${stamp}`, email: `izin-w${stamp}@ornek.fr` });
-    // REDDEDEN müşteri: `granted:false`. "Hiç sorulmadı" (torba boş) ile aynı kovaya düşmemeli —
-    // ikisi ayrı hâller (09.10) ama süzgeç açısından ikisi de listenin DIŞINDA kalır.
+    // Reddeden (`granted:false`) ile hiç sorulmamış ayrı hâllerdir, ama ikisi de süzgecin dışında kalır.
     const r = await profiles.insert({ name: `İzin Yok ${stamp}`, email: `izin-yok${stamp}@ornek.fr` });
     epostaIzinli = e.id;
     whatsappIzinli = w.id;
@@ -359,8 +351,7 @@ describe('pazarlama izni süzgeci (ANALYTICS §6)', () => {
   });
 
   it('sayaç ile liste AYNI ölçütten çıkar — köprünün iki ucu aynı sayıyı göstermeli', async () => {
-    // Küresel sayıya bakılmıyor (`CLAUDE §4b`): başka ajanın verisi toplamı oynatır. Ölçüt şu —
-    // sayaç, bu testin kurduğu satırları kapsayacak kadar büyük VE listeyle tutarlı olmalı.
+    // Küresel sayıya bakılmaz (`CLAUDE §4b`); ölçüt sayacın listeyle tutarlı olmasıdır.
     const [sayac, page] = await Promise.all([
       profiles.countByMarketingConsent('email'),
       profiles.list({ marketingConsent: 'email', limit: 1000 }),
@@ -369,9 +360,7 @@ describe('pazarlama izni süzgeci (ANALYTICS §6)', () => {
   });
 });
 
-/* Adres artık teslim alacak kişi VE numarayla birlikte doğuyor (kullanıcı kararı 22.08, kolonlar
-   `not null`) — fikstürler o değişmeze uydu. Değerler sabit: bu blok varsayılan seçimini ölçüyor,
-   alıcı/telefon burada yalnız kaydın var olabilmesi için dolu. */
+// Alıcı ve telefon kolonları `not null`; bu blok varsayılan seçimini ölçer, ikisi yalnız kayıt yazılabilsin diye dolu.
 const DOOR = { recipient: 'Claire Weber', phone: '+33612345678' } as const;
 
 describe('adresler (04.4)', () => {
@@ -402,14 +391,8 @@ describe('adresler (04.4)', () => {
 });
 
 /**
- * **ARAMA YALNIZ MÜŞTERİ DÖNDÜRÜR** (26.08, ölçülmüş arıza).
- *
- * `user_profiles` müşteriyi ve personeli AYNI tabloda tutuyor (`0001`) ve `search()`ün adı
- * "müşteri arama"ydı ama rol süzgeci YOKTU. Ölçüldü (tarayıcıda, elle sipariş girişi): "Claire"
- * aramasının İLK sonucu bir depo çalışanıydı — operatör farkında olmadan personel adına sipariş
- * açabilirdi. Belirtisi de yoktu: satır geçerli bir profil, sipariş geçerli bir sipariş.
- *
- * Yerinde satışın anonim alıcısı (`roles={system}`, 21.119) aynı deliği daha görünür kıldı.
+ * Müşteri ve personel aynı tablodadır; rol süzgeci olmazsa seçici personeli ya da yerinde satışın anonim alıcısını getirir ve
+ * operatör farkında olmadan onların adına sipariş açar.
  */
 describe('müşteri arama rol süzer (26.08)', () => {
   const damga = `AramaRol${stamp}`;
