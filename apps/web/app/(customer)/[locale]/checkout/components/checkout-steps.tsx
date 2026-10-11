@@ -492,13 +492,8 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, paym
       blocked: payment.codBlockedReason ? (t.payment.codBlocked[payment.codBlockedReason as keyof typeof t.payment.codBlocked] ?? null) : null,
     },
   ];
-  // Havale: motorun açtığı bir yol (peşin, faturayla). Vadeliden AYRI karttır — biri paranın nasıl
-  // geldiği, öbürü ne zaman geldiğidir.
-  if (payment.methods.includes('bank_transfer')) {
-    options.push({ method: 'bank_transfer', onAccount: false, title: t.payment.transfer, body: t.payment.transferBody, blocked: null });
-  }
-  // Vadeli YALNIZ açıksa çizilir: kapalıyken göstermek B2C müşteriye anlamı olmayan bir kapı açardı.
-  // Gri/kilitli bile değil — geçersiz yol DOM'da hiç yoktur (tasarım sözleşmesi).
+  // Havale yalnız vadeli siparişin yoludur (peşin havale yok, DOMAIN §7), bu yüzden ayrı bir havale kartı yoktur.
+  // Vadeli YALNIZ açıksa çizilir: geçersiz yol DOM'da hiç yoktur (tasarım sözleşmesi).
   if (payment.creditAvailable) {
     options.push({ method: 'bank_transfer', onAccount: true, title: t.payment.credit, body: t.payment.creditBody, blocked: null });
   }

@@ -261,13 +261,13 @@ describe('CheckoutScreen — siparişin kapsamı', () => {
 
 /*
   Onay ekranına cevaptaki sipariş numarası taşınır; ölçülen geçişin parametresidir, numaranın çizimi onay ekranının testindedir.
-  Havale yolu seçildi, çünkü sipariş bu yolda tek çağrıda kesinleşir; kart yolunda sipariş hâlâ taslaktır ve numara yoktur.
+  Vadeli havale yolu seçildi, çünkü sipariş bu yolda tek çağrıda kesinleşir; kart yolunda sipariş hâlâ taslaktır ve numara yoktur.
 */
 describe('CheckoutScreen — sipariş numarası', () => {
-  /** Havale ile ödenen KARGO siparişi: gün sorulmaz, ödeme kartı açılmaz — tek çağrıda kesinleşir. */
+  /** Vadeli havaleyle ödenen KARGO siparişi: gün sorulmaz, ödeme kartı açılmaz — tek çağrıda kesinleşir. */
   function transferSnapshot(): CheckoutSnapshot {
     const base = snapshot(false, 2000);
-    return { ...base, payment: { ...base.payment!, methods: ['bank_transfer'] } };
+    return { ...base, payment: { ...base.payment!, methods: ['bank_transfer'], creditAvailable: true } };
   }
 
   /** İki uç, tek mock: okuma GET'ten, sipariş POST'tan. URL'e bakmayan bir mock ikisine aynı cevabı verirdi. */
@@ -283,7 +283,7 @@ describe('CheckoutScreen — sipariş numarası', () => {
 
     await render(<CheckoutScreen />);
     await waitFor(() => expect(screen.getByTestId('checkout-summary')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.credit} · ${t.payment.creditBody}` }));
     await fireEvent.press(screen.getByRole('button', { name: t.terms }));
     await fireEvent.press(screen.getByTestId('checkout-confirm'));
     await waitFor(() => expect(mockReplace).toHaveBeenCalled());
@@ -370,10 +370,10 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
     city: 'Lingolsheim',
   };
 
-  /** Havale ile ödenen kargo siparişi: gün sorulmaz, ödeme kartı açılmaz — tek çağrıda kesinleşir. */
+  /** Vadeli havaleyle ödenen kargo siparişi: gün sorulmaz, ödeme kartı açılmaz — tek çağrıda kesinleşir. */
   function transferSnapshot(): CheckoutSnapshot {
     const base = snapshot(false, 2000);
-    return { ...base, payment: { ...base.payment!, methods: ['bank_transfer'] } };
+    return { ...base, payment: { ...base.payment!, methods: ['bank_transfer'], creditAvailable: true } };
   }
 
   // `includes('/check')` yetmez, çünkü `/me/checkout`u da yakalar.
@@ -413,7 +413,7 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
 
   async function openAndConfirm(): Promise<void> {
     await openCheckout();
-    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.credit} · ${t.payment.creditBody}` }));
     await fireEvent.press(screen.getByRole('button', { name: t.terms }));
     await fireEvent.press(screen.getByTestId('checkout-confirm'));
   }
@@ -483,7 +483,7 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
     await openCheckout();
     expect(checkCalls()).toHaveLength(0);
 
-    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.credit} · ${t.payment.creditBody}` }));
     await waitFor(() => expect(checkCalls()).toHaveLength(1));
 
     await fireEvent.press(screen.getByRole('button', { name: t.terms }));
@@ -583,7 +583,7 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
     const base = snapshot(false, 2000);
     return {
       ...base,
-      payment: { ...base.payment!, methods: ['bank_transfer'] },
+      payment: { ...base.payment!, methods: ['bank_transfer'], creditAvailable: true },
       shipping: { status: 'ok', options: OPTIONS, parcelCount: 1, selectedCode, mode: 'customer', unshippable: [] },
     };
   }
@@ -616,7 +616,7 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
   });
 
   async function onayla(): Promise<void> {
-    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.credit} · ${t.payment.creditBody}` }));
     await fireEvent.press(screen.getByRole('button', { name: t.terms }));
     await fireEvent.press(screen.getByTestId('checkout-confirm'));
     await waitFor(() => expect(orderBody).not.toBeNull());
@@ -646,7 +646,7 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
     await waitFor(() => expect(screen.getByTestId('checkout-shipping-choice')).toBeOnTheScreen());
 
     await fireEvent.press(screen.getByRole('button', { name: TUR_NOKTA }));
-    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.credit} · ${t.payment.creditBody}` }));
     // Koşullar işaretli: düğmeyi kapalı tutan tek sebep nokta olsun.
     await fireEvent.press(screen.getByRole('button', { name: t.terms }));
 
@@ -665,7 +665,7 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
       }),
     );
     await render(<CheckoutScreen />);
-    await fireEvent.press(await screen.findByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(await screen.findByRole('button', { name: `${t.payment.credit} · ${t.payment.creditBody}` }));
     // Koşullar işaretli: düğmeyi kapalı tutan tek sebep fiyatsızlık olsun.
     await fireEvent.press(screen.getByRole('button', { name: t.terms }));
 

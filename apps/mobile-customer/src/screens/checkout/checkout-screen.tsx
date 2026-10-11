@@ -245,18 +245,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       available: methods.includes('cash') && codBlockedReason === null,
     },
   ];
-  if (methods.includes('bank_transfer')) {
-    paymentOptions.push({
-      key: 'transfer',
-      method: 'bank_transfer',
-      onAccount: false,
-      label: t.payment.transfer,
-      body: t.payment.transferBody,
-      available: true,
-    });
-  }
-  // Vadeli YALNIZ açıksa çizilir (web'in aynı kararı): kapalıyken göstermek, B2C müşteriye
-  // anlamı olmayan bir kapı açardı.
+  // Havale yalnız vadeli siparişin yoludur (peşin havale yok, DOMAIN §7); vadeli YALNIZ açıksa çizilir (web'in aynı kararı).
   if (payment?.creditAvailable === true) {
     paymentOptions.push({
       key: 'credit',

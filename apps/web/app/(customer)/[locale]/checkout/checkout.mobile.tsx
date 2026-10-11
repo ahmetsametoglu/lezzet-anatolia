@@ -155,10 +155,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           : (copy.payment.codBlocked[codReason as keyof CheckoutCopy['payment']['codBlocked']] ?? copy.payment.onDeliveryBody),
       available: methods.includes('cash') && codReason === null,
     },
-    ...(methods.includes('bank_transfer')
-      ? [{ key: 'transfer', method: 'bank_transfer' as const, onAccount: false, label: copy.payment.transfer, body: copy.payment.transferBody, available: true }]
-      : []),
-    // Vadeli YALNIZ açıksa çizilir: kapalıyken göstermek B2C müşteriye anlamı olmayan bir kapı açardı.
+    // Havale yalnız vadeli siparişin yoludur (peşin havale yok, DOMAIN §7); vadeli YALNIZ açıksa çizilir.
     ...(payment?.creditAvailable
       ? [{ key: 'credit', method: 'bank_transfer' as const, onAccount: true, label: copy.payment.credit, body: copy.payment.creditBody, available: true }]
       : []),

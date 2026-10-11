@@ -37,7 +37,7 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   online: 'Online',
   cash: 'Nakit',
   card: 'Kart',
-  bank_transfer: 'Havale',
+  bank_transfer: 'Vadeli (havale)',
 };
 
 /**
@@ -63,7 +63,6 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
   const [delivery, setDelivery] = useState<DeliveryContext | null>(null);
   const [deliveryDate, setDeliveryDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
-  const [onAccount, setOnAccount] = useState(false);
   const [isGift, setIsGift] = useState(false);
 
   const [variantOptions, setVariantOptions] = useState<VariantPickRow[]>([]);
@@ -81,7 +80,6 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
     setDelivery(null);
     setDeliveryDate('');
     setPaymentMethod('');
-    setOnAccount(false);
     setLines([]);
     setVariantOptions([]);
     if (!customer) return;
@@ -148,7 +146,8 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
       addressId,
       deliveryDate: delivery?.deliveryType === 'route' ? deliveryDate || null : null,
       paymentMethod,
-      onAccount,
+      // Havale yalnız vadeli siparişin yöntemidir (DOMAIN §7); motor onu yalnız vade açıkken listeler.
+      onAccount: paymentMethod === 'bank_transfer',
       isGiftOrder: isGift,
       // Köprüden gelindiyse konuşmanın kimliği; kaynağı SUNUCU ondan çözer (künye props tipinde).
       conversationId,
@@ -256,9 +255,6 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
                     options={delivery.paymentMethods.map((m) => ({ value: m, label: PAYMENT_LABELS[m] }))}
                     placeholder="Ödeme yöntemi"
                   />
-                  {delivery.creditAvailable && (
-                    <ToggleField on={onAccount} onChange={setOnAccount} label="Vadeli (hesaba)" />
-                  )}
                   {/* İşaretin sonucu girişte yazılıyor, çünkü sunucu hediyenin fiyatlarını sıfırlıyor (DOMAIN §9). */}
                   <ToggleField on={isGift} onChange={setIsGift} label="Hediye sipariş (patron ikramı)" />
                   <p className="font-ops-body text-ops-xs text-ops-muted">

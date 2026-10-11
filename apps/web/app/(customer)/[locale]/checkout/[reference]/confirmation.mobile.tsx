@@ -86,15 +86,14 @@ function deliveryLabel(copy: CheckoutCopy, view: ConfirmationView, locale: Local
  * yazar), müşterinin seçtiği yol kapıda ödemedir. Yöntem henüz seçilmemişse "bilinmiyor" — "kapıda" DEĞİL.
  */
 function paymentLabel(copy: CheckoutCopy, view: ConfirmationView): string {
-  if (view.onAccount) return copy.payment.credit;
+  // Havale yalnız vadeli siparişin yöntemidir (peşin havale yok, DOMAIN §7); ikisi aynı satırı okur.
+  if (view.onAccount || view.paymentMethod === 'bank_transfer') return copy.payment.credit;
   switch (view.paymentMethod) {
     case 'online':
       return copy.payment.online;
     case 'cash':
     case 'card':
       return copy.payment.onDelivery;
-    case 'bank_transfer':
-      return copy.payment.transfer;
     case null:
       return copy.confirmed.unknown;
   }

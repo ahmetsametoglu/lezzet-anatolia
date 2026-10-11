@@ -148,7 +148,7 @@
           {
             "id": "toptan",
             "question": "Restoranım için toptan fiyat alabilir miyim?",
-            "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla (Fransa) ya da KDV numaranızla (Almanya) başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ile ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
+            "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla (Fransa) ya da KDV numaranızla (Almanya) başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesabınıza vadeli ödeme tanımlanırsa havale ile ödeme de açılır; vade süresi ve limit hesabınıza tanımlanır."
           },
           {
             "id": "alerjen",
@@ -375,7 +375,7 @@
             "paragraphs": [
               "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
               "Teslimat bölgemiz içinde, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır güncel hâliyle Teslimat ve iade sayfasındadır. Kapıda ödemede tahsil edilecek tutar, teslim edilen ürünlerin tutarıdır; eksik çıkan ürün baştan düşülür.",
-              "Havale ile ödeme yalnız onaylı işletme hesaplarına açıktır; ödeme koşullarınız hesabınıza tanımlanır.",
+              "Havale ile ödeme yalnız vadeli ödeme tanımlanmış onaylı işletme hesaplarına açıktır; vade süresi ve limit hesabınıza tanımlanır.",
               "Peşin ödemeli siparişler, ödeme tamamlanmadan hazırlığa alınmaz. Kapıda ödemede tahsilat teslimat anında yapılır ve sipariş onaylandığı anda hazırlığa girer."
             ],
             "bullets": []
@@ -679,7 +679,7 @@
           {
             "id": "toptan",
             "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
-            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET (France) ou votre numéro de TVA (Allemagne) ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au paiement par virement ; vos conditions de règlement sont définies sur votre compte."
+            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET (France) ou votre numéro de TVA (Allemagne) ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Si un paiement à échéance est défini sur votre compte professionnel, le paiement par virement est également disponible ; le délai et le plafond sont définis sur votre compte."
           },
           {
             "id": "alerjen",
@@ -906,7 +906,7 @@
             "paragraphs": [
               "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
               "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
-              "Le virement est réservé aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
+              "Le virement est réservé aux comptes professionnels validés bénéficiant d'un paiement à échéance ; le délai et le plafond sont définis sur votre compte.",
               "Les commandes payées d'avance ne sont pas mises en préparation avant la finalisation du paiement. En paiement à la livraison, l'encaissement a lieu au moment de la livraison et la commande entre en préparation dès sa validation."
             ],
             "bullets": []
@@ -1210,7 +1210,7 @@
           {
             "id": "toptan",
             "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
-            "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer (Frankreich) oder Ihrer USt-IdNr. (Deutschland) registrieren; sobald Ihre Anfrage angenommen ist, wird Ihr Konto zu einem Geschäftskundenkonto und die Preise werden entsprechend angezeigt. Geschäftskundenkonten können zusätzlich per Überweisung bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
+            "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer (Frankreich) oder Ihrer USt-IdNr. (Deutschland) registrieren; sobald Ihre Anfrage angenommen ist, wird Ihr Konto zu einem Geschäftskundenkonto und die Preise werden entsprechend angezeigt. Ist für Ihr Geschäftskundenkonto eine Zahlung auf Ziel eingerichtet, können Sie zusätzlich per Überweisung bezahlen; Zahlungsziel und Limit werden in Ihrem Konto hinterlegt."
           },
           {
             "id": "alerjen",
@@ -1437,7 +1437,7 @@
             "paragraphs": [
               "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
               "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich – bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rücksendung. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
-              "Die Überweisung steht ausschließlich bestätigten Geschäftskonten offen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt.",
+              "Die Überweisung steht ausschließlich bestätigten Geschäftskonten mit eingerichteter Zahlung auf Ziel offen; Zahlungsziel und Limit werden in Ihrem Konto hinterlegt.",
               "Im Voraus bezahlte Bestellungen werden erst nach Abschluss der Zahlung in Vorbereitung genommen. Bei Zahlung bei Lieferung erfolgt der Einzug bei der Übergabe, und die Bestellung geht unmittelbar nach ihrer Bestätigung in Vorbereitung."
             ],
             "bullets": []

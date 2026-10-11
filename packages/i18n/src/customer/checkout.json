@@ -98,8 +98,6 @@
       "onlineBody": "Kart bilgileriniz Revolut tarafından şifrelenir.",
       "onDelivery": "Kapıda ödeme",
       "onDeliveryBody": "Nakit ya da kart.",
-      "transfer": "Havale ile öde",
-      "transferBody": "Hesabımıza, faturayla.",
       "credit": "Hesaba yaz",
       "creditBody": "Vadeli ödeme — faturayla.",
       "codBlocked": {
@@ -330,8 +328,6 @@
       "onlineBody": "Vos données de carte sont chiffrées par Revolut.",
       "onDelivery": "Paiement à la livraison",
       "onDeliveryBody": "Espèces ou carte.",
-      "transfer": "Payer par virement",
-      "transferBody": "Sur notre compte, avec facture.",
       "credit": "Paiement différé",
       "creditBody": "Réglé sur facture, à échéance.",
       "codBlocked": {
@@ -562,8 +558,6 @@
       "onlineBody": "Ihre Kartendaten werden von Revolut verschlüsselt.",
       "onDelivery": "Zahlung bei Lieferung",
       "onDeliveryBody": "Bar oder Karte.",
-      "transfer": "Per Überweisung",
-      "transferBody": "Auf unser Konto, mit Rechnung.",
       "credit": "Auf Rechnung",
       "creditBody": "Zahlungsziel – per Rechnung.",
       "codBlocked": {
