@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  AccountService,
   CategoryService,
   DeliveryZoneService,
   NeighborInviteService,
   OrderService,
+  PointsEntryService,
   ProductService,
   StockService,
   UserProfileService,
@@ -16,9 +18,11 @@ import {
   neighborInviteUrl,
   openNeighborInvite,
   readNeighborWelcome,
+  readPendingNeighborAwards,
   remainingNeighborInviteUses,
   tryOpenNeighborInvite,
 } from './neighbor';
+import { recordOrderPayment } from '../order/payment';
 
 /**
  * Komşu daveti paraya dokunur: her kabul edilen komşu bir ödülün önkoşulu ve kullanım hakkı sınırlı, yanlış karar ya tutulmayacak
@@ -39,6 +43,7 @@ let inviterId: string;
 let neighborId: string;
 let otherId: string;
 let professionalId: string;
+let accountId: string;
 const createdProfiles: string[] = [];
 
 /** Sefer AÇIK olsun diye teslimat günü ileriye alınır — kesim saati testin koştuğu saate bağlanmasın. */
@@ -90,6 +95,8 @@ beforeAll(async () => {
   });
   professionalId = professional.id;
   createdProfiles.push(professional.id);
+
+  accountId = (await new AccountService(db).insert({ name: `Komşu kasası ${stamp}`, type: 'cash' })).id;
 });
 
 beforeEach(async () => {
@@ -103,6 +110,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
+    accountIds: [accountId],
     warehouseIds: [warehouseId],
   });
 });
@@ -283,6 +291,49 @@ describe('kullanım hakkı', () => {
     await db.from('order').update({ neighbor_invite_id: invite.id }).eq('id', komsuSiparisi.id);
 
     expect(await remainingNeighborInviteUses(db, { id: invite.id, maxUses: 0 })).toBe(0);
+  });
+});
+
+/*
+  "Yolda olan puanlar" bir söz: ekran ödenmemiş komşu siparişini "ödeme alınınca puan gelecek" diye gösterir. Söz ile ödül aynı
+  kümeyi saymazsa ekran ya tutulmayacak puan vaat eder ya da gelecek puanı gizler.
+*/
+describe('yolda olan komşu puanı', () => {
+  /** Davet edenin defterinde bu siparişin komşu ödülü var mı — yalnız bu testin siparişi sayılır. */
+  const neighborAwardFor = async (orderId: string) =>
+    (await new PointsEntryService(db).listByCustomer(inviterId, undefined, 50)).rows.some(
+      (row) => row.reason === 'neighbor' && row.refId === orderId,
+    );
+
+  it('ödenmemiş komşu siparişi yalnız ilk adla yolda görünür; ödeme alınınca düşer ve puan yazılır', async () => {
+    const invite = await davet();
+    const komsuSiparisi = await rotaSiparisi({ customerId: neighborId });
+    await orders.update({ id: komsuSiparisi.id, neighborInviteId: invite.id });
+
+    expect(await readPendingNeighborAwards(db, inviterId)).toEqual([{ neighborName: 'Mehmet', deliveryDate: invite.deliveryDate }]);
+    expect(await neighborAwardFor(komsuSiparisi.id)).toBe(false);
+
+    await recordOrderPayment(db, { orderId: komsuSiparisi.id, accountId, amountCents: 2000, method: 'cash' });
+
+    expect(await readPendingNeighborAwards(db, inviterId)).toEqual([]);
+    expect(await neighborAwardFor(komsuSiparisi.id)).toBe(true);
+  });
+
+  it('iptal edilen komşu siparişi yolda sayılmaz, çünkü ödemesi hiç alınmayacak', async () => {
+    const invite = await davet();
+    const komsuSiparisi = await rotaSiparisi({ customerId: neighborId });
+    await orders.update({ id: komsuSiparisi.id, neighborInviteId: invite.id });
+    await db.from('order').update({ status: 'cancelled' }).eq('id', komsuSiparisi.id);
+
+    expect(await readPendingNeighborAwards(db, inviterId)).toEqual([]);
+  });
+
+  it('davet edenin kendi davetine bağlanan siparişi yolda sayılmaz, çünkü kendine ödül yazılmaz', async () => {
+    const invite = await davet();
+    const kendiSiparisi = await rotaSiparisi({ date: ileriGun(4) });
+    await orders.update({ id: kendiSiparisi.id, neighborInviteId: invite.id });
+
+    expect(await readPendingNeighborAwards(db, inviterId)).toEqual([]);
   });
 });
 
