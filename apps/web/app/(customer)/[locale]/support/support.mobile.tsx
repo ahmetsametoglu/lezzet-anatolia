@@ -79,7 +79,7 @@ export function SupportMobile({ t, locale, mode, tickets, nextCursor, loadingMor
           right={<PhoneTicketStatusTag status={open.status} label={copy.status[open.status]} />}
         />
         <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto">
-          <PhoneTicketThread copy={copy} t={t} locale={locale} ticket={open} />
+          <PhoneTicketThread copy={copy} locale={locale} ticket={open} />
         </div>
         <PhoneReplyBox copy={copy} t={t} locale={locale} ticketId={open.id} onReplied={setTicket} />
       </div>

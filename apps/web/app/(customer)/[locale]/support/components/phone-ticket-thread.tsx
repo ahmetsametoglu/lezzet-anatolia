@@ -8,7 +8,6 @@ import { Note } from '@/components/customer/phone-kit/note';
 import { ChatText } from '@/components/text/chat-text';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import type { CustomerTicketView, TicketMessageView } from '@/lib/ticket/ticket-types';
-import type { Messages } from '../support-types';
 import { MessageStamp } from './message-stamp';
 import { useStampReveal } from './use-stamp-reveal.hook';
 
@@ -20,12 +19,11 @@ type SupportCopy = LocalizedCopy<typeof supportMessages>;
  */
 interface PhoneTicketThreadProps {
   copy: SupportCopy;
-  t: Messages;
   locale: Locale;
   ticket: CustomerTicketView;
 }
 
-export function PhoneTicketThread({ copy, t, locale, ticket }: PhoneTicketThreadProps) {
+export function PhoneTicketThread({ copy, locale, ticket }: PhoneTicketThreadProps) {
   const scope = ticketScope(ticket.order?.referenceNo ?? null, copy.list.orderScope, copy.detail.generalScope);
   // İade ancak ödenmişse söylenir: tetiklenmiş ama ödenmemiş iade gerçek bir ara hâldir.
   const refunded =
@@ -51,8 +49,6 @@ export function PhoneTicketThread({ copy, t, locale, ticket }: PhoneTicketThread
         />
       ))}
 
-      {/* Çözülmüş talep yazınca kendiliğinden açılır; ayrı bir "yeniden aç" düğmesi yazıp basmayı unutanın mesajını kapalı talepte bırakırdı. */}
-      {ticket.status === 'resolved' && <p className="font-sans text-note leading-[1.6] text-muted">{t.reopenNote}</p>}
       {ticket.messages.some((message) => message.bodyTranslated) && (
         <p className="pt-2 text-center font-sans text-micro text-sand-600">{copy.detail.translatedNotice}</p>
       )}

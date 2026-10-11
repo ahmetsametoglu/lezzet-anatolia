@@ -6,30 +6,21 @@ import { createClient } from '@/lib/supabase/client';
 import { customerNotificationBadgeAction } from '@/lib/notifications/actions';
 
 /*
-  OKUNMAMIŞ BİLDİRİM SAYISI (14.15) — zilin ve başlıktaki hesap menüsünün TEK kaynağı.
-
-  Zilin içinden çıkarıldı (13.09): v1 tasarımında masaüstü başlığında zil yok, sayı hesap menüsünde
-  ve avatarın rozetinde okunuyor. Aynı sayıyı iki bileşen ayrı ayrı sorsaydı biri canlı kanalı
-  dinleyip öteki dinlemezdi.
-
-  ── SAYI SUNUCUDAN ──────────────────────────────────────────────────────────
-  İlk okuma bitmeden `null` döner (0 göstermek "bildiriminiz yok" derdi — ölçülemeyen değer sıfır
-  değildir). Canlılık kişinin kendi kanalından (adı sunucuda profil kimliğinden türedi, aksiyon
-  söyler); kanal yükü boş — duyunca sayı SUNUCUDAN yeniden istenir. Aynı sekmedeki akış sayfası
-  okundu işaretleyince `NOTIFICATIONS_CHANGED_EVENT` atar; o olay da yük taşımaz, sayının tek
-  kaynağı hep aynı kapı.
+  Okunmamış bildirim sayısı, zilin ve hesap menüsünün tek kaynağı: ikisi ayrı sorsa biri canlı kanalı dinleyip öteki dinlemezdi.
+  Kanal ve sayfa olayları yük taşımaz, duyulunca sayı yeniden sunucudan sorulur.
 */
 
 /** Akış sayfası ↔ sayaç senkronu — window olayı, yüksüz: "sayın değişti, sunucuya bak". */
 export const NOTIFICATIONS_CHANGED_EVENT = 'lezzet:notifications-changed';
 
-export function useUnreadNotifications(): number | null {
+/** İlk okuma bitmeden `null` döner, çünkü 0 "bildiriminiz yok" demektir; `enabled` yanlışken hiç sorulmaz. */
+export function useUnreadNotifications(enabled = true): number | null {
   const [unread, setUnread] = useState<number | null>(null);
   const [channel, setChannel] = useState<string | null>(null);
 
-  // İlk soru: sayı + dinlenecek kanal tek turda. Hata sessiz ama izli (aksiyon funnel'ı kaydeder);
-  // sayı `null` kalır — girişli yüzeyde tek sebebi süresi dolan oturumdur.
+  // Sayı ve dinlenecek kanal tek turda gelir; hata aksiyonun kendisinde izlenir ve sayı `null` kalır.
   useEffect(() => {
+    if (!enabled) return;
     let acik = true;
     const sor = () => {
       void customerNotificationBadgeAction().then((res) => {
@@ -46,11 +37,11 @@ export function useUnreadNotifications(): number | null {
       acik = false;
       window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
     };
-  }, []);
+  }, [enabled]);
 
   // Canlı bağ — kanal adı öğrenilince kurulur; gizli sekme tur atmaz, dönüşte bir kez sorar.
   useEffect(() => {
-    if (!channel) return;
+    if (!enabled || !channel) return;
     let missedWhileHidden = false;
     const sor = () => {
       void customerNotificationBadgeAction().then((res) => {
@@ -77,7 +68,7 @@ export function useUnreadNotifications(): number | null {
       document.removeEventListener('visibilitychange', onVisible);
       void supabase.removeChannel(live);
     };
-  }, [channel]);
+  }, [channel, enabled]);
 
-  return unread;
+  return enabled ? unread : null;
 }

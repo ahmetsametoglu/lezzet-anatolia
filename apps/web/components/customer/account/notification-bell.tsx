@@ -6,27 +6,18 @@ import { Icon } from '@/components/customer/ui/icons';
 import { useUnreadNotifications } from './use-unread-notifications.hook';
 import messages from './account-messages.json';
 
-/*
-  HESAP ZİLİ (14.15) — hesap alanı başlığının bildirim girişi: rozetli zil, tıklanınca akış sayfası.
-  Web'de müşteri bildirimi = bu zil + o liste; tarayıcı push'u YOK ve eklenmeyecek (KARARLAR 26.08:
-  aynı telefonda tarayıcı aboneliği ile uygulama jetonu ayırt edilemez — çift bildirim).
-
-  Sayı ortak kancadan (`useUnreadNotifications`) — hesap menüsü de aynı sayıyı okuyor. Rozet
-  `CartBadge` kuralıyla: ilk okuma bitmeden çizilmez, yalnız >0 iken çizilir.
-*/
-
+/** Bildirim akışının girişi: rozetli zil. Rozet ilk okuma bitmeden ve sayı sıfırken çizilmez. */
 interface NotificationBellProps {
   locale: Locale;
-  /**
-   * Mobil vitrin başlığının zili — native'in 46px kum dairesi (`home-screen` `bellButton`), rozeti
-   * krem halkalı (14.09). Varsayılan çıplak ikon: masaüstü hesap başlığı.
-   */
+  /** Mobil vitrin başlığının kum dairesi, native vitrin zilinin ikizi; verilmezse masaüstü hesap başlığının çıplak ikonu. */
   circle?: boolean;
+  /** Okunmamış sayısı sorulsun mu; misafirin bildirim akışı olmadığından ona sorulmaz. */
+  counted?: boolean;
 }
 
-export function NotificationBell({ locale, circle = false }: NotificationBellProps) {
+export function NotificationBell({ locale, circle = false, counted = true }: NotificationBellProps) {
   const t = messages[locale];
-  const unread = useUnreadNotifications();
+  const unread = useUnreadNotifications(counted);
 
   return (
     <Link
