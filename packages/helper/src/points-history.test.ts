@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupPointsHistory } from './points-history';
+import { groupPointsHistory, pendingNeighborLines } from './points-history';
 
 const row = (id: string, reason: string, points: number, day: string) => ({ id, reason, points, day });
 const byDay = (entry: { day: string }) => entry.day;
@@ -21,5 +21,21 @@ describe('groupPointsHistory', () => {
       byDay,
     );
     expect(groups.map((group) => group.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+});
+
+describe('pendingNeighborLines', () => {
+  const template = '{name} sipariş verdi — {points} puan, ödeme alınınca hesabınıza geçecek.';
+
+  it('her bekleyen komşu için adı ve puanıyla bir cümle kurar', () => {
+    expect(pendingNeighborLines([{ neighborName: 'Mehmet' }, { neighborName: 'Ayşe' }], 100, template)).toEqual([
+      'Mehmet sipariş verdi — 100 puan, ödeme alınınca hesabınıza geçecek.',
+      'Ayşe sipariş verdi — 100 puan, ödeme alınınca hesabınıza geçecek.',
+    ]);
+  });
+
+  // Puan ayarı okunamadıysa ekran "? puan" ya da "0 puan" diye söz vermemeli; blok hiç çizilmez.
+  it('puan sayısı bilinmiyorsa satır kurmaz', () => {
+    expect(pendingNeighborLines([{ neighborName: 'Mehmet' }], null, template)).toEqual([]);
   });
 });

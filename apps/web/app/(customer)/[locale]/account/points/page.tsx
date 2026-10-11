@@ -46,6 +46,7 @@ export default async function PointsHistoryPage({ params }: PointsPageProps) {
         first={{ entries: history.entries, nextCursor: history.nextCursor ?? null }}
         rules={card.points}
         balance={card.points.balance}
+        pendingNeighborAwards={card.points.pendingNeighborAwards}
       />
     </SiteFrame>
   );

@@ -10,6 +10,7 @@ import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatOrderDate } from '@/lib/storefront/format';
 import { useLoadMore } from '@/lib/use-load-more.hook';
+import { PhonePendingAwards } from './components/phone-pending-awards';
 import type { PointsViewProps } from './points-types';
 
 type PointsCopy = LocalizedCopy<typeof pointsMessages>;
@@ -18,23 +19,26 @@ type PointsCopy = LocalizedCopy<typeof pointsMessages>;
  * Puan geçmişinin telefon görünümü, native puan ekranının ikizi: aynı gün ve sebepteki hareketler tek satırda, kutusuz liste,
  * sona yaklaşınca kendiliğinden devam. Kazanma yolları burada değil hesap kartının çekmecesinde, native'deki gibi.
  */
-export function PointsMobile({ t, locale, balance, entries, hasMore, loading, failed, loadMore }: PointsViewProps) {
+export function PointsMobile({ t, locale, rules, balance, pendingNeighborAwards, entries, hasMore, loading, failed, loadMore }: PointsViewProps) {
   const copy: PointsCopy = pointsMessages[locale];
   // Düşen istek kendiliğinden yinelenmez; devam "tekrar dene" ile müşterinin elinde.
   const { ref } = useLoadMore({ hasMore: hasMore && !failed, loading, onLoadMore: loadMore });
 
   // Bakiye başlığın altında bir künye satırı, kart değil: müşteri buraya "puanım ne kadar" diye gelir.
-  const balanceRow = (
-    <div className="flex items-baseline justify-between px-4.5 pt-2 pb-5">
-      <span className="font-sans text-note text-muted">{copy.pending.balance}</span>
-      <span className="font-serif text-card-title text-olive">{balance}</span>
+  const summary = (
+    <div className="flex flex-col gap-3.5 px-4.5 pt-2 pb-5">
+      <div className="flex items-baseline justify-between">
+        <span className="font-sans text-note text-muted">{copy.pending.balance}</span>
+        <span className="font-serif text-card-title text-olive">{balance}</span>
+      </div>
+      <PhonePendingAwards copy={copy.pending} awards={pendingNeighborAwards} rules={rules} />
     </div>
   );
 
   if (entries.length === 0) {
     return (
       <>
-        {balanceRow}
+        {summary}
         <EmptyState
           fill
           icon={<MobileIcon name="star" size={80} className="text-sand-600" />}
@@ -50,7 +54,7 @@ export function PointsMobile({ t, locale, balance, entries, hasMore, loading, fa
 
   return (
     <div className="flex flex-col pb-5">
-      {balanceRow}
+      {summary}
       <ul className="flex flex-col px-4.5">
         {groups.map((group) => {
           const earned = group.points >= 0;

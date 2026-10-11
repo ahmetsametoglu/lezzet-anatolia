@@ -37,3 +37,16 @@ export function groupPointsHistory<E extends { id: string; reason: string; point
 
   return groups;
 }
+
+/**
+ * "Yolda olan puanlar" satırları: komşunun ödenmemiş siparişi başına bir cümle. Puan sayısı bilinmiyorsa liste boş döner, çünkü
+ * bilinmeyen sayıyla söz verilmez.
+ */
+export function pendingNeighborLines(
+  awards: readonly { neighborName: string }[],
+  points: number | null,
+  template: string,
+): string[] {
+  if (points === null) return [];
+  return awards.map((award) => template.replace('{name}', award.neighborName).replace('{points}', String(points)));
+}

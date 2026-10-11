@@ -1,4 +1,4 @@
-import { groupPointsHistory, type PointsHistoryGroup } from '@lezzet/helper';
+import { groupPointsHistory, pendingNeighborLines, type PointsHistoryGroup } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import messages from '@lezzet/i18n/customer/points-history';
 import type { PointsReason } from '@lezzet/types';
@@ -42,8 +42,11 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   /* Kart ve defter ayrı uçlar ve bu ekran ikisini de okur: "hangi puan nereden geldi" defterin, "kaç puanım var" kartın sorusu. */
   const points = usePoints(true);
   const card = points.view?.points ?? null;
-  const pending = card?.pendingNeighborAwards ?? [];
-  const neighborPoints = card?.earnWays.find((way) => way.key === 'neighbor')?.points ?? null;
+  const pendingLines = pendingNeighborLines(
+    card?.pendingNeighborAwards ?? [],
+    card?.earnWays.find((way) => way.key === 'neighbor')?.points ?? null,
+    t.pending.one,
+  );
 
   const page = usePageHeader();
 
@@ -69,12 +72,12 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
 
       {/* Yolda olan ödül defterde yok, çünkü henüz yazılmadı: listeye satır olarak karışmaz, üstünde ayrı blok durur, yoksa sanal bir
           satır tarih sırasını ve toplamı yanlış söyletirdi. */}
-      {pending.length === 0 || neighborPoints === null ? null : (
+      {pendingLines.length === 0 ? null : (
         <View style={styles.pendingCard} testID="points-history-pending">
           <Text style={styles.pendingTitle}>{t.pending.title}</Text>
-          {pending.map((award, index) => (
-            <Text key={`${award.neighborName}-${award.deliveryDate}-${index}`} style={styles.pendingLine}>
-              {t.pending.one.replace('{name}', award.neighborName).replace('{points}', String(neighborPoints))}
+          {pendingLines.map((line, index) => (
+            <Text key={index} style={styles.pendingLine}>
+              {line}
             </Text>
           ))}
         </View>
@@ -305,10 +308,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.note,
     color: theme.colors.ink,
   },
+  /** Satır gövde renginde, çünkü soluk ton kum zeminde okunma eşiğinin altında kalır. */
   pendingLine: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.micro,
-    color: theme.colors.muted,
+    color: theme.colors.ink,
   },
   /* SATIR KUTU DEĞİL: hareketler bir liste, kart yığını değil — her satıra zemin ve çerçeve
      vermek 200 satırlık bir arşivi okunamaz kılardı; ayrım ince bir çizgiyle. */

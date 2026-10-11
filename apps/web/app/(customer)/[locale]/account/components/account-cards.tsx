@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { pendingNeighborLines } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
+import pointsMessages from '@lezzet/i18n/customer/points-history';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
@@ -155,6 +157,8 @@ export function PointsCard({
   const { minimumPoints, valueCents } = points.redeem;
   const enough = points.balance >= minimumPoints;
   const rule = t.pointsRule.replace('{points}', String(minimumPoints)).replace('{amount}', formatPrice(valueCents, locale));
+  const pending = pointsMessages[locale].pending;
+  const pendingLines = pendingNeighborLines(points.pendingNeighborAwards, points.neighborPoints, pending.one);
 
   /**
    * Mobil kart tasarım gereği tek satır: solda başlık ve kural, sağda rakam ve küçük hap. İç panel ve son kazanımlar mobilde yok,
@@ -195,13 +199,13 @@ export function PointsCard({
         <RedeemPoints t={t} locale={locale} amount={points.nextRedeem} enough={enough} />
       </div>
 
-      {/* Bekleyen komşu ödülü deftere karışmaz, çünkü defter olanı tutar; puan sayısı bilinmiyorsa blok çizilmez, bilinmeyen sayıyla söz verilmez. */}
-      {points.pendingNeighborAwards.length > 0 && points.neighborPoints !== null && (
+      {/* Bekleyen komşu ödülü deftere karışmaz, çünkü defter olanı tutar. */}
+      {pendingLines.length > 0 && (
         <div className="flex flex-col gap-1.5 rounded-soft bg-cream/10 px-4 py-3">
-          <span className="font-sans text-note font-bold text-cream">{t.pointsPendingTitle}</span>
-          {points.pendingNeighborAwards.map((award, i) => (
-            <span key={`${award.neighborName}-${award.deliveryDate}-${i}`} className="font-sans text-note leading-relaxed text-neutral-400">
-              {t.pointsPendingRow.replace('{name}', award.neighborName).replace('{points}', String(points.neighborPoints))}
+          <span className="font-sans text-note font-bold text-cream">{pending.title}</span>
+          {pendingLines.map((line, i) => (
+            <span key={i} className="font-sans text-note leading-relaxed text-neutral-400">
+              {line}
             </span>
           ))}
         </div>

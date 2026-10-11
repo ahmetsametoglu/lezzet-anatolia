@@ -56,8 +56,6 @@
       "referral": "Getirdiğiniz arkadaş — iptal edildi",
       "neighbor": "Davet ettiğiniz komşu — iptal edildi"
     },
-    "pointsPendingTitle": "Yolda olan puanlar",
-    "pointsPendingRow": "{name} sipariş verdi — {points} puan, ödeme alınınca hesabınıza geçecek.",
     "pointsHistoryLink": "Tüm puan geçmişi →",
     "inviteTitle": "Arkadaşınızı davet edin",
     "inviteBody": "Bağlantınızla gelen arkadaşınız ilk siparişini verdiğinde {points} puan kazanırsınız.",
@@ -174,8 +172,6 @@
       "referral": "Ami parrainé — annulé",
       "neighbor": "Voisin invité — annulé"
     },
-    "pointsPendingTitle": "Points en attente",
-    "pointsPendingRow": "{name} a commandé — {points} points, crédités dès le paiement encaissé.",
     "pointsHistoryLink": "Tout l'historique des points →",
     "inviteTitle": "Parrainez un ami",
     "inviteBody": "Quand un ami commande pour la première fois via votre lien, vous gagnez {points} points.",
@@ -292,8 +288,6 @@
       "referral": "Geworbene Freundin oder Freund – storniert",
       "neighbor": "Nachbarn eingeladen – storniert"
     },
-    "pointsPendingTitle": "Punkte unterwegs",
-    "pointsPendingRow": "{name} hat bestellt – {points} Punkte, sobald die Zahlung eingegangen ist.",
     "pointsHistoryLink": "Gesamter Punkteverlauf →",
     "inviteTitle": "Freunde werben",
     "inviteBody": "Bestellt jemand zum ersten Mal über Ihren Link, erhalten Sie {points} Punkte.",

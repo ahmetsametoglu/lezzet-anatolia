@@ -1,4 +1,4 @@
-import type { CustomerPointsRules } from '@lezzet/application';
+import type { CustomerPointsRules, PendingNeighborAward } from '@lezzet/application';
 import type { Locale } from '@lezzet/i18n';
 import type { KeysetCursor, PointsEntry } from '@lezzet/types';
 import type messages from './messages.json';
@@ -12,6 +12,8 @@ export interface PointsViewProps {
   rules: CustomerPointsRules;
   /** Hesap kartının bakiyesi; telefon native gibi başlığın altında gösterir. */
   balance: number;
+  /** Ödemesi beklenen komşu siparişleri; telefon native gibi bakiyenin altında "yolda" diye gösterir. */
+  pendingNeighborAwards: PendingNeighborAward[];
   entries: PointsEntry[];
   hasMore: boolean;
   loading: boolean;

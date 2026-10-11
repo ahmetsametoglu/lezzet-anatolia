@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import type { CustomerPointsRules } from '@lezzet/application';
+import type { CustomerPointsRules, PendingNeighborAward } from '@lezzet/application';
 import type { PointsEntry } from '@lezzet/types';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
@@ -22,9 +22,10 @@ interface PointsHistoryClientProps {
   first: PointsHistoryPage;
   rules: CustomerPointsRules;
   balance: number;
+  pendingNeighborAwards: PendingNeighborAward[];
 }
 
-export function PointsHistoryClient({ t, locale, device, first, rules, balance }: PointsHistoryClientProps) {
+export function PointsHistoryClient({ t, locale, device, first, rules, balance, pendingNeighborAwards }: PointsHistoryClientProps) {
   const resolved = useDevice(device);
   const [extra, setExtra] = useState<PointsEntry[]>([]);
   const [cursor, setCursor] = useState(first.nextCursor);
@@ -47,6 +48,6 @@ export function PointsHistoryClient({ t, locale, device, first, rules, balance }
     });
   };
 
-  const view = { t, locale, rules, balance, entries: [...first.entries, ...extra], hasMore: cursor !== null, loading, failed, loadMore };
+  const view = { t, locale, rules, balance, pendingNeighborAwards, entries: [...first.entries, ...extra], hasMore: cursor !== null, loading, failed, loadMore };
   return resolved === 'mobile' ? <PointsMobile {...view} /> : <PointsDesktop {...view} />;
 }
