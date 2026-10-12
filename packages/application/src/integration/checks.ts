@@ -75,8 +75,8 @@ const revolut: Probe = {
 const revolutWebhook: Probe = {
   needs: ['revolut_webhook_secret'],
   async run(value) {
-    if (!value('revolut_webhook_secret').startsWith('wsk_')) return rejected('Revolut bildirim imza anahtarı "wsk_" ile başlar');
-    return { status: 'unverifiable', detail: 'Revolut imza anahtarını API üzerinden sınatmaz; ilk bildirimde imza doğrulanır' };
+    if (!value('revolut_webhook_secret').startsWith('wsk_')) return rejected('Revolut webhook signing secret "wsk_" ile başlar');
+    return { status: 'unverifiable', detail: 'Revolut bu anahtarı API üzerinden sınatmaz; ilk bildirimde imza doğrulanır' };
   },
 };
 
@@ -101,7 +101,8 @@ const hiboutik: Probe = {
       }).listStores();
       return { status: 'ok' };
     } catch (err) {
-      if (err instanceof HiboutikError && err.code === 'credentials') return rejected('Hiboutik hesap, kullanıcı ya da anahtarı reddetti');
+      if (err instanceof HiboutikError && err.code === 'credentials')
+        return rejected('Hiboutik reddetti: Account name, Username ya da API key yanlış');
       throw err;
     }
   },
@@ -144,7 +145,7 @@ const sendcloud: Probe = {
 
 const sendcloudWebhook: Probe = {
   needs: ['sendcloud_webhook_secret'],
-  run: async () => ({ status: 'unverifiable', detail: 'Sendcloud imza anahtarını API üzerinden sınatmaz; ilk bildirimde imza doğrulanır' }),
+  run: async () => ({ status: 'unverifiable', detail: 'Sendcloud bu anahtarı API üzerinden sınatmaz; ilk bildirimde imza doğrulanır' }),
 };
 
 const metaToken = (name: 'meta_access_token' | 'meta_page_access_token'): Probe => ({
@@ -162,7 +163,7 @@ const metaAppSecret: Probe = {
       Authorization: `Bearer ${token}`,
     });
     const appId = debug.ok ? ((await debug.json().catch(() => null)) as { data?: { app_id?: string } } | null)?.data?.app_id : undefined;
-    if (!appId) return { status: 'unverifiable', detail: 'Uygulama kimliği erişim jetonundan okunamadı; önce erişim jetonunu sınayın' };
+    if (!appId) return { status: 'unverifiable', detail: "App ID, Access token'dan okunamadı; önce Access token'ı sınayın" };
     const query = new URLSearchParams({ client_id: appId, client_secret: value('meta_app_secret'), grant_type: 'client_credentials' });
     return judge(await get(fetchImpl, `${META_GRAPH}/oauth/access_token?${query.toString()}`, {}), 'Meta');
   },
@@ -170,7 +171,10 @@ const metaAppSecret: Probe = {
 
 const metaVerifyToken: Probe = {
   needs: ['meta_webhook_verify_token'],
-  run: async () => ({ status: 'unverifiable', detail: 'Bu değeri biz belirleriz; Meta bildirim kaydına aynısı girilmelidir' }),
+  run: async () => ({
+    status: 'unverifiable',
+    detail: "Bu değeri biz belirleriz; Meta'daki webhook kaydının Verify token alanına aynısı girilir",
+  }),
 };
 
 const anthropic: Probe = {
@@ -225,16 +229,16 @@ const webPush: Probe = {
   needs: ['web_push_private_key'],
   async run(value) {
     const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY?.trim();
-    if (!publicKey) return { status: 'unverifiable', detail: 'Açık anahtar (NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY) ortamda yok' };
+    if (!publicKey) return { status: 'unverifiable', detail: 'Public Key (NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY) ortamda yok' };
     let derived: string;
     try {
       const ecdh = createECDH('prime256v1');
       ecdh.setPrivateKey(Buffer.from(value('web_push_private_key'), 'base64url'));
       derived = ecdh.getPublicKey('base64url', 'uncompressed');
     } catch {
-      return rejected('Gizli anahtar geçerli bir web bildirimi (VAPID) anahtarı değil');
+      return rejected('Private Key geçerli bir VAPID anahtarı değil');
     }
-    return derived === publicKey.replace(/=+$/, '') ? { status: 'ok' } : rejected('Gizli anahtar ortamdaki açık anahtarla eşleşmiyor');
+    return derived === publicKey.replace(/=+$/, '') ? { status: 'ok' } : rejected('Private Key, ortamdaki Public Key ile eşleşmiyor');
   },
 };
 

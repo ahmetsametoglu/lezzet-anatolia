@@ -192,44 +192,44 @@ class Component extends DCLogic {
     const NONE = 'Bu anahtar olmadan bağlantı kurulmaz';
     const GROUPS = [
       { title: 'Revolut', provider: 'Revolut', purpose: 'Kartla online ödeme, kapıda kart ve aktarımlar', keys: [
-        K('Gizli anahtar', 'vault', '••••••••a91c', VAULT('12.10 14:32 · Selin Kaya'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
-        K('Bildirim imza anahtarı', 'vault', '••••••••7Qd2', VAULT('12.10 14:33 · Selin Kaya'), 'unverifiable', 'Sınanamaz · Revolut imza anahtarını API üzerinden sınatmaz; ilk bildirimde imza doğrulanır'),
+        K('Secret key', 'vault', '••••••••a91c', VAULT('12 Eki 14:32 · Selin Kaya'), 'ok', 'Çalışıyor · 12 Eki 14:35 sınandı'),
+        K('Webhook signing secret', 'vault', '••••••••7Qd2', VAULT('12 Eki 14:33 · Selin Kaya'), 'unverifiable', 'Sınanamaz · Revolut bu anahtarı API üzerinden sınatmaz; ilk bildirimde imza doğrulanır'),
       ] },
       { title: 'Kargo (Sendcloud)', provider: 'Sendcloud', purpose: 'Kargo fiyatı, etiket ve gönderi takibi', keys: [
-        K('Açık anahtar', 'env', '••••••••e0b4', ENV, 'rejected', 'Reddedildi · Sendcloud anahtarları reddetti'),
-        K('Gizli anahtar', 'env', '••••••••19fa', ENV, 'rejected', 'Reddedildi · Sendcloud anahtarları reddetti'),
-        K('Bildirim imza anahtarı', 'none', '', NONE, null, ''),
+        K('Public Key', 'env', '••••••••e0b4', ENV, 'rejected', 'Reddedildi · Sendcloud anahtarları reddetti'),
+        K('Secret Key', 'env', '••••••••19fa', ENV, 'rejected', 'Reddedildi · Sendcloud anahtarları reddetti'),
+        K('Webhook Signature Key', 'none', '', NONE, null, ''),
       ] },
       { title: 'Pennylane', provider: 'Pennylane', purpose: 'Muhasebe: alış belgeleri ve banka eşleşmesi', keys: [
-        K('API anahtarı', 'env', '••••••••7d02', ENV, null, ''),
+        K('API token', 'env', '••••••••7d02', ENV, null, ''),
       ] },
       { title: 'Meta', provider: 'Meta', purpose: 'WhatsApp, Messenger ve Instagram mesajları', keys: [
-        K('Erişim jetonu', 'vault', '••••••••ZBkA', VAULT('09.10 11:02 · Selim A.'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
-        K('Sayfa erişim jetonu', 'env', '••••••••mQ3z', ENV, 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
-        K('Uygulama sırrı', 'env', '••••••••', ENV, 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
-        K('Bildirim doğrulama değeri', 'env', '••••••••', ENV, 'unverifiable', 'Sınanamaz · Bu değeri biz belirleriz; Meta bildirim kaydına aynısı girilmelidir'),
+        K('Access token', 'vault', '••••••••ZBkA', VAULT('9 Eki 11:02 · Selim A.'), 'ok', 'Çalışıyor · 12 Eki 14:35 sınandı'),
+        K('Page access token', 'env', '••••••••mQ3z', ENV, 'ok', 'Çalışıyor · 12 Eki 14:35 sınandı'),
+        K('App secret', 'env', '••••••••', ENV, 'ok', 'Çalışıyor · 12 Eki 14:35 sınandı'),
+        K('Verify token', 'env', '••••••••', ENV, 'unverifiable', 'Sınanamaz · Bu değeri biz belirleriz; Meta\'daki webhook kaydının Verify token alanına aynısı girilir'),
       ] },
       { title: 'Hiboutik', provider: 'Hiboutik', purpose: 'Sertifikalı kasa: satışların kasaya yazımı ve gün kapanışı', keys: [
-        K('Hesap adı', 'env', '••••••••', ENV, 'incomplete', 'Eksik · Kullanıcı girilince birlikte sınanır'),
-        K('Kullanıcı', 'none', '', NONE, null, ''),
-        K('API anahtarı', 'env', '••••••••c4e1', ENV, 'incomplete', 'Eksik · Kullanıcı girilince birlikte sınanır'),
+        K('Account name', 'env', '••••••••', ENV, 'incomplete', 'Eksik · Username girilince birlikte sınanır'),
+        K('Username', 'none', '', NONE, null, ''),
+        K('API key', 'env', '••••••••c4e1', ENV, 'incomplete', 'Eksik · Username girilince birlikte sınanır'),
       ] },
       { title: 'Yapay zekâ', provider: 'Anthropic', purpose: 'Asistan, otomatik cevap ve çeviri', keys: [
-        K('Anthropic API anahtarı', 'vault', '••••••••uX8w', VAULT('08.10 18:40 · Selim A.'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
-        K('Google AI API anahtarı', 'none', '', NONE, null, ''),
+        K('Anthropic API key', 'vault', '••••••••uX8w', VAULT('8 Eki 18:40 · Selim A.'), 'ok', 'Çalışıyor · 12 Eki 14:35 sınandı'),
+        K('Gemini API key', 'none', '', NONE, null, ''),
       ] },
       { title: 'E-posta (Resend)', provider: 'Resend', purpose: 'Giriş kodları, sipariş ve bildirim e-postaları', keys: [
-        K('API anahtarı', 'vault', '••••••••Qx3k', VAULT('08.10 18:41 · Selim A.'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+        K('API key', 'vault', '••••••••Qx3k', VAULT('8 Eki 18:41 · Selim A.'), 'ok', 'Çalışıyor · 12 Eki 14:35 sınandı'),
       ] },
       { title: 'Dosya deposu (Cloudflare R2)', provider: 'R2', purpose: 'Ürün ve sayfa görselleri, müşteri ekleri', keys: [
-        K('Erişim anahtarı kimliği', 'env', '••••••••41d9', ENV, 'unreachable', 'Ulaşılamadı · The operation was aborted due to timeout'),
-        K('Gizli erişim anahtarı', 'env', '••••••••b7Ue', ENV, 'unreachable', 'Ulaşılamadı · The operation was aborted due to timeout'),
+        K('Access Key ID', 'env', '••••••••41d9', ENV, 'unreachable', 'Ulaşılamadı · The operation was aborted due to timeout'),
+        K('Secret Access Key', 'env', '••••••••b7Ue', ENV, 'unreachable', 'Ulaşılamadı · The operation was aborted due to timeout'),
       ] },
       { title: 'Harita (Google)', provider: 'Google', purpose: 'Almanya adreslerinde öneri ve doğrulama', keys: [
-        K('Sunucu API anahtarı', 'env', '••••••••Ha0c', ENV, null, ''),
+        K('API key', 'env', '••••••••Ha0c', ENV, null, ''),
       ] },
       { title: 'Web bildirimi', provider: 'Web bildirimi', purpose: 'Telefona kurulu siteye anlık bildirim', keys: [
-        K('Gizli VAPID anahtarı', 'env', '••••••••Kp2s', ENV, 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+        K('Private Key', 'env', '••••••••Kp2s', ENV, 'ok', 'Çalışıyor · 12 Eki 14:35 sınandı'),
       ] },
     ];
 
@@ -268,11 +268,11 @@ class Component extends DCLogic {
     });
 
     const log = [
-      { label: 'Revolut · Bildirim imza anahtarı', action: 'yazıldı · sınanamaz', by: 'Selin Kaya', at: '12.10 14:33' },
-      { label: 'Revolut · Gizli anahtar', action: 'yazıldı · çalışıyor', by: 'Selin Kaya', at: '12.10 14:32' },
-      { label: 'Meta · Erişim jetonu', action: 'yazıldı · çalışıyor', by: 'Selim A.', at: '09.10 11:02' },
-      { label: 'E-posta (Resend) · API anahtarı', action: 'kopyalandı', by: 'Selim A.', at: '08.10 18:44' },
-      { label: 'Pennylane · API anahtarı', action: 'kaldırıldı', by: 'Selim A.', at: '08.10 18:42' },
+      { label: 'Revolut · Webhook signing secret', action: 'yazıldı · sınanamaz', by: 'Selin Kaya', at: '12 Eki 14:33' },
+      { label: 'Revolut · Secret key', action: 'yazıldı · çalışıyor', by: 'Selin Kaya', at: '12 Eki 14:32' },
+      { label: 'Meta · Access token', action: 'yazıldı · çalışıyor', by: 'Selim A.', at: '9 Eki 11:02' },
+      { label: 'E-posta (Resend) · API key', action: 'kopyalandı', by: 'Selim A.', at: '8 Eki 18:44' },
+      { label: 'Pennylane · API token', action: 'kaldırıldı', by: 'Selim A.', at: '8 Eki 18:42' },
     ];
 
     const d = this.state.dialog;
