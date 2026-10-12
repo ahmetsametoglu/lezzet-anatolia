@@ -6,6 +6,7 @@ import {
   type MatchSuggestion,
   type PennylaneDocumentStatus,
 } from '@lezzet/domain-core';
+import type { DoorCardReview } from '@lezzet/application';
 import { pennylaneBlockReasonLabel } from '@lezzet/i18n';
 import type {
   Account,
@@ -34,6 +35,8 @@ import {
 import type {
   AccountView,
   DocumentPaymentsView,
+  DoorCardCollectionView,
+  DoorCardReviewView,
   DocumentRowView,
   MatchCandidateView,
   MatchOptionsView,
@@ -494,5 +497,20 @@ export function toDocumentPaymentsView(options: DocumentPaymentOptions, accountN
       score: candidate.score,
       reasons: reasonsOf(candidate.reasons),
     })),
+  };
+}
+
+/** Kapıda kart penceresi: tahsilat sipariş adıyla okunur, referansı okunamayan sipariş kısaltılmış kimliğiyle. */
+export function toDoorCardReviewView(review: DoorCardReview, orderRefs: ReadonlyMap<string, string>): DoorCardReviewView {
+  const collectionOf = (movement: MoneyMovement): DoorCardCollectionView => ({
+    id: movement.id,
+    amountCents: movement.amountCents,
+    createdAt: movement.createdAt,
+    orderId: movement.orderId!,
+    orderName: orderName(orderRefs.get(movement.orderId!) ?? null, movement.orderId!),
+  });
+  return {
+    payments: review.payments.map(({ candidates, ...payment }) => ({ ...payment, candidates: candidates.map(collectionOf) })),
+    orphans: review.orphans.map(collectionOf),
   };
 }

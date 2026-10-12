@@ -8,6 +8,7 @@ import { BankImportDialog } from './bank-import-dialog';
 import { DictionaryDialog } from './dictionary-dialog';
 import { DocumentDialog } from './document-dialog';
 import { DocumentList } from './documents-list';
+import { DoorCardDialog } from './door-card-dialog';
 import { AccountStrip, FinanceToolbar, MovementList } from './finance-sections';
 import type { FinanceViewProps, RowEditor } from './finance-types';
 import { ALL_ACCOUNTS } from './finance-url';
@@ -162,6 +163,7 @@ export function FinanceDesktop({
         />
       ) : null}
       {dialog === 'account' ? <AccountDialog onClose={onCloseDialog} onSaved={onSaved} /> : null}
+      {dialog === 'doorCard' ? <DoorCardDialog onClose={onCloseDialog} /> : null}
       {/* Sözlük penceresi yazımdan sonra KAPANMAZ: sözlük action'ları sayfayı aynı cevapta tazeliyor
           (`revalidatePath`), liste yeni veriyle kendiliğinden çizilir. */}
       {dialog === 'dictionary' ? <DictionaryDialog dictionary={data.dictionary} onClose={onCloseDialog} /> : null}

@@ -1,4 +1,14 @@
-import type { Account, AccountLedgerRow, Counterparty, MoneyDocument, MovementDirection, MovementNature, MovementTag } from '@lezzet/types';
+import type { InPersonPayment } from '@lezzet/domain-core';
+import type {
+  Account,
+  AccountLedgerRow,
+  Counterparty,
+  MoneyDocument,
+  MoneyMovement,
+  MovementDirection,
+  MovementNature,
+  MovementTag,
+} from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { CounterpartyOption, NatureOption, TagOption } from '@/components/operation/form/movement-form/schema';
 import type { SupplierOption } from '@/components/operation/form/document-form/schema';
@@ -222,6 +232,15 @@ export interface DocumentPaymentsView {
   candidates: PaymentCandidateView[];
 }
 
+/** Kapıda kart penceresinin tahsilatı: bizde kart diye yazılmış, Revolut ödemesine bağlanmamış sipariş parası, sipariş adıyla. */
+export type DoorCardCollectionView = Pick<MoneyMovement, 'id' | 'amountCents' | 'createdAt'> & { orderId: string; orderName: string };
+
+/** Kapıda kart eşleştirme penceresi: açık Revolut ödemeleri adaylarıyla; hiçbir ödemenin tutarını tutmayan tahsilatlar ayrı. */
+export interface DoorCardReviewView {
+  payments: Array<InPersonPayment & { candidates: DoorCardCollectionView[] }>;
+  orphans: DoorCardCollectionView[];
+}
+
 /** Sözlük penceresinin listeleri, pasifler dâhil: pasif kayıt geri açılabilsin diye listede durur; seçicilere yalnız aktifler gider. */
 export interface DictionaryView {
   natures: Array<Pick<MovementNature, 'slug' | 'label' | 'direction' | 'accountCode' | 'isActive'>>;
@@ -257,7 +276,7 @@ export interface FinanceData {
  * Açık diyalog, `null` hiçbiri: `document` belge girişi, `dictionary` tür · cari · etiket sözlüğü, `bankImport` dosya yükleme.
  * `movement` ile `transfer` aynı penceredir, ikincisi onu transfer kipinde açar.
  */
-export type DialogKind = 'movement' | 'transfer' | 'document' | 'dictionary' | 'bankImport' | 'account' | null;
+export type DialogKind = 'movement' | 'transfer' | 'document' | 'dictionary' | 'bankImport' | 'account' | 'doorCard' | null;
 
 /** Satırın yazım sözleşmesi: ortadaki hücrenin seçenekleri ve kapıları (`useRowWrites`); pasif etiketin adı sözlüğün tamamından. */
 export interface RowEditor {

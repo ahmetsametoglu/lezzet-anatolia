@@ -8,7 +8,7 @@ import { Chip } from '@/components/operation/ui/chip';
 import { DateRangeFilterChip } from '@/components/operation/ui/date-range-filter-chip';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
-import { BookIcon, DocumentIcon, NavIcon, PlusIcon, TransferIcon, UploadIcon } from '@/components/operation/ui/icons';
+import { BookIcon, DocumentIcon, NavIcon, PlusIcon, ReceiptIcon, TransferIcon, UploadIcon } from '@/components/operation/ui/icons';
 import { amount, dayMonthLong, money, num, weekdayName } from '@/components/operation/ui/format';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Tabs } from '@/components/operation/ui/tabs';
@@ -259,6 +259,13 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
                 hint: writableAccountCount > 0 ? 'ekstre satırları listeye izah bekleyen olarak düşer' : 'önce açık bir hesap gerekir',
                 disabled: writableAccountCount === 0,
                 onSelect: () => onOpenDialog('bankImport'),
+              },
+              {
+                key: 'doorCard',
+                icon: <ReceiptIcon />,
+                label: 'Kapıda kart eşleştirme',
+                hint: "Revolut'ta Tap to Pay ile çekilen ödemeleri kart tahsilatlarına bağla",
+                onSelect: () => onOpenDialog('doorCard'),
               },
               { key: 'dictionary', icon: <BookIcon />, label: 'Sözlük', hint: 'tür · cari · etiket', onSelect: () => onOpenDialog('dictionary') },
               {

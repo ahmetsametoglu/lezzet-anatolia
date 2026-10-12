@@ -289,6 +289,14 @@ export const RECONCILE_REASON = {
   business_mismatch: ALLOCATION_REASON.business_mismatch,
 } as const;
 
+/** Kapıda kart eşleştirmesinin kapalı hâli ve reddi. */
+export const DOOR_CARD_REASON = {
+  not_configured: 'Revolut anahtarı tanımlı değil — yüz yüze ödemeler okunamıyor (Ayarlar › Kurulum).',
+  no_card_account: 'Kapıda kart hesabı ayarlı değil — kart tahsilatı yazılmıyor (Ayarlar › Para › Para hesapları).',
+  payment_not_open: 'Bu Revolut ödemesi artık açıkta değil — başka bir tahsilata bağlanmış; liste yeniden okundu.',
+  not_candidate: 'Bu tahsilat bu ödemeye bağlanamaz — tutarı tutmuyor ya da başka bir ödemeye bağlanmış; liste yeniden okundu.',
+} as const;
+
 /** Okunamayan ekstre satırının sebebi — sayısı ve sebebi söylenir, dosya sessizce eksik alınmaz. */
 export const ROW_FAILURE_LABEL = {
   bad_date: 'tarih okunamadı',

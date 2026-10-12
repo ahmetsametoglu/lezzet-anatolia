@@ -21,29 +21,27 @@ import { FinanceDesktop } from './finance.desktop';
 import { financeUrl, type FinanceUrlState } from './finance-url';
 import type { DialogKind, DocumentRowView, FinanceData, FinanceViewProps, MovementRowView } from './finance-types';
 
-// Para client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
-// mobil deneyim native uygulamada — `docs/uygulama`.
-//
-// Süzgeçler GERÇEK GEZİNMEDİR (`?acct=…&tab=…&from=…`) çünkü veriyi sunucu okuyor ve "şu hesabın
-// hareketleri" bağlantısı paylaşılabilir olmalı. Listenin eklenen sayfaları ise İSTEMCİ durumudur:
-// imleç adrese yazılmaz (CLAUDE §1).
+// Süzgeçler gerçek gezinmedir (`?acct=…&tab=…&from=…`), çünkü veriyi sunucu okur ve "şu hesabın hareketleri" bağlantısı
+// paylaşılabilir olmalı; listenin eklenen sayfaları istemci durumudur ve imleç adrese yazılmaz.
 
 interface FinanceClientProps {
   data: FinanceData;
   urlState: FinanceUrlState;
   writableAccounts: FinanceData['accounts'];
+  /** Açılışta açık gelen pencere — zilin adresinden. */
+  initialDialog: DialogKind;
 }
 
 /** Action'ların ortak cevabından yalnız hata okunur — veri sayfanın yeni hâliyle gelir. */
 type ActionOutcome = { error: string | null };
 
-export function FinanceClient({ data, urlState, writableAccounts }: FinanceClientProps) {
+export function FinanceClient({ data, urlState, writableAccounts, initialDialog }: FinanceClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
-  const [dialog, setDialog] = useState<DialogKind>(null);
+  const [dialog, setDialog] = useState<DialogKind>(initialDialog);
   /** Hangi belge işleniyor (dosyası açılıyor) — iki kez tıklanmasın, hangisinin beklediği görünsün. */
   const [busyId, setBusyId] = useState<string | null>(null);
-  /** "Ödemesini yaz" denen belge — elle hareket penceresi belgeyle dolu açılır (12.12). */
+  /** "Ödemesini yaz" denen belge — elle hareket penceresi belgeyle dolu açılır. */
   const [payingDocument, setPayingDocument] = useState<DocumentRowView | null>(null);
   /** Yapısal yazım bekleyen satır (bağ, hedef, geri alma). */
   const [rowBusyId, setRowBusyId] = useState<string | null>(null);
@@ -58,10 +56,9 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
   const [cursor, setCursor] = useState<string | null>(firstPage?.nextCursor ?? null);
   const [loadingMore, setLoadingMore] = useState(false);
   /*
-    SÜZGEÇ ya da SEKME değişince eklenen sayfalar SIFIRLANIR — eski süzgecin satırları yeni
-    listede kalmasın. Yazım sonrası tazelemede KORUNUR: sayfa 2'deki satıra etiket koyan operatörün
-    listesi başa dönmez, o satırın kendisi yeniden okunur (`refreshMovement`). Prop değişince durumu
-    ayarlamanın React deseni: efekt değil, çizim sırasında karşılaştırma.
+    Süzgeç ya da sekme değişince eklenen sayfalar sıfırlanır, yazım sonrası tazelemede korunur: sayfa 2'deki satıra etiket koyan
+    operatörün listesi başa dönmez, o satır yeniden okunur (`refreshMovement`). Prop'a bağlı durum efektle değil çizim sırasında
+    karşılaştırmayla ayarlanır (React deseni).
   */
   const listKey = financeUrl(urlState);
   const [seenKey, setSeenKey] = useState(listKey);
@@ -117,9 +114,8 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
   };
 
   /**
-   * Satırın tür · cari · etiket yazımı (13.09 · Kaydet yok). Sayfa verisi action'ın `revalidatePath`iyle
-   * aynı cevapta tazelenir; satırın iyimser gösterimi o cevaba kadar sürer. Ret satırların üstündeki
-   * şeride düşer ve söz `false` döner.
+   * Satırın tür · cari · etiket yazımı Kaydet'siz: sayfa verisi action'ın `revalidatePath`iyle aynı cevapta tazelenir, satırın iyimser
+   * gösterimi o cevaba kadar sürer. Ret satırların üstündeki şeride düşer ve söz `false` döner.
    */
   const writeRow = async (movementId: string, run: () => Promise<ActionOutcome>): Promise<boolean> => {
     setRowError(null);

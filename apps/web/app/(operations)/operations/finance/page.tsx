@@ -2,6 +2,7 @@ import { MoneyMovementService, serviceDb } from '@lezzet/database';
 import { listOpenDocuments } from '@lezzet/application';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { guarded, requireFinance } from '@/lib/guard';
+import { one } from '@/lib/url-params';
 import { FinanceClient } from './finance-client';
 import { namesOf, readDictionaries, readDocumentsPage, readLedgerPage, withResolvedAccount } from './finance-data';
 import { toAccountViews, totalBalance } from './finance-read';
@@ -28,7 +29,8 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
 
   const db = serviceDb();
   const dictionaries = await readDictionaries(db);
-  const urlState = withResolvedAccount(parseFinanceUrl(await searchParams), dictionaries.accounts);
+  const params = await searchParams;
+  const urlState = withResolvedAccount(parseFinanceUrl(params), dictionaries.accounts);
   const names = namesOf(dictionaries);
   const accountViews = toAccountViews(dictionaries.accounts, dictionaries.balances);
   const onDocuments = urlState.tab === 'documents';
@@ -91,6 +93,8 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
       urlState={urlState}
       // Pasif hesap listede kalır ama yeni harekete kapanır, bu yüzden diyalogların seçicisi ayrı bir küme okur.
       writableAccounts={accountViews.filter((account) => account.isActive)}
+      // Kapıda kart zili eşleştirme penceresini açık getirir; pencere süzgeç değil, adresin süzgeç sözleşmesine girmez.
+      initialDialog={one(params.dialog) === 'door-card' ? 'doorCard' : null}
     />
   );
 }

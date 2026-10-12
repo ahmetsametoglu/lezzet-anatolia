@@ -6,6 +6,7 @@ import {
   BankImportProfileService,
   MoneyDocumentService,
   MovementNatureService,
+  OrderService,
   PurchaseOrderService,
   StockIntakeBalanceService,
   serviceDb,
@@ -32,6 +33,7 @@ import { dayMonth, money } from '@/components/operation/ui/format';
 import type { StockLinkOption } from '@/components/operation/form/document-form/schema';
 import { applyMatch, documentPaymentOptions, linkDocument, matchOptions, unmatchRow, type MatchTarget } from '@/lib/bank/reconcile';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from '@/lib/bank/import';
+import { webRevolutClient } from '@/lib/revolut';
 import {
   addCounterparty,
   addMovementNature,
@@ -41,7 +43,10 @@ import {
   createMoneyDocument,
   documentFileUrl,
   linkAwaitingTransfers,
+  linkDoorCardPaymentByHand,
+  readDoorAccountId,
   removeAllocation,
+  reviewDoorCardItems,
   requestDocumentUploadUrl,
   setMovementCounterparty,
   setMovementNature,
@@ -49,11 +54,13 @@ import {
   tagMovement,
   updateCounterparty,
   updateMovementNature,
+  type RevolutClient,
 } from '@lezzet/application';
 import {
   ALLOCATION_REASON,
   COUNTERPARTY_REASON,
   DOCUMENT_REASON,
+  DOOR_CARD_REASON,
   INVALID_REASON,
   NATURE_REASON,
   RECONCILE_REASON,
@@ -69,11 +76,12 @@ import {
   readLedgerRows,
   withResolvedAccount,
 } from '@/app/(operations)/operations/finance/finance-data';
-import { toDocumentPaymentsView, toMatchOptionsView } from '@/app/(operations)/operations/finance/finance-read';
+import { toDocumentPaymentsView, toDoorCardReviewView, toMatchOptionsView } from '@/app/(operations)/operations/finance/finance-read';
 import type {
   DocumentListView,
   DocumentPaymentsView,
   DocumentRowView,
+  DoorCardReviewView,
   LedgerView,
   MatchOptionsView,
   MovementRowView,
@@ -416,6 +424,51 @@ export async function documentPaymentsAction(documentId: string): Promise<Action
     const [options, accounts] = await Promise.all([documentPaymentOptions(documentId), new AccountService(serviceDb()).list()]);
     if (!options) return { data: null, error: DOCUMENT_REASON.not_found };
     return { data: toDocumentPaymentsView(options, new Map(accounts.map((account) => [account.id, account.name] as const))), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+// ── Kapıda kart ───────────────────────────────────────────────────────────────
+
+/** Eşleştirmenin iki girdisi; biri yoksa pencere sebebini okur, boş liste "her şey eşli" sanılmaz. */
+async function doorCardContext(): Promise<{ client: RevolutClient; accountId: string } | { error: string }> {
+  const [client, accountId] = await Promise.all([webRevolutClient(), readDoorAccountId(serviceDb(), 'card')]);
+  if (!client) return { error: DOOR_CARD_REASON.not_configured };
+  if (!accountId) return { error: DOOR_CARD_REASON.no_card_account };
+  return { client, accountId };
+}
+
+/** Kapıda kart penceresi açılınca: açık Revolut ödemeleri adaylarıyla ve hiçbir ödemenin adayı olmayan tahsilatlar. */
+export async function doorCardReviewAction(): Promise<ActionResult<DoorCardReviewView>> {
+  try {
+    await requireFinance();
+    const context = await doorCardContext();
+    if ('error' in context) return { data: null, error: context.error };
+    const db = serviceDb();
+    const review = await reviewDoorCardItems(db, context.client, { accountId: context.accountId });
+    const orderIds = [
+      ...new Set([...review.payments.flatMap((payment) => payment.candidates), ...review.orphans].map((movement) => movement.orderId!)),
+    ];
+    const orders = orderIds.length > 0 ? await new OrderService(db).listByIds(orderIds) : [];
+    const orderRefs = new Map(orders.flatMap((order) => (order.referenceNo ? [[order.id, order.referenceNo] as const] : [])));
+    return { data: toDoorCardReviewView(review, orderRefs), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Seçilen Revolut ödemesini tahsilata bağlar; seçim kapıda yeniden okunup doğrulanır, çünkü pencerenin listesi bayat olabilir. */
+export async function linkDoorCardAction(movementId: string, paymentRef: string): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireFinance();
+    const context = await doorCardContext();
+    if ('error' in context) return { data: null, error: context.error };
+    const outcome = await linkDoorCardPaymentByHand(serviceDb(), context.client, { accountId: context.accountId, movementId, paymentRef });
+    if (outcome.status === 'invalid') return { data: null, error: DOOR_CARD_REASON[outcome.reason] };
+
+    revalidatePath(FINANCE_PATH);
+    return { data: { ok: true }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }
