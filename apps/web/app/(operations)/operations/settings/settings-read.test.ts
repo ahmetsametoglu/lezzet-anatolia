@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONVERSATION_DEFAULT_HANDLER_KEY } from '@lezzet/domain-core';
+import { CONVERSATION_DEFAULT_HANDLER_KEY, PENNYLANE_INVOICE_TEMPLATE_KEYS } from '@lezzet/domain-core';
 import type { Setting, UserProfile } from '@lezzet/types';
 import { SETTING_BY_KEY, SETTING_CATALOG } from './settings-catalog';
 import { checkBounds, formatSettingValue, parseSettingValue } from './settings-labels';
@@ -19,8 +19,7 @@ function setting(over: Partial<Setting> & { key: string }): Setting {
     value: null,
     description: null,
     updatedAt: '2026-08-01T10:00:00Z',
-    // Arka uç `updated_by`'ı indirdi (talep §7c). Fixture onu AÇIKÇA null tutuyor: "izi yok" da bir
-    // hâl ve testin varsayılanı o olmalı — alanı atlamak tipi gevşetirdi.
+    // `updatedBy` açıkça null: "izi yok" da bir hâldir ve testin varsayılanı odur; alanı atlamak tipi gevşetirdi.
     updatedBy: null,
     ...over,
   };
@@ -223,6 +222,27 @@ describe('fabrika değeri OLMAYAN ayar — kart ödemeleri aktarım hesabı', ()
   it('"varsayılandan farklı" İŞARETLENMEZ — karşılaştırılacak bir normal yok', () => {
     // Kurulumun kendi seçimi; onu "değiştirilmiş" saymak olmayan bir normalden sapma uydurmaktı.
     expect(row([setting({ key: 'card_payout_account_id', value: ACCOUNTS[0]!.id })]).changed).toBe(false);
+  });
+});
+
+describe('fatura şablonu ayarı', () => {
+  const def = SETTING_BY_KEY.get(PENNYLANE_INVOICE_TEMPLATE_KEYS.lezzet)!;
+  const row = (settings: Setting[], templates?: SettingsReadInput['templates']) =>
+    toSettingRows({ settings, zones: ZONES, warehouses: [], templates }).rows.find((r) => r.key === def.key)!;
+
+  // Kimlik dize yazılsaydı okuyan (`templateOf`) onu şablon saymaz, fatura sessizce varsayılan şablonla kesilirdi.
+  it('seçilen şablon sayı olarak yazılır; boş seçim varsayılan şablondur, liste dışı biçim reddedilir', () => {
+    expect(parseSettingValue(def, '46712')).toEqual({ ok: true, value: 46712 });
+    expect(parseSettingValue(def, '')).toEqual({ ok: true, value: '' });
+    expect(parseSettingValue(def, 'Lezzet').ok).toBe(false);
+  });
+
+  // Liste okunamadığında uydurma bir ad ya da sayı biçimli "0" yazmak, kurulu olmayan bir şeyi kurulu gösterirdi.
+  it('satırda şablonun adı görünür; liste okunamadıysa numarası, seçilmemişse uyarısı', () => {
+    const chosen = [setting({ key: def.key, value: 46712 })];
+    expect(row(chosen, [{ id: 46712, name: 'Lezzet Anatolie' }]).display).toBe('Lezzet Anatolie');
+    expect(row(chosen).display).toBe('Şablon #46712');
+    expect(row([])).toMatchObject({ display: '— seçilmedi', unset: true });
   });
 });
 

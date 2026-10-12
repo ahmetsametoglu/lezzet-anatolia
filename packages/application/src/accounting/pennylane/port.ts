@@ -13,6 +13,7 @@ import type {
   PennylaneInvoice,
   PennylaneInvoiceDraft,
   PennylaneInvoicePatch,
+  PennylaneInvoiceTemplate,
   PennylanePaymentStatus,
   PennylaneSupplier,
   PennylaneSupplierDraft,
@@ -82,6 +83,8 @@ export interface PennylanePort {
   /** Taslağı kesinleştirir ve numarasını verir; kesinleşen fatura düzenlenmez, düzeltmesi alacak notudur. */
   finalizeCustomerInvoice(invoiceId: number): Promise<PennylaneCustomerInvoice>;
   sendCustomerInvoice(input: { invoiceId: number; recipients: readonly string[] }): Promise<void>;
+  /** Satış faturası şablonları; işin ayarı faturayı hangisinin basacağını seçer. */
+  listInvoiceTemplates(): Promise<PennylaneInvoiceTemplate[]>;
   listCategoryGroups(): Promise<PennylaneCategoryGroup[]>;
   createCategoryGroup(label: string): Promise<PennylaneCategoryGroup>;
   listCategories(): Promise<PennylaneCategory[]>;

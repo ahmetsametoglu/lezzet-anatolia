@@ -9,19 +9,13 @@ import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
 import type { ActionResult } from '@/lib/error';
 import { SETTING_BY_KEY } from './settings-catalog';
-import { parseSettingValue } from './settings-labels';
+import { invoiceTemplateProblem, parseSettingValue } from './settings-labels';
+import { readInvoiceTemplateList } from './pennylane-read';
 import { SettingWriteSchema, StaffFormSchema } from './settings-types';
 import { SETTINGS_PATH } from './settings-url';
 
-// Ayarlar ekranının yazma kapıları (09.16).
-//
-// **Hepsi `requireAdmin`.** Bir ayar sistemin davranışını değiştirir: kesim saati siparişin hangi
-// güne yazılacağını, tavan kimin kapıda ödeyebileceğini, rol kimin neyi göreceğini belirler.
-// Depocu kendi eşiğini bile değiştiremez — eşiği okuduğu ekran Stok'tur.
-//
-// **Sözlük olmayan anahtar YAZILAMAZ.** Kapı `SETTING_BY_KEY`'e bakar: ekranda görünmeyen bir
-// anahtara bu yoldan değer yazılamaz. Serbest anahtar kabul etmek, ayar tablosunu tanımsız
-// satırlarla dolduran ve hiçbir yerde okunmayan bir çöp kapısı olurdu.
+// Ayarlar ekranının yazma kapıları; hepsi yöneticinin, çünkü bir ayar sistemin davranışını değiştirir (kesim saati, kapı tavanı,
+// roller). Sözlükte olmayan anahtar yazılmaz, yoksa tablo hiçbir yerde okunmayan satırlarla dolardı.
 
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   settings_scoped_key: 'Bu ayarın aynı kapsam için zaten bir istisnası var. Var olanı düzenleyin.',
@@ -63,22 +57,20 @@ export async function saveSettingAction(input: unknown): Promise<ActionResult<{ 
     const value = parseSettingValue(def, parsed.raw);
     if (!value.ok) return { data: null, error: value.error };
 
-    /**
-     * Hesap VARLIĞI burada doğrulanır — biçim `parseSettingValue`'da elendi, varlık orada
-     * elenemez (saf fonksiyon veritabanını görmez).
-     *
-     * Ekranın seçici sunması yeterli değil: action doğrudan çağrılabilir ve o zaman uydurma bir
-     * uuid ayara yazılırdı. Sonucu sessizdir ve geç anlaşılır — kapı önü satış olmayan bir hesaba
-     * para yazmaya başlar, gün sonu mutabakatı tutmaz, kimse ayara bakmaz.
-     *
-     * PASİF hesap da reddedilir: kapatılmış hesap yeni harekete kapalıdır.
-     */
+    // Seçilen hesabın ve şablonun varlığı burada denetlenir: eylem doğrudan çağrılabilir, saf ayrıştırıcı ise veritabanını ve
+    // Pennylane'i görmez. Uydurma hesap kapı satışının parasını sessizce yanlış yere yazardı; kapatılmış hesap yeni harekete kapalıdır.
     if (def.kind === 'account') {
       const account = await new AccountService(serviceDb()).getById(String(value.value));
       if (!account) return { data: null, error: 'Seçilen hesap bulunamadı.' };
       if (!account.isActive) return { data: null, error: `"${account.name}" kapatılmış bir hesap — yeni harekete kapalı.` };
       if (def.accountType && account.type !== def.accountType)
         return { data: null, error: `"${account.name}" bu ayarın beklediği türde bir hesap değil.` };
+    }
+    if (def.kind === 'invoiceTemplate' && value.value !== '') {
+      const list = await readInvoiceTemplateList();
+      if (list.status !== 'ok') return { data: null, error: invoiceTemplateProblem(list) };
+      if (!list.templates.some((template) => template.id === value.value))
+        return { data: null, error: "Seçilen şablon Pennylane'de yok; sayfayı yenileyip yeniden seçin." };
     }
 
     // Açıklama sözlükten yazılır: satırı veritabanında görenin de ne olduğunu okuyabilmesi için.
@@ -95,14 +87,8 @@ export async function saveSettingAction(input: unknown): Promise<ActionResult<{ 
 }
 
 /**
- * Genel değeri fabrika değerine döndürür.
- *
- * Satır SİLİNMEZ, fabrika değeri YAZILIR — ve fark önemli: satır silinseydi yürürlükteki değer
- * çağrı yerlerindeki koda gömülü `fallback`'e düşerdi, o da sözlüktekiyle aynı olmak zorunda
- * değil. Yazmak, ekranın gösterdiği değerin sistemin uyguladığı değer olduğunu garanti eder.
- *
- * İstisnalara DOKUNMAZ: "varsayılana dön" genel değerin sorusudur; istisnayı kaldırmak ayrı ve
- * bilinçli bir eylem.
+ * Genel değeri fabrika değerine döndürür; satır silinmez, fabrika değeri yazılır, çünkü silinen satırda yürürlükteki değer çağrı
+ * yerine gömülü ve sözlüktekinden farklı olabilen `fallback`e düşerdi. İstisnalara dokunmaz: onları kaldırmak ayrı bir karardır.
  */
 export async function resetSettingAction(input: { key: string }): Promise<ActionResult> {
   try {
@@ -143,11 +129,8 @@ export async function removeSettingExceptionAction(input: { id: string; key: str
 // ── Kullanıcı & rol ─────────────────────────────────────────────────────────
 
 /**
- * Personel künyesi + rolleri — tek yazımda.
- *
- * Rol kümesi motora doğrulatılır (`validateRoleSet`), burada yeniden yorumlanmaz: kural
- * `domain-core`'da (müşteri ↔ personel keskin ayrım, boş küme olamaz) ve veritabanında da zorlanır.
- * Buradaki çağrı, reddi ANLAŞILIR kılmak için — kapıya varmadan sebebini söyleyebilelim.
+ * Personelin künyesi ve rolleri tek yazımda. Rol kümesi `validateRoleSet` ile burada da sınanır ki ret, kural `domain-core`'da ve
+ * veritabanında zorlanmadan önce sebebiyle söylensin.
  */
 export async function saveStaffAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {
@@ -182,15 +165,8 @@ const StaffCreateSchema = StaffFormSchema.omit({ id: true }).extend({
 });
 
 /**
- * Yeni personel kaydı.
- *
- * **Hesabı biz açmayız, YOLUNU açarız:** profil e-posta + rollerle yazılır, kişi o adresle giriş
- * yaptığında auth tetikleyicisi profili bağlar ve rolleri OLDUĞU GİBİ bırakır (`0002`). Yani
- * davetin son adımı kişinin kendi girişidir; biz kimse adına parola kurmayız.
- *
- * Var olan bir e-posta REDDEDİLİR, sessizce personel yapılmaz: mevcut bir müşteriyi personele
- * çevirmek `customer` rolünü düşürür ve o kişinin veri görünürlüğünü değiştirir — "+ Kullanıcı"
- * düğmesinin yan etkisi olamayacak kadar büyük bir karar. O yol ayrıca açılacak
+ * Yeni personel kaydı: profil e-posta ve rollerle yazılır, kişi o adresle girince auth tetikleyicisi profili bağlar (`0002`); kimse
+ * adına parola kurulmaz. Var olan e-posta reddedilir, çünkü müşteriyi personele çevirmek görünürlüğünü değiştiren ayrı bir karardır
  * (`BEKLEYEN(09.16)`).
  */
 export async function createStaffAction(input: unknown): Promise<ActionResult<{ id: string }>> {

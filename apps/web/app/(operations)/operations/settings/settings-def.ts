@@ -15,7 +15,8 @@ export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
  * Değerin türü, gösterimi ve düzenleme kontrolünü belirler. `channelFlags`in kanal ayrımı değerin içinde yaşar, istisna satırı
  * olarak değil, yoksa aynı soruya iki cevap kapısı açılırdı.
  */
-export type SettingKind = 'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text' | 'account' | 'choice';
+export type SettingKind =
+  'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text' | 'account' | 'choice' | 'invoiceTemplate';
 
 /** Ayarın değeri — `jsonb` sütununun ekranda karşılık gelen dar hâli. */
 export type SettingValue = string | number | boolean | Record<string, boolean>;

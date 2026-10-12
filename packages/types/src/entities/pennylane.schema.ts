@@ -132,6 +132,10 @@ export const PennylaneCustomerInvoiceLineSchema = z.object({
 });
 export type PennylaneCustomerInvoiceLine = z.infer<typeof PennylaneCustomerInvoiceLineSchema>;
 
+/** Satış faturasının Pennylane'deki görünümü (logo, ticari ad, IBAN); faturayı hangisinin basacağı işin ayarıdır. */
+export const PennylaneInvoiceTemplateSchema = z.object({ id: z.number().int(), name: z.string() });
+export type PennylaneInvoiceTemplate = z.infer<typeof PennylaneInvoiceTemplateSchema>;
+
 /** Kesilecek müşteri faturası; Pennylane onu taslak açar ve toplamları satırlardan kendisi hesaplar. */
 export const PennylaneCustomerInvoiceDraftSchema = z.object({
   customerId: z.number().int(),

@@ -16,6 +16,7 @@ import {
   PennylaneApiInvoiceLinePageSchema,
   PennylaneApiInvoicePageSchema,
   PennylaneApiInvoiceSchema,
+  PennylaneApiInvoiceTemplatePageSchema,
   PennylaneApiMeSchema,
   PennylaneApiSupplierPageSchema,
   PennylaneApiSupplierSchema,
@@ -285,6 +286,9 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     },
     async sendCustomerInvoice({ invoiceId, recipients }) {
       await write('POST', `/customer_invoices/${invoiceId}/send_by_email`, { json: { recipients } });
+    },
+    async listInvoiceTemplates() {
+      return readAll('/customer_invoice_templates', PennylaneApiInvoiceTemplatePageSchema, 'fatura şablonları');
     },
     async findInvoices(filter) {
       const conditions =

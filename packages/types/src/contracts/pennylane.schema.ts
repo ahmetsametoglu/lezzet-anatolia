@@ -93,6 +93,8 @@ export const PennylaneApiTransactionMatchPageSchema = pageOf(z.object({ id: z.nu
 export const PennylaneApiCategoryGroupSchema = z.object({ id: z.number().int(), label: z.string() });
 export const PennylaneApiCategoryGroupPageSchema = pageOf(PennylaneApiCategoryGroupSchema);
 
+export const PennylaneApiInvoiceTemplatePageSchema = pageOf(z.object({ id: z.number().int(), name: z.string() }));
+
 export const PennylaneApiCategorySchema = z.object({
   id: z.number().int(),
   label: z.string(),

@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import type { InvoiceTemplateList } from '@lezzet/application';
 import {
   SettingScopeEnum,
   UserRoleEnum,
   type Account,
   type AccountType,
+  type PennylaneInvoiceTemplate,
   type Setting,
   type UserProfile,
   type UserRole,
@@ -123,6 +125,8 @@ export interface SettingsData {
    * bırakmak, kapı önü satışın parasını kapalı bir kasaya yazmak olurdu.
    */
   accountOptions: AccountOption[];
+  /** `invoiceTemplate` türündeki ayarın seçenekleri; Pennylane kartı görünmüyorsa okunmaz (`null`). */
+  invoiceTemplates: InvoiceTemplateList | null;
   /** Değişikliğin tüm süreçlerde geçerli olacağı azami süre (sn) — ekranın operatöre verdiği söz. */
   propagationSeconds: number;
   /** Kurulum sekmesinin verisi; yalnız o sekme açıkken okunur, öteki sekmelerde `null`. */
@@ -177,4 +181,6 @@ export interface SettingsReadInput {
   warehouses: { id: string; code: string; name: string }[];
   /** Hesaplar — `account` türündeki ayarın ad sözlüğü (`door_cash_account_id`); tür, ayarın beklediğiyle karşılaştırılır. */
   accounts: Pick<Account, 'id' | 'name' | 'type'>[];
+  /** Pennylane'deki fatura şablonları — `invoiceTemplate` türündeki ayarın ad sözlüğü. */
+  templates: PennylaneInvoiceTemplate[];
 }

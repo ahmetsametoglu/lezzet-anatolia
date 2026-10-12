@@ -158,9 +158,11 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   B2B nakdi kasaya fiş olarak değil kasa girişi olarak gider (`register/plan.ts`, `sync.ts`).
 
 **Faz 4 — satış faturası Pennylane'de**
-- S0 (kullanıcı): iki işin şablonu (logo, ticari ad, IBAN, "açıklamaya fatura numarasını yazın"). Şablon kimlikleri Ayarlar ›
-  Pennylane'e girilir; boşsa fatura Pennylane'in varsayılan şablonuyla kesilir. Anahtar bütün yetkilerle açıldı (kullanıcı, 12.10);
-  müşteri ve müşteri faturası erişimi ilk okumada ölçülür.
+- S0 (kullanıcı): iki işin şablonu Pennylane'de açılır (Paramètres › Facturation client › Personnalisation, "Invoice template";
+  logo, ticari ad, IBAN, "açıklamaya fatura numarasını yazın"). Şablon sayısı Pennylane planına bağlıdır, iki şablon en az Basique
+  ister. Ayarlar › Pennylane'de şablon adıyla seçilir: liste arka ucun anahtarı ve kipiyle (`PENNYLANE_MODE`) Pennylane'den okunur,
+  kimlik sayı olarak saklanır; boşsa fatura Pennylane'in varsayılan şablonuyla kesilir. Anahtar bütün yetkilerle açıldı (kullanıcı,
+  12.10); şablon listesi sandbox'ta okundu, müşteri ve müşteri faturası erişimi ilk kesimde ölçülür.
 - Satış faturası bizde belge olur: `money_document` (karşı taraf müşteri, yön giriş), siparişleri `money_document_order`, akışı
   `sales_invoice` (onay bekliyor · kuyrukta · kesildi) ([`data-model/para.md`](../architecture/data-model/para.md)).
 - **Açılış (tamamlandı):** backend işi on dakikada bir faturası açılmamış satışları tarar. Aday, kasanın yazmadığı satıştır (kanal

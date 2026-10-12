@@ -10,26 +10,23 @@ import { MoneyField, PercentField } from '@/components/operation/form/money-inpu
 import { Select } from '@/components/operation/form/select';
 import { ToggleField } from '@/components/operation/form/toggle';
 import { removeSettingExceptionAction, resetSettingAction, saveSettingAction } from './actions';
-import { channelLabel, checkBounds, parseSettingValue, SCOPE_AXIS_LABELS, toEditableNumber } from './settings-labels';
-import type { AccountOption, ExceptionScope, ScopeOptions, SettingRowView } from './settings-types';
+import {
+  channelLabel,
+  checkBounds,
+  DEFAULT_TEMPLATE_OPTION,
+  invoiceTemplateProblem,
+  parseSettingValue,
+  SCOPE_AXIS_LABELS,
+  toEditableNumber,
+} from './settings-labels';
+import type { AccountOption, ExceptionScope, ScopeOptions, SettingRowView, SettingsData } from './settings-types';
 import type { SettingValue } from './settings-catalog';
 import { useDialogAction } from './use-dialog-action.hook';
 
 /**
- * Ayar düzenleme penceresi (09.16).
- *
- * ── ÜÇ BÖLÜM, ÜÇ AYRI SORU ──────────────────────────────────────────────────
- * 1. **Genel değer** — "normalde ne olsun". Altında fabrika değeri yazılı.
- * 2. **İstisnalar** — "nerede farklı olsun". Yalnız sözlüğün izin verdiği eksenler sunulur; izin
- *    vermeyen ayarda bölüm hiç çizilmez (boş bir "istisna ekle" düğmesi, olmayan bir yeteneği
- *    varmış gibi gösterir).
- * 3. **Etki** — geniş etkili ayarlarda uyarı. Bilinçli onay tasarımın isteği (`§3`); uyarı
- *    kaydetmeyi engellemez, kararı görünür kılar.
- *
- * ── SINIR İKİ KEZ DENETLENİR VE BU KOPYA DEĞİL ──────────────────────────────
- * Kutunun altındaki uyarı `checkBounds`'tan gelir, kaydetmedeki ret de aynı fonksiyondan (server
- * action `parseSettingValue` üzerinden çağırıyor). Tek kural, iki gösterim anı: biri yazarken
- * uyarır, öteki yürürlüğü sağlar.
+ * Ayar düzenleme penceresi: genel değer, izin verilen eksenlerde istisnalar ve geniş etkili ayarda uyarı; izin olmayan bölüm hiç
+ * çizilmez, çünkü boş bir "istisna ekle" olmayan bir yeteneği varmış gibi gösterirdi. Yazarken görünen sınır uyarısı ile kaydetmedeki
+ * ret aynı fonksiyondandır (`checkBounds`), kural yürürlüğe sunucuda girer.
  */
 
 interface SettingDialogProps {
@@ -37,12 +34,21 @@ interface SettingDialogProps {
   scopeOptions: ScopeOptions;
   /** `account` türündeki ayarın seçenekleri — yalnız aktif hesaplar (`page.tsx`). */
   accountOptions: AccountOption[];
+  invoiceTemplates: SettingsData['invoiceTemplates'];
   propagationSeconds: number;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function SettingDialog({ row, scopeOptions, accountOptions, propagationSeconds, onClose, onSaved }: SettingDialogProps) {
+export function SettingDialog({
+  row,
+  scopeOptions,
+  accountOptions,
+  invoiceTemplates,
+  propagationSeconds,
+  onClose,
+  onSaved,
+}: SettingDialogProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(row, row.value));
   const { busy, running, error, run } = useDialogAction(onSaved);
 
@@ -97,7 +103,14 @@ export function SettingDialog({ row, scopeOptions, accountOptions, propagationSe
     >
       <div className="flex flex-col gap-4">
         <section className="flex flex-col gap-1.5">
-          <ValueEditor row={row} draft={draft} onChange={setDraft} label="Genel değer" accountOptions={accountOptions} />
+          <ValueEditor
+            row={row}
+            draft={draft}
+            onChange={setDraft}
+            label="Genel değer"
+            accountOptions={accountOptions}
+            invoiceTemplates={invoiceTemplates}
+          />
           {/* Fabrika değeri olmayan ayarda "Varsayılan: —" yazmak, olmayan bir normal uydurmak
               olurdu; onun yerine değerin NİYE kurulum-özgü olduğu söyleniyor. */}
           <span className="font-ops-body text-ops-micro text-ops-faint">
@@ -158,6 +171,7 @@ export function SettingDialog({ row, scopeOptions, accountOptions, propagationSe
                   onChange={setExceptionDraft}
                   label="Bu kapsamdaki değer"
                   accountOptions={accountOptions}
+                  invoiceTemplates={invoiceTemplates}
                 />
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="secondary" disabled={busy} onClick={() => setExceptionAxis(null)}>
@@ -228,9 +242,11 @@ interface ValueEditorProps {
   label: string;
   /** `account` türü için seçenekler; başka türlerde kullanılmaz. */
   accountOptions: AccountOption[];
+  /** `invoiceTemplate` türü için Pennylane'deki şablonlar; başka türlerde kullanılmaz. */
+  invoiceTemplates: SettingsData['invoiceTemplates'];
 }
 
-function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEditorProps) {
+function ValueEditor({ row, draft, onChange, label, accountOptions, invoiceTemplates }: ValueEditorProps) {
   switch (row.kind) {
     case 'money':
       return (
@@ -273,14 +289,8 @@ function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEdito
       return (
         <InputField label={label} value={typeof draft.raw === 'string' ? draft.raw : ''} onChange={(e) => onChange({ raw: e.target.value, numeric: null })} />
       );
-    /**
-     * Hesap SEÇİLİR, yazılmaz. Serbest kutu bırakmak operatörden bir uuid ezberlemesini istemek
-     * olurdu; seçici hem o işi yapıyor hem yanlış kimliğin ilk kapısını kapatıyor (ikincisi
-     * `saveSettingAction`'da, çünkü ekranın kısıtı action'ı bağlamaz).
-     *
-     * Liste YALNIZ aktif hesapları taşır (`page.tsx`) — kapatılmış hesap yeni harekete kapalıdır. Ayar bir hesap türü bekliyorsa
-     * yalnız o türdekiler sunulur: aktarımın banka yerine ödeme sağlayıcısına yazılması kendine transfer olurdu.
-     */
+    // Hesap seçilir, yazılmaz: serbest kutu uuid ezberletirdi. Ayar bir hesap türü bekliyorsa yalnız o türdekiler sunulur, çünkü
+    // aktarımın banka yerine ödeme sağlayıcısına yazılması kendine transfer olurdu.
     case 'account': {
       const options = accountOptions.filter((option) => !row.accountType || option.type === row.accountType);
       return (
@@ -294,7 +304,7 @@ function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEdito
         </FieldShell>
       );
     }
-    // Seçenekli ayar (15.30): hesap seçiciyle aynı kap — listeden seçilir, yazılmaz.
+    // Seçenekli ayar hesap seçiciyle aynı kaptadır: değer listeden seçilir, yazılmaz.
     case 'choice':
       return (
         <FieldShell label={label}>
@@ -306,6 +316,21 @@ function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEdito
           />
         </FieldShell>
       );
+    // Liste okunamazsa seçici kapanır ve sebebi yazılır; kayıtlı seçim değişmeden kalır.
+    case 'invoiceTemplate': {
+      const templates = invoiceTemplates?.status === 'ok' ? invoiceTemplates.templates : null;
+      return (
+        <FieldShell label={label} error={invoiceTemplates?.status === 'ok' ? undefined : invoiceTemplateProblem(invoiceTemplates)}>
+          <Select
+            value={typeof draft.raw === 'string' ? draft.raw : ''}
+            onChange={(v) => onChange({ raw: v, numeric: null })}
+            placeholder={row.display}
+            options={[DEFAULT_TEMPLATE_OPTION, ...(templates ?? []).map((t) => ({ value: String(t.id), label: t.name }))]}
+            disabled={templates === null}
+          />
+        </FieldShell>
+      );
+    }
     case 'boolean':
       return <ToggleField label={label} on={draft.raw === true} onChange={(on) => onChange({ raw: on, numeric: null })} />;
     case 'channelFlags': {

@@ -17,7 +17,7 @@ import { toScopeOptions, toSettingRows, toStaffRows } from './settings-read';
 import { readSiteImages } from './site-images-read';
 import { readMcpPanel } from './mcp-read';
 import { readRegisterPanel } from './register-read';
-import { readPennylanePanel } from './pennylane-read';
+import { readInvoiceTemplateList, readPennylanePanel } from './pennylane-read';
 import { readIntegrationKeyCount, readIntegrationKeysPanel } from './integration-keys-read';
 import { parseSettingsUrl } from './settings-url';
 import type { SettingsData, SetupData } from './settings-types';
@@ -43,7 +43,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const urlState = parseSettingsUrl(await searchParams);
   const db = serviceDb();
 
-  const [settings, staff, zones, warehouses, accounts, setup, connections, connectionCount] = await Promise.all([
+  const [settings, staff, zones, warehouses, accounts, setup, connections, connectionCount, invoiceTemplates] = await Promise.all([
     readAllSettings(new SettingsService(db)),
     readStaff(new UserProfileService(db)),
     new DeliveryZoneService(db).list(),
@@ -54,9 +54,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     urlState.tab === 'setup' ? readSetup() : Promise.resolve(null),
     urlState.tab === 'connections' ? readIntegrationKeysPanel() : Promise.resolve(null),
     readIntegrationKeyCount(),
+    // Şablon adları Pennylane'den canlı okunur, bu yüzden yalnız Pennylane kartı görünebilirken: Para sekmesinde ya da aramada.
+    urlState.tab === 'money' || urlState.q ? readInvoiceTemplateList() : Promise.resolve(null),
   ]);
 
-  const { rows } = toSettingRows({ settings, zones, accounts, warehouses });
+  const templates = invoiceTemplates?.status === 'ok' ? invoiceTemplates.templates : undefined;
+  const { rows } = toSettingRows({ settings, zones, accounts, warehouses, templates });
 
   const data: SettingsData = {
     rows,
@@ -66,6 +69,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     // Araçlar da burada, çünkü kuryenin aracı kapsamından bulunur; elense kurye araç stoğunu göremezdi.
     warehouseOptions: warehouses.filter((w) => w.isActive).map((w) => ({ value: w.id, label: `${w.code} · ${w.name}` })),
     accountOptions: accounts.filter((a) => a.isActive).map((a) => ({ value: a.id, label: a.name, type: a.type })),
+    invoiceTemplates,
     propagationSeconds: Math.round(SETTINGS_CACHE_TTL_MS / 1000),
     setup,
     connections,

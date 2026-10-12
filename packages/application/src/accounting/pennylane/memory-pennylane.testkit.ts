@@ -10,6 +10,7 @@ import type {
   PennylaneCustomerInvoice,
   PennylaneCustomerInvoiceDraft,
   PennylaneInvoiceDraft,
+  PennylaneInvoiceTemplate,
   PennylanePaymentStatus,
   PennylaneSupplierDraft,
   PennylaneTransaction,
@@ -72,6 +73,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   /** Hareket başına eşlenen faturalar. */
   const matches = new Map<number, number[]>();
   const categoryGroups = new Map<number, PennylaneCategoryGroup>();
+  const invoiceTemplates = new Map<number, PennylaneInvoiceTemplate>();
   const categories = new Map<number, PennylaneCategory>();
   /** Kayıt başına kategoriler ve ağırlıkları; anahtar `invoice:<kimlik>` ya da `transaction:<kimlik>`. */
   const assignedCategories = new Map<string, PennylaneAssignedCategory[]>();
@@ -254,6 +256,10 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       if (!row) throw notFound();
       row.sentTo.push([...recipients]);
     },
+    listInvoiceTemplates: async () => {
+      failing('listInvoiceTemplates');
+      return [...invoiceTemplates.values()];
+    },
     findInvoices: async (filter) => {
       failing('findInvoices');
       return [...invoices.values()]
@@ -373,6 +379,11 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     addBankAccount(name: string): number {
       const id = (nextId += 1);
       bankAccounts.set(id, { id, name, currency: 'EUR' });
+      return id;
+    },
+    addInvoiceTemplate(name: string): number {
+      const id = (nextId += 1);
+      invoiceTemplates.set(id, { id, name });
       return id;
     },
     /** Hesap Pennylane'den kalkar; hareketleri de listeden düşer, akışa olay düşmez. */

@@ -665,6 +665,7 @@ export {
   type SecretLookup,
 } from './integration/secrets';
 export { pennylaneFromSecrets } from './accounting/pennylane/client';
+export { readInvoiceTemplates, type InvoiceTemplateList } from './accounting/pennylane/invoice-templates';
 export {
   BANK_FEED_QUIET_JOB,
   PENNYLANE_SYNC_JOB,

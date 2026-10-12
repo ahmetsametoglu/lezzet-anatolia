@@ -229,7 +229,7 @@ function DefaultNote({ row }: { row: SettingRowView }) {
   return <span className="font-ops-body text-ops-micro text-ops-faint">varsayılan {row.fallbackDisplay}</span>;
 }
 
-const TEXT_KINDS = new Set<SettingRowView['kind']>(['account', 'text', 'channelFlags', 'choice']);
+const TEXT_KINDS = new Set<SettingRowView['kind']>(['account', 'text', 'channelFlags', 'choice', 'invoiceTemplate']);
 
 function ValueView({ row }: { row: SettingRowView }) {
   if (row.kind === 'boolean') {

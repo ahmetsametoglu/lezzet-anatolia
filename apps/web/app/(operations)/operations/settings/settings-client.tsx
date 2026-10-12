@@ -68,6 +68,7 @@ export function SettingsClient({ data, urlState }: SettingsClientProps) {
           row={editing}
           scopeOptions={data.scopeOptions}
           accountOptions={data.accountOptions}
+          invoiceTemplates={data.invoiceTemplates}
           propagationSeconds={data.propagationSeconds}
           onClose={() => setEditingKey(null)}
           // Pencere sayfayı kendisi tazeler ve yeni değer çizilince kapanır (`useDialogAction`).

@@ -20,19 +20,21 @@ import type {
  */
 
 /**
- * `accounts` İSTEĞE BAĞLI ve bu bilinçli: verilmezse kimlik taşıyan değer ham uuid olarak görünür
- * (`formatSettingValue` künyesi — uydurma bir ad, yanlış bir şeyin düzeldiğini düşündürürdü).
- * Sayfa onu daima veriyor; gevşeklik yalnız bu saf fonksiyonun kendi başına sınanabilmesi için.
+ * `accounts` ve `templates` İSTEĞE BAĞLI: verilmezse kimlik taşıyan değer kimliğiyle görünür, çünkü uydurma bir ad yanlış bir şeyin
+ * düzeldiğini düşündürürdü. Şablonlar yalnız Pennylane kartı görünebilirken okunur (`page.tsx`).
  */
 export function toSettingRows(
-  input: Pick<SettingsReadInput, 'settings' | 'zones' | 'warehouses'> & Partial<Pick<SettingsReadInput, 'accounts'>>,
+  input: Pick<SettingsReadInput, 'settings' | 'zones' | 'warehouses'> & Partial<Pick<SettingsReadInput, 'accounts' | 'templates'>>,
 ): { rows: SettingRowView[] } {
   const zoneNames = new Map(input.zones.map((z) => [z.id, z.name]));
   // Ad sözlüğü TÜM depolardan (aktif süzgeci YOK): kapalı bir depoya yazılmış eski bir istisna
   // adıyla görünmeli — görünmeyen bir istisna kaldırılamaz ve sessizce okunmaya devam eder.
   const warehouseNames = new Map(input.warehouses.map((w) => [w.id, `${w.code} · ${w.name}`]));
   // Kimlik taşıyan değerlerin ad sözlüğü — `door_cash_account_id` uuid tutuyor, ekranda "Kasa" yazar.
-  const names = { accounts: new Map((input.accounts ?? []).map((a) => [a.id, a.name])) };
+  const names = {
+    accounts: new Map((input.accounts ?? []).map((a) => [a.id, a.name])),
+    templates: new Map((input.templates ?? []).map((t) => [String(t.id), t.name])),
+  };
   const accountTypes = new Map((input.accounts ?? []).map((a) => [a.id, a.type]));
   const byKey = new Map<string, Setting[]>();
   for (const row of input.settings) {
@@ -170,7 +172,7 @@ function initialsOf(name: string): string {
 
 /** Seçim ya da metin bekleyen türlerde boş değer; sayısal türde boşluk olmaz, fabrika değeri durur. */
 function isUnset(def: SettingDef, value: SettingValue): boolean {
-  if (def.kind !== 'account' && def.kind !== 'text' && def.kind !== 'choice') return false;
+  if (def.kind !== 'account' && def.kind !== 'text' && def.kind !== 'choice' && def.kind !== 'invoiceTemplate') return false;
   return String(value ?? '').trim() === '';
 }
 

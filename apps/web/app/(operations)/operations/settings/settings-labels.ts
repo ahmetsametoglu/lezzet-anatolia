@@ -1,3 +1,4 @@
+import type { InvoiceTemplateList } from '@lezzet/application';
 import { toCents, fromCents } from '@lezzet/helper';
 import type { StaffRole } from '@lezzet/types';
 import { money, num } from '@/components/operation/ui/format';
@@ -46,6 +47,7 @@ export function channelLabel(id: string): string {
  */
 interface SettingValueNames {
   accounts?: ReadonlyMap<string, string>;
+  templates?: ReadonlyMap<string, string>;
 }
 
 /** Değerin operatöre gösterilen hâli. */
@@ -81,7 +83,23 @@ export function formatSettingValue(def: SettingDef, value: SettingValue, names: 
       const id = String(value ?? '').trim();
       return def.choices?.find((c) => c.value === id)?.label ?? (id || '— seçilmedi');
     }
+    case 'invoiceTemplate': {
+      const id = String(value ?? '').trim();
+      if (!id) return '— seçilmedi';
+      return names.templates?.get(id) ?? `Şablon #${id}`;
+    }
   }
+}
+
+/** Şablon seçicisinin boş seçimi: ayar boş kalır ve fatura Pennylane'in varsayılan şablonuyla kesilir. */
+export const DEFAULT_TEMPLATE_OPTION = { value: '', label: "Pennylane'in varsayılan şablonu" };
+
+/** Şablon listesi okunamadığında seçicinin altında ve kaydetme reddinde görünen sebep. */
+export function invoiceTemplateProblem(list: Exclude<InvoiceTemplateList, { status: 'ok' }> | null): string {
+  if (list === null) return 'Şablon listesi bu görünümde okunmadı; ayarı Para sekmesinden açın.';
+  return list.status === 'not_configured'
+    ? 'Pennylane anahtarı ya da kipi tanımlı değil; şablonlar okunamıyor.'
+    : `Pennylane'den şablonlar okunamadı: ${list.message}`;
 }
 
 /** Düzenleme kutusuna yazılacak başlangıç metni — para/yüzde kutuları SAYI ister. */
@@ -122,6 +140,13 @@ export function parseSettingValue(def: SettingDef, raw: string | boolean | Recor
   if (def.kind === 'account') {
     if (!UUID.test(text)) return { ok: false, error: 'Listeden bir hesap seçin.' };
     return { ok: true, value: text };
+  }
+
+  // Boş seçim Pennylane'in varsayılan şablonudur. Kimlik sayı yazılır, çünkü okuyan (`templateOf`) dizeyi şablon saymaz.
+  if (def.kind === 'invoiceTemplate') {
+    if (text === '') return { ok: true, value: '' };
+    if (!/^\d+$/.test(text)) return { ok: false, error: 'Listeden bir şablon seçin.' };
+    return { ok: true, value: Number(text) };
   }
 
   if (def.kind === 'time') {

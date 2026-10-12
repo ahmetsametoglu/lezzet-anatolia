@@ -1,7 +1,15 @@
 import 'server-only';
 
 import { AccountService, JobRunService, PennylaneBankAccountService, PennylaneQueueService, serviceDb } from '@lezzet/database';
-import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB, bankFeedStatus, pennylaneConnectionOf } from '@lezzet/application';
+import {
+  BANK_FEED_QUIET_JOB,
+  PENNYLANE_SYNC_JOB,
+  bankFeedStatus,
+  pennylaneConnectionOf,
+  pennylaneFromSecrets,
+  readInvoiceTemplates,
+  type InvoiceTemplateList,
+} from '@lezzet/application';
 import { pennylaneBlockReasonLabel } from '@lezzet/i18n';
 import type { PennylaneBankAccountMirror } from '@lezzet/types';
 import { jobView, readQueueView, type SetupJobView, type SetupQueueView } from './setup-trace';
@@ -29,6 +37,9 @@ export interface PennylanePanelData {
   sync: SetupJobView | null;
   quietCheck: SetupJobView | null;
 }
+
+/** Sayfanın şablon listesini beklediği en uzun süre; istemci okumayı 20 saniyelik denemelerle üç kez tekrarlar. */
+const TEMPLATE_WAIT_MS = 5_000;
 
 /** Turun kendini atlama sebebi, operatörün diliyle. */
 const JOB_SKIP_LABEL: Record<string, string> = {
@@ -77,4 +88,21 @@ export async function readPennylanePanel(): Promise<PennylanePanelData> {
     sync: sync ? jobView(sync, JOB_SKIP_LABEL) : null,
     quietCheck: quietCheck ? jobView(quietCheck, JOB_SKIP_LABEL) : null,
   };
+}
+
+/**
+ * Fatura şablonları arka ucun anahtarı ve kipiyle okunur ki seçilen şablon faturayı kesecek şirketin olsun. Pennylane geç cevap
+ * verirse sayfa beklemez, seçici sebebini yazar.
+ */
+export async function readInvoiceTemplateList(): Promise<InvoiceTemplateList> {
+  const pennylane = await pennylaneFromSecrets(serviceDb());
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<InvoiceTemplateList>((resolve) => {
+    timer = setTimeout(() => resolve({ status: 'failed', message: `${TEMPLATE_WAIT_MS / 1000} saniyede cevap gelmedi` }), TEMPLATE_WAIT_MS);
+  });
+  try {
+    return await Promise.race([readInvoiceTemplates(pennylane), late]);
+  } finally {
+    clearTimeout(timer);
+  }
 }

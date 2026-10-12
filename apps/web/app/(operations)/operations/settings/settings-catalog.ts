@@ -331,10 +331,9 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   ...BusinessEnum.options.map((business) => ({
     key: PENNYLANE_INVOICE_TEMPLATE_KEYS[business],
     label: `Fatura şablonu — ${BUSINESS_LABELS[business]}`,
-    help: `${BUSINESS_LABELS[business]} satış faturalarının kesildiği Pennylane şablonunun kimliği (logo, ticari ad, IBAN).`,
+    help: `${BUSINESS_LABELS[business]} satış faturalarını basan Pennylane şablonu (logo, ticari ad, IBAN); liste Pennylane'den okunur.`,
     section: 'bankFeed' as const,
-    kind: 'integer' as const,
-    min: 1,
+    kind: 'invoiceTemplate' as const,
     unsetNote: "Fatura Pennylane'in varsayılan şablonuyla kesilir.",
     exceptionScopes: NONE,
   })),
