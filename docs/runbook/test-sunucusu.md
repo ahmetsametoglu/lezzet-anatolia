@@ -178,7 +178,7 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    `scripts/seed-real/data/urun-kunyeleri.json` AYNASINDAN okur (`seed-real/kunye.ts`). Ayna elle
    yazılmaz, betikle çekilir: sunucuda `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet npx tsx
    scripts/seed-real-ayna.ts --out=/tmp/ayna`; üç dosya (iki künye aynası + `stok-sayimi.json`) depoya kopyalanır; çelişkide kazanan veritabanıdır. `data.ts` yalnız faturayı
-   (kalem, adet, alış fiyatı), işletmecinin kararlarını (kategori, koleksiyon, paket, tarif,
+   (kalem, adet, alış fiyatı), işletmecinin kararlarını (kategori, koleksiyon, tarif,
    `SALE_PRICES`) ve kapakları taşır. Künyesi aynada olmayan taslak beslemeyi DURDURUR.
 
    **İKİ ayna var, ikisi de aynı kuralla:** `urun-kunyeleri.json` TASLAKLARIN künyesi (ürünü o kurar),

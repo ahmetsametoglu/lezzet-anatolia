@@ -3,7 +3,6 @@
 // yapılan düzeltme yeniden çalıştırmada ezilmesin.
 import { receivePurchase } from '@lezzet/application';
 import {
-  BundleService,
   CategoryImageService,
   CategoryService,
   CollectionService,
@@ -27,7 +26,7 @@ import {
   WarehouseService,
   waitForRest,
 } from '@lezzet/database';
-import { canPublishProduct, purchaseOrderReferenceNo, rebalanceAllocations } from '@lezzet/domain-core';
+import { canPublishProduct, purchaseOrderReferenceNo } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { PRODUCT_GALLERY_MAX, type LocalizedText, type PortionKind, type Product } from '@lezzet/types';
 
@@ -40,8 +39,6 @@ import { gorselOzeti, r2Keys, uploadImageFromPath, uploadImageFromUrl } from './
 import { seedSiteImages } from './seed/site-image';
 import {
   ADAY_SKULARI,
-  BUNDLE_DISCOUNT,
-  BUNDLES,
   CATEGORIES,
   COLLECTIONS,
   DRAFT_CATEGORY,
@@ -83,7 +80,7 @@ type AnyDraft = Draft | (typeof EK_TASLAKLAR)[number];
 /** Taslağın fatura satırları — faturasız taslakta boş dizi. */
 const faturaSatirlari = (draft: AnyDraft): Draft['variants'] => ('variants' in draft ? draft.variants : []);
 type Line = Purchase['catalog'][number] | Draft['variants'][number];
-type SeedLine = (typeof BUNDLES)[number]['items'][number];
+type SeedLine = (typeof RECIPES)[number]['items'][number];
 
 /** Bütün taslaklar tek listede — faturalı olanlar tedarikçisiyle, faturasızlar tedarikçisiz. */
 const VERI_TASLAKLARI: Array<{ draft: AnyDraft; supplier: string | null }> = [
@@ -109,7 +106,7 @@ const TASLAKLAR: Array<{ draft: AnyDraft; supplier: string | null }> = [
 const kategoriOf = (draft: AnyDraft): string | undefined => KUNYELER[draftName(draft)]?.category ?? DRAFT_CATEGORY[draft.name];
 
 /**
- * Faturadaki ad → katalogdaki Türkçe ad; koleksiyon, paket ve aile üyeliği faturadaki adla yazılı.
+ * Faturadaki ad → katalogdaki Türkçe ad; koleksiyon, tarif ve aile üyeliği faturadaki adla yazılı.
  * Faturasız taslak kendi Türkçe adıyla anılır, o yüzden eşleme onda birim (`draftName` aynısını döner).
  */
 const TASLAK_ADI = new Map(TASLAKLAR.map(({ draft }) => [draft.name, draftName(draft)]));
@@ -373,12 +370,12 @@ function checkSalePrices(): void {
   }
 }
 
-/** Paket ve tarif kalemi faturadaki bir kaleme bağlanmalı; yazım hatası yazmaya başlamadan yakalanır. */
-function checkBundleAndRecipeLines(): void {
+/** Tarif kalemi faturadaki bir kaleme bağlanmalı; yazım hatası yazmaya başlamadan yakalanır. */
+function checkRecipeLines(): void {
   const skus = new Set(PURCHASES.flatMap((p) => p.catalog.map((line) => line.sku)));
   const drafts = new Map(PURCHASES.flatMap((p) => p.drafts).map((d) => [d.name, d]));
   const bozuk: string[] = [];
-  for (const { name, items } of [...BUNDLES, ...RECIPES]) {
+  for (const { name, items } of RECIPES) {
     for (const line of items) {
       if ('sku' in line) {
         if (!skus.has(line.sku)) bozuk.push(`${name.tr}: ${line.sku}`);
@@ -390,7 +387,7 @@ function checkBundleAndRecipeLines(): void {
       if (!bulundu) bozuk.push(`${name.tr}: ${line.draft}${line.label ? ` (${line.label})` : ''}`);
     }
   }
-  if (bozuk.length > 0) throw new Error(`faturada karşılığı olmayan paket/tarif kalemi: ${bozuk.join(' · ')}`);
+  if (bozuk.length > 0) throw new Error(`faturada karşılığı olmayan tarif kalemi: ${bozuk.join(' · ')}`);
 }
 
 /** Kategori kapağı: katalogdaki kare · depodaki usta · markanın mağazası. R2 ayarsızsa null döner. */
@@ -927,62 +924,6 @@ async function lineVariantId(line: SeedLine, variants: ProductVariantService, ur
   return boy?.id ?? null;
 }
 
-/** Liste toplamının `BUNDLE_DISCOUNT` altı, 90 kuruşa yuvarlanmış — işletmecinin paket fiyatı kuralı. */
-const paketHedefi = (listeCents: number) => Math.round((listeCents * (1 - BUNDLE_DISCOUNT)) / 100) * 100 - 10;
-
-const euro = (cents: number) => `${(cents / 100).toFixed(2)} €`;
-
-async function seedBundles(db: Db): Promise<void> {
-  console.log('▸ paketler');
-  const bundles = new BundleService(db);
-  const variants = new ProductVariantService(db);
-  const prices = new PriceService(db);
-  const existing = await bundles.listAll();
-  const urunler = await new ProductService(db).listAll();
-  for (const [i, paket] of BUNDLES.entries()) {
-    if (existing.some((b) => b.name.tr === paket.name.tr)) {
-      done(`paket · ${paket.name.tr}`);
-      continue;
-    }
-    const ids = await Promise.all(paket.items.map((line) => lineVariantId(line, variants, urunler)));
-    const bulunan = ids.filter((id): id is string => id !== null);
-    const fiyatlar = await prices.findApplicableMap(bulunan, 'b2c');
-    const kalemler = paket.items.map((line, k) => {
-      const variantId = ids[k] ?? null;
-      return { variantId, qty: line.qty, listeCents: variantId ? (fiyatlar.get(variantId)?.channelPrice?.amountCents ?? null) : null };
-    });
-    const eksik = kalemler.filter((k) => k.variantId === null || k.listeCents === null).length;
-    // Kuru koşuda ürün ve fiyat henüz yazılmadığı için eksik görünür; uyarı gerçek eksikliği gizlemesin (`seedPurchases` aynı ayrımı yapıyor).
-    if (eksik > 0) {
-      console.log(
-        `  ${DRY_RUN ? '○' : '⚠'} paket · ${paket.name.tr} — ${eksik} kalemin varyantı ya da fiyatı ${DRY_RUN ? 'henüz yok; önceki adımlar yazılınca kurulur' : 'yok, yazılmadı'}`,
-      );
-      continue;
-    }
-    const hazir = kalemler.map((k) => ({ variantId: k.variantId as string, qty: k.qty, listeCents: k.listeCents as number }));
-    const listeCents = hazir.reduce((toplam, k) => toplam + k.listeCents * k.qty, 0);
-    // Paylar liste fiyatlarına oransal dağılır; adetli kalemde hedef kuruşuna tutmayabilir, o zaman fiyat ulaşılan toplamdır.
-    const paylar = rebalanceAllocations(
-      hazir.map((k) => ({ qty: k.qty, allocatedUnitPriceCents: k.listeCents })),
-      paketHedefi(listeCents),
-    );
-    if (paylar.residualCents !== 0) console.log(`  ⚠ paket · ${paket.name.tr} — paylar hedefi ${paylar.residualCents} kuruşla tutturamadı`);
-    plan(`paket · ${paket.name.tr} · ${hazir.length} kalem · ${euro(listeCents)} → ${euro(paylar.achievedTotalCents)}`);
-    if (DRY_RUN) continue;
-    await bundles.create({
-      name: paket.name,
-      description: paket.description,
-      totalPrice: paylar.achievedTotalCents / 100,
-      serves: paket.serves ?? null,
-      // Alan işletmecinin niyetidir; kalemin ürünü satışta değilse paketi vitrinden motor düşürür (`listSellable`).
-      isActive: true,
-      isFeatured: paket.isFeatured ?? false,
-      sortOrder: i + 1,
-      items: hazir.map((k, n) => ({ variantId: k.variantId, qty: k.qty, allocatedUnitPrice: (paylar.unitPricesCents[n] ?? 0) / 100 })),
-    });
-  }
-}
-
 async function seedRecipes(db: Db): Promise<void> {
   console.log('▸ tarifler');
   const recipes = new RecipeService(db);
@@ -1254,7 +1195,7 @@ async function main(): Promise<void> {
   checkKunyeler();
   checkDraftCategories();
   checkSalePrices();
-  checkBundleAndRecipeLines();
+  checkRecipeLines();
   const db = createServiceRoleClient();
   console.log(`▸ GERÇEK BESLEME${DRY_RUN ? ' · KURU KOŞU (yazılmaz)' : ''} · ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(adres yok)'}`);
   await waitForRest(db);
@@ -1274,8 +1215,6 @@ async function main(): Promise<void> {
   await seedMasaFiyatlari(db);
   // Uydurma fiyat gerçeklerden SONRA: var olan fiyatın üstüne yazmaz.
   if (LAYERS >= 3) await seedTestCatalogPrices(db);
-  // Paket fiyatı liste fiyatlarından türediği için fiyatlardan sonra.
-  await seedBundles(db);
   await seedRecipes(db);
   // Sayfa görselleri kuru koşuda YÜKLENMEZ: fonksiyon slot doluysa atlar, boşsa kovaya yazar.
   if (DRY_RUN) console.log(`▸ sayfa görselleri\n  ○ ${SAYFA_GORSELLERI.map((g) => g.slot).join(' · ')} — eklenecek`);
