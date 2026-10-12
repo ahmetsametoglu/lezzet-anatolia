@@ -65,7 +65,7 @@ export function scanSaleCode(code: string, scope: SaleScope): Promise<ApiResult<
   return saleFetch(`/api/v1/sale/scan${queryString({ locale: 'tr', code })}`, scope, SaleScanResponseSchema);
 }
 
-/** Satışın kesin tutarı, yazım yok: kart bu tutarla çekilir, satış ondan sonra yazılır. */
+/** Satışın kesin tutarı, yazım yok: nakit ve kart bu tutarla alınır, satış ondan sonra yazılır. */
 export function quoteOnSiteSale(
   body: OnSiteSaleQuoteRequest,
   scope: SaleScope,

@@ -73,8 +73,8 @@ export function PickupScreen() {
   const pickup = usePickup();
   const [scanOpen, setScanOpen] = useState(false);
   const [keypadOpen, setKeypadOpen] = useState(false);
-  /** Kartla tahsilatın onay çekmecesi; teslim "Kart ödemesi alındı" denince yazılır, çünkü tahsilat yazıldığı anda kasaya gider. */
-  const [cardConfirm, setCardConfirm] = useState(false);
+  /** Tahsilatın onay çekmecesi; tahsilatlı teslim parayı aldığını onaylayınca yazılır, çünkü tahsilat yazıldığı anda kasaya gider. */
+  const [collectConfirm, setCollectConfirm] = useState(false);
   const [result, setResult] = useState<ResultRow | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
 
@@ -213,7 +213,7 @@ export function PickupScreen() {
               <SecondaryButton label={t.pickup.deliver.cancel} onPress={() => pickup.select(null)} testID="warehouse-pickup-cancel" />
               <PrimaryButton
                 label={pickup.busy ? t.pickup.deliver.busy : t.pickup.deliver.cta}
-                onPress={() => (pickup.dueCents > 0 && pickup.method === 'card' ? setCardConfirm(true) : void handleDeliver())}
+                onPress={() => (pickup.dueCents > 0 ? setCollectConfirm(true) : void handleDeliver())}
                 disabled={offline || !pickup.canDeliver}
                 grow
                 testID="warehouse-pickup-deliver"
@@ -272,19 +272,21 @@ export function PickupScreen() {
       )}
 
       <OperationsConfirmSheet
-        visible={cardConfirm}
-        title={fillCopy(t.pickup.deliver.cardConfirm.title, { amount: `${pickup.amountText} €` })}
-        message={t.pickup.deliver.cardConfirm.body}
-        confirmLabel={t.pickup.deliver.cardConfirm.confirm}
-        cancelLabel={t.pickup.deliver.cardConfirm.cancel}
+        visible={collectConfirm}
+        title={fillCopy(pickup.method === 'card' ? t.pickup.deliver.confirm.cardTitle : t.pickup.deliver.confirm.cashTitle, {
+          amount: `${pickup.amountText} €`,
+        })}
+        message={pickup.method === 'card' ? t.pickup.deliver.confirm.cardBody : t.pickup.deliver.confirm.cashBody}
+        confirmLabel={pickup.method === 'card' ? t.pickup.deliver.confirm.cardConfirm : t.pickup.deliver.confirm.cashConfirm}
+        cancelLabel={t.pickup.deliver.confirm.cancel}
         tone="olive"
         busy={pickup.busy}
         busyLabel={t.pickup.deliver.busy}
-        onConfirm={() => void handleDeliver().finally(() => setCardConfirm(false))}
+        onConfirm={() => void handleDeliver().finally(() => setCollectConfirm(false))}
         onCancel={() => {
-          if (!pickup.busy) setCardConfirm(false);
+          if (!pickup.busy) setCollectConfirm(false);
         }}
-        testID="warehouse-pickup-card-sheet"
+        testID="warehouse-pickup-collect-sheet"
       />
 
       <ScanSheet

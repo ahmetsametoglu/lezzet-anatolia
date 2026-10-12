@@ -702,9 +702,9 @@ Pennylane bağlantısında yalnız banka akışı açık kalır (8. karar); uygu
   birer kez bildirilir.
 - Elle eşleme: Para › Eylemler › Kapıda kart eşleştirme, son 14 gün. Aday tutarı birebir tutan tahsilattır, saat aranmaz; zil
   pencereyi açık getirir.
-- Mobil: kurye tahsilatı, gel-al tezgâhı ve yerinde satışta "kart" seçilince çekilecek tutar ve Tap to Pay yönlendirmesi. Kartla
-  tahsilat, onay çekmecesinde "Kart ödemesi alındı" denince yazılır; çekmece tutarı ve geri alınamazlığı söyler. Yerinde satışta
-  "tamamla" kesin tutarı önce yazmadan okur. Nakitte onay yok.
+- Mobil: kurye tahsilatı, gel-al tezgâhı ve yerinde satışta "kart" seçilince çekilecek tutar ve Tap to Pay yönlendirmesi. Nakit ve
+  kartla tahsilat, onay çekmecesinde "Nakit alındı" ya da "Kart ödemesi alındı" denince yazılır; çekmece tutarı ve geri
+  alınamazlığı söyler. Yerinde satışta "tamamla" kesin tutarı önce yazmadan okur.
 
 **Açık:**
 - Ödemeyi alan kişinin alanı eşleştirmeye eklenir (ilk canlı ödemede ölçülürse); pencere ve bekleme ilk haftanın verisiyle

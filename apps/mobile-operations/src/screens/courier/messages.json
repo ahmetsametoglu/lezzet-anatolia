@@ -334,10 +334,13 @@
       "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
       "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
       "cardNote": "Kartı Revolut Business uygulamasında Tap to Pay ile çekin: {amount}. Ödeme onaylanınca teslimi burada kapatın.",
-      "cardConfirm": {
-        "title": "Kartla {amount} çekin",
-        "body": "Tutarı Revolut Business uygulamasında Tap to Pay ile çekin. Teslim yazılınca geri alınamaz: kart ödemesinin başarıyla tamamlandığından emin olun.",
-        "confirm": "Kart ödemesi alındı",
+      "confirm": {
+        "cardTitle": "Kartla {amount} çekin",
+        "cardBody": "Tutarı Revolut Business uygulamasında Tap to Pay ile çekin. Teslim yazılınca geri alınamaz: kart ödemesinin başarıyla tamamlandığından emin olun.",
+        "cardConfirm": "Kart ödemesi alındı",
+        "cashTitle": "{amount} nakit alın",
+        "cashBody": "Teslim yazılınca geri alınamaz: parayı aldığınızdan emin olun.",
+        "cashConfirm": "Nakit alındı",
         "cancel": "Vazgeç"
       },
       "note": "Ödeme durumu tahsilattan türetilir; \"tekrar dene\" güvenlidir, para iki kez yazılmaz.",

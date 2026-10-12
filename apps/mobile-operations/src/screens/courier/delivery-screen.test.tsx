@@ -515,6 +515,10 @@ describe('teslimat · tahsilat', () => {
     );
     expect(screen.queryByTestId('courier-collection-blocked')).toBeNull();
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+    // Tahsilatlı teslim, kurye parayı aldığını onaylamadan yazılmaz.
+    expect(screen.getByText(/42,00 € nakit alın/)).toBeOnTheScreen();
+    expect(deliverCalls()).toBe(0);
+    await fireEvent.press(screen.getByTestId('courier-collect-sheet-confirm'));
 
     await waitFor(() => expect(deliverCalls()).toBe(1));
     expect(deliverBody().collection).toEqual({
@@ -534,16 +538,16 @@ describe('teslimat · tahsilat', () => {
     await fireEvent.press(screen.getByTestId('courier-method-card'));
 
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-    expect(screen.getByTestId('courier-card-sheet-confirm')).toBeOnTheScreen();
+    expect(screen.getByTestId('courier-collect-sheet-confirm')).toBeOnTheScreen();
     expect(screen.getByText(/Kartla 42,00/)).toBeOnTheScreen();
     expect(deliverCalls()).toBe(0);
 
-    await fireEvent.press(screen.getByTestId('courier-card-sheet-cancel'));
-    expect(screen.queryByTestId('courier-card-sheet-confirm')).toBeNull();
+    await fireEvent.press(screen.getByTestId('courier-collect-sheet-cancel'));
+    expect(screen.queryByTestId('courier-collect-sheet-confirm')).toBeNull();
     expect(deliverCalls()).toBe(0);
 
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-    await fireEvent.press(screen.getByTestId('courier-card-sheet-confirm'));
+    await fireEvent.press(screen.getByTestId('courier-collect-sheet-confirm'));
     await waitFor(() => expect(deliverCalls()).toBe(1));
     expect(deliverBody().collection).toMatchObject({ method: 'card', amountCents: 4200 });
   });

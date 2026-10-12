@@ -83,8 +83,8 @@ export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
 export type OnSiteSaleResponse = z.infer<typeof OnSiteSaleResponseSchema>;
 
 /**
- * Kesin tutar (`POST /sale/on-site/quote`): satışla aynı sepet, yazım yok. Personel kartı bu tutarla çeker ve satış ancak ödeme
- * alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır; retler satışınkilerle aynıdır.
+ * Kesin tutar (`POST /sale/on-site/quote`): satışla aynı sepet, yazım yok. Personel parayı (nakit ya da kart) bu tutarla alır ve satış
+ * ancak para alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır; retler satışınkilerle aynıdır.
  */
 export const OnSiteSaleQuoteRequestSchema = OnSiteSaleRequestSchema.pick({ lines: true, paymentMethod: true, onAccount: true });
 export type OnSiteSaleQuoteRequest = z.infer<typeof OnSiteSaleQuoteRequestSchema>;

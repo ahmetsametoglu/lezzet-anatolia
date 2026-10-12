@@ -91,15 +91,15 @@ it('kartla tahsilatta teslim, onay çekmecesinde "Kart ödemesi alındı" denmed
   await fireEvent.press(screen.getByTestId('warehouse-pickup-method-card'));
 
   await fireEvent.press(screen.getByTestId('warehouse-pickup-deliver'));
-  expect(screen.getByTestId('warehouse-pickup-card-sheet-confirm')).toBeOnTheScreen();
+  expect(screen.getByTestId('warehouse-pickup-collect-sheet-confirm')).toBeOnTheScreen();
   expect(teslimler()).toHaveLength(0);
 
-  await fireEvent.press(screen.getByTestId('warehouse-pickup-card-sheet-cancel'));
-  expect(screen.queryByTestId('warehouse-pickup-card-sheet-confirm')).toBeNull();
+  await fireEvent.press(screen.getByTestId('warehouse-pickup-collect-sheet-cancel'));
+  expect(screen.queryByTestId('warehouse-pickup-collect-sheet-confirm')).toBeNull();
   expect(teslimler()).toHaveLength(0);
 
   await fireEvent.press(screen.getByTestId('warehouse-pickup-deliver'));
-  await fireEvent.press(screen.getByTestId('warehouse-pickup-card-sheet-confirm'));
+  await fireEvent.press(screen.getByTestId('warehouse-pickup-collect-sheet-confirm'));
   await waitFor(() => expect(teslimler()).toHaveLength(1));
   expect(JSON.parse(String(teslimler()[0]![1]?.body)).collection).toMatchObject({ method: 'card', amountCents: 1250 });
 });

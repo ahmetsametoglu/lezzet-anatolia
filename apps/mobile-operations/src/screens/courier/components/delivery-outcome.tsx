@@ -16,6 +16,8 @@ interface DeliveryOutcomeProps {
 
 /** Ekranın altındaki sonuç alanı; sonuç toast'ta söylenir, çünkü kurye kutu okuturken sayfanın altına bakmıyordu. */
 export function DeliveryOutcome({ delivery }: DeliveryOutcomeProps) {
+  const confirm = t.delivery.collection.confirm;
+  const card = delivery.method === 'card';
   return (
     <>
       <View style={styles.footer}>
@@ -60,19 +62,19 @@ export function DeliveryOutcome({ delivery }: DeliveryOutcomeProps) {
         ) : null}
       </View>
 
-      {/* Kart Revolut'un uygulamasında çekilir; teslim, kurye ödemenin alındığını onaylayınca yazılır. */}
+      {/* Tahsilatlı teslim, kurye parayı aldığını onaylayınca yazılır; çekmece tutarı ve geri alınamazlığı söyler. */}
       <OperationsConfirmSheet
-        visible={delivery.cardConfirmOpen && !delivery.finished}
-        title={fillCopy(t.delivery.collection.cardConfirm.title, { amount: `${delivery.amountText} €` })}
-        message={t.delivery.collection.cardConfirm.body}
-        confirmLabel={t.delivery.collection.cardConfirm.confirm}
-        cancelLabel={t.delivery.collection.cardConfirm.cancel}
+        visible={delivery.collectConfirmOpen && !delivery.finished}
+        title={fillCopy(card ? confirm.cardTitle : confirm.cashTitle, { amount: `${delivery.amountText} €` })}
+        message={card ? confirm.cardBody : confirm.cashBody}
+        confirmLabel={card ? confirm.cardConfirm : confirm.cashConfirm}
+        cancelLabel={confirm.cancel}
         tone="olive"
-        onConfirm={delivery.confirmCard}
-        onCancel={delivery.cancelCard}
+        onConfirm={delivery.confirmCollect}
+        onCancel={delivery.cancelCollect}
         busy={delivery.sending}
         busyLabel={t.delivery.cta.sending}
-        testID="courier-card-sheet"
+        testID="courier-collect-sheet"
       />
 
       {/* Bedel başlığın altında, düğmelerden önce yazılır ki okunmadan basılmasın. */}

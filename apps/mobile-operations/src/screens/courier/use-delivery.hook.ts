@@ -131,10 +131,10 @@ interface UseDeliveryResult {
   finished: boolean;
   deliver: () => void;
   confirmOutcome: () => void;
-  /** Kartla tahsilatın onay çekmecesi; teslim "Kart ödemesi alındı" denince yazılır. */
-  cardConfirmOpen: boolean;
-  confirmCard: () => void;
-  cancelCard: () => void;
+  /** Tahsilatın onay çekmecesi; tahsilatlı teslim, kurye parayı aldığını onaylayınca yazılır. */
+  collectConfirmOpen: boolean;
+  confirmCollect: () => void;
+  cancelCollect: () => void;
 }
 
 /** Kapının ret dallarını ekranın diline çevirir — hiçbiri YUTULMAZ, hepsi bir cümleye çıkar. */
@@ -197,7 +197,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [noteError, setNoteError] = useState<string | null>(null);
 
   const [sending, setSending] = useState(false);
-  const [cardConfirmOpen, setCardConfirmOpen] = useState(false);
+  const [collectConfirmOpen, setCollectConfirmOpen] = useState(false);
   /* Sonuç toast'ta: sayfanın altındaki satıra kurye kutu okuturken bakmıyor ve reddin sebebini görmüyordu. */
   const setNotice = useCallback((notice: DeliveryNotice | null) => {
     if (notice === null) return;
@@ -415,7 +415,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
         ...(doorCodeAsked ? { doorCode: doorCodeSkipped || doorCodeLocked ? null : doorCode } : {}),
       });
       setSending(false);
-      setCardConfirmOpen(false);
+      setCollectConfirmOpen(false);
 
       if (result.error !== null) {
         setNotice({ tone: 'error', text: wireErrorText(result.error) });
@@ -451,12 +451,12 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     })();
   }, [adjustments, buildCollection, doorCode, doorCodeAsked, doorCodeLocked, doorCodeSkipped, gateOpen, orderId, scannedBoxCodes, sending]);
 
-  /** Kartla tahsilatta teslim, kurye kart ödemesinin alındığını onaylayınca yazılır, çünkü tahsilat yazıldığı anda kasaya gider. */
+  /** Tahsilatlı teslim, kurye parayı aldığını onaylayınca yazılır, çünkü tahsilat yazıldığı anda kasaya gider. */
   const deliver = useCallback(() => {
     if (!gateOpen || sending) return;
-    if (collecting && method === 'card') setCardConfirmOpen(true);
+    if (collecting) setCollectConfirmOpen(true);
     else submitDelivery();
-  }, [collecting, gateOpen, method, sending, submitDelivery]);
+  }, [collecting, gateOpen, sending, submitDelivery]);
 
   const confirmOutcome = useCallback(() => {
     if (outcome === null || sending) return;
@@ -576,10 +576,10 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     finished,
     deliver,
     confirmOutcome,
-    cardConfirmOpen,
-    confirmCard: submitDelivery,
-    cancelCard: () => {
-      if (!sending) setCardConfirmOpen(false);
+    collectConfirmOpen,
+    confirmCollect: submitDelivery,
+    cancelCollect: () => {
+      if (!sending) setCollectConfirmOpen(false);
     },
   };
 }
