@@ -457,3 +457,46 @@ export async function notifyPayoutUnexplained(
     yut(err, 'payout_unexplained');
   }
 }
+
+/**
+ * Revolut'ta yüz yüze bir kart ödemesi var ama bizde onu karşılayan kapıda kart tahsilatı bulunamadı; personel kartı yazmamış ya da
+ * eşleşme belirsiz. Ödeme başına tek zil.
+ */
+export async function notifyDoorCardUnmatched(
+  db: SupabaseClient,
+  input: { paymentRef: string; amountCents: number; at: string },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'door_card_unmatched',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { paymentRef: input.paymentRef, amountCents: input.amountCents, at: input.at },
+      dedupeKey: `door-card-unmatched:${input.paymentRef}`,
+    });
+  } catch (err) {
+    yut(err, 'door_card_unmatched');
+  }
+}
+
+/** Bizde kapıda kart diye yazılmış tahsilatın Revolut'ta ödemesi bulunamadı; zil siparişe açılır, tahsilat başına bir kez. */
+export async function notifyDoorCardMissing(
+  db: SupabaseClient,
+  input: { movementId: string; orderId: string; amountCents: number },
+): Promise<void> {
+  try {
+    const order = await new OrderService(db).getById(input.orderId);
+    if (!order) return;
+    await dispatchStaffNotification(db, {
+      kind: 'door_card_missing',
+      roles: ['admin', 'accounting'],
+      warehouseId: order.warehouseId,
+      target: { type: 'order', id: order.id },
+      payload: { referenceNo: order.referenceNo, amountCents: input.amountCents },
+      dedupeKey: `door-card-missing:${input.movementId}`,
+    });
+  } catch (err) {
+    yut(err, 'door_card_missing');
+  }
+}

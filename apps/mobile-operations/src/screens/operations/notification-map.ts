@@ -86,6 +86,9 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   refund_blocked: 'money',
   // Aktarım farkı web'deki Para ekranında ve Revolut'un aktarım raporunda incelenir.
   payout_unexplained: 'management',
+  // Kapıda kartın Revolut eşleşmesi web'deki sipariş detayında ve Para ekranında çözülür.
+  door_card_unmatched: 'management',
+  door_card_missing: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

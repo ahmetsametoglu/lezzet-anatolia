@@ -52,6 +52,26 @@ export const RevolutApiOrderSchema = z.object({
 });
 export type RevolutApiOrder = z.infer<typeof RevolutApiOrderSchema>;
 
+/**
+ * Sipariş listesi (`GET /api/orders`) sadeleştirilmiş sipariş döner. Künye gevşek okunur: bizim açmadığımız sipariş (yüz yüze
+ * ödeme) başka türde değer taşıyabilir ve tek satırın biçimi bütün listeyi düşürmemeli.
+ */
+export const RevolutApiOrderListSchema = z.object({
+  orders: z.array(
+    RevolutApiOrderSchema.pick({
+      id: true,
+      type: true,
+      state: true,
+      amount: true,
+      currency: true,
+      outstanding_amount: true,
+      created_at: true,
+    }).extend({
+      metadata: z.record(z.string(), z.unknown()).nullish(),
+    }),
+  ),
+});
+
 export const RevolutApiPayoutSchema = z.object({
   id: z.string(),
   state: z.string(),

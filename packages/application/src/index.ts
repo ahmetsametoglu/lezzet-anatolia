@@ -291,7 +291,7 @@ export type {
 
 // ── Kurye ──
 export { discardCourierRun, listCourierDay, listStrandedStops, markUndelivered, readCourierRun, readCourierRuns, startCourierDay } from './courier/day';
-export { readDoorCollection } from './order/door-account';
+export { readDoorAccountId, readDoorCollection } from './order/door-account';
 export type { CourierStrandedStop } from './courier/day';
 // Kurye dönüşünün depo kabul kapısı.
 export { acceptCourierReturn, readCourierReturn } from './courier/return';
@@ -528,6 +528,8 @@ export type { RevolutClient, RevolutConfig } from './order/revolut';
 export { revolutRefunderWith } from './order/revolut-refunder';
 export { recordPaymentFee } from './order/payment-fee';
 export { reconcileRecentPayouts } from './order/payout-statement';
+export { linkDoorCardPaymentByHand, reconcileDoorCardPayments, reviewDoorCardItems } from './order/door-card';
+export type { DoorCardLinkReason, DoorCardReview } from './order/door-card';
 // ── Paket (bundle) çözümü ──
 export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
 // Tarif malzeme okumasının tek kapısı.

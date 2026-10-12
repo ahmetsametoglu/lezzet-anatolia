@@ -61,6 +61,7 @@ export * from './delivery/route-order';
 export * from './delivery/geo-point';
 export * from './payment/checkout-options';
 export * from './payment/credit';
+export * from './payment/door-card-match';
 export * from './payment/payment-status';
 export * from './payment/payout-statement';
 export * from './payment/refund-method';

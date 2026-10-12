@@ -76,6 +76,10 @@ export const AppNotificationKindEnum = z.enum([
   'refund_blocked',
   /** Kart aktarımının raporunda defterin açıklayamadığı işlem var (bilinmeyen ödeme, ters ibraz, ücret); aktarım defterle tutmaz. */
   'payout_unexplained',
+  /** Revolut'ta yüz yüze bir kart ödemesi var, bizde karşılığı olan kapıda kart tahsilatı bulunamadı (kart yazılmamış ya da belirsiz). */
+  'door_card_unmatched',
+  /** Bizde kapıda kart diye yazılmış tahsilatın Revolut'ta ödemesi bulunamadı: para karttan çekilmemiş ya da eşleşme belirsiz. */
+  'door_card_missing',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -103,6 +107,8 @@ export const STAFF_NOTIFICATION_KINDS = [
   'pennylane_document_different',
   'refund_blocked',
   'payout_unexplained',
+  'door_card_unmatched',
+  'door_card_missing',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

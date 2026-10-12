@@ -345,6 +345,30 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return [...byRef.values()];
   }
 
+  /**
+   * Kapıda kartla alınıp sağlayıcının ödemesine henüz bağlanmamış (künyesiz) tahsilatlar; yüz yüze ödeme eşleştirmesi bunları arar.
+   * Künye jsonb içinde durduğu için süzgeç ham yazılır.
+   */
+  async listUnlinkedCardCollections(accountId: string, fromIso: string): Promise<MoneyMovement[]> {
+    const { data, error } = await this.supabase
+      .from('money_movement')
+      .select('*')
+      .eq('account_id', accountId)
+      .eq('type', 'order_payment')
+      .eq('payment_method', 'card')
+      .is('meta->>providerRef', null)
+      .not('order_id', 'is', null)
+      .gte('created_at', fromIso)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return this.parseRows(data ?? []);
+  }
+
+  /** Tahsilatı sağlayıcının ödemesine bağlar; künyedeki öteki bilgiler korunur. */
+  linkProviderRef(movement: Pick<MoneyMovement, 'id' | 'meta'>, providerRef: string): Promise<MoneyMovement> {
+    return this.update({ id: movement.id, meta: { ...(movement.meta ?? {}), providerRef } });
+  }
+
   /** Önbelleği kaynaktan yeniden kurar; hareket silinir ya da düzeltilirse tek çağrıyla gerçeğe dönülür. */
   async resyncOrder(orderId: string): Promise<OrderAmounts> {
     const raw = await this.executeRpc('resync_order_amounts', { p_order_id: orderId });

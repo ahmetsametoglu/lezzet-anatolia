@@ -1,4 +1,6 @@
+import type { InPersonPayment } from '@lezzet/domain-core';
 import {
+  RevolutApiOrderListSchema,
   RevolutApiOrderSchema,
   RevolutApiPayoutSchema,
   RevolutModeEnum,
@@ -268,6 +270,35 @@ export function revolutFeeOf(order: RevolutApiOrder): { feeCents: number; paymen
   const paid = (order.payments ?? []).find((payment) => (payment.fees ?? []).length > 0);
   if (!paid) return null;
   return { feeCents: (paid.fees ?? []).reduce((sum, fee) => sum + fee.amount, 0), paymentId: paid.id };
+}
+
+/** Sipariş listesinin sayfa boyu; sağlayıcının üst sınırı. */
+const ORDER_PAGE = 500;
+
+/**
+ * Aralıkta tamamlanmış yüz yüze ödemeler: künyesinde bizim sipariş kimliğimiz olmayan ödeme siparişleri. Revolut Business uygulamasının
+ * Tap to Pay ödemesi böyle görünür; bizim açtığımız çevrim içi sipariş künyesindeki `order_id` ile ayrılır.
+ */
+export async function listInPersonPayments(client: RevolutClient, range: { from: string; to: string }): Promise<InPersonPayment[]> {
+  const payments: InPersonPayment[] = [];
+  let window = range;
+  for (;;) {
+    const query = new URLSearchParams({ from: window.from, to: window.to, state: 'completed', limit: String(ORDER_PAGE) });
+    const parsed = RevolutApiOrderListSchema.safeParse(await client.request('GET', `/api/orders?${query.toString()}`));
+    if (!parsed.success) throw new RevolutError('parse', `Revolut sipariş listesi beklenen biçimde değil: ${parsed.error.message}`);
+    const { orders } = parsed.data;
+    for (const order of orders) {
+      if (order.type !== 'payment' || order.metadata?.['order_id']) continue;
+      payments.push({ ref: order.id, amountCents: order.amount - (order.outstanding_amount ?? 0), at: order.created_at });
+    }
+    if (orders.length < ORDER_PAGE) return payments;
+    // Belge listenin sırasını yazmıyor; dolu sayfada aralık, sayfanın uç anından okunmamış tarafa daraltılır.
+    const times = orders.map((order) => Date.parse(order.created_at));
+    const newestFirst = times[0]! >= times[times.length - 1]!;
+    window = newestFirst
+      ? { from: window.from, to: new Date(Math.min(...times) - 1).toISOString() }
+      : { from: new Date(Math.max(...times) + 1).toISOString(), to: window.to };
+  }
 }
 
 /** Merchant hesabından ana hesaba aktarım; tutar aktarım tamamlanınca dolar. */

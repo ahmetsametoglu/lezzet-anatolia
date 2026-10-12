@@ -36,6 +36,7 @@ import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations
 import { SWEEP_UNPAID_DRAFTS, sweepUnpaidDraftsJob } from './jobs/sweep-unpaid-drafts';
 import { SHIPMENT_WATCH, shipmentWatchJob } from './jobs/shipment-watch';
 import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
+import { DOOR_CARD_MATCH, doorCardMatchJob } from './jobs/door-card';
 import { PAYOUT_STATEMENT, payoutStatementJob } from './jobs/payout-statement';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
@@ -237,6 +238,14 @@ cron.schedule('50 5 * * 1', () => {
 */
 cron.schedule('45 * * * *', () => {
   void runJob(PAYOUT_STATEMENT, payoutStatementJob);
+});
+
+/*
+  Kapıda kart eşleştirmesi 15 dakikada bir: personel kartı Revolut uygulamasında çekip bizde yazar, eşleşme kısa sürede kurulursa komisyon
+  siparişe ve fark yönetime aynı gün düşer. Dakikalar öteki çeyrek saatlik işlerle çakışmasın diye kaydırıldı.
+*/
+cron.schedule('12,27,42,57 * * * *', () => {
+  void runJob(DOOR_CARD_MATCH, doorCardMatchJob);
 });
 
 // Asistan önerilerinin süre süpürmesi saatte bir: öneri ömrü saat mertebesinde ve tur görüntüyü değil kaydı düzeltir, geçmişte

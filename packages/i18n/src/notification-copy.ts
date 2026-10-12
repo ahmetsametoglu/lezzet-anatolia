@@ -345,6 +345,9 @@ const IADE_ENGELI: Record<string, string> = {
 };
 
 const euro = (cents: number): string => new Intl.NumberFormat(INTL_LOCALE.tr, { style: 'currency', currency: 'EUR' }).format(cents / 100);
+/** Paris saatiyle gün ve saat; personel ödemeyi Revolut uygulamasındaki listede bu andan bulur. */
+const parisMoment = (iso: string): string =>
+  new Intl.DateTimeFormat(INTL_LOCALE.tr, { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Paris' }).format(new Date(iso));
 
 const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => StaffNotificationBrief>> = {
   /* Kapanmayan kasa günü yasal bir açıktır; sebebi sayıyla söylenir, ayrıntısı kurulum kartında ve hata kaydında. */
@@ -424,6 +427,23 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
       ]
         .filter(Boolean)
         .join(' · ') || null,
+  }),
+  /* Personel kartı Revolut uygulamasında çekmiş ama bizde kart yazmamış; ödemenin saati Revolut uygulamasında aranır. */
+  door_card_unmatched: (p) => ({
+    tone: 'alert',
+    label: 'Para',
+    title: 'Kapıda kart ödemesi bizde yazılı değil',
+    subtitle:
+      [typeof p.amountCents === 'number' ? euro(p.amountCents) : null, typeof p.at === 'string' ? parisMoment(p.at) : null]
+        .filter(Boolean)
+        .join(' · ') || null,
+  }),
+  /* Kart diye yazılan tahsilatın Revolut'ta ödemesi yok; ödeme varsa Para › Kapıda kart eşleştirme'de bağlanır, yoksa siparişte düzeltilir. */
+  door_card_missing: (p) => ({
+    tone: 'alert',
+    label: 'Para',
+    title: `Kart tahsilatı Revolut'ta bulunamadı${referans(p)}`,
+    subtitle: typeof p.amountCents === 'number' ? euro(p.amountCents) : null,
   }),
   /* Eşleşme kendiliğinden yeniden denenir; haber Para ekranını hesabın o gününe açar. */
   pennylane_match_stuck: (p) => ({
