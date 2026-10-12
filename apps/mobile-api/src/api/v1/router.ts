@@ -31,6 +31,7 @@ import { tickets } from './tickets';
 import { courier } from './courier';
 import { social } from './social';
 import { sale } from './sale';
+import { staffOrder } from './staff-order';
 import { management } from './management';
 import { money } from './money';
 import { operations } from './operations';
@@ -166,6 +167,8 @@ v1.route('/courier', courier);
 v1.route('/warehouse', warehouse);
 // Yerinde satış ayrı önek, çünkü rol kümesinde kurye de var; kurye ise hazırlık kuyruğunu ve mal kabulü görmez.
 v1.route('/sale', sale);
+// Müşteri adına sipariş girişi kurye, depocu ve yöneticiye açık; web masasıyla aynı ortak okumaları çağırır.
+v1.route('/staff-order', staffOrder);
 // Sosyal gelen kutusu yalnız yöneticinin, çünkü yazışma içeriği kişisel veridir.
 v1.route('/social', social);
 v1.route('/management', management);

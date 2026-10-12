@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { creditPosition, dueDayOf, isOpenCredit, isOverdue, openAmountCents, type CreditOrder } from './credit';
+import {
+  creditPosition,
+  creditSummary,
+  dueDayOf,
+  isOpenCredit,
+  isOverdue,
+  openAmountCents,
+  remainingCreditCents,
+  type CreditOrder,
+} from './credit';
 
 const NOW = new Date('2026-07-29T10:00:00Z');
 
@@ -80,5 +89,30 @@ describe('creditPosition', () => {
 
   it('bakiye eksiye düşmez — fazla tahsilat borç yaratmaz', () => {
     expect(creditPosition([order({ amountCollectedCents: 15_000 })], 30, NOW).openBalanceCents).toBe(0);
+  });
+});
+
+describe('remainingCreditCents', () => {
+  it('kalan limit = limit − açık bakiye', () => {
+    expect(remainingCreditCents(150_000, 26_000)).toBe(124_000);
+  });
+
+  it('tanımsız limit sıfırdır, sınırsız değil — fren de öyle okur', () => {
+    expect(remainingCreditCents(null, 0)).toBe(0);
+  });
+
+  it('limit aşılmışsa kalan sıfırdır, eksi gösterilmez', () => {
+    expect(remainingCreditCents(10_000, 14_000)).toBe(0);
+  });
+});
+
+describe('creditSummary', () => {
+  // Sipariş 29 Haziran'da açıldı, bugün 29 Temmuz'un ertesi: 30 günlük vadede gecikmiş, 45 günlükte değil.
+  const ertesiGun = new Date('2026-07-30T10:00:00Z');
+
+  it('müşterinin kendi vade süresi ayardakini ezer; gecikme o süreyle ölçülür', () => {
+    const kendiSuresi = creditSummary({ creditLimitCents: 50_000, paymentTermDays: 45 }, [order()], 30, ertesiGun);
+    expect(kendiSuresi).toEqual({ termDays: 45, limitCents: 50_000, remainingCents: 40_000, overdue: false });
+    expect(creditSummary({ creditLimitCents: 50_000, paymentTermDays: null }, [order()], 30, ertesiGun).overdue).toBe(true);
   });
 });

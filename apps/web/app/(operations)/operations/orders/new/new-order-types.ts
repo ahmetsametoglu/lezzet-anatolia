@@ -1,52 +1,7 @@
-// Telefonla ya da mesajla gelen siparişin masada yazıldığı ekranın tipleri; para kuruştur (STACK §8). Yerinde satış burada değil,
-// native uygulamanın kurye ve depo bölümündedir (DOMAIN §17), çünkü bu ekranın müşterisi telefondadır ve malı kuryeyle gider.
+// Telefonla ya da mesajla gelen siparişin masada yazıldığı ekranın tipleri; para kuruştur (STACK §8). Seçici satırları ve teslim
+// bağlamı mobil sipariş girişiyle ortaktır (`staff-order-api.schema.ts`); burada yalnız masanın kendi görünümü durur.
 import type { StaffCompanyPreview } from '@lezzet/application/customer/staff-customer';
-import type { Channel, CustomerType, PaymentMethod } from '@lezzet/types';
-
-/** Müşteri arama sonucu — operatör telefonu ya da adı yazarak bulur. */
-export interface CustomerPickOption {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  type: CustomerType;
-  /**
-   * Fiyatın okunacağı GEÇERLİ kanal — onaysız şirket B2C'dir (`effectiveChannelOf`, DOMAIN §10).
-   * Ekran bunu yalnız GÖSTERİR ("B2B fiyatları"); karar sunucuda verilir ve fiyat da orada çözülür.
-   */
-  channel: Channel;
-  /** Doğrulanmamış kayıt (WhatsApp/elle açılmış) — operatör kimin karşısında olduğunu bilmeli. */
-  isDraft: boolean;
-}
-
-/** Müşterinin adresi — sipariş deposu ve teslimat günü bundan çözülür. */
-export interface AddressPickOption {
-  id: string;
-  /** Tek satır künye: "1 rue du Marché, 67000 Strasbourg". */
-  label: string;
-  recipient: string;
-}
-
-/**
- * Kalem seçicisinin satırı — **fiyat MÜŞTERİYE GÖRE çözülmüş** gelir (özel → grup → kanal).
- *
- * Maliyet ve hedef marj da burada: marj-altı uyarısı operatör fiyatı yazarken anında çıkmalı ve
- * her tuşta sunucuya gitmek o uyarıyı kullanılamaz yapardı. Üçü de yalnız KARAR GİRDİSİDİR;
- * kararın kendisini motor verir (`isBelowTargetMargin`).
- */
-export interface VariantPickRow {
-  variantId: string;
-  title: string;
-  /** Müşteriye çözülmüş liste fiyatı (kanal tabanında); `null` = bu müşteriye satışa kapalı. */
-  listPriceCents: number | null;
-  /** Yenileme maliyeti (HT); `null` = ölçülemedi — marj uyarısı o hâlde SUSAR, sıfır varsaymaz. */
-  costCents: number | null;
-  /** Kanalın geçerli hedef marjı (`targetMarginFor`); `null` = hedef tanımlı değil. */
-  targetMarginPercent: number | null;
-  vatRate: number;
-  /** Siparişin deposunda kullanılabilir adet; `null` = depo henüz belli değil (adres seçilmemiş). */
-  availableQty: number | null;
-}
+import type { PaymentMethod, StaffCustomerOption, StaffDelivery, StaffPaymentOptions } from '@lezzet/types';
 
 /** Formdaki bir kalem — seçilen ürün + operatörün yazdıkları. */
 export interface NewOrderLine {
@@ -62,28 +17,11 @@ export interface NewOrderLine {
   vatRate: number;
 }
 
-/** Sunucunun adresten çözdüğü teslimat — gün listesi ve yöntem kümesi ekranın uyduracağı şeyler değil. */
-export interface DeliveryContext {
-  deliveryType: 'route' | 'shipping';
-  /** Rota içi teslimatın yaklaşan günleri; kargoda BOŞ — tarih taşıyıcıya bağlı, söz verilmez. */
-  availableDates: string[];
-  /** Bu müşteri + adres için AÇIK ödeme yöntemleri (motor söyler; kapıda ödeme tavanı dahil). */
-  paymentMethods: PaymentMethod[];
-  /** Vadeli satış açık mı — profilin yetkisi ve limiti motorda çözülür. */
-  creditAvailable: boolean;
-  /** Siparişin çıkacağı depo (adresin posta kodundan) — kalem seçicisinin stok sayısı buna bağlı. */
-  warehouseId: string | null;
-}
+/** Masanın teslim bağlamı: adresin teslimi ve sepet boşken açık yöntemler; kesin tavan kontrolü sipariş yazılırken yapılır. */
+export type DeliveryContext = StaffDelivery &
+  Pick<StaffPaymentOptions, 'creditAvailable'> & {
+    paymentMethods: PaymentMethod[];
+  };
 
 /** SIRET yazılınca okunan önizleme; aynı SIRET'li kayıtlar seçici satırı olarak gelir ki tek dokunuşla seçilsin. */
-export type CompanyPreview = Omit<StaffCompanyPreview, 'existing'> & { existing: CustomerPickOption[] };
-
-/** Yeni adres; alıcı ve telefon zorunlu, çünkü kurye kapıda kimi soracağını ve arayacağını bilmek zorunda. */
-export interface NewAddressInput {
-  recipient: string;
-  phone: string;
-  line1: string;
-  line2: string | null;
-  postalCode: string;
-  city: string;
-}
+export type CompanyPreview = Omit<StaffCompanyPreview, 'existing'> & { existing: StaffCustomerOption[] };

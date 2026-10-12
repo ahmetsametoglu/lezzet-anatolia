@@ -35,6 +35,9 @@ export const PlaceOptionListSchema = z.array(PlaceOptionSchema);
  * `GET /places/by-postal-code` cevabı: dört hâl ayrık taşınır ve hepsi 200'dür, çünkü tek bir hata dizesine indirilseler ekran
  * belirsizlik seçicisini çizemezdi. `inRoute` onboarding'in ana sorusudur; rota günleri bilerek yok, kesim saatiyle bayatlar.
  */
+/** Yer zincirinin koptuğu sebep; personelin sipariş girişi de adresin teslim bağlamında aynı sebebi taşır. */
+export const PlaceUnresolvedReasonEnum = z.enum(['no_shipping_warehouse', 'ambiguous_zone', 'outside_zones']);
+
 export const PlaceResolutionSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('resolved'),
@@ -57,7 +60,7 @@ export const PlaceResolutionSchema = z.discriminatedUnion('kind', [
    * çakışmasıdır, `outside_zones` kargo göndermeyen işin bölgesi dışıdır. Değerler motorun `PlaceResolution` birliğinin aynısı ve bağ
    * derlemede kilitli.
    */
-  z.object({ kind: z.literal('unresolved'), reason: z.enum(['no_shipping_warehouse', 'ambiguous_zone', 'outside_zones']) }),
+  z.object({ kind: z.literal('unresolved'), reason: PlaceUnresolvedReasonEnum }),
 ]);
 export type PlaceResolution = z.infer<typeof PlaceResolutionSchema>;
 

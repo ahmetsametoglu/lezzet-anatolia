@@ -1,7 +1,7 @@
 import { UserProfileService } from '@lezzet/database';
 import { isValidSiret, normalizeSiret } from '@lezzet/domain-core';
 import { isValidEmail, normalizeEmail } from '@lezzet/helper';
-import type { CustomerType, UserProfile } from '@lezzet/types';
+import type { StaffCustomerField, StaffCustomerInput, UserProfile } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   companyInfoOf,
@@ -15,18 +15,6 @@ import { addCustomerAddress, setBillingCustomerAddress } from './addresses';
   Personelin müşteri adına açtığı kayıt girişsiz ve taslaktır; müşteri bir gün aynı e-postayla girerse kayıt oturumuna bağlanır.
   Şirket kaydı SIRET'le açılır: künye ve fatura adresi resmî kayıttan okunur, kayıt B2B onay kuyruğuna girer (DOMAIN §10).
 */
-
-export interface StaffCustomerInput {
-  name: string;
-  /** Kurye kapıda arayacağı için zorunlu; benzersiz değil, aile ve iş yeri numarası meşrudur. */
-  phone: string;
-  email: string | null;
-  type: CustomerType;
-  /** Yalnız şirket kaydında okunur; boş bırakılırsa kayıt künyesiz açılır. */
-  siret: string | null;
-}
-
-export type StaffCustomerField = 'name' | 'phone' | 'email' | 'siret';
 
 export type StaffCustomerOutcome =
   | { status: 'ok'; profile: UserProfile }

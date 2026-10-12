@@ -76,6 +76,7 @@ export * from './social-api.schema';
 // personelin künyesinden, ikincisi anonim alıcıdan gelir; ikisini de istemciye sormak, kararı
 // istemciye vermek olurdu.
 export * from './sale-api.schema';
+export * from './staff-order-api.schema';
 // Yönetim + Para bölümleri — karar kuyruğu, gün özeti, tahsilat izleme, gün sonu mutabakatı.
 export * from './management-api.schema';
 export * from './money-api.schema';

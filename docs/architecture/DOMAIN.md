@@ -198,7 +198,7 @@ Bir müşteriye ürünün **birim fiyatı** adaylar karşılaştırılarak belir
 
 Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` satırı bunun yanlış aracıdır.
 
-- Yalnız `order_source=door/manual` siparişlerde ve yalnız **yönetici** (admin) rolündeki personelde: kalem fiyat alanı liste fiyatıyla **dolu gelir**, pazarlık varsa üstüne yazılır. Pazarlık yoksa hiçbir ek adım yok. Kural web masasında ve mobil yerinde satışta aynıdır: kurye ya da depocu olan yönetici de pazarlık yapar; yönetici olmayanın fiyat alanı kilitlidir ve sunucu onun pazarlıklı fiyatını reddeder (11.10). **Teslimdeki kurye fiyat değiştiremez** — fiyat sipariş oluşurken bellidir.
+- Yalnız `order_source=door/manual` siparişlerde ve yalnız **yönetici** (admin) rolündeki personelde: kalem fiyat alanı liste fiyatıyla **dolu gelir**, pazarlık varsa üstüne yazılır. Pazarlık yoksa hiçbir ek adım yok. Kural web masasında, mobil sipariş girişinde ve mobil yerinde satışta aynıdır: kurye ya da depocu olan yönetici de pazarlık yapar; yönetici olmayanın fiyat alanı kilitlidir ve sunucu onun pazarlıklı fiyatını reddeder. Maliyet ve hedef marj da yalnız pazarlık yazabilene gösterilir. **Teslimdeki kurye fiyat değiştiremez** — fiyat sipariş oluşurken bellidir.
 - **İz kaydı:** kim değiştirdi, liste fiyatı neydi, ne girildi — "kapıda toplam ne kadar pazarlık indirimi verdim" raporu türetilir.
 - **Marj uyarısı engellemez:** girilen fiyat hedef marjın altındaysa mevcut uyarı gösterilir, işlem engellenmez (karar satıcının).
 - Aynı müşteriye sürekli aynı özel fiyat veriliyorsa doğru araç **müşteriye özel fiyat**tır (yukarıdaki çözüm sırası).
@@ -758,9 +758,10 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
 - **Varsayılan depo kavramı YOKTUR.** Belirsizlik varsayılanla çözülmez: sipariş deposunun kaynağı
   ya adresin posta kodudur (uzaktan sipariş: web/WhatsApp/elle) ya işlemi yapan personelin **o anki**
   deposudur (yerinde satış: depo kapısı ya da kuryenin aracı). **Admin yerinde satış yapmaz** —
-  satan kişi, malın yanında duran personeldir. Yüzey sonucu (26.08): yerinde satış ekranı **native
-  uygulamanın** kurye/depo bölümündedir; operasyon web'inde elle sipariş girişi yalnız *telefonla
-  gelen* siparişin yazılmasıdır (`09.8`).
+  satan kişi, malın yanında duran personeldir. Yüzey sonucu: yerinde satış ekranı **native
+  uygulamanın** kurye/depo bölümündedir. Müşteri adına sipariş girişi iki yüzeyde aynı kapıdan geçer:
+  operasyon web'inde telefonla gelen sipariş, mobil uçta sahadaki kurye, depocu ya da yöneticinin girdiği
+  sipariş; ikisinde de depo adresin posta kodundan çözülür.
 - **Ülke:** posta kodu ülkeler arası benzersiz değildir (FR ve DE ikisi de 5 hane; `67000` ikisinde
   de geçerli). Yer çözümü `(ülke, posta kodu)` ikilisidir. Ülke seçici yalnız aktif bölge/depoların
   ülke kümesi 1'i aşınca görünür (veriden türer, ayar değil); site dili en fazla ön-seçim

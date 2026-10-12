@@ -421,15 +421,21 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
    * personeli ve anonim alıcıyı da döndürürdü.
    */
   async search(term: string, limit = 10): Promise<UserProfile[]> {
+    return (await this.searchPage(term, { limit })).rows;
+  }
+
+  /** `search()`in sayfalı hâli, ada göre keyset: seçici kaydırdıkça devamını ister, çünkü eşleşen müşteri kümesi veriyle büyür. */
+  async searchPage(term: string, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
     const safe = ilikeTerm(term);
-    if (!safe) return [];
-    return this.getAll(
+    if (!safe) return { rows: [], nextCursor: null };
+    return this.getPage(
       {},
       {
         ...CUSTOMERS_ONLY,
         orFilters: [searchGroup(safe)],
         orderBy: 'name',
-        limit,
+        keysetAfter: opts.cursor,
+        limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       },
     );
   }

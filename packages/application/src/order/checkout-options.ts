@@ -36,6 +36,8 @@ export interface CheckoutPaymentResult {
   cashWarning: boolean;
   creditBlockedReason: 'not_enabled' | 'overdue' | 'limit_exceeded' | null;
   creditRequiresApproval: boolean;
+  /** Kapıda ödeme tavanı (cent), müşterinin kapsamında çözülmüş; kapalı yöntemin sebebini anlatan ekran tutarı buradan yazar. */
+  codMaxCents: number;
 
   /**
    * Kargo ücreti (cent) ve neden ücretsiz olduğu; `pickup` = müşteri kendisi alıyor, taşıma yok. `null` = eşik altında ve taşıyıcı
@@ -188,5 +190,6 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     pricesIncludeVat,
     goodsVat: addedVatOf(goods, pricesIncludeVat, zeroRated).map(({ vatRate, vatCents }) => ({ vatRate, vatCents })),
     orderTotalCents,
+    codMaxCents,
   };
 }

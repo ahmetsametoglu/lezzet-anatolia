@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isBelowTargetMargin, revenueHtOf } from '@lezzet/domain-core';
 import { formatPrice, fromCents, toCents } from '@lezzet/helper';
-import type { PaymentMethod } from '@lezzet/types';
+import type { PaymentMethod, StaffAddressOption, StaffCustomerOption, StaffVariantRow } from '@lezzet/types';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Button } from '@/components/operation/ui/button';
 import { Combobox } from '@/components/operation/form/combobox';
@@ -20,13 +20,7 @@ import {
   searchVariantsAction,
 } from './actions';
 import { CustomerDialog, AddressDialog } from './new-order-dialogs';
-import type {
-  AddressPickOption,
-  CustomerPickOption,
-  DeliveryContext,
-  NewOrderLine,
-  VariantPickRow,
-} from './new-order-types';
+import type { DeliveryContext, NewOrderLine } from './new-order-types';
 
 /**
  * Elle sipariş girişi: akış sıralıdır (müşteri → adres → kalemler), çünkü fiyat müşteriye, depo adrese göre çözülür ve kalem seçicisi ikisi belli olmadan doğru cevap veremez.
@@ -46,17 +40,17 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
  */
 interface NewOrderDesktopProps {
   conversationId: string | null;
-  initialCustomer: CustomerPickOption | null;
+  initialCustomer: StaffCustomerOption | null;
 }
 
 export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDesktopProps) {
   const router = useRouter();
 
-  const [customer, setCustomer] = useState<CustomerPickOption | null>(initialCustomer);
-  const [customerOptions, setCustomerOptions] = useState<CustomerPickOption[]>([]);
+  const [customer, setCustomer] = useState<StaffCustomerOption | null>(initialCustomer);
+  const [customerOptions, setCustomerOptions] = useState<StaffCustomerOption[]>([]);
   const [customerDialog, setCustomerDialog] = useState(false);
 
-  const [addresses, setAddresses] = useState<AddressPickOption[]>([]);
+  const [addresses, setAddresses] = useState<StaffAddressOption[]>([]);
   const [addressId, setAddressId] = useState('');
   const [addressDialog, setAddressDialog] = useState(false);
 
@@ -65,7 +59,7 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
   const [isGift, setIsGift] = useState(false);
 
-  const [variantOptions, setVariantOptions] = useState<VariantPickRow[]>([]);
+  const [variantOptions, setVariantOptions] = useState<StaffVariantRow[]>([]);
   const [lines, setLines] = useState<NewOrderLine[]>([]);
 
   const [submitting, setSubmitting] = useState(false);

@@ -1,5 +1,5 @@
 import { addDays, parisDateOf } from '@lezzet/helper';
-import type { Order } from '@lezzet/types';
+import type { CustomerCreditSummary, Order } from '@lezzet/types';
 
 /**
  * Vadeli satışın parası (DOMAIN §7): açık bakiye ve gecikme saklanmaz, türetilir, ve türetim tek yerde durur ki checkout freni,
@@ -66,4 +66,32 @@ export function creditPosition(
     if (isOverdue(order, termDays, now)) hasOverdue = true;
   }
   return { openBalanceCents: Math.max(0, openBalanceCents), hasOverdue };
+}
+
+/**
+ * Vade limitinden kalan (kuruş): limit − açık bakiye, eksiye düşmez. Tanımsız limit sıfırdır, `resolveCheckoutOptions`in limit
+ * frenindeki okumayla aynı; ekran kalan limiti gösterir, karar yine frende verilir.
+ */
+export function remainingCreditCents(limitCents: number | null, openBalanceCents: number): number {
+  return Math.max(0, (limitCents ?? 0) - openBalanceCents);
+}
+
+/**
+ * Müşterinin vade özeti: süre müşterinin kendi süresi, yoksa ayardaki; kalan limit ve gecikme o süreyle açık siparişlerden türer.
+ * Seçici satırı ve sipariş ekranı aynı özeti gösterir, karar yine `resolveCheckoutOptions`taki frendedir.
+ */
+export function creditSummary(
+  customer: { creditLimitCents: number | null; paymentTermDays: number | null },
+  openOrders: readonly CreditOrder[],
+  defaultTermDays: number,
+  now: Date = new Date(),
+): CustomerCreditSummary {
+  const termDays = customer.paymentTermDays ?? defaultTermDays;
+  const position = creditPosition(openOrders, termDays, now);
+  return {
+    termDays,
+    limitCents: customer.creditLimitCents ?? 0,
+    remainingCents: remainingCreditCents(customer.creditLimitCents, position.openBalanceCents),
+    overdue: position.hasOverdue,
+  };
 }

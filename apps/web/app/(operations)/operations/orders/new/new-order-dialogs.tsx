@@ -2,14 +2,13 @@
 
 import { useState, type ReactNode } from 'react';
 import { normalizeSiret } from '@lezzet/domain-core';
-import type { CustomerType } from '@lezzet/types';
+import type { CustomerType, StaffAddressOption, StaffCustomerOption } from '@lezzet/types';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
 import { createAddressAction, createCustomerAction } from './actions';
-import type { AddressPickOption, CustomerPickOption } from './new-order-types';
 import { useCompanyPreview, type CompanyPreviewState } from './use-company-preview.hook';
 
 /**
@@ -62,7 +61,7 @@ function siretBlockedReason(raw: string, company: CompanyPreviewState): string |
 interface CustomerDialogProps {
   onClose: () => void;
   /** Yeni açılan ya da aynı SIRET'le bulunan kayıt; ikisinde de sipariş o müşteriyle sürer. */
-  onPicked: (customer: CustomerPickOption) => void;
+  onPicked: (customer: StaffCustomerOption) => void;
 }
 
 export function CustomerDialog({ onClose, onPicked }: CustomerDialogProps) {
@@ -144,7 +143,7 @@ export function CustomerDialog({ onClose, onPicked }: CustomerDialogProps) {
 }
 
 /** SIRET'in altındaki tek satır; her hâlde bir cümle durur ki sonuç gelince alan yerinden oynamasın. */
-function CompanyPreviewLine({ state, onPick }: { state: CompanyPreviewState; onPick: (customer: CustomerPickOption) => void }) {
+function CompanyPreviewLine({ state, onPick }: { state: CompanyPreviewState; onPick: (customer: StaffCustomerOption) => void }) {
   const muted = 'font-ops-body text-ops-xs leading-[1.5] text-ops-muted';
   const alert = 'font-ops-body text-ops-xs leading-[1.5] text-ops-red';
 
@@ -190,7 +189,7 @@ function CompanyPreviewLine({ state, onPick }: { state: CompanyPreviewState; onP
 interface AddressDialogProps {
   customerId: string;
   onClose: () => void;
-  onCreated: (address: AddressPickOption) => void;
+  onCreated: (address: StaffAddressOption) => void;
 }
 
 export function AddressDialog({ customerId, onClose, onCreated }: AddressDialogProps) {
