@@ -334,7 +334,7 @@ export type { DayCloseDraft } from './courier/day-close';
 export { readDeliveryProof, requestDeliveryProofUploadUrl } from './courier/proof';
 
 // ── Sipariş düzeltmesi ve para bağları: kurye, operasyon, şikâyet ve ödeme webhook'u aynı kapıyı çağırır ──
-export { adjustFulfillment, cancelOrder, deliverOrderWithAdjustments, retryRefund } from './order/refund';
+export { adjustFulfillment, cancelOrder, cardRefundMovementKey, deliverOrderWithAdjustments, retryRefund } from './order/refund';
 export { cancelOrderShipment, isOpenShipment, type ShipmentCancelOutcome } from './shipping/cancel';
 export type { AdjustOutcome, CancelOutcome, RefundBlockReason, RefundOptions, WarehouseScope } from './order/refund';
 export { deliverOrder } from './order/fulfillment';
@@ -515,6 +515,7 @@ export {
   isFailedRevolutOrder,
   readRevolutOrder,
   readRevolutPayout,
+  REVOLUT_IDEMPOTENCY_KEY_MAX,
   refundRevolutOrder,
   revolutClient,
   revolutClientFromSecrets,

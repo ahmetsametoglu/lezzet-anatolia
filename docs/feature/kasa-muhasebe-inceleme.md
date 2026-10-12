@@ -17,11 +17,11 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Yapıldı |
 | 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Konuşulacak |
 | 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Konuşulacak |
-| 10 | Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor | Düşük | Konuşulacak |
+| 10 | Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor | Düşük | Yapıldı |
 | 11 | Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor | Düşük | Konuşulacak |
 | 12 | İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor | Düşük | Konuşulacak |
 | 13 | Hediye siparişin değeri aktarıma 0 € gidiyor | Düşük | Konuşulacak |
-| 14 | Revolut'a giden iade anahtarı kırpılıyor | Düşük | Konuşulacak |
+| 14 | Revolut'a giden iade anahtarı kırpılıyor | Düşük | Yapıldı |
 | 15 | Para ekranının yöntem dökümü siparişin son yönteminden okunuyor | Düşük | Konuşulacak |
 | 16 | İşlenirken süreci kapanan bildirim bir daha işlenmiyor | Düşük | Konuşulacak |
 
@@ -264,13 +264,16 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 10. Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor
 
-**Durum:** Konuşulacak · **Ağırlık:** düşük
+**Durum:** Yapıldı (12.10) · **Ağırlık:** düşük
 
 - **Mevcut durum:** Kart iadesinde önce Revolut çağrılır, sonra hareket yazılır. "İade tamamlandı" bildirimi gelince o ödemeye
   bağlı iadeler toplanır ve eksik varsa "panelden yapılmış iade" olarak yazılır.
 - **Problem:** Bildirim bizim hareketimiz yazılmadan işlenirse aynı iade iki kez yazılır. Aralık iade cevabı ile hareket yazımı
   arasındaki kısa süredir; ölçülmedi.
 - **Olması gereken:** İki yazım aynı iade siparişinin kimliğinde birleşir. 5. maddenin çözümüyle birlikte ele alınır.
+- **Çözüm (12.10):** Karta iadenin defter satırı Revolut'un iade siparişinin kimliğiyle yazılır (`card-refund:<iade kimliği>`).
+  Bildirim de her iade siparişini kendi kimliği ve tutarıyla aynı anahtarla yazar; hangisi önce gelirse yazar, öteki aynı
+  satırı bulur. Toplam karşılaştırması kalktı; panelden yapılan iade yine bildirimle deftere düşer.
 - **Kanıt:** `packages/application/src/order/refund.ts:328-345` · `apps/web/lib/order/payment-webhook.ts:147-181`.
 
 ## 11. Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor
@@ -308,13 +311,15 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 14. Revolut'a giden iade anahtarı kırpılıyor
 
-**Durum:** Konuşulacak · **Ağırlık:** düşük
+**Durum:** Yapıldı (12.10) · **Ağırlık:** düşük
 
 - **Mevcut durum:** İade anahtarı sipariş kimliği, sıra ve tutardan kurulur; tutar zaten cent olduğu hâlde 100'le bir kez daha
   çarpılır. Revolut'a giderken anahtar 50 karakterde kesilir ve tutardan yalnız 4 hane kalır.
 - **Problem:** Aynı siparişte aynı sıradaki iki farklı iade (ör. 15,00 € ve 150,00 €) aynı anahtarı alır. İlk iade geçip
   hareket yazılamazsa yeniden denemede Revolut ilk iadeyi döner ya da reddeder.
 - **Olması gereken:** Anahtar 50 karaktere sığacak biçimde kurulur, tutar cent olarak bir kez girer.
+- **Çözüm (12.10):** Anahtar `rf:<tiresiz sipariş kimliği>:<sıra>:<cent>`; 50 karaktere kesilmeden sığar. Kesme kalktı,
+  50'yi aşan anahtar Revolut'a gönderilmeden hata verir.
 - **Kanıt:** `packages/application/src/order/refund.ts:357-361` · `order/revolut.ts:164`.
 
 ## 15. Para ekranının yöntem dökümü siparişin son yönteminden okunuyor

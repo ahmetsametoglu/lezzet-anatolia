@@ -1,4 +1,11 @@
-import { confirmOnlinePayment, kickOrderRegister, linkAwaitingTransfers, recordPaymentFee, type PaymentGateway } from '@lezzet/application';
+import {
+  cardRefundMovementKey,
+  confirmOnlinePayment,
+  kickOrderRegister,
+  linkAwaitingTransfers,
+  recordPaymentFee,
+  type PaymentGateway,
+} from '@lezzet/application';
 import {
   AccountService,
   MoneyMovementService,
@@ -46,8 +53,8 @@ export type PaymentEvent =
     }
   /** Ödeme gelmeyecek (iptal ya da süre doldu): ayrılmış mal bırakılır, taslak müşteri için durur. */
   | { key: string; kind: 'payment_released'; orderId: string | null; paymentRef: string }
-  /** İade tamamlandı; ödemenin sağlayıcıda bugüne kadar iade edilmiş TOPLAMI taşınır ki olay tekrar gelirse fark iki kez yazılmasın. */
-  | { key: string; kind: 'refund_completed'; paymentRef: string; refundedTotalCents: number }
+  /** İade tamamlandı: iade siparişinin kimliği ve tutarı; `paymentRef` iade ettiği ödemedir. */
+  | { key: string; kind: 'refund_completed'; paymentRef: string; refundRef: string; amountCents: number }
   /** İade siparişi sağlayıcıda düştü: para müşteriye dönmedi; `paymentRef` iade ettiği ödemedir. */
   | { key: string; kind: 'refund_failed'; refundRef: string; paymentRef: string }
   /** Merchant hesabından ana hesaba aktarım tamamlandı. */
@@ -129,8 +136,8 @@ async function confirmPayment(
 }
 
 /**
- * İade mutabakatı: bir kart ödemesinin sağlayıcıdaki iade toplamı ile defterde o ödemeye bağlı iadeler eşitlenir; bizim başlattığımız
- * iadede ikisi zaten eşittir, sağlayıcının panelinden yapılan iadede fark deftere düşer. Sipariş ve ödeme künyeden (`providerRef`) bulunur.
+ * İade mutabakatı: her iade siparişi defterde tek satırdır ve satır Revolut'un iade kimliğiyle yazılır. Bizim başlattığımız iadeyi
+ * zaten o kimlikle yazdık, bildirim aynı satırı bulur; panelden yapılan iade ise bu yoldan deftere düşer.
  */
 async function reconcileRefund(
   event: Extract<PaymentEvent, { kind: 'refund_completed' }>,
@@ -143,27 +150,22 @@ async function reconcileRefund(
   const order = await new OrderService(db).getById(payment.orderId);
   if (!order) return { status: 'not_found' };
 
-  // Karşılaştırma o kart ödemesinin kendi iadeleriyledir: siparişin öteki iadeleri (nakit, başka kart ödemesi) bu ödemeden çıkmadı.
-  // Sağlayıcı bizden az iade göstermiş olamaz; negatif fark mutabakat sorunudur ve burada "düzeltilmez", defter kaynaktır.
-  const refundedHere = (await new MoneyMovementService(db).listByOrder(order.id))
-    .filter((movement) => movement.type === 'order_refund' && movement.meta?.['providerRef'] === event.paymentRef)
-    .reduce((sum, movement) => sum + movement.amountCents, 0);
-  const missingCents = event.refundedTotalCents - refundedHere;
-  if (missingCents <= 0) return { status: 'ok', action: 'ignored' };
-
   // Para hangi hesaba girdiyse oradan çıkar; ikisi de yoksa yazılmaz, yanlış hesaba yazmak bakiyeyi sessizce kaydırırdı.
   const refundAccountId = payment.accountId ?? accountId;
   if (!refundAccountId) return { status: 'not_found' };
 
-  await recordOrderRefund({
+  const written = await recordOrderRefund({
     orderId: order.id,
     accountId: refundAccountId,
-    amountCents: missingCents,
+    amountCents: event.amountCents,
     method: 'online',
-    description: 'Sağlayıcı panelinden iade — mutabakat',
-    meta: { providerRef: event.paymentRef },
+    description: 'Revolut iadesi — mutabakat',
+    meta: { providerRef: event.paymentRef, refundId: event.refundRef },
     source: 'system',
+    idempotencyKey: cardRefundMovementKey(event.refundRef),
   });
+  if (written.status !== 'ok') return { status: 'not_found' };
+  if (written.deduped) return { status: 'ok', action: 'ignored' };
   kickOrderRegister(serviceDb(), order.id);
   return { status: 'ok', action: 'refunded' };
 }

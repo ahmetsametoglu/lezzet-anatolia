@@ -33,7 +33,7 @@ export function verifyRevolutSignature(input: {
 
 /**
  * Bildirim yalnız olay ve kimlik taşır; tutar, komisyon ve bizim sipariş, sağlayıcı siparişi okunarak alınır. İade ayrı bir sipariş
- * olarak bildirilir ve iade ettiği siparişin iade toplamı ondan okunur.
+ * olarak bildirilir: kendi kimliği ve tutarıyla, iade ettiği ödemenin künyesine bağlanır.
  */
 export async function toPaymentEvent(client: RevolutClient, webhook: RevolutWebhookEvent): Promise<PaymentEvent> {
   const key = `${webhook.event}:${webhook.order_id ?? webhook.payout_id ?? webhook.dispute_id ?? 'yok'}`;
@@ -42,8 +42,7 @@ export async function toPaymentEvent(client: RevolutClient, webhook: RevolutWebh
     const order = await readRevolutOrder(client, webhook.order_id);
     if (order.type === 'refund') {
       if (!order.related_order_id) return { key, kind: 'ignored' };
-      const paid = await readRevolutOrder(client, order.related_order_id);
-      return { key, kind: 'refund_completed', paymentRef: paid.id, refundedTotalCents: paid.refunded_amount ?? order.amount };
+      return { key, kind: 'refund_completed', paymentRef: order.related_order_id, refundRef: order.id, amountCents: order.amount };
     }
     return {
       key,

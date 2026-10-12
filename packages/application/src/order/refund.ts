@@ -257,18 +257,17 @@ export async function retryRefund(
 }
 
 /**
- * Sipariş depodan çıktı (araç yola çıktı, koli kargoya verildi): hazırlıkta eksik çıkan malın parası kendiliğinden iade edilir. Kutu
- * artık açılamaz, karşılanan tutar kesinleşmiştir; kasanın düzeltme fişi de bu anda yazılır. Borç yoksa hiçbir şey yazılmaz.
+ * Sipariş depodan çıktı (araç yola çıktı, koli kargoya verildi): kutu açılamaz ve karşılanan tutar kesinleşir, hazırlıkta eksik çıkan
+ * malın parası kendiliğinden iade edilir. Kasanın düzeltme fişi de bu anda yazılır; borç yoksa hiçbir şey yazılmaz.
  */
 export async function refundShortfallOnDeparture(db: SupabaseClient, orderId: string, effects?: OrderEffects): Promise<void> {
   await settleRefund(db, orderId, { effects, description: 'Hazırlık eksiği — iade' });
 }
 
 /**
- * Ödeme durumunu tazeler, borç varsa iadeyi yazar ve hareketten sonraki hâli döner; tutar türetimden gelir, elle verilen tutar
- * yerine geçer. Para birden çok yoldan geldiyse iade motorun planıyla parçalara bölünür; her parçada önce sağlayıcı çağrısı, sonra
- * hareket, çünkü para dönmeden hareket yazılsa defter kapanmış görünürdü. Yazılamayan iade yönetime haber verir, çünkü kendiliğinden
- * yapılan iadede onu ekranda gören yoktur.
+ * Elle verilen tutar türetilen iade borcunun yerine geçer; para birden çok yoldan geldiyse iade motorun planıyla parçalanır ve her
+ * parçada önce sağlayıcı çağrılır, çünkü para dönmeden yazılan hareket defteri kapanmış gösterirdi. Yazılamayan iade yönetime haber
+ * verir, çünkü kendiliğinden yapılan iadeyi ekranda gören yoktur.
  */
 async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOptions): Promise<RefundOutcome | null> {
   const before = await syncOrderPaymentStatus(db, orderId);
@@ -333,6 +332,7 @@ type LegResult =
  */
 async function writeRefundLeg(db: SupabaseClient, orderId: string, leg: RefundLeg, opts: RefundOptions): Promise<LegResult> {
   const idempotencyKey = await refundIdempotencyKey(db, orderId, leg.amountCents);
+  let movementKey = idempotencyKey;
   let meta: Record<string, unknown> | null = null;
 
   // Sağlayıcı çağrısı hesabın TÜRÜNE bağlıdır, siparişin ödeme yöntemine değil: operatör kartla ödenmiş siparişi kasadan nakit iade
@@ -344,6 +344,8 @@ async function writeRefundLeg(db: SupabaseClient, orderId: string, leg: RefundLe
     if (result.status === 'unavailable') return { status: 'blocked', reason: 'provider_unavailable' };
     if (result.status === 'failed') return { status: 'blocked', reason: 'provider_failed' };
     meta = { providerRef: leg.providerRef, refundId: result.refundId };
+    // Revolut'un "iade tamamlandı" bildirimi de satırı bu kimlikle yazar; hangisi önce gelirse yazar, öteki aynı satırı bulur.
+    movementKey = cardRefundMovementKey(result.refundId);
   }
 
   const after = await recordOrderRefund(db, {
@@ -356,7 +358,7 @@ async function writeRefundLeg(db: SupabaseClient, orderId: string, leg: RefundLe
     meta,
     // Sistemin yazdığı satır: iade borcu motordan türedi, hareketi bu zincir yazar.
     source: 'system',
-    idempotencyKey,
+    idempotencyKey: movementKey,
   });
   if (after.status !== 'ok') {
     // Para SAĞLAYICIDAN ÇIKMIŞ olabilir ama deftere geçmedi — sessiz kalınamaz; çağıranın hata funnel'ı bunu `error_log`'a düşürür.
@@ -366,11 +368,16 @@ async function writeRefundLeg(db: SupabaseClient, orderId: string, leg: RefundLe
 }
 
 /**
- * Sağlayıcıda mükerrer iadeyi engelleyen anahtar: iadenin sırası ve tutarı anahtara girer. Aynı iadenin tekrarı aynı
- * anahtarla gider ve para iki kez çıkmaz; yeni kısmi iadede sıra değişir.
+ * Sağlayıcıda mükerrer iadeyi engelleyen anahtar: iadenin sırası ve tutarı (cent) anahtara girer ve Revolut'un 50 karakterine
+ * kesilmeden sığar. Aynı iadenin tekrarı aynı anahtarla gider ve para iki kez çıkmaz; yeni kısmi iadede sıra değişir.
  */
-async function refundIdempotencyKey(db: SupabaseClient, orderId: string, amount: number): Promise<string> {
+async function refundIdempotencyKey(db: SupabaseClient, orderId: string, amountCents: number): Promise<string> {
   const movements = await new MoneyMovementService(db).listByOrder(orderId);
   const sequence = movements.filter((movement) => movement.type === 'order_refund').length;
-  return `refund:${orderId}:${sequence}:${Math.round(amount * 100)}`;
+  return `rf:${orderId.replace(/-/g, '')}:${sequence}:${amountCents}`;
+}
+
+/** Karta iadenin defter satırı Revolut'un iade siparişine bağlıdır: bizim başlattığımız iade ve bildirim aynı satırda birleşir. */
+export function cardRefundMovementKey(refundOrderId: string): string {
+  return `card-refund:${refundOrderId}`;
 }

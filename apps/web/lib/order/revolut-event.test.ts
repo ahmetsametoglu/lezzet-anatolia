@@ -67,7 +67,7 @@ describe('toPaymentEvent', () => {
     });
   });
 
-  it('tamamlanan iade ödeme sanılmaz; iade ettiği ödemenin iade toplamıyla mutabakata gider', async () => {
+  it('tamamlanan iade ödeme sanılmaz; kendi kimliği ve tutarıyla iade ettiği ödemeye bağlanır', async () => {
     const client = fakeClient({
       'iade-1': { ...base, id: 'iade-1', type: 'refund', state: 'completed', amount: 300, related_order_id: 'rv-1' },
       'rv-1': {
@@ -84,7 +84,8 @@ describe('toPaymentEvent', () => {
       key: 'ORDER_COMPLETED:iade-1',
       kind: 'refund_completed',
       paymentRef: 'rv-1',
-      refundedTotalCents: 800,
+      refundRef: 'iade-1',
+      amountCents: 300,
     });
   });
 

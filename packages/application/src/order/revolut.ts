@@ -167,11 +167,18 @@ export function revolutGateway(client: RevolutClient | null): PaymentGateway | n
   };
 }
 
+/** Revolut'un tekrar anahtarı için kabul ettiği en uzun değer. */
+export const REVOLUT_IDEMPOTENCY_KEY_MAX = 50;
+
 /** Kısmi ya da tam iade; sağlayıcı iadeyi ayrı bir sipariş olarak açar ve sonucu o siparişin olayıyla bildirir. */
 export async function refundRevolutOrder(
   client: RevolutClient,
   input: { orderRef: string; amountCents: number; currency?: string; idempotencyKey: string; reference?: string },
 ): Promise<{ refundOrderId: string }> {
+  // Revolut anahtarı 50 karakterle sınırlar; kesilen anahtar farklı iki iadeyi aynı iade sayardı.
+  if (input.idempotencyKey.length > REVOLUT_IDEMPOTENCY_KEY_MAX) {
+    throw new RevolutError('validation', `iade anahtarı ${REVOLUT_IDEMPOTENCY_KEY_MAX} karakteri aşıyor (${input.idempotencyKey.length})`);
+  }
   const created = RevolutApiOrderSchema.safeParse(
     await client.request(
       'POST',
@@ -181,7 +188,7 @@ export async function refundRevolutOrder(
         currency: input.currency ?? 'EUR',
         ...(input.reference ? { merchant_order_data: { reference: input.reference } } : {}),
       },
-      { idempotencyKey: input.idempotencyKey.slice(0, 50) },
+      { idempotencyKey: input.idempotencyKey },
     ),
   );
   if (!created.success) throw new RevolutError('parse', `Revolut iade cevabı beklenen biçimde değil: ${created.error.message}`);
