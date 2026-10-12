@@ -23,7 +23,7 @@ Bu dosya sistemin **kalbidir**. İş mantığına dokunan her görevde okunur. "
 | **Fiili stok** | Depoda fiziksel olarak var olan miktar. |
 | **Ayrılmış stok** | Verilmiş ama henüz teslim edilmemiş siparişlere tahsis edilmiş miktar. |
 | **Kullanılabilir stok** | Fiili stok − ayrılmış stok. Yeni siparişin görebileceği miktar. |
-| **Hızlı satış** | Müşterinin depo kapısında anında verdiği, tek adımda tamamlanan ve ödenen sipariş. |
+| **Hızlı satış** | Müşterinin depo kapısında ya da kuryenin aracında anında verdiği, tek adımda tamamlanan sipariş; ödeme anında alınır, vadeli satışta tutar müşterinin açık bakiyesine eklenir. |
 
 ---
 
@@ -763,9 +763,11 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
   ya adresin posta kodudur (uzaktan sipariş: web/WhatsApp/elle) ya işlemi yapan personelin **o anki**
   deposudur (yerinde satış: depo kapısı ya da kuryenin aracı). **Admin yerinde satış yapmaz** —
   satan kişi, malın yanında duran personeldir. Yüzey sonucu: yerinde satış ekranı **native
-  uygulamanın** kurye/depo bölümündedir. Müşteri adına sipariş girişi iki yüzeyde aynı kapıdan geçer:
-  operasyon web'inde telefonla gelen sipariş, mobil uçta sahadaki kurye, depocu ya da yöneticinin girdiği
-  sipariş; ikisinde de depo adresin posta kodundan çözülür.
+  uygulamanın** kurye/depo bölümündedir. Yerinde satışta müşteri isteğe bağlıdır: seçilmezse satış anonim
+  alıcıya yazılır; seçilirse fiyat, kanal ve KDV ondan okunur, vade izni ve limiti yetiyorsa satış vadeli yazılır
+  (kapıda para alınmaz). Müşteri adına sipariş girişi iki yüzeyde aynı kapıdan geçer: operasyon web'inde telefonla
+  gelen sipariş, mobil uçta sahadaki kurye, depocu ya da yöneticinin girdiği sipariş; ikisinde de depo adresin posta
+  kodundan çözülür.
 - **Ülke:** posta kodu ülkeler arası benzersiz değildir (FR ve DE ikisi de 5 hane; `67000` ikisinde
   de geçerli). Yer çözümü `(ülke, posta kodu)` ikilisidir. Ülke seçici yalnız aktif bölge/depoların
   ülke kümesi 1'i aşınca görünür (veriden türer, ayar değil); site dili en fazla ön-seçim
@@ -808,8 +810,8 @@ izi ve soğuk zincir kendiliğinden çalışır.
   ürünü asla depo değiştirmez. Değişmez **veride** durur: siparişe yazılan partiler siparişin
   deposundan olmak zorundadır (ertelenmiş kısıt — `order_discount_balance` emsali).
 - **Sipariş müşterinin işinin deposundan çıkar** (`docs/feature/iki-is.md`, karar 7 ve 10): QUALITE müşterisi yalnız
-  QUALITE deposundan, Lezzet müşterisi ve anonim alıcı yalnız Lezzet deposundan alır; QUALITE deposunda kapı satışı
-  yapılmaz. Kural veridedir ve yazılmış siparişin işi depo değişse de değişmez.
+  QUALITE deposundan, Lezzet müşterisi ve anonim alıcı yalnız Lezzet deposundan alır; QUALITE deposunda anonim kapı
+  satışı yapılmaz, kapı ve araç satışı adı belli QUALITE müşterisine açılır. Kural veridedir ve yazılmış siparişin işi depo değişse de değişmez.
 - **Karma sepet (rota müşterisi):** kendi deposunda OLAN her şey — kargolanabilir dahil — rota
   siparişiyle araçtan gider. Kendi deposunda OLMAYAN kargolanabilir ürün **engellenmez**:
   "kargoyla gönderilir" işaretiyle satılır ve **ayrı ödemeli ayrı bir kargo checkout'una** gider

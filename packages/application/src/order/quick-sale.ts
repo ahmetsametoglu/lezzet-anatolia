@@ -65,9 +65,10 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
   if (stockEffectOf(order.status, 'completed') !== 'consume_direct') {
     return { status: 'forbidden', reason: 'not_fast_sale_path' };
   }
-  // Tahsilatın yazılacağı hesap yoksa satış başlamaz: mal giderken para kayıtsız kalırdı.
-  const accountId = input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod));
-  if (!accountId) return { status: 'no_payment_account' };
+  // Tahsilatın yazılacağı hesap yoksa satış başlamaz: mal giderken para kayıtsız kalırdı. Vadeli siparişte kapıda para alınmaz, tutar
+  // müşterinin açık bakiyesine eklenir; hesap da tahsilat da yoktur.
+  const accountId = order.onAccount ? null : (input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod)));
+  if (!order.onAccount && !accountId) return { status: 'no_payment_account' };
 
   // 2) Partiler: verilmediyse FEFO önerisi. Yetmiyorsa satış hiç başlamaz.
   let picks: PreparationPick[];
@@ -127,17 +128,20 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
   }
 
   // 5) Tahsilat ayrı bir gerçektir: para bir hesaba girer, sipariş önbelleği ondan türer.
-  const collected = await recordOrderPayment(db, {
-    orderId: order.id,
-    accountId,
-    amountCents: input.collectedAmountCents ?? order.orderedTotalCents,
-    method: input.paymentMethod,
-    description: 'Kapı önü satış',
-    // Sistemin yazdığı satır: kasiyer tutarı onaylar ama deftere yazan akışın kendisidir.
-    source: 'system',
-  });
-  const paymentRecorded = collected.status === 'ok';
-  if (paymentRecorded) kickOrderRegister(db, order.id);
+  let paymentRecorded = false;
+  if (accountId !== null) {
+    const collected = await recordOrderPayment(db, {
+      orderId: order.id,
+      accountId,
+      amountCents: input.collectedAmountCents ?? order.orderedTotalCents,
+      method: input.paymentMethod,
+      description: 'Kapı önü satış',
+      // Sistemin yazdığı satır: kasiyer tutarı onaylar ama deftere yazan akışın kendisidir.
+      source: 'system',
+    });
+    paymentRecorded = collected.status === 'ok';
+    if (paymentRecorded) kickOrderRegister(db, order.id);
+  }
 
   // Getirenin ödülü tahsilatla `finalize`te doğar, burada çağrılmaz, çünkü ölçüt defterdir.
 

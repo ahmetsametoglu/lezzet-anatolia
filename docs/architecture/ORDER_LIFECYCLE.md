@@ -7,7 +7,7 @@ Sipariş, sistemin en çok referans verilen ve en karmaşık varlığıdır. Bu 
 Sipariş **katı bir zincir değildir.** Durumlar zorunlu bir sıra oluşturmaz; bir "izin verilen geçişler kümesi" vardır. Aynı sipariş varlığı iki farklı yoldan geçebilir:
 
 - **Tam yol** — uzaktan sipariş: onaydan teslimata kadar tüm adımlar.
-- **Hızlı satış yolu** — kapı önü: tek adımda tamamlanır ve ödenir.
+- **Hızlı satış yolu** — kapı önü ve araç: tek adımda tamamlanır; vadeli değilse anında ödenir.
 
 İkisi de aynı `orders` tablosunu ve aynı durum alanını kullanır; yalnızca farklı geçişlerden geçerler.
 
@@ -81,7 +81,7 @@ Kapanış (`delivered → completed`) teslim edilmiş ve parası tamamen alınm�
 Kapı önü satışı için ara adımlar **atlanabilir**:
 
 ```
-draft → completed   (stok fiiliden anında düşülür, ödeme anında alınır)
+draft → completed   (stok fiiliden anında düşülür; ödeme anında alınır, vadeli satışta açık bakiyeye eklenir)
 ```
 
 Bu yolda `confirmed/preparing/ready/out_for_delivery` durumlarına uğranmaz. Tek ekranda: ürün seç → ödeme al → kapat. Stok rezervasyonu yapılmaz; fiili stoktan doğrudan düşülür (bkz. `DOMAIN.md §4`). `reference_no` bu yolda `completed`'a geçişte üretilir (kural: **ilk kalıcı durum**).

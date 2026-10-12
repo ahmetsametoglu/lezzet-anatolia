@@ -8,11 +8,14 @@ import {
   type Db,
 } from '@lezzet/database';
 import type { CreateOrderItemInput } from '@lezzet/database';
-import type { Order, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import { customerBusinessOf, deriveChannel, resolveVatTreatment } from '@lezzet/domain-core';
+import type { Order, PaymentMethod, PreferredLanguage, UserProfile, Warehouse } from '@lezzet/types';
 import { getCartView } from '../cart/read';
-import { discountAmountOf, discountIdOf, discountLabelOf, discountSharesOf } from '../cart/cart-types';
+import { discountAmountOf, discountIdOf, discountLabelOf, discountSharesOf, type CartLine } from '../cart/cart-types';
+import { resolveCheckoutPayment } from './checkout-options';
 import { readDoorAccountId } from './door-account';
 import { quickSale, type QuickSaleOutcome } from './quick-sale';
+import { shippingVatLines } from './shipping-selection';
 
 /**
  * Yerinde satış (DOMAIN §17): depo kapısında ya da kuryenin aracında tek adımda kapanır; satan malın yanındaki personeldir, bu yüzden
@@ -42,8 +45,8 @@ export interface OnSiteSaleInput {
   /** Satışı yapan personel — pazarlık izinin "kim" tarafı ve geçiş logunun aktörü. */
   staffId: string;
   /**
-   * Siparişin yazılacağı müşteri: kimlik sorulmadığı için normalde anonim kayıt, kendi hesabıyla alan için gerçek kimlik. Kararı
-   * çağıran verir; bu kapı politika uygulamaz, yalnız yazar.
+   * Siparişin yazılacağı müşteri: anonim alıcı ya da personelin seçtiği müşteri. Seçilen müşterinin işi deponun işiyle tutmalıdır;
+   * fiyat, kanal ve KDV ondan okunur.
    */
   customerId: string;
   lines: readonly OnSiteSaleLine[];
@@ -56,6 +59,8 @@ export interface OnSiteSaleInput {
   locale?: PreferredLanguage;
   /** Cevabı kaybolan satış aynı kimlikle yeniden gelir; kimlik siparişe yazılır ki ikinci istek ikinci satış açmasın. */
   idempotencyKey?: string | null;
+  /** Vadeli satış: yalnız seçilmiş müşteride ve havale yöntemiyle; vade izni ve limiti burada denetlenir. */
+  onAccount?: boolean;
 }
 
 export type OnSiteSaleOutcome =
@@ -75,11 +80,21 @@ export type OnSiteSaleOutcome =
   | { status: 'insufficient_here'; lines: { name: string; available: number }[] }
   /** Yöntemin kapı hesabı ayarlı değil — sipariş HİÇ yazılmaz, çünkü mal giderken para kayıtsız kalırdı. */
   | { status: 'no_payment_account' }
+  /** Seçilen müşterinin işi deponun işi değil; QUALITE müşterisi Lezzet deposundan almaz, tersi de. */
+  | { status: 'business_mismatch' }
+  /** Vadeli yalnız seçilmiş müşteride ve havaleyle açılır. */
+  | { status: 'payment_not_allowed' }
+  /** Vade freni: izin yok, vadesi geçmiş borç var ya da limit yetmiyor; sipariş yazılmaz. */
+  | { status: 'credit_not_allowed'; reason: 'not_enabled' | 'overdue' | 'limit_exceeded' }
   /** Kapanış adımının reddi olduğu gibi taşınır — mal yok, yarış, kural reddi. */
   | { status: 'sale_failed'; outcome: Exclude<QuickSaleOutcome, { status: 'ok' }> };
 
 export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSiteSaleOutcome> {
   if (input.lines.length === 0) return { status: 'empty' };
+  const onAccount = input.onAccount === true;
+  const named = input.customerId !== ANONYMOUS_BUYER_ID;
+  // Vadeli satış adı belli müşterinin açık bakiyesine yazılır ve yöntemi havaledir; anonim alıcının bakiyesi yoktur.
+  if (onAccount && (!named || input.paymentMethod !== 'bank_transfer')) return { status: 'payment_not_allowed' };
 
   if (input.idempotencyKey) {
     const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
@@ -89,9 +104,14 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
   const warehouse = await new WarehouseService(db).getById(input.warehouseId);
   if (!warehouse) return { status: 'warehouse_not_found' };
 
-  // Hesap taslaktan önce denetlenir: reddedilen satış kapanmayacak bir taslak sipariş bırakmasın.
-  const paymentAccountId = input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod));
-  if (!paymentAccountId) return { status: 'no_payment_account' };
+  const buyer = named ? await new UserProfileService(db).getById(input.customerId) : null;
+  if (named && !buyer) throw new Error(`yerinde satış: müşteri bulunamadı (${input.customerId})`);
+  // Siparişi yazan her kapıda müşterinin işi deponun işiyle tutar; anonim alıcı muaftır.
+  if (buyer && customerBusinessOf(buyer) !== warehouse.business) return { status: 'business_mismatch' };
+
+  // Hesap taslaktan önce denetlenir: reddedilen satış kapanmayacak bir taslak sipariş bırakmasın. Vadelide kapıda para alınmaz.
+  const paymentAccountId = onAccount ? null : (input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod)));
+  if (!onAccount && !paymentAccountId) return { status: 'no_payment_account' };
 
   const locale: PreferredLanguage = input.locale ?? 'tr';
   const overrides = new Map(
@@ -138,6 +158,22 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     .map((line, index) => ({ line, share: shares[index] ?? 0 }))
     .filter((row): row is { line: typeof row.line & { variantId: string }; share: number } => row.line.variantId !== undefined);
 
+  const terms =
+    buyer === null
+      ? null
+      : await namedSaleTerms(db, {
+          buyer,
+          warehouse,
+          basketCents: view.totalCents,
+          subtotalCents: view.subtotalCents,
+          lines: kept.map(({ line }) => line),
+          shares: kept.map(({ share }) => share),
+        });
+  if (onAccount && terms && !terms.payment.creditAvailable) {
+    return { status: 'credit_not_allowed', reason: terms.payment.creditBlockedReason ?? 'not_enabled' };
+  }
+  const totalCents = terms?.payment.orderTotalCents ?? view.totalCents;
+
   const items: CreateOrderItemInput[] = kept.map(({ line, share }) => ({
     variantId: line.variantId,
     qty: line.qty,
@@ -146,7 +182,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     ...(line.listUnitPriceCents != null
       ? { listUnitPriceCents: line.listUnitPriceCents, priceSetBy: input.staffId }
       : {}),
-    vatRate: line.vatRate,
+    vatRate: terms?.vat.zeroRated ? 0 : line.vatRate,
     // İndirim kaleme yazılır, yoksa ciro onu görmez: `revenue_total` tetikleyicisi (`resync_order_revenue`) yalnız bu alanı okur.
     lineDiscountAmountCents: share,
   }));
@@ -157,15 +193,24 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     {
       customerId: input.customerId,
       warehouseId: input.warehouseId,
-      channel: 'b2c',
+      channel: terms?.channel ?? 'b2c',
       // Son kapı satışları görünümü (`listDoorSales`) siparişi bu kaynaktan bulur.
       orderSource: 'door',
       deliveryType: 'pickup',
       status: 'draft',
       paymentMethod: input.paymentMethod,
+      onAccount,
       // Kargo ücreti SORULMUYOR: `resolveShippingFee` `pickup` almıyor, sipariş doğrudan 0 yazar.
       shippingFeeCents: 0,
-      orderedTotalCents: view.totalCents,
+      orderedTotalCents: totalCents,
+      ...(terms === null || buyer === null
+        ? {}
+        : {
+            deliveryCountry: warehouse.countryCode,
+            vatTreatment: terms.vat.treatment,
+            vatNumberSnapshot: terms.vat.zeroRated ? buyer.vatNumber : null,
+            pricesIncludeVat: terms.payment.pricesIncludeVat,
+          }),
       /*
         Siparişin indirim alanları da yazılır, çünkü kampanya kotası `create_order` RPC'sinde `discount_id`den tükenir ve veritabanı
         `discount_amount = Σ line_discount_amount` eşitliğini commit anında denetler (`order_discount_balance`); alanlar checkout'un
@@ -186,7 +231,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     actorId: input.staffId,
     paymentMethod: input.paymentMethod,
     collectedAmountCents: input.collectedAmountCents,
-    paymentAccountId,
+    paymentAccountId: paymentAccountId ?? undefined,
   });
 
   if (outcome.status !== 'ok') return { status: 'sale_failed', outcome };
@@ -194,10 +239,44 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
   return {
     status: 'ok',
     orderId: order.id,
-    totalCents: view.totalCents,
+    totalCents,
     referenceNo: outcome.referenceNo,
     paymentRecorded: outcome.paymentRecorded,
   };
+}
+
+/**
+ * Adı belli müşterinin siparişinde kanal, KDV ve borç checkout'un kurallarıyla yazılır: B2B fiyatı vergisizdir, borç her tabanda KDV
+ * dahildir. Teslim ülkesi deponun ülkesidir, çünkü mal kapıda ya da araçta el değiştirir.
+ */
+async function namedSaleTerms(
+  db: Db,
+  input: {
+    buyer: UserProfile;
+    warehouse: Warehouse;
+    basketCents: number;
+    subtotalCents: number;
+    lines: readonly CartLine[];
+    shares: readonly number[];
+  },
+) {
+  const channel = deriveChannel({ isCompany: input.buyer.type === 'company' });
+  const vat = resolveVatTreatment({
+    channel,
+    deliveryCountry: input.warehouse.countryCode,
+    vatNumberValid: input.buyer.vatNumberValid ?? undefined,
+  });
+  const payment = await resolveCheckoutPayment(db, {
+    customerId: input.buyer.id,
+    deliveryType: 'pickup',
+    basketCents: input.basketCents,
+    subtotalCents: input.subtotalCents,
+    lines: shippingVatLines(input.lines),
+    discountShares: input.shares,
+    country: input.warehouse.countryCode,
+    warehouseId: input.warehouse.id,
+  });
+  return { channel, vat, payment };
 }
 
 /**

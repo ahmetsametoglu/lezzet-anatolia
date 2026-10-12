@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, DiscountService, MoneyMovementService, OrderItemService, OrderService, PriceService,
   ProductService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeOrdersBy, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, sellOnSite } from './on-site-sale';
 
 /**
@@ -285,5 +285,84 @@ describe('yerinde satış', () => {
       // Kampanya bu testin malı: kalırsa dosyanın öteki testlerinin tutarlarını sessizce oynatır.
       await mustDelete(db, 'discount', (q) => q.eq('id', kampanya.id));
     }
+  });
+});
+
+describe('adı belli müşteriye satış', () => {
+  const B2B = 800;
+  let vadeliId: string;
+  let vadesizId: string;
+  let qualiteId: string;
+
+  beforeAll(async () => {
+    await new PriceService(db).insert({ variantId, channel: 'b2b', amountCents: B2B });
+    const profiles = new UserProfileService(db);
+    vadeliId = (
+      await profiles.insert({
+        name: `Vadeli şirket ${stamp}`,
+        type: 'company',
+        b2bApproved: true,
+        creditEnabled: true,
+        creditLimitCents: 100_000,
+        paymentTermDays: 30,
+      })
+    ).id;
+    vadesizId = (await profiles.insert({ name: `Vadesiz şirket ${stamp}`, type: 'company', b2bApproved: true, creditEnabled: false })).id;
+    qualiteId = (await profiles.insert({ name: `QUALITE şirketi ${stamp}`, type: 'company', b2bApproved: true, business: 'qualite' })).id;
+    createdProfiles.push(vadeliId, vadesizId, qualiteId);
+  });
+
+  afterAll(async () => {
+    // Satış partiye çıpalandığı için parti önce, sipariş sonra gider (`beforeEach` sırası).
+    await purgeVariantStock(db, [variantId]);
+    await purgeOrdersBy(db, 'customer_id', [vadeliId, vadesizId, qualiteId]);
+  });
+
+  it('vadeli satış kapıda para almaz: sipariş B2B kanalında, KDV dahil borçla ve tahsilatsız kapanır', async () => {
+    const result = await sale({ customerId: vadeliId, paymentMethod: 'bank_transfer', paymentAccountId: undefined, onAccount: true });
+
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.paymentRecorded).toBe(false);
+    // B2B fiyatı vergisizdir; borç her tabanda KDV dahil yazılır.
+    expect(result.totalCents).toBeGreaterThan(2 * B2B);
+
+    const order = await orders.getById(result.orderId);
+    expect(order).toMatchObject({
+      status: 'completed',
+      channel: 'b2b',
+      onAccount: true,
+      pricesIncludeVat: false,
+      orderedTotalCents: result.totalCents,
+    });
+    const movements = await new MoneyMovementService(db).listByOrder(result.orderId);
+    expect(movements.filter((m) => m.type === 'order_payment')).toHaveLength(0);
+  });
+
+  it('peşin B2B satış tahsilatı yazar ve siparişi B2B kanalına yazar; kasa B2B nakdini kanaldan tanır', async () => {
+    const result = await sale({ customerId: vadeliId });
+
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.paymentRecorded).toBe(true);
+    expect(await orders.getById(result.orderId)).toMatchObject({ channel: 'b2b', onAccount: false });
+  });
+
+  it('vade izni olmayan şirkete vadeli satış açılmaz ve sipariş yazılmaz', async () => {
+    const result = await sale({ customerId: vadesizId, paymentMethod: 'bank_transfer', paymentAccountId: undefined, onAccount: true });
+
+    expect(result).toEqual({ status: 'credit_not_allowed', reason: 'not_enabled' });
+    const { data } = await db.from('order').select('id').eq('customer_id', vadesizId);
+    expect(data ?? []).toHaveLength(0);
+  });
+
+  it('müşterinin işi deponun işiyle tutmazsa satış yazılmaz: QUALITE müşterisi Lezzet kapısından almaz', async () => {
+    expect(await sale({ customerId: qualiteId })).toEqual({ status: 'business_mismatch' });
+  });
+
+  it('anonim alıcıya vadeli satış yazılmaz, çünkü açık bakiyesi yoktur', async () => {
+    expect(await sale({ customerId: ANONYMOUS_BUYER_ID, paymentMethod: 'bank_transfer', onAccount: true })).toEqual({
+      status: 'payment_not_allowed',
+    });
   });
 });

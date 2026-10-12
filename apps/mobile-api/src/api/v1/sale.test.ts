@@ -5,10 +5,11 @@ import {
   PriceService,
   ProductService,
   StockService,
+  UserProfileService,
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeOrdersBy, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, startCourierDay } from '@lezzet/application';
 // Beklenen şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME kırılır.
 import type { OnSiteSaleResponse, SaleCatalogPage, SaleVariantsResponse } from '@lezzet/types';
@@ -58,6 +59,10 @@ let categoryId: string;
    karşı-örnek şart: araç katalogu onu GÖRMEMELİ, tesis katalogu görmeli. */
 let sadeceTesisVariantId: string;
 let sadeceTesisProductId: string;
+/** Onaylı, vadeli Lezzet şirketi ve onaylı QUALITE şirketi; satışın `?customerId=` alıcıları. */
+let b2bMusteriId: string;
+let qualiteMusteriId: string;
+const B2B_FIYAT = 400;
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
@@ -82,6 +87,21 @@ beforeAll(async () => {
   productSlug = product.slug;
   variantId = variants[0]!.id;
   await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: 500 });
+  await new PriceService(db).insert({ variantId, channel: 'b2b', amountCents: B2B_FIYAT });
+  const profiles = new UserProfileService(db);
+  b2bMusteriId = (
+    await profiles.insert({
+      name: `Uç vadeli şirket ${stamp}`,
+      type: 'company',
+      b2bApproved: true,
+      creditEnabled: true,
+      creditLimitCents: 100_000,
+      paymentTermDays: 30,
+    })
+  ).id;
+  qualiteMusteriId = (
+    await profiles.insert({ name: `Uç QUALITE şirketi ${stamp}`, type: 'company', b2bApproved: true, business: 'qualite' })
+  ).id;
   // Katalog YALNIZ aktif ürünü listeler (`status: 'active'` süzgeci); aday ürün doğrudan bağlantıyla
   // bile açılmıyor (DOMAIN §13). Fikstür bu yüzden ürünü yayına alıyor.
   await new ProductService(db).update({ id: productId, status: 'active' });
@@ -132,12 +152,21 @@ beforeEach(async () => {
 afterAll(async () => {
   // Aynı gerekçe (`beforeEach` künyesi): parti önce, sipariş sonra; silme bu dosyanın depolarıyla sınırlı.
   await purgeVariantStock(db, [variantId, sadeceTesisVariantId]);
+  await purgeOrdersBy(db, 'customer_id', [b2bMusteriId, qualiteMusteriId]);
   await mustDelete(db, 'order', (q) =>
     q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId, qualiteDepoId]),
   );
   await purgeTestData(db, {
     productIds: [productId, sadeceTesisProductId], categoryIds: [categoryId],
-    profileIds: [kurye.profileId, depocu.profileId, aracsizKurye.profileId, qualiteDepocu.profileId, yoneticiDepocu.profileId],
+    profileIds: [
+      kurye.profileId,
+      depocu.profileId,
+      aracsizKurye.profileId,
+      qualiteDepocu.profileId,
+      yoneticiDepocu.profileId,
+      b2bMusteriId,
+      qualiteMusteriId,
+    ],
     warehouseIds: [facilityId, vehicleId, baskaDepoId, qualiteDepoId],
   });
 });
@@ -357,5 +386,40 @@ describe('POST /sale/on-site', () => {
       headers: bearer(kurye.token),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe('adı belli müşteriye satış (?customerId=)', () => {
+  it('QUALITE deposunda satış yalnız işi tutan müşteriye açılır; Lezzet müşterisi orada alamaz', async () => {
+    const katalog = (customerId: string) =>
+      app.request(`/api/v1/sale/catalog?locale=tr&customerId=${customerId}`, { headers: bearer(qualiteDepocu.token) });
+
+    expect((await katalog(qualiteMusteriId)).status).toBe(200);
+    const lezzet = await katalog(b2bMusteriId);
+    expect(lezzet.status).toBe(403);
+    expect(((await lezzet.json()) as { error: string }).error).toBe('customer_business_mismatch');
+  });
+
+  it('katalog fiyatı seçilen müşterinin fiyatıdır, müşterisiz okuma perakendedir', async () => {
+    const fiyat = async (query: string) => {
+      const res = await app.request(`/api/v1/sale/catalog?locale=tr&q=${encodeURIComponent(`Simit ${stamp}`)}${query}`, {
+        headers: bearer(depocu.token),
+      });
+      const data = await envelopeData<SaleCatalogPage>(res);
+      return data.products.find((p) => p.variantId === variantId)?.priceCents;
+    };
+
+    expect(await fiyat('')).toBe(500);
+    expect(await fiyat(`&customerId=${b2bMusteriId}`)).toBe(B2B_FIYAT);
+  });
+
+  it('vadeli satış uçtan geçer ve tahsilat yazmaz; müşterisiz vadeli istek kapıya ulaşmaz', async () => {
+    const vadeli = { lines: [{ variantId, qty: 1 }], paymentMethod: 'bank_transfer', onAccount: true };
+
+    const data = await envelopeData<OnSiteSaleResponse>(await post(depocu, vadeli, `?customerId=${b2bMusteriId}`));
+    expect(data).toMatchObject({ status: 'ok', paymentRecorded: false });
+
+    expect((await post(depocu, vadeli)).status).toBe(400);
+    expect(await anonimSiparisSayisi()).toBe(0);
   });
 });

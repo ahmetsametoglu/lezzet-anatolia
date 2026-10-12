@@ -1,16 +1,25 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { ProductVariantService, StockService, VariantBarcodeService, WarehouseService, serviceDb } from '@lezzet/database';
+import {
+  ProductVariantService,
+  StockService,
+  UserProfileService,
+  VariantBarcodeService,
+  WarehouseService,
+  serviceDb,
+} from '@lezzet/database';
 import {
   ANONYMOUS_BUYER_ID,
   getCatalogData,
   getProductDetail,
   listRecentDoorSales,
+  pricingViewerFor,
   sellOnSite,
   toWireCampaign,
   vehicleWarehouseOf,
   VISITOR,
   type PlaceWarehouses,
+  type PricingViewer,
 } from '@lezzet/application';
 import { canNegotiatePrice, customerBusinessOf } from '@lezzet/domain-core';
 import {
@@ -23,6 +32,8 @@ import {
   SaleCatalogPageSchema,
   SaleScanResponseSchema,
   SaleVariantsResponseSchema,
+  type Business,
+  type UserProfile,
 } from '@lezzet/types';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { fail, ok } from '../../lib/respond';
@@ -33,7 +44,7 @@ import { warehouseGuard, type WarehouseEnv } from './warehouse';
 
 /**
  * Yerinde satış ucu, depo kapısı ve kuryenin aracı için tek çağrı: kural hesaplamaz, hepsi `sellOnSite`tadır. Ayrı yönlendiricidir,
- * çünkü yerinde satışı kurye de yapar ve depo yönlendiricisinin rol kapısına giremez; depo personelin künyesinden, alıcı anonimdir.
+ * çünkü yerinde satışı kurye de yapar ve depo yönlendiricisinin rol kapısına giremez; depo personelin künyesinden, alıcı bağlamdan gelir.
  */
 /**
  * Satışın kendi bağlamı: depo kapısının değişkenlerine **satış yeri** eklenir. Yer, çözülen deponun
@@ -41,14 +52,25 @@ import { warehouseGuard, type WarehouseEnv } from './warehouse';
  * daralıyor — bu yüzden ayrı bir değişken, türetilmiş bir tahmin değil.
  */
 interface SaleEnv {
-  Variables: WarehouseEnv['Variables'] & { salePlace: 'facility' | 'van' };
+  Variables: WarehouseEnv['Variables'] & {
+    salePlace: 'facility' | 'van';
+    /** Satışın alıcısı; `null` = anonim alıcı. */
+    saleBuyer: UserProfile | null;
+    saleBusiness: Business;
+  };
 }
 
 export const sale = new Hono<SaleEnv>();
 
-/** Satışın yeri satıcının deposudur; alıcı anonimdir ve anonim alıcı Lezzet'tir. */
-function salePlaceOf(warehouseId: string): PlaceWarehouses {
-  return { warehouseId, shippingWarehouseId: null, business: customerBusinessOf(null) };
+/** Satışın yeri satıcının deposudur ve işi deponun işidir; seçilen müşterinin işi onunla tutmak zorundadır. */
+function salePlaceOf(warehouseId: string, business: Business): PlaceWarehouses {
+  return { warehouseId, shippingWarehouseId: null, business };
+}
+
+/** Fiyat seçilen müşterinin görüşünden okunur (özel → grup → liste); alıcı yoksa ziyaretçi. */
+function saleViewerOf(c: Context<SaleEnv>): Promise<PricingViewer> {
+  const buyer = c.get('saleBuyer');
+  return buyer === null ? Promise.resolve(VISITOR) : pricingViewerFor(serviceDb(), buyer);
 }
 
 /**
@@ -86,19 +108,31 @@ async function salePlaceGuard(c: Context<SaleEnv>, next: Next): Promise<Response
 }
 
 /**
- * QUALITE deposundan anonim kapı satışı yapılmaz: satışın alıcısı anonimdir ve anonim alıcı Lezzet'tir (docs/feature/iki-is.md,
- * karar 10). Ekran bu cevapla sebebi söyler, liste ve okutma açılmaz.
+ * Satışın alıcısı (`?customerId=`); verilmezse anonim alıcıdır ve anonim alıcı Lezzet'tir. QUALITE deposunda anonim satış yapılmaz
+ * (docs/feature/iki-is.md, karar 10), satış ancak işi deponun işiyle tutan adı belli müşteriye açılır.
  */
-async function doorSaleOpen(c: Context<SaleEnv>, next: Next): Promise<Response | void> {
-  const warehouse = await new WarehouseService(serviceDb()).getById(c.get('warehouseId'));
-  if (warehouse !== null && warehouse.business !== customerBusinessOf(null)) return fail(c, 'door_sale_closed', 403);
+async function saleBuyerGuard(c: Context<SaleEnv>, next: Next): Promise<Response | void> {
+  const raw = c.req.query('customerId');
+  const customerId = raw === undefined ? null : z.string().uuid().safeParse(raw);
+  if (customerId !== null && !customerId.success) return fail(c, 'invalid_customer', 400);
+  const db = serviceDb();
+  const [warehouse, buyer] = await Promise.all([
+    new WarehouseService(db).getById(c.get('warehouseId')),
+    customerId === null ? Promise.resolve(null) : new UserProfileService(db).getById(customerId.data),
+  ]);
+  if (customerId !== null && (buyer === null || buyer.id === ANONYMOUS_BUYER_ID)) return fail(c, 'customer_not_found', 404);
+  const business = warehouse?.business ?? customerBusinessOf(null);
+  if (buyer !== null && customerBusinessOf(buyer) !== business) return fail(c, 'customer_business_mismatch', 403);
+  if (buyer === null && business !== customerBusinessOf(null)) return fail(c, 'door_sale_closed', 403);
+  c.set('saleBuyer', buyer);
+  c.set('saleBusiness', business);
   await next();
 }
 
-// Sıra güvenlik kararının kendisidir: önce rol (kim), sonra depo (nerede), en son o depoda kapı satışı açık mı.
+// Sıra güvenlik kararının kendisidir: önce rol (kim), sonra depo (nerede), en son alıcı ve o depoda satışın ona açık olup olmadığı.
 sale.use('*', requireStaffRole('warehouse', 'courier', 'admin'));
 sale.use('*', salePlaceGuard);
-sale.use('*', doorSaleOpen);
+sale.use('*', saleBuyerGuard);
 
 /**
  * Satış tek çağrıda kapanır ve kapının kararı ne olursa olsun 200 döner; `sale_failed` ayrıntısızdır, çünkü sebepleri personelin
@@ -115,22 +149,26 @@ sale.post('/on-site', async (c) => {
   const outcome = await sellOnSite(serviceDb(), {
     warehouseId: c.get('warehouseId'),
     staffId: c.get('staff').id,
-    customerId: ANONYMOUS_BUYER_ID,
+    customerId: c.get('saleBuyer')?.id ?? ANONYMOUS_BUYER_ID,
     lines: parsed.data.lines,
     paymentMethod: parsed.data.paymentMethod,
     collectedAmountCents: parsed.data.collectedAmountCents,
     idempotencyKey: parsed.data.idempotencyKey,
+    onAccount: parsed.data.onAccount,
   });
 
   if (
     outcome.status === 'ok' ||
     outcome.status === 'insufficient_here' ||
     outcome.status === 'blocked_lines' ||
-    outcome.status === 'no_payment_account'
+    outcome.status === 'no_payment_account' ||
+    outcome.status === 'credit_not_allowed'
   ) {
     const body: z.input<typeof OnSiteSaleResponseSchema> = outcome;
     return ok(c, OnSiteSaleResponseSchema.parse(body));
   }
+  // Vadeli yalnız seçilmiş müşteride ve havaleyle istenebilir; ekran başka bir birleşim kurmaz, elle kurulan istek burada düşer.
+  if (outcome.status === 'payment_not_allowed') return fail(c, 'payment_not_allowed', 400);
 
   // `empty` ve `warehouse_not_found` buraya ULAŞAMAZ: ilkini şema (`min(1)`), ikincisini guard eler.
   // Kalan tek hâl kapanış reddi — sebebi ekranın işine yaramaz ama BİZİM işimize yarar, o yüzden
@@ -151,7 +189,7 @@ const SaleCatalogQuerySchema = z.object({
 
 /**
  * Bu depoda ne var, satış ekranının listesi: katalog okumasının kendisidir, yalnız yer personelin o anki deposudur ve kargo deposu
- * yoktur; görüş `b2c`, çünkü alıcı anonimdir. Kalan adet satışa özel alandan (`availableHere`) gelir, kaynağı sepet doğrulamasının
+ * yoktur; fiyat alıcının görüşünden okunur. Kalan adet satışa özel alandan (`availableHere`) gelir, kaynağı sepet doğrulamasının
  * okuduğu görünümdür.
  */
 sale.get('/catalog', async (c) => {
@@ -168,8 +206,8 @@ sale.get('/catalog', async (c) => {
       /* Araç bir vitrin değildir, kurye elindekini satar; tesis kapısında kural tersinedir (`listStockedProductIds`). */
       onlyStockedHere: c.get('salePlace') === 'van',
     },
-    place: salePlaceOf(c.get('warehouseId')),
-    viewer: VISITOR,
+    place: salePlaceOf(c.get('warehouseId'), c.get('saleBusiness')),
+    viewer: await saleViewerOf(c),
     limit: DEFAULT_PAGE_SIZE,
   });
 
@@ -193,7 +231,7 @@ sale.get('/catalog', async (c) => {
 });
 
 /**
- * Çok boylu ürünün boy çekmecesi: kaynak `getProductDetail`in kendisidir (yer personelin deposu, görüş `b2c`), fiyat ve `soldOut`
+ * Çok boylu ürünün boy çekmecesi: kaynak `getProductDetail`in kendisidir (yer personelin deposu, görüş alıcınınki), fiyat ve `soldOut`
  * vitrinle aynı motordan çıkar. Kalan adet katalogla aynı gerekçeyle eklenir.
  */
 sale.get('/catalog/:slug/variants', async (c) => {
@@ -208,8 +246,8 @@ sale.get('/catalog/:slug/variants', async (c) => {
   const detail = await getProductDetail(db, {
     locale: locale.data,
     slug: c.req.param('slug'),
-    place: salePlaceOf(c.get('warehouseId')),
-    viewer: VISITOR,
+    place: salePlaceOf(c.get('warehouseId'), c.get('saleBusiness')),
+    viewer: await saleViewerOf(c),
   });
   if (!detail) return fail(c, 'product_not_found', 404);
 
@@ -255,8 +293,8 @@ sale.get('/scan', async (c) => {
   const variant = await new ProductVariantService(db).getById(match.variantId);
   if (variant === null) return ok(c, SaleScanResponseSchema.parse({ status: 'unknown_code' }));
 
-  const place = salePlaceOf(c.get('warehouseId'));
-  const viewer = VISITOR;
+  const place = salePlaceOf(c.get('warehouseId'), c.get('saleBusiness'));
+  const viewer = await saleViewerOf(c);
 
   const page = await getCatalogData(db, {
     locale: locale.data,

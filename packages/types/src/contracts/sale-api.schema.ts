@@ -3,8 +3,8 @@ import { PaymentMethodEnum } from '../primitives/enums.schema';
 import { CatalogProductSchema, CatalogVariantSchema } from './catalog-api.schema';
 
 /**
- * Yerinde satışın tel şekli (DOMAIN §17); kararlar `sellOnSite`tadır. Depo ve müşteri gövdede yoktur: depo personelin künyesinden,
- * alıcı anonim alıcıdan gelir, çünkü istemcinin seçtiği depo ya da kimlik bir yetki açığı olurdu.
+ * Yerinde satışın tel şekli (DOMAIN §17); kararlar `sellOnSite`tadır ve depo gövdede yoktur, personelin künyesinden gelir. Alıcı
+ * satışın bağlamıdır (`?customerId=`, katalog ve okutma da aynı müşteriyle fiyatlanır); verilmezse satış anonim alıcıya yazılır.
  */
 /**
  * Satışın yüzeyi (`?place=`): personel tesiste mi, aracından mı satıyor; depoyu yine sunucu çözer. Beyan yetki değildir: aracı
@@ -30,6 +30,11 @@ export const OnSiteSaleRequestSchema = z.object({
   collectedAmountCents: z.number().int().nonnegative().optional(),
   /** Cevabı kaybolan satış aynı sepetle yeniden gönderilince aynı kimlikle gelir; sunucu ikinci satış açmaz. */
   idempotencyKey: z.string().min(1).max(64).nullish(),
+  /**
+   * Vadeli satış: kapıda para alınmaz, tutar müşterinin açık bakiyesine eklenir. Yalnız seçilmiş müşteride ve havale yöntemiyle
+   * gelir; vade izni ve limiti sunucu denetler.
+   */
+  onAccount: z.boolean().optional(),
 });
 export type OnSiteSaleRequest = z.infer<typeof OnSiteSaleRequestSchema>;
 
@@ -43,9 +48,14 @@ export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
     orderId: z.string().uuid(),
     totalCents: z.number().int(),
     referenceNo: z.string().nullable(),
-    /** Tahsilat defterine yazıldı mı; hesap satıştan önce denetlenir, `false` yalnız yazımın kendisi reddedilirse. */
+    /**
+     * Tahsilat defterine yazıldı mı; hesap satıştan önce denetlenir, `false` yazımın kendisi reddedildiğinde ya da satış vadeliyse
+     * (vadelide tahsilat yoktur).
+     */
     paymentRecorded: z.boolean(),
   }),
+  /** Vadeli satış açılamadı — sipariş HİÇ yazılmadı; sebep vade freninin kendisidir. */
+  z.object({ status: z.literal('credit_not_allowed'), reason: z.enum(['not_enabled', 'overdue', 'limit_exceeded']) }),
   /** Seçilen yöntemin kapı hesabı ayarlı değil — sipariş HİÇ yazılmadı; personel başka yöntemle satabilir. */
   z.object({ status: z.literal('no_payment_account') }),
   /** Bu depoda o kadar yok — sipariş HİÇ yazılmadı, kalan sayı söylenir. */
