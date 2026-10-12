@@ -42,7 +42,11 @@
     },
     "addProducts": "Ürün ekle",
     "addMore": "+ ekle",
-    "subtotal": "Kalemler",
+    "subtotal": "Kalemler · {basis}",
+    "basis": {
+      "b2b": "vergisiz",
+      "b2c": "KDV dahil"
+    },
     "lineSub": "{qty} × {price} · depoda {stock}",
     "lineSubNoStock": "{qty} × {price}",
     "removed": "çıkarıldı · ",
@@ -232,7 +236,7 @@
     "allAdded": "{price} · depoda {n} · hepsi eklendi",
     "notForSale": "bu müşteriye satışa kapalı",
     "coldChain": "soğuk zincir · kargoya çıkmaz",
-    "bar": "{n} kalem · ~{total}",
+    "bar": "{n} kalem · ~{total} {basis}",
     "barEmpty": "Henüz ürün yok",
     "done": "Tamam",
     "addLabel": "{name} — ekle",
@@ -250,7 +254,7 @@
   },
   "done": {
     "title": "Sipariş açıldı",
-    "summary": "{customer} · {total}",
+    "summary": "{customer} · kesin toplam {total}",
     "when": "{day} · {warehouse} · {method}",
     "whenShipping": "Kargo · {warehouse} · {method}",
     "note": "Sipariş deponun toplama listesinde; {day} rotasıyla teslim edilir.",

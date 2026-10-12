@@ -21,7 +21,7 @@ import { PayRow } from './components/pay-row';
 import { PickRow } from './components/pick-row';
 import { SubmitBar } from './components/submit-bar';
 import { useStaffOrderContext } from './staff-order-context';
-import { activeLines, customerBadgeOf, customerCreditLineOf, lineIssueOf } from './staff-order-format';
+import { activeLines, customerBadgeOf, customerCreditLineOf, lineIssueOf, subtotalBasisOf } from './staff-order-format';
 
 /*
   Müşteri adına sipariş tek sayfada dört bölümdür; seçim sayfanın içinde değil tam ekran seçicide yapılır, bölümler kapanıp açılmaz
@@ -250,7 +250,9 @@ export function StaffOrderScreen({ fromOrderId, stopNo }: StaffOrderScreenProps)
                 )}
               </View>
               <View style={styles.subtotal}>
-                <Text style={styles.subtotalLabel}>{t.page.subtotal}</Text>
+                <Text style={styles.subtotalLabel}>
+                  {fillCopy(t.page.subtotal, { basis: customer === null ? '' : subtotalBasisOf(customer) })}
+                </Text>
                 <Text style={styles.subtotalValue}>{`~${money(order.totalCents)}`}</Text>
               </View>
             </>

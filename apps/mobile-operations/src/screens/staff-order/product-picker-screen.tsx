@@ -19,7 +19,7 @@ import { ListMessage, ListTail } from './components/list-message';
 import { ListStatus, SearchBox } from './components/search-box';
 import { VARIANT_ROW_HEIGHT, VariantRow } from './components/variant-row';
 import { useStaffOrderContext } from './staff-order-context';
-import { activeLines, lineFromRow } from './staff-order-format';
+import { activeLines, lineFromRow, subtotalBasisOf } from './staff-order-format';
 import { MIN_SEARCH_TERM, usePickerSearch, type PickerFetch } from './use-picker-search.hook';
 
 /*
@@ -186,7 +186,13 @@ export function StaffProductPickerScreen() {
           testID="staff-order-cart-done"
         >
           <Text style={styles.barText} numberOfLines={1}>
-            {lines.length === 0 ? p.barEmpty : fillCopy(p.bar, { n: String(lines.length), total: money(order.totalCents) })}
+            {lines.length === 0
+              ? p.barEmpty
+              : fillCopy(p.bar, {
+                  n: String(lines.length),
+                  total: money(order.totalCents),
+                  basis: order.customer === null ? '' : subtotalBasisOf(order.customer),
+                })}
           </Text>
           <Text style={styles.barDone}>{p.done}</Text>
         </PressableSurface>

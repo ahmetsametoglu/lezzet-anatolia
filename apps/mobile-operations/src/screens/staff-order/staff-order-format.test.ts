@@ -1,12 +1,14 @@
 import type { StaffCustomerOption, StaffDeliveryContext, StaffPaymentOptions } from '@lezzet/types';
 
 import { money } from '@/lib/operations/money';
+import { staffOrderCopy as t } from './copy';
 import {
   dayChipLabelOf,
   footerReasonOf,
   lineIssueOf,
   orderRequestOf,
   paymentRowsOf,
+  subtotalBasisOf,
   type FooterState,
   type OrderLine,
 } from './staff-order-format';
@@ -179,5 +181,12 @@ describe('gün düğmesi', () => {
   it('gün adı saat diliminden kaymaz', () => {
     expect(dayChipLabelOf('2026-10-15')).toBe('Per 15 Eki');
     expect(dayChipLabelOf('2026-10-20')).toBe('Sal 20 Eki');
+  });
+});
+
+describe('ara toplamın tabanı', () => {
+  it('kanaldan okunur: onay bekleyen şirketin perakende fiyatı KDV dahildir, B2B fiyatı vergisizdir', () => {
+    expect(subtotalBasisOf(customer())).toBe(t.page.basis.b2b);
+    expect(subtotalBasisOf(customer({ channel: 'b2c', b2bPending: true, credit: null }))).toBe(t.page.basis.b2c);
   });
 });

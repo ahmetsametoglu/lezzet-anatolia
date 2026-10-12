@@ -53,6 +53,11 @@ export function lineFromRow(row: StaffVariantRow, qty: number): OrderLine | null
   };
 }
 
+/** Ara toplamın tabanı fiyatın kanalından okunur: B2B fiyatı vergisizdir, onay bekleyen şirketinki dahil perakende fiyat KDV dahildir. */
+export function subtotalBasisOf(customer: Pick<StaffCustomerOption, 'channel'>): string {
+  return customer.channel === 'b2b' ? t.page.basis.b2b : t.page.basis.b2c;
+}
+
 export function activeLines(lines: readonly OrderLine[]): OrderLine[] {
   return lines.filter((line) => line.qty > 0);
 }
