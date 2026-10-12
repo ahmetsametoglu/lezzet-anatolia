@@ -11,7 +11,7 @@ import {
   type Db,
 } from '@lezzet/database';
 import { REGISTER_BACKOFF_CAP_MS, planRegister, splitRegisterLine, type RegisterBlockReason, type RegisterMovement } from '@lezzet/domain-core';
-import { parisDateOf } from '@lezzet/helper';
+import { fromParisLocalTime, parisDateOf } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type {
   MoneyMovement,
@@ -111,7 +111,7 @@ async function processClaimedRow(
 ): Promise<RegisterQueueOutcome> {
   try {
     const outcome = row.orderId
-      ? await syncOrderRegister(db, register, row.orderId, ctx)
+      ? await syncOrderRegister(db, register, row.orderId)
       : await syncCashMovement(db, register, row.movementId!, ctx);
     if (outcome.status === 'blocked') {
       if ((await deferBlocked(queue, row, outcome.reason, ctx.now)).firstTime) await alertStuck(db, row, outcome.reason, ctx.now);
@@ -160,7 +160,6 @@ interface OrderScope {
   register: CashRegister;
   order: Order;
   items: OrderItem[];
-  now: Date;
 }
 
 interface Mirror {
@@ -169,13 +168,13 @@ interface Mirror {
   payments: RegisterPaymentRow[];
 }
 
-async function syncOrderRegister(db: Db, register: CashRegister, orderId: string, ctx: SyncContext): Promise<SyncOutcome> {
+async function syncOrderRegister(db: Db, register: CashRegister, orderId: string): Promise<SyncOutcome> {
   const found = await new OrderService(db).getWithItems(orderId);
   if (!found) return { status: 'skipped' };
   const money = (await new MoneyMovementService(db).listByOrder(orderId)).filter(isOrderMoney);
   const before = await mirrorOf(db, orderId);
   if (before.tickets.length === 0 && money.length === 0) return { status: 'skipped' };
-  const scope: OrderScope = { db, register, order: found.order, items: found.items, now: ctx.now };
+  const scope: OrderScope = { db, register, order: found.order, items: found.items };
 
   await recoverOrder(scope, before);
   const mirror = await mirrorOf(db, orderId);
@@ -317,7 +316,7 @@ async function completeTicket(scope: OrderScope, store: RegisterStore, ticket: R
     await tickets.update({ id: ticket.id, externalSaleId: sale.saleId });
   }
 
-  if (sale.closed) {
+  if (sale.closedAt !== null) {
     await completePayments(
       scope,
       ticket,
@@ -329,26 +328,36 @@ async function completeTicket(scope: OrderScope, store: RegisterStore, ticket: R
     for (const payment of sale.payments) await register.deletePayment(payment.paymentId);
     for (const line of sale.lines) await register.deleteLine(line.lineId);
     await writeLines(scope, sale.saleId, lines);
+    const refs: RegisterPaymentRef[] = [];
     for (const payment of payments) {
-      const ref = await register.addPayment({ saleId: sale.saleId, method: payment.method, amountCents: payment.amountCents });
-      await new RegisterPaymentService(db).update({
-        id: payment.id,
-        ...externalOf(ref),
-        status: 'written',
-        writtenAt: scope.now.toISOString(),
-      });
+      refs.push(await register.addPayment({ saleId: sale.saleId, method: payment.method, amountCents: payment.amountCents }));
     }
     await register.closeSale(sale.saleId);
     sale = (await register.readSale(sale.saleId)) ?? sale;
+    // Ödemelerin anı kapanıştır ve ancak şimdi bilinir; kapanışla bu kayıt arasında kesilen yazımı sonraki tur kasadaki sahipsiz
+    // satırlardan tamamlar.
+    const writtenAt = writtenAtOf(sale);
+    for (const [index, payment] of payments.entries()) {
+      await new RegisterPaymentService(db).update({ id: payment.id, ...externalOf(refs[index]!), status: 'written', writtenAt });
+    }
   }
   return tickets.update({
     id: ticket.id,
     externalSaleId: sale.saleId,
     status: 'written',
-    writtenAt: scope.now.toISOString(),
+    writtenAt: writtenAtOf(sale),
     uniqueSaleId: sale.uniqueSaleId,
     receiptUrl: sale.receiptUrl,
   });
+}
+
+/**
+ * Satışın kendi kayıtları (fiş ve ödemeleri) kasanın satışı kapattığı anla yazılır, çünkü kasa satışı kapandığı güne sayar; yazımın
+ * kendi saati gece yarısını geçen satışı gün sonunda başka güne koyardı.
+ */
+function writtenAtOf(sale: RegisterSale): string {
+  if (sale.closedAt === null) throw new Error(`kasa: satış kapanmış okunmadı (${sale.extRef})`);
+  return fromParisLocalTime(sale.closedAt).toISOString();
 }
 
 /** Kasa aramayı "içerir" biçiminde yapar (`-1` araması `-10`u da getirir); satış okunarak tam eşleşme doğrulanır. */
@@ -405,12 +414,12 @@ async function completePayments(
   scope: OrderScope,
   ticket: RegisterTicket,
   rows: RegisterPaymentRow[],
-  known?: RegisterSale,
+  closingSale?: RegisterSale,
 ): Promise<void> {
   if (rows.length === 0) return;
   const { db, register } = scope;
   const payments = new RegisterPaymentService(db);
-  const sale = known ?? (ticket.externalSaleId === null ? null : await register.readSale(ticket.externalSaleId));
+  const sale = closingSale ?? (ticket.externalSaleId === null ? null : await register.readSale(ticket.externalSaleId));
   if (!sale) throw new Error(`kasa: fişin satışı kasada yok (${ticket.extRef})`);
 
   const mine = await payments.listByTickets([ticket.id]);
@@ -429,7 +438,9 @@ async function completePayments(
         ? { kind: 'cash_flow', id: orphanFlow.cashFlowId }
         : await register.addPayment({ saleId: sale.saleId, method: row.method, amountCents: row.amountCents });
     claimed[ref.kind].add(ref.id);
-    await payments.update({ id: row.id, ...externalOf(ref), status: 'written', writtenAt: scope.now.toISOString() });
+    // Kapanırken kesilen fişin ödemeleri satışın parçasıdır; sonradan eklenen ödeme eklendiği anla yazılır.
+    const writtenAt = closingSale ? writtenAtOf(closingSale) : new Date().toISOString();
+    await payments.update({ id: row.id, ...externalOf(ref), status: 'written', writtenAt });
   }
 }
 
@@ -540,11 +551,12 @@ async function completeCashOp(db: Db, register: CashRegister, op: RegisterCashOp
     const [year, monthNo] = month.split('-').map(Number) as [number, number];
     const found = (await register.listCashMoves(store.externalStoreId, { year, month: monthNo })).find((move) => move.label === op.label);
     if (found) {
+      // Yarıda kalan yazım ertesi gün tamamlanabilir; kayıt kasanın yazdığı anla tutulur ki gün sonu onu kasadaki gününe saysın.
       await new RegisterCashOpService(db).update({
         id: op.id,
         externalTillId: found.tillId,
         status: 'written',
-        writtenAt: now.toISOString(),
+        writtenAt: fromParisLocalTime(found.at).toISOString(),
       });
       return;
     }
@@ -555,5 +567,5 @@ async function completeCashOp(db: Db, register: CashRegister, op: RegisterCashOp
     amountCents: op.amountCents,
     label: op.label,
   });
-  await new RegisterCashOpService(db).update({ id: op.id, externalTillId, status: 'written', writtenAt: now.toISOString() });
+  await new RegisterCashOpService(db).update({ id: op.id, externalTillId, status: 'written', writtenAt: new Date().toISOString() });
 }

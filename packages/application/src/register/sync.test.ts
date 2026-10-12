@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   AccountService,
   CategoryService,
@@ -32,8 +32,10 @@ const movements = new MoneyMovementService(db);
 const tickets = new RegisterTicketService(db);
 
 const stamp = Date.now();
+/** Gece yarısı testleri kasanın saatini kurar; boşken kasa gerçek saatle yazar. */
+let registerClock: Date | null = null;
 /** Gerçek kasa gibi dosya boyunca tek kasa: ürün aynası kalıcıdır ve kasadaki ürün numaralarını anar. */
-const fake = memoryRegister();
+const fake = memoryRegister({ now: () => registerClock ?? new Date() });
 let warehouseId: string;
 let unmappedWarehouseId: string;
 let customerId: string;
@@ -893,5 +895,75 @@ describe('gün sonu', () => {
     const kinds = result.stores.find((store) => store.warehouseId === own.warehouseId)!.days[0]!.differences;
     expect(kinds).toContainEqual({ kind: 'unknown_sale', saleId: manual });
     expect(kinds).toContainEqual({ kind: 'vat', vatRate: 20, oursCents: 0, registerCents: 500 });
+  });
+
+  describe('gece yarısı', () => {
+    /** Bu gecenin Paris gece yarısından `seconds` saniye uzaktaki an. */
+    const aroundMidnight = (seconds: number) => new Date(new Date(parisDayRange(today()).to).getTime() + seconds * 1000);
+    const tomorrow = () => addDays(today(), 1);
+    const daysOf = async (warehouse: string) =>
+      (await closeRegisterDay(db, fake.register, { date: tomorrow(), close: false })).stores.find(
+        (store) => store.warehouseId === warehouse,
+      )?.days;
+
+    afterEach(() => {
+      registerClock = null;
+    });
+
+    it('gece yarısından önce başlayan tur satışı gece yarısından sonra kapatırsa fiş kasanın kapandığı güne sayılır, iki günde de fark çıkmaz', async () => {
+      const own = await ownStore('KASA-GECE-FIS');
+      const order = await newOrder({ warehouseId: own.warehouseId });
+      await pay(order.id, 2990);
+      registerClock = aroundMidnight(10);
+
+      expect(await syncOrderNow(db, fake.register, order.id, aroundMidnight(-30))).toBe('written');
+
+      expect(await daysOf(own.warehouseId)).toEqual([
+        { date: today(), differences: [] },
+        { date: tomorrow(), differences: [] },
+      ]);
+    });
+
+    it('kasada gece yarısından önce kapanıp aynaya geçmeyen fiş ertesi gün tamamlanınca kapandığı güne sayılır', async () => {
+      const own = await ownStore('KASA-GECE-KURTARMA');
+      const order = await newOrder({ warehouseId: own.warehouseId });
+      await pay(order.id, 2990);
+      registerClock = aroundMidnight(-20);
+      fake.failOn('closeSale', 'after');
+      expect(await syncOrderNow(db, fake.register, order.id, aroundMidnight(-30))).toBe('failed');
+
+      registerClock = aroundMidnight(300);
+      expect(await syncOrderNow(db, fake.register, order.id, aroundMidnight(300))).toBe('written');
+
+      expect(salesOf(order.referenceNo)[0]!.payments).toHaveLength(1);
+      expect(await daysOf(own.warehouseId)).toEqual([
+        { date: today(), differences: [] },
+        { date: tomorrow(), differences: [] },
+      ]);
+    });
+
+    it('gece yarısından önce kasaya yazılıp cevabı kaybolan kasa hareketi ertesi gün tamamlanınca kasadaki gününe sayılır', async () => {
+      const own = await ownStore('KASA-GECE-NAKIT');
+      const expense = await movements.insert({
+        accountId: own.cashAccountId,
+        direction: 'out',
+        amountCents: 700,
+        type: 'expense',
+        description: 'Gece gideri',
+      });
+      const row = (await queueRowOf('movement_id', expense.id))!;
+      registerClock = aroundMidnight(-20);
+      fake.failOn('moveCash', 'after');
+      expect(await processQueueRow(db, fake.register, row, { now: aroundMidnight(-30) })).toBe('failed');
+
+      registerClock = aroundMidnight(300);
+      expect(await processQueueRow(db, fake.register, row, { now: aroundMidnight(300) })).toBe('written');
+
+      expect(tillsOf(expense.id)).toHaveLength(1);
+      expect(await daysOf(own.warehouseId)).toEqual([
+        { date: today(), differences: [] },
+        { date: tomorrow(), differences: [] },
+      ]);
+    });
   });
 });

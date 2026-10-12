@@ -3,8 +3,9 @@ import type { MovementDirection, PaymentMethod, RegisterSale } from '@lezzet/typ
 import type { CashRegister } from './port';
 
 /**
- * Testlerin bellek içi kasası: Hiboutik'in ölçülen davranışını taklit eder (kapanmış satışa kalem eklenmez ama ödeme satırı eklenir,
- * günü de kapanmışsa ödeme nakit akışı olur; arama "içerir" biçimindedir). `failOn` yarıda kesilen yazımı kurar: çağrı yazmadan ya da yazdıktan sonra fırlatır. `now` kasanın saatidir.
+ * Testlerin bellek içi kasası Hiboutik'i taklit eder: kapanmış satışa kalem eklenmez ama ödeme satırı eklenir, günü de kapanmışsa ödeme
+ * nakit akışı olur; arama "içerir" biçimindedir. `failOn` yarıda kesilen yazımı kurar (çağrı yazmadan ya da yazdıktan sonra fırlatır),
+ * `now` kasanın saatidir.
  */
 
 interface MemorySale {
@@ -137,7 +138,7 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
         return {
           saleId,
           extRef: sale.extRef,
-          closed: sale.closedAt !== null,
+          closedAt: sale.closedAt ? localTime(sale.closedAt) : null,
           uniqueSaleId: sale.closedAt ? `Z-${saleId}` : null,
           receiptUrl: sale.closedAt ? `https://fis.test/${saleId}` : null,
           lines: sale.lines.map((line) => ({ ...line })),

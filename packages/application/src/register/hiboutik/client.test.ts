@@ -132,7 +132,7 @@ describe('satış okuması', () => {
     expect(await register.readSale(7)).toEqual({
       saleId: 7,
       extRef: 'LA-26-7K4M2P-1',
-      closed: true,
+      closedAt: '2026-10-01 14:09:50',
       uniqueSaleId: '2026-10-1-7',
       receiptUrl: 'https://myrecei.pt/fr/1/7/x',
       lines: [{ lineId: 11, productId: 3, quantity: 3, unitPriceCents: 967, vatRate: 5.5 }],
@@ -147,7 +147,7 @@ describe('satış okuması', () => {
   it('açık satış kapalı sayılmaz — yarım yazım ancak açık satışta yeniden kurulabilir', async () => {
     const { register } = fakeHiboutik([{ json: sale({ completed_at: '0000-00-00 00:00:00', unique_sale_id: '' }) }]);
 
-    expect(await register.readSale(7)).toMatchObject({ closed: false, uniqueSaleId: null });
+    expect(await register.readSale(7)).toMatchObject({ closedAt: null, uniqueSaleId: null });
   });
 
   it('taze açılan satış okunur: bölünmemiş satışta ödeme satırı ve bakiye alanı hiç gelmez', async () => {
@@ -167,7 +167,7 @@ describe('satış okuması', () => {
     expect(await register.readSale(2)).toEqual({
       saleId: 2,
       extRef: '',
-      closed: false,
+      closedAt: null,
       uniqueSaleId: null,
       receiptUrl: 'https://myrecei.pt/fr/1/2/x',
       lines: [],

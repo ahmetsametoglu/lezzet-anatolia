@@ -252,7 +252,7 @@ function saleOf(row: HiboutikSale): RegisterSale {
   return {
     saleId: row.sale_id,
     extRef: row.sale_ext_ref ?? '',
-    closed: row.completed_at !== EMPTY_DATE,
+    closedAt: row.completed_at === EMPTY_DATE ? null : row.completed_at,
     uniqueSaleId: row.unique_sale_id ? row.unique_sale_id : null,
     receiptUrl: row.url_receipt ? row.url_receipt : null,
     lines: row.line_items.map((line) => ({

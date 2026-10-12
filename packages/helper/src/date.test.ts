@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, parisDateOf, parisDayRange, parisMinutesOf } from './date';
+import { addDays, fromParisLocalTime, parisDateOf, parisDayRange, parisMinutesOf } from './date';
 
 describe('Paris takvimi', () => {
   it('kış günü UTC+1, yaz günü UTC+2 sınırlıdır; yaz saatine geçilen gün 23 saat, ay sonu ertesi aya taşar', () => {
@@ -18,6 +18,14 @@ describe('Paris takvimi', () => {
   it('UTC gece yarısından önce Paris gün değiştirir', () => {
     expect(parisDateOf(new Date('2026-07-15T21:59:00.000Z'))).toBe('2026-07-15');
     expect(parisDateOf(new Date('2026-07-15T22:00:00.000Z'))).toBe('2026-07-16');
+  });
+
+  it('kasanın yerel saati doğru ana çevrilir; saat değişimi gecesinin 01:30u da kaymaz, gece yarısı komşusu başka güne düşmez', () => {
+    expect(fromParisLocalTime('2026-01-15 23:59:59').toISOString()).toBe('2026-01-15T22:59:59.000Z');
+    expect(fromParisLocalTime('2026-07-16 00:00:05').toISOString()).toBe('2026-07-15T22:00:05.000Z');
+    expect(fromParisLocalTime('2026-03-29 01:30:00').toISOString()).toBe('2026-03-29T00:30:00.000Z');
+    expect(fromParisLocalTime('2026-10-25 01:30:00').toISOString()).toBe('2026-10-24T23:30:00.000Z');
+    expect(() => fromParisLocalTime('0000-00-00')).toThrow();
   });
 
   it('gün kaydırma ay ve yıl sınırını aşar, artık yılda 29 Şubatı bilir', () => {

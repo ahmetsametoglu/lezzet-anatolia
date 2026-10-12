@@ -53,7 +53,8 @@ export type RegisterTicketSnapshot = z.infer<typeof RegisterTicketSnapshotSchema
 export const RegisterSaleSchema = z.object({
   saleId: z.number().int(),
   extRef: z.string(),
-  closed: z.boolean(),
+  /** Kasanın satışı kapattığı an, kasanın yerel saatiyle (`YYYY-MM-DD hh:mm:ss`); açık satışta `null`. Satış kasanın bu gününe sayılır. */
+  closedAt: z.string().nullable(),
   uniqueSaleId: z.string().nullable(),
   receiptUrl: z.string().nullable(),
   lines: z.array(

@@ -15,8 +15,8 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
 | 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Yapıldı |
 | 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Yapıldı |
-| 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Konuşulacak |
-| 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Konuşulacak |
+| 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Yapıldı |
+| 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Açıklandı |
 | 10 | Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor | Düşük | Yapıldı |
 | 11 | Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor | Düşük | Konuşulacak |
 | 12 | İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor | Düşük | Konuşulacak |
@@ -241,24 +241,28 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 8. Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor
 
-**Durum:** Konuşulacak · **Ağırlık:** orta
+**Durum:** Yapıldı (12.10) · **Ağırlık:** orta
 
 - **Mevcut durum:** Dakikalık kasa işi turun başında saati bir kez alır ve turdaki bütün kayıtlara "yazıldığı an" olarak onu
   yazar. Gün sonu bizim tarafı bu ana göre, Hiboutik tarafını satışın kasada kapandığı güne göre sayar.
 - **Problem:** 23:59'da başlayan tur bir satışı 00:00'dan sonra kapatırsa satış bizde önceki güne, kasada sonraki güne sayılır;
   iki günde de kalıcı fark çıkar ve 1. maddedeki kapanmama zinciri başlar. Seyrektir.
 - **Olması gereken:** Kaydın günü, Hiboutik'in satışı kapattığı andan alınır.
+- **Çözüm (12.10):** Fiş ve kendi ödemeleri Hiboutik'in satışı kapattığı anla (`completed_at`, Paris saati) yazılır; yarıda kalıp
+  ertesi gün tamamlanan fiş de bu anı alır. Kapanmış fişe sonradan eklenen ödeme eklendiği, kasa hareketi kasaya yazıldığı anla
+  yazılır; yarıda kalan kasa hareketi Hiboutik'teki kaydının saatini alır. Turun başındaki saat hiçbir kayda yazılmaz.
 - **Kanıt:** `packages/application/src/register/sync.ts:60-64, 336, 346, 430, 545, 556` · `register/day-end.ts:189-229`.
 
 ## 9. İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor
 
-**Durum:** Konuşulacak · **Ağırlık:** orta
+**Durum:** Açıklandı (12.10) · **Ağırlık:** orta
 
 - **Mevcut durum:** Hesaplar arası nakit transferi kasaya tek kayıt olarak yazılır: hareketin kendi hesabının mağazasına, o
   yoksa karşı hesabınkine.
 - **Problem:** İki tarafı da kasa mağazasına bağlı iki çekmece arasında transfer olursa yalnız bir kasaya yazılır; ötekinin günü
   kapanmaz. Bugün tek kasa var, depo ağı kurulunca gerçekleşir.
 - **Olması gereken:** İki taraf da bağlıysa birine çıkış, ötekine giriş yazılır.
+- **Karar (12.10):** Kasalar arasında nakit taşınmaz, nakit bankaya yatırılır; bu yol kullanılmadığı için düzeltilmedi.
 - **Kanıt:** `packages/application/src/register/sync.ts:500-507` · `supabase/migrations/0059_register.sql:300-307` ·
   `0018_money.sql:526-535`.
 

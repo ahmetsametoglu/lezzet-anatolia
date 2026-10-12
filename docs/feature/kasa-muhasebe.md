@@ -417,7 +417,8 @@ günler (en çok 7 gün geriye, mağazanın eşlendiği günden önceye değil) 
    kuralıyla kasa kaydı) aynada yazılanla tutmalı. Yanlış plan ayna ↔ kasada fark çıkarmaz, burada çıkarır.
 2. **Ayna ↔ Hiboutik:** oran başına KDV dahil tutar (`/z/taxes`), yöntem başına ödeme (`/z/payment_types` ve
    kapanmış güne eklenen ödemeler için `/z/cash_flow`), satış kimlikleri (kasada olup bizde olmayan satış
-   Hiboutik ekranından elle yapılmıştır) ve çekmecenin günlük net nakdi; bizim taraf yazıldığı ana göre sayılır.
+   Hiboutik ekranından elle yapılmıştır) ve çekmecenin günlük net nakdi; bizim taraf yazıldığı ana göre sayılır: fiş ve
+   kendi ödemeleri Hiboutik'in satışı kapattığı an, kasa hareketi Hiboutik'in kaydettiği an.
 3. **Bekleyen:** mağazanın kuyrukta duran siparişi ve kasa hareketi.
 
 Hepsi tutuyorsa gün kasada kapatılır (`POST /z/closure`); yalnız `HIBOUTIK_MODE=live` iken, çünkü kapanış geri

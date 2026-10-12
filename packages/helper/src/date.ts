@@ -41,12 +41,26 @@ export function addDays(date: string, days: number): string {
 /** Paris takviminde bir günün UTC sınırları, yarı açık `[from, to)`; yaz saatine geçilen gün 23 saattir. */
 export function parisDayRange(date: string): { from: string; to: string } {
   const [year, month, day] = date.split('-').map(Number) as [number, number, number];
-  return { from: parisMidnight(year, month, day).toISOString(), to: parisMidnight(year, month, day + 1).toISOString() };
+  return { from: parisInstant(year, month, day).toISOString(), to: parisInstant(year, month, day + 1).toISOString() };
 }
 
-/** Paris'te yerel gece yarısının anı; Paris UTC+1 ya da +2'dir ve saat değişimi gece yarısına düşmez. */
-function parisMidnight(year: number, month: number, day: number): Date {
-  const guess = Date.UTC(year, month - 1, day);
+/** Paris duvar saatinin (`YYYY-MM-DD hh:mm:ss`, kasa yazılımının biçimi) anı; yaz saatine geçiş gecesinde olmayan saat bir saat ileri kayar. */
+export function fromParisLocalTime(local: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/.exec(local);
+  if (!match) throw new Error(`Paris saati okunamadı: ${local}`);
+  const [year, month, day, hour, minute, second] = match.slice(1).map(Number) as [number, number, number, number, number, number];
+  return parisInstant(year, month, day, hour, minute, second);
+}
+
+/** Ofset tahmin edilen andan okunur ve bir kez daha düzeltilir: saat değişimine yakın saatte tahmin edilen anın ofseti farklıdır. */
+function parisInstant(year: number, month: number, day: number, hour = 0, minute = 0, second = 0): Date {
+  const wall = Date.UTC(year, month - 1, day, hour, minute, second);
+  const first = wall - parisOffsetAt(wall);
+  return new Date(wall - parisOffsetAt(first));
+}
+
+/** Bir anda Paris duvar saatinin UTC'den farkı (ms). */
+function parisOffsetAt(at: number): number {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: BUSINESS_TIME_ZONE,
     year: 'numeric',
@@ -54,9 +68,10 @@ function parisMidnight(year: number, month: number, day: number): Date {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hourCycle: 'h23',
-  }).formatToParts(new Date(guess));
+  }).formatToParts(new Date(at));
   const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((candidate) => candidate.type === type)!.value);
-  const wall = Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'));
-  return new Date(guess - (wall - guess));
+  const wall = Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'), part('second'));
+  return wall - Math.floor(at / 1000) * 1000;
 }

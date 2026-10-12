@@ -116,7 +116,8 @@ Siparişin kasadaki bir satışı. Kalem farkı doğduğunda yeni fiş açılır
 
 - **`movement_id`** — FK yok: hareket silinse de satır onu anar. Kasadaki satır değişmediği için bir hareketin birden çok satırı olabilir: tutarı, yöntemi ya da siparişi değişen hareketin farkı yeni satırdır, silinen hareketin neti ters satırla geri alınır; eşdeğer yeni hareket gelirse satırlar ona bağlanır.
 - **`external_cash_flow_id`** — gün kapanmışsa kasa ödemeyi satışın nakit akışı olarak kaydeder; numara `external_payment_id` yerine burada durur.
-- **`written_at`** — gün sonu mutabakatı satırı yazıldığı güne sayar; açılış anı yeniden denemede günler öncesinde kalabilir.
+- **`written_at`** — gün sonu mutabakatı satırı bu güne sayar; açılış anı yeniden denemede günler öncesinde kalabilir. Fişin kendi
+  ödemeleri kasanın satışı kapattığı anı taşır (kasa satışı o güne sayar), kapanmış fişe sonradan eklenen ödeme eklendiği anı.
 
 ## RegisterCashOp (kasa hareketi)
 
