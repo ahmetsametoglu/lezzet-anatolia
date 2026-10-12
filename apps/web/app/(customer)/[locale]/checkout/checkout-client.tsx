@@ -244,7 +244,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     if (data.status === 'rejected') {
       setBusy(false);
       hapticError();
-      return setError(rejectionMessage(t, data.reason, data.detail));
+      return setError(rejectionMessage(t, checkoutMessages[locale].reject, data.reason, data.detail));
     }
     // Aynı basışın ödemesi işleniyor: yeni sipariş açılmadı, müşteri sonucu o siparişin sayfasında görür.
     if (data.status === 'open_payment') {
@@ -283,7 +283,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       servicePointId: state.servicePoint?.id ?? null,
     });
     if (errorKey || !data) return refuse(errorText(t.errors, errorKey));
-    if (data.status === 'rejected') return refuse(rejectionMessage(t, data.reason, data.detail));
+    if (data.status === 'rejected') return refuse(rejectionMessage(t, checkoutMessages[locale].reject, data.reason, data.detail));
     // Aynı basışın ödemesi bankada işleniyor: yeni ödeme açılmaz, müşteri o siparişe gider.
     if (data.status === 'open_payment') {
       leaveTo(data.orderId);
@@ -417,16 +417,23 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
 }
 
 /**
- * Ret sebebi müşteri diline; stok yarışında kalem adı çözüldüyse adlı cümle, çözülmediyse genel cümle yazılır. Ayrımı ekran yapar,
- * çünkü sebep kodu davranışı ve ölçümü belirler ve onu metnin varlığına göre bölmek aynı gerçeğe iki kod vermek olurdu.
+ * Ret sebebi müşteri diline; stok yarışında kalem adı çözüldüyse adlı cümle, çözülmediyse genel cümle yazılır. Ülke ve satış yeri
+ * retlerinin cümlesi native ile ortaktır (`@lezzet/i18n/customer/checkout`), iki yüzey aynı reddi ayrı sözle anlatmasın.
  */
-function rejectionMessage(t: Messages, reason: string, detail?: string[] | string): string {
+function rejectionMessage(
+  t: Messages,
+  shared: (typeof checkoutMessages)[Locale]['reject'],
+  reason: string,
+  detail?: string[] | string,
+): string {
   const list = Array.isArray(detail) ? detail.join(', ') : (detail ?? '');
   const template =
-    reason === 'insufficient_stock' && list
-      ? t.rejected.insufficient_stock_named
-      : reason === 'warehouse_unresolved' && detail === 'outside_zones'
-        ? t.rejected.warehouse_outside_zones
-        : (t.rejected[reason as keyof typeof t.rejected] ?? t.pay.error);
+    reason === 'not_sold_in_country' || reason === 'sale_origin_unsupported'
+      ? shared[reason]
+      : reason === 'insufficient_stock' && list
+        ? t.rejected.insufficient_stock_named
+        : reason === 'warehouse_unresolved' && detail === 'outside_zones'
+          ? t.rejected.warehouse_outside_zones
+          : (t.rejected[reason as keyof typeof t.rejected] ?? t.pay.error);
   return template.replace('{detail}', list);
 }

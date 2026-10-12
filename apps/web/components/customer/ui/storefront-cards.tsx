@@ -2,6 +2,7 @@
 
 import { RATIO_BAND, RATIO_PORTRAIT, RATIO_SOURCE } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
+import priceLabelMessages from '@lezzet/i18n/customer/price-label';
 import { FramedImage } from '@/components/media/framed-image';
 import { Link } from '@/i18n/navigation';
 import { formatComparison } from '@/lib/storefront/format';
@@ -218,19 +219,26 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
         {/* Dar kartta fiyat ve eylem iki satırda: aynı satırda üstü çizili fiyat ve "Seçenekler →" kart kenarından taşar, tam
             genişlik eylem 44px'i iki eksende de sağlar. Masaüstü kartı tek satırda. */}
         <div className={compact ? 'mt-1.5 flex flex-col items-stretch gap-2' : 'mt-1 flex items-center justify-between gap-2'}>
-          <Price
-            cents={product.priceCents}
-            wasCents={product.wasCents}
-            locale={locale}
-            size={compact ? 'sm' : 'lg'}
-            tone={away ? 'muted' : 'default'}
-            stacked={compact}
-          />
+          {/* O ülkede satılmayan ürünün fiyatı yoktur; fiyatın yerinde sebebi yazar, kart satışa kapalı ürününki gibi detaya açılır. */}
+          {product.notSoldIn ? (
+            <span className={['font-sans font-semibold text-body', compact ? 'text-micro' : 'text-note leading-tight'].join(' ')}>
+              {priceLabelMessages[locale].notSoldIn[product.notSoldIn]}
+            </span>
+          ) : (
+            <Price
+              cents={product.priceCents}
+              wasCents={product.wasCents}
+              locale={locale}
+              size={compact ? 'sm' : 'lg'}
+              tone={away ? 'muted' : 'default'}
+              stacked={compact}
+            />
+          )}
           <ProductCardAction product={product} locale={locale} labels={labels} compact={compact} />
         </div>
-        {/* "başlangıç fiyatı" notu tasarımda YALNIZ masaüstü kartında var: mobilde kart zaten dar,
-            iki satırlık bir açıklama ızgarayı düzensizleştirir ve "Seçenekler →" aynı şeyi söyler. */}
-        {!compact && labels.priceFrom && product.purchaseMode === 'options' && !product.soldOut && (
+        {/* "Başlangıç fiyatı" notu tasarımda yalnız masaüstü kartında var, çünkü dar kartta iki satırlık açıklama ızgarayı
+            düzensizleştirir. Fiyatı olmayan kartta not yazılmaz: anlattığı fiyat ekranda yok. */}
+        {!compact && labels.priceFrom && product.purchaseMode === 'options' && !product.soldOut && product.priceCents !== null && (
           <span className="font-sans text-micro text-body">{labels.priceFrom}</span>
         )}
       </div>
@@ -337,7 +345,7 @@ export function OfferCard({ offer, locale, limitLabel, actionLabels }: OfferCard
           className="size-[92px] !rounded-[12px] bg-sand-100"
         />
       </Link>
-      {/* Satırlar sıkı: token satır yükseklikleri (1.5–1.6) paragraf içindir, kartı tasarımdan ~11px uzatıyordu. */}
+      {/* Satırlar sıkı, çünkü token satır yükseklikleri (1.5–1.6) paragraf içindir ve kartı tasarımdan ~11px uzatırdı. */}
       <div className="flex min-w-0 flex-1 flex-col gap-1.25">
         <Link
           href={productHref(offer.slug)}

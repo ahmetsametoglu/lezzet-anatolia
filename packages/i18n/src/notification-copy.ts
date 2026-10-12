@@ -471,6 +471,37 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     title: "Bir eşleşme Pennylane'de çözüldü",
     subtitle: `${typeof p.valueDate === 'string' ? `${p.valueDate} · ` : ''}bağ bizde duruyor, elle bakın`,
   }),
+  /* Aşılma Almanya'daki tüketiciye Alman KDV'sini ve OSS beyanını başlatır, bu yüzden insan işidir; yaklaşma hazırlık içindir. */
+  distance_sale_threshold: (p) => {
+    const year = typeof p.year === 'number' ? ` — ${p.year}` : '';
+    if (p.warning === 'exceeded' && p.sincePreviousYear === true) {
+      return {
+        tone: 'alert',
+        label: 'Muhasebe',
+        title: 'Uzaktan satış eşiği geçen yıl aşıldı',
+        subtitle: `${typeof p.year === 'number' ? `${p.year} boyunca ` : ''}Almanya'daki tüketiciye Alman KDV'si · beyan OSS'den`,
+      };
+    }
+    if (p.warning === 'exceeded') {
+      return {
+        tone: 'alert',
+        label: 'Muhasebe',
+        title: `Uzaktan satış eşiği aşıldı${year}`,
+        subtitle: "Almanya'daki tüketiciye Alman KDV'si yazılıyor · beyan OSS'den",
+      };
+    }
+    const total = typeof p.yearTotalCents === 'number' ? p.yearTotalCents : null;
+    const threshold = typeof p.thresholdCents === 'number' && p.thresholdCents > 0 ? p.thresholdCents : null;
+    return {
+      tone: 'attention',
+      label: 'Muhasebe',
+      title: `Uzaktan satış eşiğine yaklaşıldı${year}`,
+      subtitle:
+        total === null || threshold === null
+          ? null
+          : `${euro(total)} / ${euro(threshold)}, KDV hariç · %${Math.floor((total * 100) / threshold)}`,
+    };
+  },
   /* Sessizlik çoğu zaman bankanın Pennylane bağlantısının düşmesidir; yenilenene kadar banka satırı gelmez. */
   bank_feed_quiet: (p) => ({
     tone: 'alert',

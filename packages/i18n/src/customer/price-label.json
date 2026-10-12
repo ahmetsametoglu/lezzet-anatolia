@@ -1,11 +1,35 @@
 {
   "tr": {
-    "from": "{price}'dan"
+    "from": "{price}'dan",
+    "notSoldIn": {
+      "FR": "Bu ürün Fransa için satışta değil",
+      "DE": "Bu ürün Almanya için satışta değil"
+    },
+    "cardNotSoldIn": {
+      "FR": "Fransa'da satılmıyor",
+      "DE": "Almanya'da satılmıyor"
+    }
   },
   "fr": {
-    "from": "dès {price}"
+    "from": "dès {price}",
+    "notSoldIn": {
+      "FR": "Ce produit n'est pas vendu en France",
+      "DE": "Ce produit n'est pas vendu en Allemagne"
+    },
+    "cardNotSoldIn": {
+      "FR": "Non vendu en France",
+      "DE": "Non vendu en Allemagne"
+    }
   },
   "de": {
-    "from": "ab {price}"
+    "from": "ab {price}",
+    "notSoldIn": {
+      "FR": "Dieses Produkt wird in Frankreich nicht verkauft",
+      "DE": "Dieses Produkt wird in Deutschland nicht verkauft"
+    },
+    "cardNotSoldIn": {
+      "FR": "Nicht in Frankreich erhältlich",
+      "DE": "Nicht in Deutschland erhältlich"
+    }
   }
 }

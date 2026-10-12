@@ -2,6 +2,7 @@
 
 import { variantNameOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
+import priceLabelMessages from '@lezzet/i18n/customer/price-label';
 import { formatComparison } from '@/lib/storefront/format';
 import type { StorefrontVariant } from '@lezzet/application';
 import { Badge } from '@/components/customer/ui/badge';
@@ -230,8 +231,10 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
   const qty = inCart ? inCart.qty : 1;
   const setQty = (next: number) => inCart && setCartQty({ kind: 'variant', variantId: selected.id, stockId: inCart.stockId }, next);
 
-  // Düğme toplam yazmaz: adet hep 1 olduğu için toplam birim fiyata eşittir ve hemen üstündeki fiyatı ikinci kez basardı.
-  const label = !sellable ? (selected.priceCents === null ? t.closed : t.soldOut) : t.addToCart;
+  // Düğme toplam yazmaz: adet hep 1 olduğu için toplam birim fiyata eşittir ve hemen üstündeki fiyatı ikinci kez basardı. O ülkede
+  // satılmayan boyda kapalı düğme sebebi ülkeyle söyler.
+  const closedLabel = selected.notSoldIn ? priceLabelMessages[locale].notSoldIn[selected.notSoldIn] : t.closed;
+  const label = !sellable ? (selected.priceCents === null ? closedLabel : t.soldOut) : t.addToCart;
 
   // Tek kontrol, tek kutu. İkisi de satırın tamamını kaplar ve aynı yüksekliktedir; çerçeve farkı
   // düğmeye ŞEFFAF kenarlık verilerek kapanır — yoksa geçişte kutu birkaç piksel zıplıyor.
@@ -256,9 +259,9 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
         variant: 'primary',
         size: 'lg',
         fullWidth: true,
-        // `text-lead`in 1.6 satır aralığı bir düğme etiketinde ~9 px fazladan yükseklik demek
-        // (tasarım: 17/1.2). Seçici de aynı ölçüyü kullanır, iki kutu aynı kalır.
-        className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50',
+        // `text-lead`in 1.6 satır aralığı düğme etiketinde ~9 px fazladan yükseklik demek, seçici de aynı ölçüyü kullanır ki iki kutu
+        // aynı kalsın. Kapalı düğmenin sebebi (ülke cümlesi) tek satıra sığmayabilir, bu yüzden yalnız o hâlde sarılır ve kutu uzar.
+        className: `border-2 border-transparent !px-4 !py-3 leading-tight ${sellable ? 'whitespace-nowrap' : '!h-auto min-h-14 text-balance'} disabled:cursor-not-allowed disabled:opacity-50`,
       })}
     >
       {label}

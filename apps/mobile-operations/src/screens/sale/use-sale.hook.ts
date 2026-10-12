@@ -570,6 +570,7 @@ function noticeOfRefusal(outcome: Exclude<SaleOutcome, { status: 'ok' }>): SaleN
     return { tone: 'error', text: fillCopy(t.result.blockedIntro, { lines: outcome.lines.join(', ') }) };
   }
   if (outcome.status === 'no_payment_account') return { tone: 'error', text: t.result.noPaymentAccount };
+  if (outcome.status === 'sale_origin_unsupported') return { tone: 'error', text: t.result.originUnsupported };
   if (outcome.status === 'credit_not_allowed') return { tone: 'error', text: t.result.creditNotAllowed[outcome.reason] };
   return { tone: 'error', text: t.result.failed };
 }

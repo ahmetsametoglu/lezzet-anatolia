@@ -1,7 +1,16 @@
 'use server';
 
-import { PriceService, ProductService, SettingsService, StockService, serviceDb } from '@lezzet/database';
+import { PriceService, ProductService, ProductVatRateService, SettingsService, StockService, serviceDb } from '@lezzet/database';
 import { AUTO_PRICE_STEP_DEFAULT, AUTO_PRICE_STEP_KEY } from '@lezzet/domain-core';
+import { readDistanceSaleThreshold } from '@lezzet/application/accounting/distance-sale-threshold';
+import type { Country } from '@lezzet/types';
+import {
+  countryCellsOf,
+  countryVatOf,
+  generalPricesOf,
+  type CountryPriceCells,
+  type CountryPricing,
+} from '@/components/operation/prices/country-prices';
 import { requireAdmin, requireWarehouseScope } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readCostBasis } from '@lezzet/application';
@@ -60,6 +69,9 @@ export async function loadProductStockPeekAction(productId: string): Promise<Act
 
 export interface ProductPricesPeek {
   rows: PriceRow[];
+  /** Boy başına ülke fiyatları; bakıştan açılan fiyat penceresi ülke alanlarını bunlardan doldurur. */
+  countryPrices: Record<string, Partial<Record<Country, CountryPriceCells>>>;
+  countryVat: CountryPricing['vat'];
   /** Otomatik fiyatın yuvarlama adımı (cent); bakıştan açılan fiyat penceresinin önizlemesi yazımla aynı adımı kullansın. */
   autoPriceStepCents: number;
 }
@@ -77,17 +89,28 @@ export async function loadProductPricesPeekAction(productId: string): Promise<Ac
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
 
     const priceSvc = new PriceService(db);
-    const [b2c, b2b, costs, autoPriceStepCents] = await Promise.all([
-      priceSvc.findApplicableMap(variantIds, 'b2c'),
-      priceSvc.findApplicableMap(variantIds, 'b2b'),
+    const [b2c, b2b, costs, autoPriceStepCents, countryRates, threshold] = await Promise.all([
+      priceSvc.findListPricesMap(variantIds, 'b2c'),
+      priceSvc.findListPricesMap(variantIds, 'b2b'),
       readCostBasis(db, variantIds),
       new SettingsService(db).getNumber(AUTO_PRICE_STEP_KEY, AUTO_PRICE_STEP_DEFAULT),
+      new ProductVatRateService(db).listByProducts([productId]),
+      readDistanceSaleThreshold(db),
     ]);
 
     // Kategori adı diyalogda çizilmiyor — boş harita bilinçli (satır kurulumu alanı boş bırakır).
+    const rows = toPriceRows({
+      products: page.rows,
+      prices: toChannelMaps(generalPricesOf(b2c), generalPricesOf(b2b)),
+      costs,
+      categoryNames: new Map(),
+    });
+    const vatRate = page.rows[0]?.vatRate;
     return {
       data: {
-        rows: toPriceRows({ products: page.rows, prices: toChannelMaps(b2c, b2b), costs, categoryNames: new Map() }),
+        rows,
+        countryPrices: Object.fromEntries(variantIds.map((id) => [id, countryCellsOf(id, b2c, b2b)])),
+        countryVat: vatRate === undefined ? {} : countryVatOf({ vatRate, countryRates }, threshold.destinationTaxation),
         autoPriceStepCents,
       },
       error: null,

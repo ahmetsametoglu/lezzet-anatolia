@@ -9,20 +9,18 @@ import { CatalogTab } from './tabs/catalog/catalog-tab';
 import { FamilyTab } from './tabs/family/family-tab';
 import { PackagesTab } from './tabs/package/package-tab';
 import { ProductsTab } from './tabs/product/product-tab.desktop';
+import { COUNTRY_LABELS } from '@lezzet/types';
 import { PRODUCT_TABS, PRODUCT_TAB_LABEL, type ProductTab } from './products-paths';
 import type { ProductsViewProps } from './products-types';
+import { RATE_COUNTRIES } from './products-url';
 
-// Ürünler — web ("Veri Masası") KABUĞU: ortak üst bar (PageHeader) + O2 sekmeler; sekme içerikleri
-// kendi klasörlerinde (tabs/product · tabs/catalog · tabs/package) — bu dosya yalnız yönlendirir.
-// Kategoriler ve Koleksiyonlar AYNI katalog modülüdür, yalnız `kind` ile ayrışır (no-duplication).
+// Ürünler kabuğu: ortak üst bar ve sekmeler; sekme içerikleri kendi klasörlerinde, bu dosya yalnız yönlendirir. Kategoriler ve
+// Koleksiyonlar aynı katalog modülüdür, yalnız `kind` ile ayrışır.
 
-// Sıra ve ad `products-paths.ts`ten (15.08): `loading.tsx` de aynı kaynağı okur — liste burada
-// yazılıyken iskelet 4 çubukta kalmıştı, beşinci sekme ("Aileler") gelince bar genişliyordu.
+// Sıra ve ad `products-paths.ts`ten gelir, çünkü `loading.tsx` de aynı kaynağı okur ve iskelet sekme sayısını tutturmalı.
 const TABS = PRODUCT_TABS.map((key) => ({ key, label: PRODUCT_TAB_LABEL[key] }));
 
-// "Yeni …" düğmesinin etiketi sekmeden gelir — düğme sekme çubuğunun sağında durur ve neyi
-// yarattığını sekme söyler. Etiketler TABS ile aynı sırayı izler ama ondan TÜRETİLEMEZ: sekme adı
-// çoğuldur ("Kategoriler"), eylem tekildir ("+ Kategori").
+// "Yeni …" düğmesinin etiketi sekmeden gelir; sekme adından türetilemez, çünkü sekme adı çoğul ("Kategoriler"), eylem tekildir.
 const CREATE_LABEL: Record<ProductTab, string> = {
   products: 'Ürün',
   categories: 'Kategori',
@@ -31,8 +29,7 @@ const CREATE_LABEL: Record<ProductTab, string> = {
   families: 'Aile',
 };
 
-// Arama da sekmeye BAĞLI: yer tutucu neyin arandığını söyler. Eskiden tek bir "Ürün ara…" kutusu
-// başlıkta duruyor ve hangi sekme açık olursa olsun ÜRÜNDE arıyordu — kutu yalan söylüyordu.
+// Arama sekmeye bağlıdır ve yer tutucu neyin arandığını söyler.
 const SEARCH_PLACEHOLDER: Record<ProductTab, string> = {
   products: 'Ürün ara…',
   categories: 'Kategori ara…',
@@ -43,14 +40,13 @@ const SEARCH_PLACEHOLDER: Record<ProductTab, string> = {
 
 export function ProductsDesktop(props: ProductsViewProps) {
   const { data, tab, onTab, search, onSearch, creating, openCreate, closeCreate } = props;
-  // Sayaçlar SUNUCUDAN gelir: liste sayfalı olduğu için client görünen satırlardan türetemez
-  // (türetse "12 ürün" yazıp 30 satır gösterirdi). Süzgeç uygulanmışsa sayaçlar da süzülmüştür.
+  // Sayaçlar sunucudan gelir, çünkü liste sayfalıdır ve görünen satırlardan türetilen sayı yanlış olurdu; süzgeç varsa süzülmüştür.
   const { total, candidate, incomplete } = data.counts;
+  const rateGaps = RATE_COUNTRIES.map((country) => ` · ${data.rateGaps[country] ?? 0} ${COUNTRY_LABELS[country]} oranı eksik`).join('');
 
-  // Alt başlık da sekmeye ait: her sekmede "70 ürün · 6 aday" yazmak, kategori listesine bakarken
-  // ürün sayaçlarını okutmaktı. Katalog sayaçları client'ta doğru — o listeler bütün hâlinde geliyor.
+  // Alt başlık sekmeye aittir; katalog sayaçları istemcide doğrudur, çünkü o listeler bütün hâlinde gelir.
   const SUBTITLE: Record<ProductTab, string> = {
-    products: `${total} ürün · ${candidate} aday · ${incomplete} beyan eksik`,
+    products: `${total} ürün · ${candidate} aday · ${incomplete} beyan eksik${rateGaps}`,
     categories: `${data.categories.length} kategori`,
     collections: `${data.collections.length} koleksiyon`,
     packages: `${data.bundles.length} paket`,
@@ -67,8 +63,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
         onSelect={onTab}
         action={
           <>
-            {/* Paketlerde arama YOK: aranacak veri yok. Kutuyu kilitli göstermek "birazdan çalışır"
-                izlenimi verirdi. */}
+            {/* Paketlerde arama yok; kilitli kutu "birazdan çalışır" izlenimi verirdi. */}
             {tab === 'packages' ? null : (
               <SearchInput value={search} onChange={onSearch} placeholder={SEARCH_PLACEHOLDER[tab]} className="w-56" />
             )}

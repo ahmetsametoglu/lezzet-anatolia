@@ -176,7 +176,13 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     <>
       <PricesDesktop {...view} />
       {editing && data.autoPriceStepCents !== null ? (
-        <PriceDialog key={editing.variantId} row={editing} stepCents={data.autoPriceStepCents} onClose={closePriceDialog} />
+        <PriceDialog
+          key={editing.variantId}
+          row={editing}
+          countries={{ prices: editing.countryPrices, vat: editing.countryVat }}
+          stepCents={data.autoPriceStepCents}
+          onClose={closePriceDialog}
+        />
       ) : null}
       {offerBatch ? (
         <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />

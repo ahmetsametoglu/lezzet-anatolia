@@ -2,32 +2,65 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { autoPriceCents, markupPercent, priceForMargin, targetMarginFor, vatBaseOf } from '@lezzet/domain-core';
+import {
+  autoPriceCents,
+  countryAutoPrice,
+  markupPercent,
+  priceForMargin,
+  revenueHtOf,
+  targetMarginFor,
+  vatBaseOf,
+} from '@lezzet/domain-core';
 import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
-import type { Country } from '@lezzet/types';
+import { COUNTRY_LABELS, type Channel, type Country } from '@lezzet/types';
+import { removeCountryPriceAction, setCountryPriceAction } from '@/app/(operations)/operations/country-price-actions';
+import { vatRateLabel } from '@/components/operation/form/document-form/labels';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Toggle } from '@/components/operation/form/toggle';
 import { DateField } from '@/components/operation/form/date-field';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
-import { money, percent } from '@/components/operation/ui/format';
+import { decimal, money, percent } from '@/components/operation/ui/format';
+import { locative } from '@/components/operation/ui/suffix';
 import { Metric } from '@/components/operation/ui/metric';
 import { setAutoPriceAction, setChannelPriceAction } from '@/lib/prices/price-actions';
-import { countryColumnLabel } from './country-prices';
+import {
+  countryColumnLabel,
+  countryPriceWrites,
+  FOREIGN_COUNTRIES,
+  PRICE_CHANNELS,
+  type CountryDrafts,
+  type CountryPricing,
+} from './country-prices';
 import type { PriceRow } from '@/lib/pricing/price-rows';
 
-// Genel fiyat penceresi: iki kanalın liste fiyatı, otomatik fiyat anahtarı ve hedef marj; Fiyatlar ve Ürünler aynı pencereyi açar. B2C KDV
-// dahil, B2B hariç yazılır ve etiket bunu söyler, yoksa toptan fiyat perakendeye göre ayarlanır ve marj sessizce kayar.
+// Fiyat penceresi: iki kanalın genel ve ülke fiyatı, otomatik fiyat anahtarı ve hedef marj; Fiyatlar ve Ürünler aynı pencereyi açar. B2C
+// KDV dahil, B2B hariç yazılır ve etiket bunu söyler, yoksa toptan fiyat perakendeye göre ayarlanır ve marj sessizce kayar.
 
 interface PriceDialogProps {
   /** `marginCountry` doluysa en dar marj o ülkenin fiyatındadır (Fiyatlar listesi). */
   row: PriceRow & { marginCountry?: Country | null };
+  /** Boyun ülke fiyatları ve ürünün o ülkelerde uygulanan oranları. */
+  countries: CountryPricing;
   /** Otomatik fiyatın yuvarlama adımı (cent), ayardan; açan sayfa okur ki önizleme yazımla aynı adımı kullansın. */
   stepCents: number;
   onClose: () => void;
 }
 
-export function PriceDialog({ row, stepCents, onClose }: PriceDialogProps) {
+const draftsOf = (prices: CountryPricing['prices']): CountryDrafts =>
+  Object.fromEntries(
+    FOREIGN_COUNTRIES.map((country) => [
+      country,
+      Object.fromEntries(
+        PRICE_CHANNELS.map((channel) => {
+          const cents = prices[country]?.[channel].amountCents ?? null;
+          return [channel, cents === null ? null : fromCents(cents)];
+        }),
+      ) as Record<Channel, number | null>,
+    ]),
+  );
+
+export function PriceDialog({ row, countries, stepCents, onClose }: PriceDialogProps) {
   const router = useRouter();
 
   const [b2c, setB2c] = useState<number | null>(row.b2c.amountCents === null ? null : fromCents(row.b2c.amountCents));
@@ -38,6 +71,8 @@ export function PriceDialog({ row, stepCents, onClose }: PriceDialogProps) {
   const [target, setTarget] = useState<number | null>(row.targetMarginPercent);
   // B2B'ye özel hedef; boşsa ortak hedef geçer. Çözüm motordadır (`targetMarginFor`) ki önizleme, otomatik fiyat ve uyarı ayrışmasın.
   const [targetB2b, setTargetB2b] = useState<number | null>(row.targetMarginB2bPercent);
+  // Ülke alanı boşsa o ülkede genel fiyat geçer; boşaltılan alan kaydedince ülke fiyatını kaldırır.
+  const [drafts, setDrafts] = useState<CountryDrafts>(() => draftsOf(countries.prices));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -58,6 +93,20 @@ export function PriceDialog({ row, stepCents, onClose }: PriceDialogProps) {
 
   const b2cMargin = cost === null ? null : markupPercent(htOf('b2c', b2c) ?? 0, cost);
   const b2bMargin = cost === null ? null : markupPercent(htOf('b2b', b2b) ?? 0, cost);
+  const general: Record<Channel, number | null> = { b2c, b2b };
+
+  /** Ülkenin tüketiciye uygulanan oranı; ürün oradaki tüketiciye satılmıyorsa `null`, çünkü o fiyattan satış olmaz. */
+  const consumerRateIn = (country: Country): number | null => {
+    const vat = countries.vat[country];
+    return vat?.sellableToConsumer ? vat.consumerRate : null;
+  };
+  /** Ülkede geçen fiyatın (alan boşsa genel) marjı, o ülkede uygulanan oranla; KDV hariç kanalda oran marjı değiştirmez. */
+  const countryMargin = (country: Country, channel: Channel): number | null => {
+    const euros = drafts[country]?.[channel] ?? general[channel];
+    const rate = channel === 'b2b' ? row.vatRate : consumerRateIn(country);
+    if (cost === null || euros === null || rate === null) return null;
+    return markupPercent(revenueHtOf(channel, toCents(euros), rate), cost);
+  };
 
   /**
    * Otomatik hesabın YAZACAĞI fiyatlar. Yalnız fiyatı OLAN kanal listelenir: motor da kapalı bir
@@ -81,6 +130,29 @@ export function PriceDialog({ row, stepCents, onClose }: PriceDialogProps) {
             });
             return next === null ? null : `${channel.toUpperCase()} ${money(next)}`;
           })
+          .concat(
+            // Otomatik üründe ülkenin tüketici fiyatı orada uygulanan orandan türer; genel fiyata eşitse ülke satırı yazılmaz.
+            FOREIGN_COUNTRIES.map((country) => {
+              const channelTarget = targetMarginFor('b2c', target, targetB2b);
+              if (row.b2c.amountCents === null || channelTarget === null) return null;
+              const generalCents = autoPriceCents({
+                channel: 'b2c',
+                costCents: cost,
+                targetMarginPercent: channelTarget,
+                vatRate: row.vatRate,
+                stepCents,
+              });
+              if (generalCents === null) return null;
+              const next = countryAutoPrice({
+                costCents: cost,
+                targetMarginPercent: channelTarget,
+                stepCents,
+                countryVatRate: consumerRateIn(country),
+                generalCents,
+              });
+              return next.action === 'set' ? `${countryColumnLabel('b2c', country)} ${money(next.amountCents)}` : null;
+            }),
+          )
           .filter(Boolean)
           .join(' · ');
 
@@ -107,6 +179,14 @@ export function PriceDialog({ row, stepCents, onClose }: PriceDialogProps) {
     }
     if (!autoPrice && b2b !== null && toCents(b2b) !== row.b2b.amountCents) {
       writes.push(setChannelPriceAction(row.variantId, 'b2b', toCents(b2b), startsAt));
+    }
+    // Otomatik üründe ülke fiyatını motor yazar; elle yazılan ülke fiyatı bir sonraki hizalamada silinirdi.
+    for (const write of autoPrice ? [] : countryPriceWrites(drafts, countries.prices)) {
+      writes.push(
+        write.kind === 'write'
+          ? setCountryPriceAction(row.variantId, write.channel, write.country, write.amountCents, startsAt)
+          : removeCountryPriceAction(row.variantId, write.channel, write.country),
+      );
     }
     const results = await Promise.all(writes);
     setBusy(false);
@@ -229,6 +309,44 @@ export function PriceDialog({ row, stepCents, onClose }: PriceDialogProps) {
           }}
         />
       </div>
+
+      {FOREIGN_COUNTRIES.map((country) => {
+        const consumerRate = consumerRateIn(country);
+        const name = COUNTRY_LABELS[country];
+        const toConsumers = `${name}${locative(name)}ki tüketiciye`;
+        // Oranı olmayan ülkede tüketici marjı yazılmaz, çünkü o ülkenin tüketicisine satılmaz; işletme marjı yine geçerlidir.
+        const margins = PRICE_CHANNELS.filter((channel) => channel !== 'b2c' || consumerRate !== null)
+          .map((channel) => `${countryColumnLabel(channel, country)} ${percent(countryMargin(country, channel))}`)
+          .join(' · ');
+        return (
+          <div key={country} className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-2 gap-3">
+              {PRICE_CHANNELS.map((channel) => {
+                const generalEuros = general[channel];
+                return (
+                  <MoneyField
+                    key={channel}
+                    label={`${countryColumnLabel(channel, country)} fiyatı (€)`}
+                    labelAside={channel === 'b2c' ? 'KDV dahil' : 'KDV hariç'}
+                    id={`price-${channel}-${country}`}
+                    value={drafts[country]?.[channel] ?? null}
+                    disabled={autoPrice}
+                    onChange={(euros) =>
+                      setDrafts((prev) => ({ ...prev, [country]: { ...(prev[country] ?? { b2c: null, b2b: null }), [channel]: euros } }))
+                    }
+                    placeholder={generalEuros === null ? 'genel fiyat yok' : `genel: ${decimal(generalEuros)}`}
+                  />
+                );
+              })}
+            </div>
+            <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
+              {consumerRate === null
+                ? `Boş alanda genel fiyat geçer. ${name} KDV oranı girilmemiş, ${toConsumers} satılmaz. Marj ${margins}.`
+                : `Boş alanda genel fiyat geçer. Marj ${margins}, ${toConsumers} uygulanan KDV ${vatRateLabel(consumerRate)}.`}
+            </span>
+          </div>
+        );
+      })}
 
       <DateField
         label="Ne zamandan geçerli"

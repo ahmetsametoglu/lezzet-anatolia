@@ -3,6 +3,7 @@ import type { StorefrontProduct } from '@lezzet/application';
 import { cardBadgeOf, cardPlaceNoteOf, cardQuantityOf, placeMarkOf, productPriceLabel } from '@lezzet/helper';
 import catalogMessages from '@lezzet/i18n/customer/catalog';
 import placeMessages from '@lezzet/i18n/customer/place';
+import priceLabelMessages from '@lezzet/i18n/customer/price-label';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { Chip } from '@/components/customer/phone-kit/chip';
 import { EmptyState } from '@/components/customer/phone-kit/empty-state';
@@ -79,7 +80,8 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
       soldOut: product.soldOut,
       soldOutLabel: copy.card.soldOut,
       discountLabel: cardBadgeOf(product, { offer: copy.card.offer }),
-      placeNote,
+      // O ülkede satılmayan ürünün sebebi yerin şeridinde durur, çünkü kart için soru aynı: ürün buraya gelmiyor.
+      placeNote: product.notSoldIn ? priceLabelMessages[locale].cardNotSoldIn[product.notSoldIn] : placeNote,
       dimmed,
       quantityLabel: cardQuantityOf(product, copy.card, locale),
     };

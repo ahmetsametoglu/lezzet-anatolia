@@ -23,6 +23,7 @@ import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
 // Kartın yer cümlesi ortak sözlükten; aynı metni web'in telefon görünümü de okuyor.
 import placeMessages from '@lezzet/i18n/customer/place';
+import priceLabelMessages from '@lezzet/i18n/customer/price-label';
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -123,7 +124,8 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
       soldOutLabel: t.card.soldOut,
       /* Rozet yalnız fırsat: kapsam kampanyası her karta basılsa sepette bir kez inen indirim ürün başına vaat gibi okunurdu. */
       discountLabel: cardBadgeOf(product, { offer: t.card.offer }),
-      placeNote,
+      // O ülkede satılmayan ürünün sebebi yerin şeridinde durur, çünkü kart için soru aynı: ürün buraya gelmiyor.
+      placeNote: product.notSoldIn ? priceLabelMessages[locale].cardNotSoldIn[product.notSoldIn] : placeNote,
       /* Solma yalnız kapalı kapıda: kargoyla ya da stok girince gelebilen ürünü soldurmak müşteriyi olmayan bir kapıdan çevirirdi. */
       dimmed,
       quantityLabel: cardQuantityOf(product, t.card, locale),

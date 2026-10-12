@@ -89,6 +89,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   // Kapıda kartın Revolut eşleşmesi web'deki sipariş detayında ve Para ekranında çözülür.
   door_card_unmatched: 'management',
   door_card_missing: 'management',
+  // Eşik kartı ve OSS özeti web'deki Raporlar › Muhasebe'de okunur.
+  distance_sale_threshold: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

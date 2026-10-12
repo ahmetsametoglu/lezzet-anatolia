@@ -148,6 +148,18 @@ describe('CatalogScreen', () => {
     expect(screen.getAllByText('12,90 €')).toHaveLength(1);
   });
 
+  it('o ülkede satılmayan ürünün kartı fiyat çipi çizmez, şeridinde ülkeyi söyler', async () => {
+    mockCatalog(
+      page([catalogProduct(1), catalogProduct(2, { priceCents: null, notSoldIn: 'DE', comparisonCents: null, stockId: null })], null),
+    );
+
+    await render(<CatalogScreen />);
+
+    expect(await screen.findByTestId('product-urun-2-place-note')).toHaveTextContent("ALMANYA'DA SATILMIYOR");
+    expect(screen.queryByTestId('product-urun-1-place-note')).toBeNull();
+    expect(screen.getAllByText('12,90 €')).toHaveLength(1);
+  });
+
   it('liste bittiğinde "hepsi bu kadar" yazar (imleç yok)', async () => {
     mockCatalog(page([catalogProduct(1)], null));
 

@@ -5,11 +5,13 @@ import type {
   Category,
   Channel,
   Collection,
+  Country,
   KeysetCursor,
   LocalizedText,
   Product,
   ProductStatus,
   ProductVariant,
+  ProductVatRate,
   ProductWithRelations,
 } from '@lezzet/types';
 import type { BatchView } from '@lezzet/application';
@@ -143,6 +145,8 @@ export interface ProductsData {
   pinned: ProductView | null;
   /** Başlık sayaçları — liste sayfalandığı için client türetemez, sunucudan gelir. */
   counts: { total: number; candidate: number; incomplete: number };
+  /** Ülkenin KDV oranı girilmemiş ürün sayısı, ülke başına; öteki süzgeçlerle birlikte sayılır. */
+  rateGaps: Partial<Record<Country, number>>;
   /** Kategori ve koleksiyon TAM gelir: tavanı onlarla sınırlı, açılır menüyü besliyor (STACK §6). */
   categories: CategoryView[];
   collections: CollectionView[];
@@ -206,6 +210,9 @@ export interface ProductsViewProps {
   onStatusFilter: (s: StatusFilter) => void;
   onlyIncomplete: boolean;
   onToggleIncomplete: () => void;
+  /** "Oranı eksik" süzgecinin ülkesi; `null` süzgeç yok. */
+  rateGap: ProductVatRate['country'] | null;
+  onToggleRateGap: (country: ProductVatRate['country']) => void;
   /** Devam eden sayfa var mı + yükleyici; infinite scroll tetikleyicisi bunları kullanır. */
   hasMore: boolean;
   loadingMore: boolean;

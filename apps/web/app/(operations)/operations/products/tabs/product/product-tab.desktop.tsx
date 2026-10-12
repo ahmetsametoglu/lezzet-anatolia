@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { PRODUCTS_COLUMN_TRACKS } from '../../products-columns';
+import { RATE_COUNTRIES } from '../../products-url';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
@@ -9,7 +10,7 @@ import { withCells, Table, type Column } from '@/components/operation/ui/table';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { money, percent } from '@/components/operation/ui/format';
-import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
+import { COUNTRY_LABELS, PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import { DeclarationMarks } from './declaration-marks';
 import { StatusBadge } from './status-badge';
 import { useRowDetail } from './use-row-detail.hook';
@@ -125,6 +126,8 @@ export function ProductsTab(props: ProductsViewProps) {
     onStatusFilter,
     onlyIncomplete,
     onToggleIncomplete,
+    rateGap,
+    onToggleRateGap,
     selectedId,
     onSelect,
     openEdit,
@@ -164,16 +167,34 @@ export function ProductsTab(props: ProductsViewProps) {
         ))}
         <span className="mx-1 h-[18px] w-px bg-ops-gray-300" />
         <StatusFilterChip value={statusFilter} onChange={onStatusFilter} />
-        {missingCount > 0 ? (
-          <Chip
-            tone="amber"
-            active={onlyIncomplete}
-            onClick={onToggleIncomplete}
-            className={onlyIncomplete ? 'ml-auto' : 'ml-auto !bg-ops-amber-bg !text-ops-amber'}
-          >
-            {missingCount} beyan eksik
-          </Chip>
-        ) : null}
+        {/* Eksik çipleri sağda; açık süzgecin çipi sayı sıfırken de durur, yoksa süzgeç kapatılamazdı. */}
+        <span className="ml-auto flex flex-wrap items-center gap-2">
+          {RATE_COUNTRIES.map((country) => {
+            const count = data.rateGaps[country] ?? 0;
+            const active = rateGap === country;
+            return count > 0 || active ? (
+              <Chip
+                key={country}
+                tone="amber"
+                active={active}
+                onClick={() => onToggleRateGap(country)}
+                className={active ? undefined : '!bg-ops-amber-bg !text-ops-amber'}
+              >
+                {count} {COUNTRY_LABELS[country]} oranı eksik
+              </Chip>
+            ) : null;
+          })}
+          {missingCount > 0 || onlyIncomplete ? (
+            <Chip
+              tone="amber"
+              active={onlyIncomplete}
+              onClick={onToggleIncomplete}
+              className={onlyIncomplete ? undefined : '!bg-ops-amber-bg !text-ops-amber'}
+            >
+              {missingCount} beyan eksik
+            </Chip>
+          ) : null}
+        </span>
       </div>
 
       {/* Liste tam genişliktir (tasarım 6a): satırın tek anlamı kırılımı açmak, kırılım da bütün genişliği kullanır. */}

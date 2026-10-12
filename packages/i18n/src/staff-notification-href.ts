@@ -15,6 +15,8 @@ export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetTy
   if (row.kind === 'b2b_application_received') return '/operations/customers';
   if (row.kind === 'payout_unexplained') return '/operations/finance';
   if (row.kind === 'door_card_unmatched') return '/operations/finance?dialog=door-card';
+  // Eşik kartı ve OSS özeti Raporlar › Muhasebe sekmesindedir.
+  if (row.kind === 'distance_sale_threshold') return '/operations/reports?tab=export';
   const movementDay = row.kind === 'bank_feed_changed' || row.kind === 'pennylane_match_stuck' || row.kind === 'pennylane_match_removed';
   if (movementDay && typeof row.payload.accountId === 'string' && typeof row.payload.valueDate === 'string') {
     return `/operations/finance?acct=${row.payload.accountId}&from=${row.payload.valueDate}&to=${row.payload.valueDate}`;

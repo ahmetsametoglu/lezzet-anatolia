@@ -200,6 +200,14 @@ describe('ürün detayı', () => {
     expect(screen.getByTestId('product-noship')).toBeOnTheScreen();
   });
 
+  it('o ülkede satılmayan boyda bar sebebi ülkeyle söyler, genel "satışa kapalı" cümlesini değil', async () => {
+    const notSold = { priceCents: null, notSoldIn: 'DE' as const, comparisonCents: null, comparisonUnit: null, stockId: null };
+    await renderProduct(productDetail({ variants: [productVariant(1, notSold), productVariant(2, notSold)] }));
+
+    expect(screen.getByTestId('product-not-sold')).toHaveTextContent('Bu ürün Almanya için satışta değil');
+    expect(screen.queryByTestId('product-add')).toBeNull();
+  });
+
   it('404 "ürün bulunamadı" der — ağ arızası hâliyle karıştırılmaz', async () => {
     fetchMock.mockResolvedValue(fail(404, 'product_not_found'));
     await render(<ProductDetailScreen slug="olmayan-urun" />);
@@ -285,6 +293,17 @@ describe('ürün detayı — gelince haber ver', () => {
 
   afterEach(() => {
     mockOnboarding = null;
+  });
+
+  it('o ülkede satılmayan tükenmiş üründe bar ülkeyi söyler, "haber ver" çizilmez', async () => {
+    const notSold = { stockStatus: 'out_of_stock' as const, soldOut: true, priceCents: null, notSoldIn: 'DE' as const, stockId: null };
+    fetchMock.mockImplementation(async (input) =>
+      String(input).includes('/places/by-postal-code') ? ok(PLACE) : ok(productDetail({ variants: [productVariant(1, notSold)] })),
+    );
+    await renderSoldOut();
+
+    expect(await screen.findByTestId('product-not-sold')).toHaveTextContent('Bu ürün Almanya için satışta değil');
+    expect(screen.queryByTestId('product-stock-alert')).toBeNull();
   });
 
   it('bar yalnız OLGUYU söyler — "yakında yeniden gelecek" sözü yok', async () => {

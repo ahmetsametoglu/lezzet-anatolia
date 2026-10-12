@@ -86,6 +86,7 @@
     "insufficientIntro": "Bu depoda yeterli yok — satış yazılmadı: {lines}",
     "insufficientLine": "{name} (kalan {n})",
     "blockedIntro": "Satışa kapalı kalem — satış yazılmadı: {lines}",
+    "originUnsupported": "Bu depo Fransa dışında ve oradan satış desteklenmiyor — satış yazılmadı. Yöneticiye haber verin.",
     "failed": "Satış kapanmadı — bir daha deneyin; sürerse yöneticiye haber verin.",
     "network": "Bağlantı koptu. Hat gelince aynı sepetle yeniden tamamlayın; satış iki kez yazılmaz.",
     "quoteNetwork": "Bağlantı koptu, kesin tutar okunamadı — satış yazılmadı. Hat gelince yeniden tamamlayın.",

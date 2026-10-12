@@ -92,7 +92,15 @@ export function PricePeekDialog({ productId, productName, variantCount, onClose 
   // Tek boyda kapanış bakışın tamamını kapatır, çünkü dönülecek tablo yoktur; kaydetme listeyi `router.refresh()` ile tazeler.
   if (peek !== null && peek.rows.length === 1) {
     const only = peek.rows[0]!;
-    return <PriceDialog key={only.variantId} row={only} stepCents={peek.autoPriceStepCents} onClose={onClose} />;
+    return (
+      <PriceDialog
+        key={only.variantId}
+        row={only}
+        countries={{ prices: peek.countryPrices[only.variantId] ?? {}, vat: peek.countryVat }}
+        stepCents={peek.autoPriceStepCents}
+        onClose={onClose}
+      />
+    );
   }
 
   return (
@@ -177,6 +185,7 @@ export function PricePeekDialog({ productId, productName, variantCount, onClose 
         <PriceDialog
           key={editing.variantId}
           row={editing}
+          countries={{ prices: peek.countryPrices[editing.variantId] ?? {}, vat: peek.countryVat }}
           stepCents={peek.autoPriceStepCents}
           onClose={() => {
             setEditingId(null);

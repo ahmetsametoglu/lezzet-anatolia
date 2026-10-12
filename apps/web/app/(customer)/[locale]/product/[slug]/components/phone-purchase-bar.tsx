@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { formatPrice, type PlaceMark } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import placeMessages from '@lezzet/i18n/customer/place';
+import priceLabelMessages from '@lezzet/i18n/customer/price-label';
 import type productMessages from '@lezzet/i18n/customer/product';
 import type { StorefrontVariant } from '@lezzet/application';
 import { useAccount } from '@/components/customer/account/account-context';
@@ -18,22 +19,10 @@ import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
 import { capOf } from './purchase-panel';
 
 /*
-  YAPIŞKAN SATIN ALMA BARI — native ürün detayının alt barının (`product-detail-screen.tsx`, v3:1228-1252) web
-  telefon ikizi (14.09): krem cam (`sand-50/96` + bulanıklık), üstte 1,5px mürekkep çizgi, alt güvenli alan
-  barın İÇİNDE (dolguyla toplanmaz, ikisinin büyüğü). Dört hâl, native'in sırasıyla:
-    · tükendi ya da bölgede şu an yok → sebep satırı + "Stok gelince haber ver" (kayıt alınınca "✓ Not aldık");
-    · kapalı kapı (rota dışı soğuk zincir) → yalnız sebep satırı; satın alma öğesi YOK ve "Buraya da gelin"
-      burada tekrarlanmaz — mesele bu ürün değil bölge;
-    · fiyatsız → "Bu ürün şu an satışa kapalı";
-    · satılabilir → adet seçici + "Sepete ekle · {toplam}".
-
-  ── WEB'E ÖZGÜ AKIŞLAR ───────────────────────────────────────────────────────
-  · Sepete ekleme web'in sepetine (`useCart().add` — niyet anında, fiyat sunucudan); onay bildirim hapında.
-    Asgari sepet hatırlatması native'deki gibi SUNUCUNUN cevabıyla: eklemenin anındaki kalem sayısı saklanır,
-    görünüm değişince ikinci bir cümle (tahmini rakam yazılmaz).
-  · "Haber ver" web'in kaydı (`recordVariantStockNoticeAction`): e-postası bilinen girişli müşteri tek dokunuş,
-    öteki herkes web'in e-posta penceresi (native misafirde kodla hesap açıyor). Yer bilinmiyorsa düğme yok —
-    nereye haber verileceği bilinmeden kayıt alınmaz (kapının kuralı).
+  Yapışkan satın alma barı, native ürün detayının alt barının web telefon ikizi; hâller native'in sırasıyla: o ülkede satılmıyor,
+  tükendi ya da bölgede yok (sebep ve "haber ver"), kapalı kapı (yalnız sebep), fiyatsız, satılabilir (adet ve sepete ekle). Asgari
+  sepet hatırlatması sunucunun cevabını bekler ve "haber ver" yer bilinmezken çizilmez, çünkü nereye haber verileceği bilinmeden
+  kayıt alınmaz.
 */
 
 type ProductCopy = LocalizedCopy<typeof productMessages>;
@@ -60,7 +49,7 @@ export function PhonePurchaseBar({ copy, locale, productName, variant, placeMark
   const toast = useToast();
   const account = useAccount();
   const [quantity, setQuantity] = useState(1);
-  /** Eklemenin ANINDAKİ kalem sayısı — sunucunun cevabını bu sayının değişmesinden anlıyoruz (native 16.08). */
+  /** Eklemenin anındaki kalem sayısı; sunucunun cevabı bu sayının değişmesinden anlaşılır. */
   const [awaitingHint, setAwaitingHint] = useState<number | null>(null);
   /** "Haber ver" kaydının hâli — bar boy değişince yeniden kurulur (çağıranın `key`i), yani kayıt BOY başına. */
   const [notice, setNotice] = useState<'sending' | 'done' | null>(null);
@@ -110,7 +99,10 @@ export function PhonePurchaseBar({ copy, locale, productName, variant, placeMark
   };
 
   let content;
-  if (alertBar) {
+  // O ülkede satılmayan ürün öteki hâllerden önce gelir: stok ya da bölge haberi bu ülkede tutulamayacak bir söz olurdu.
+  if (variant.notSoldIn) {
+    content = <p className={NOTE}>{priceLabelMessages[locale].notSoldIn[variant.notSoldIn]}</p>;
+  } else if (alertBar) {
     content = (
       <div className="flex items-center gap-2.5">
         <p className={NOTE}>{barNote}</p>

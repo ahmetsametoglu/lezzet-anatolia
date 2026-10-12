@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ConversationService, serviceDb } from '@lezzet/database';
+import { AddressService, ConversationService, serviceDb } from '@lezzet/database';
 import { createStaffCustomer, previewStaffCompany, type StaffCustomerOutcome } from '@lezzet/application/customer/staff-customer';
 import {
   addStaffAddress,
@@ -131,15 +131,23 @@ export async function readDeliveryContextAction(customerId: string, addressId: s
   }
 }
 
+/**
+ * Kalem seçicisinin araması: fiyat ve satılabilirlik teslim adresinin ülkesinden okunur, adres seçilmediyse genel fiyat. Ülke adresin
+ * kaydından okunur, çünkü seçicinin adres satırı ülke taşımaz; adres başka müşterininse yok sayılır.
+ */
 export async function searchVariantsAction(
   customerId: string,
   term: string,
   warehouseId: string | null,
+  addressId: string | null,
 ): Promise<ActionResult<StaffVariantRow[]>> {
   try {
     await requireAdmin();
+    const db = serviceDb();
+    const address = addressId ? await new AddressService(db).getById(addressId) : null;
+    const country = address?.customerId === customerId ? address.country : null;
     // Masa yöneticinindir ve yönetici pazarlık yazar; maliyet ve hedef marj marj-altı uyarısı için satırda gelir.
-    const page = await searchStaffVariants(serviceDb(), { customerId, term, warehouseId, includeCost: true });
+    const page = await searchStaffVariants(db, { customerId, term, warehouseId, includeCost: true, country });
     return { data: page.rows, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

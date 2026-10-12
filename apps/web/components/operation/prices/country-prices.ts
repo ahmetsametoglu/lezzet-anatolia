@@ -1,4 +1,5 @@
 import { applicableVatRate, sellableIn, type ProductVatRates } from '@lezzet/domain-core';
+import { toCents } from '@lezzet/helper';
 import { CountryEnum, SELLER_COUNTRY, type Channel, type Country, type Price } from '@lezzet/types';
 import type { ChannelPriceCell } from '@/lib/pricing/price-rows';
 
@@ -24,6 +25,31 @@ export interface CountryVat {
   rate: number | null;
   consumerRate: number | null;
   sellableToConsumer: boolean;
+}
+
+/** Bir boyun ülke fiyatları ve ürünün ülke oranları; fiyat penceresi ülke alanlarını bunlardan çizer. */
+export interface CountryPricing {
+  prices: Partial<Record<Country, CountryPriceCells>>;
+  vat: Partial<Record<Country, CountryVat>>;
+}
+
+/** Pencerenin ülke alanlarının taslağı, euro; boş alanda genel fiyat geçer. */
+export type CountryDrafts = Partial<Record<Country, Record<Channel, number | null>>>;
+
+export type CountryPriceWrite =
+  { kind: 'write'; country: Country; channel: Channel; amountCents: number } | { kind: 'remove'; country: Country; channel: Channel };
+
+/** Ülke alanlarından yazımlar: boşaltılan alan ülke fiyatını kaldırır ve o ülkede genel fiyat geçer; değişmeyen alan yazılmaz. */
+export function countryPriceWrites(drafts: CountryDrafts, saved: Partial<Record<Country, CountryPriceCells>>): CountryPriceWrite[] {
+  return FOREIGN_COUNTRIES.flatMap((country) =>
+    PRICE_CHANNELS.flatMap((channel): CountryPriceWrite[] => {
+      const draft = drafts[country]?.[channel] ?? null;
+      const current = saved[country]?.[channel].amountCents ?? null;
+      if (draft === null) return current === null ? [] : [{ kind: 'remove', country, channel }];
+      const amountCents = toCents(draft);
+      return amountCents === current ? [] : [{ kind: 'write', country, channel, amountCents }];
+    }),
+  );
 }
 
 /** Bir kanalın liste fiyatları, `PriceService.findListPricesMap` biçiminde. */

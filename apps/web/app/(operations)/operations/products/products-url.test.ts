@@ -1,16 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { parseProductsUrl, productsUrl, toProductFilters } from './products-url';
 
-/**
- * URL sözleşmesi saf mantıktır (DB yok) → birim test. Önemi: süzgeçler artık SUNUCUDA uygulanıyor,
- * yani bu ayrıştırma yanlışsa ekran sessizce yanlış listeyi gösterir. Ayrıca gidiş-dönüş
- * (durum → URL → durum) bozulursa paylaşılan link farklı bir görünüm açar.
- */
+// Süzgeçler sunucuda uygulanır: ayrıştırma yanlışsa ekran sessizce yanlış listeyi gösterir, gidiş-dönüş bozulursa paylaşılan bağlantı
+// başka bir görünüm açar.
 const CAT = '11111111-1111-4111-8111-111111111111';
 
 describe('parseProductsUrl', () => {
   it('boş parametrelerde varsayılana düşer', () => {
-    expect(parseProductsUrl({})).toEqual({ tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: '', selected: '' });
+    expect(parseProductsUrl({})).toEqual({
+      tab: 'products',
+      q: '',
+      cat: 'all',
+      status: 'all',
+      incomplete: false,
+      rateGap: null,
+      creating: false,
+      productId: '',
+      selected: '',
+    });
   });
 
   it('tanınmayan değerleri sessizce varsayılana çevirir (bozuk link ekranı kırmaz)', () => {
@@ -23,7 +30,17 @@ describe('parseProductsUrl', () => {
 
   it('geçerli değerleri okur ve aramayı kırpar', () => {
     const s = parseProductsUrl({ tab: 'collections', q: '  baklava ', cat: CAT, status: 'candidate', incomplete: '1' });
-    expect(s).toEqual({ tab: 'collections', q: 'baklava', cat: CAT, status: 'candidate', incomplete: true, creating: false, productId: '', selected: '' });
+    expect(s).toEqual({
+      tab: 'collections',
+      q: 'baklava',
+      cat: CAT,
+      status: 'candidate',
+      incomplete: true,
+      rateGap: null,
+      creating: false,
+      productId: '',
+      selected: '',
+    });
   });
 
   it('dizi gelen parametrede ilk değeri alır (?tab=a&tab=b)', () => {
@@ -37,19 +54,47 @@ describe('productsUrl', () => {
   });
 
   it('yalnız varsayılandan sapan alanları yazar', () => {
-    const url = productsUrl({ tab: 'products', q: 'börek', cat: 'all', status: 'passive', incomplete: false, creating: false, productId: '', selected: '' });
+    const url = productsUrl({
+      tab: 'products',
+      q: 'börek',
+      cat: 'all',
+      status: 'passive',
+      incomplete: false,
+      creating: false,
+      productId: '',
+      selected: '',
+    });
     expect(url).toBe('/operations/products?q=b%C3%B6rek&status=passive');
   });
 
   it('gidiş-dönüş korunur: durum → URL → durum', () => {
-    const state = { tab: 'categories' as const, q: 'su böreği', cat: CAT, status: 'active' as const, incomplete: true, creating: false, productId: '', selected: '' };
+    const state = {
+      tab: 'categories' as const,
+      q: 'su böreği',
+      cat: CAT,
+      status: 'active' as const,
+      incomplete: true,
+      rateGap: 'DE' as const,
+      creating: false,
+      productId: '',
+      selected: '',
+    };
     const parsed = parseProductsUrl(Object.fromEntries(new URLSearchParams(productsUrl(state).split('?')[1] ?? '')));
     expect(parsed).toEqual(state);
   });
 
   // Oluşturma niyeti adreste: paylaşılan link doğrudan forma düşer, yenileme formu kapatmaz.
   it('oluşturma niyeti `new=1` olarak yazılır ve sekmeyle birlikte okunur', () => {
-    const url = productsUrl({ tab: 'categories', q: '', cat: 'all', status: 'all', incomplete: false, creating: true, productId: '', selected: '' });
+    const url = productsUrl({
+      tab: 'categories',
+      q: '',
+      cat: 'all',
+      status: 'all',
+      incomplete: false,
+      creating: true,
+      productId: '',
+      selected: '',
+    });
     expect(url).toBe('/operations/products?tab=categories&new=1');
     const parsed = parseProductsUrl({ tab: 'categories', new: '1' });
     expect(parsed.creating).toBe(true);
@@ -75,5 +120,12 @@ describe('toProductFilters', () => {
   it('dolu süzgeçleri servis şekline çevirir', () => {
     const f = toProductFilters(parseProductsUrl({ q: 'baklava', cat: CAT, status: 'passive', incomplete: '1' }));
     expect(f).toEqual({ query: 'baklava', categoryId: CAT, status: 'passive', onlyIncomplete: true });
+  });
+
+  // Ülke oranı süzgeci servise geçmezse çip tüm katalogu gösterir; satıcının ülkesi süzgece girerse oranı ürün kaydında olduğu için
+  // liste boş kalır.
+  it('oranı eksik süzgeci yalnız satıcı dışındaki ülkede servise geçer', () => {
+    expect(toProductFilters(parseProductsUrl({ rateGap: 'DE' })).missingCountryRate).toBe('DE');
+    expect(parseProductsUrl({ rateGap: 'FR' }).rateGap).toBeNull();
   });
 });

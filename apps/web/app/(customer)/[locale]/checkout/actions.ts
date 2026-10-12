@@ -246,6 +246,7 @@ async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale):
     case 'warehouse_unresolved':
       return { status: 'rejected', reason: rejection.status, detail: rejection.reason };
     case 'blocked_lines':
+    case 'not_sold_in_country':
       return { status: 'rejected', reason: rejection.status, detail: rejection.lines };
     // Ürünün adı YETMEZ, sayısı da gerekir: "Kayseri Mantısı" cümlesi müşteriye ne yapacağını
     // söylemiyor, "Kayseri Mantısı (2)" söylüyor. Parantezin ne anlama geldiğini metin yazıyor —

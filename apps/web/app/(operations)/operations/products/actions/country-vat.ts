@@ -5,6 +5,7 @@ import { ProductVatRateService, serviceDb } from '@lezzet/database';
 import { ProductVatRateSchema, type ProductVatRate } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { repriceProduct } from '@/lib/pricing/auto-price';
 import { PRICES_PATH } from '../../prices/prices-url';
 import { PRODUCTS_PATH } from '../products-paths';
 
@@ -20,9 +21,12 @@ export async function setProductCountryVatAction(
   try {
     await requireStaff();
     const target = ProductVatRateSchema.pick({ productId: true, country: true }).parse({ productId, country });
-    const svc = new ProductVatRateService(serviceDb());
+    const db = serviceDb();
+    const svc = new ProductVatRateService(db);
     if (vatRate === null) await svc.remove(target.productId, target.country);
     else await svc.set({ ...target, vatRate });
+    // Otomatik fiyatlı üründe o ülkenin tüketici fiyatı orandan türer; hizalama elle fiyatlı üründe bir şey yazmaz.
+    await repriceProduct(db, target.productId);
     revalidatePath(PRODUCTS_PATH);
     revalidatePath(PRICES_PATH);
     return { data: null, error: null };

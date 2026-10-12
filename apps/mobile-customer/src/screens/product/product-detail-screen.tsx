@@ -25,6 +25,7 @@ import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { submitStockNotice } from '@/lib/api/stock-notices';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import placeMessages from '@lezzet/i18n/customer/place';
+import priceLabelMessages from '@lezzet/i18n/customer/price-label';
 import type { PlaceResolution } from '@/lib/api/places';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
@@ -353,7 +354,12 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
       {/* ── Yapışkan alt bar: krem cam, sekme çubuğuyla aynı yüzey ── */}
       <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID="product-bar">
         <View style={styles.barGlass} pointerEvents="none" />
-        {alertBar ? (
+        {variant?.notSoldIn ? (
+          /* O ülkede satılmayan ürün öteki hâllerden önce gelir: stok ya da bölge haberi bu ülkede tutulamayacak bir söz olurdu. */
+          <Text style={styles.soldOutText} testID="product-not-sold">
+            {priceLabelMessages[locale].notSoldIn[variant.notSoldIn]}
+          </Text>
+        ) : alertBar ? (
           <View style={styles.barRow}>
             <Text style={styles.soldOutText}>{barNote}</Text>
             {stockStatus === 'ok' || stockStatus === 'already' ? (

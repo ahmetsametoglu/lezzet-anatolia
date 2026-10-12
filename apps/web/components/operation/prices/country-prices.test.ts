@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { markupPercent, revenueHtOf } from '@lezzet/domain-core';
 import type { Price } from '@lezzet/types';
-import { countryCellsOf, countryVatOf } from './country-prices';
+import { countryCellsOf, countryPriceWrites, countryVatOf } from './country-prices';
 
 // Almanya'daki tüketici fiyatı KDV dahildir: marj o gün uygulanan oranla hesaplanmazsa eşikten sonra yanlış çıkar.
 describe('countryVatOf', () => {
@@ -42,5 +42,17 @@ describe('countryCellsOf', () => {
     ]);
     expect(countryCellsOf('v1', b2c, b2b).DE).toMatchObject({ b2c: { amountCents: 750 }, b2b: { amountCents: null } });
     expect(countryCellsOf('v2', b2c, b2b).DE).toMatchObject({ b2c: { amountCents: null }, b2b: { amountCents: 900 } });
+  });
+});
+
+// Pencerede boşaltılan ülke alanı ülke fiyatını kaldırmalı; kaldırmasaydı eski Almanya fiyatı geçmeye devam ederdi.
+describe('countryPriceWrites', () => {
+  const saved = { DE: { b2c: { amountCents: 750, validFrom: null }, b2b: { amountCents: null, validFrom: null } } };
+
+  it('boşaltılan alan kaldırılır, değişmeyen yazılmaz, yeni tutar yazılır', () => {
+    expect(countryPriceWrites({ DE: { b2c: null, b2b: null } }, saved)).toEqual([{ kind: 'remove', country: 'DE', channel: 'b2c' }]);
+    expect(countryPriceWrites({ DE: { b2c: 7.5, b2b: 5.9 } }, saved)).toEqual([
+      { kind: 'write', country: 'DE', channel: 'b2b', amountCents: 590 },
+    ]);
   });
 });

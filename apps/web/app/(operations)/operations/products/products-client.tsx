@@ -10,15 +10,11 @@ import { productsUrl, type ProductsUrlState } from './products-url';
 import type { ProductTab } from './products-paths';
 import { marginAfterWrite } from './tabs/product/price-math';
 import type { PriceRow } from '@/lib/pricing/price-rows';
-import type { Channel } from '@lezzet/types';
+import type { Channel, ProductVatRate } from '@lezzet/types';
 import type { ProductPriceSummary, ProductsData, ProductView, StatusFilter } from './products-types';
 
-// Ürünler ekranı client kökü: tek durum ağacı burada, modal görünümün üstünde. Operasyon web'i
-// masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
-//
-// SÜZGEÇ AKIŞI: süzgeç bir client durumu DEĞİL, URL durumudur (STACK §6). Kullanıcı süzgeci değiştirince
-// URL yazılır → RSC yeniden okur → süzülmüş İLK SAYFA gelir. Burada client-side filtreleme YOK.
-// Arama yazarken her tuşta sunucuya gitmemek için giriş yerel tutulur ve URL'e GECİKMELİ yazılır.
+// Ürünler ekranının istemci kökü: tek durum ağacı burada, pencere görünümün üstünde. Süzgeç istemci durumu değil adres durumudur
+// (STACK §6): değişince adres yazılır ve RSC süzülmüş ilk sayfayı yeniden okur; arama her tuşta gitmesin diye gecikmeli yazılır.
 
 interface ProductsClientProps {
   data: ProductsData;
@@ -28,21 +24,15 @@ interface ProductsClientProps {
 
 export function ProductsClient({ data, urlState }: ProductsClientProps) {
   const router = useRouter();
-  /**
-   * Süzgeç/sekme turu sürüyor mu — `router.replace` bir RSC okumasıdır (bu sayfada 5 paralel sorgu) ve
-   * dönene kadar ekranda hiçbir karşılık yoktu. (Bağımsız ajan denetimi, 30.07.)
-   */
+  // Süzgeç ya da sekme turu sürüyor mu: `router.replace` bir RSC okumasıdır ve süre boyunca ekran bir karşılık vermeli.
   const [pending, startNav] = useTransition();
 
-  // Sekme SUNUCUYA GİTMEZ (yalnız hangi panelin çizildiğini değiştirir) → sığ yazım (replaceState).
-  // Süzgeçler ise RSC'yi yeniden okutur (router.replace), çünkü veriyi sunucu süzüyor.
+  // Sekme sunucuya gitmez, yalnız hangi panelin çizildiğini değiştirir (sığ yazım); süzgeçler RSC'yi yeniden okutur.
   const [tab, setTab] = useState<ProductTab>(urlState.tab);
   useEffect(() => setTab(urlState.tab), [urlState.tab]);
 
-  // Oluşturma niyeti de ADRESTE (`new=1`) ama SIĞ yazılır (sekmeden farklı olarak): bir form açmak
-  // yeni veri gerektirmez — `router.replace` RSC'yi yeniden okutur, yani boşuna veritabanına gidilir.
-  // Neden adres — yenilemede form açık kalır, link doğrudan forma düşer ve sekme değişince niyet
-  // ayrı bir sıfırlama etkisine gerek kalmadan TEK yerde düşer (aşağıda, onTab'da).
+  // Oluşturma niyeti de adreste (`new=1`) ama sığ yazılır, çünkü form açmak yeni veri gerektirmez; adreste durur ki yenilemede form açık
+  // kalsın ve sekme değişince niyet tek yerde düşsün.
   const [creating, setCreating] = useState(urlState.creating);
   useEffect(() => setCreating(urlState.creating), [urlState.creating]);
 
@@ -51,22 +41,14 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
   };
 
   const onTab = (next: ProductTab) => {
-    // Sekme değişimi SIĞ yazılır: dört sekme de aynı okumadan besleniyor (paket özeti tek RPC ile
-    // geliyor), yani sunucuya gitmenin getireceği bir veri yok. Bir ara sekmeye bağlı okuma denendi
-    // ve gerçek gezinme gerekti; okuma özete inince o gerekçe ortadan kalktı — sekme yine anında.
-    //
-    // Sekme değişince oluşturma niyeti VE arama düşer. Niyet: "Kategori ekle"ye basıp Paketler'e geçen
-    // operatörün önünde kategori formu kalmaz. Arama: terim sekmeye bağlı ("börek" ürün araması,
-    // kategori listesinde anlamsız) — taşınsaydı yeni sekme sebebi görünmeyen bir süzgeçle açılırdı.
+    // Sekmeler aynı okumadan beslenir, değişim sığ yazılır. Oluşturma niyeti ve arama düşer, çünkü ikisi de sekmeye bağlıdır ve
+    // taşınsalar yeni sekme sebebi görünmeyen bir formla ya da süzgeçle açılırdı.
     setTab(next);
     setCreating(false);
     resetSearch();
 
-    // Terim VARSA sığ yazım yetmez: `replaceState` sunucuya gitmez, gelen veri hâlâ eski terimle
-    // süzülüdür. Kutu boşalır, çip kalmaz, ama liste ve başlık sayaçları süzülü kalırdı — görünmez
-    // bir süzgeç. Devamını yükleyen action da adresi (artık terimsiz) okuduğu için ikinci sayfa
-    // SÜZÜLMEMİŞ gelir ve liste kendi içinde tutarsızlaşırdı.
-    // Ürün hedefi (`productId`) de sekmeyle düşer — süzgeç gibi o da ürünler sekmesine bağlı.
+    // Terim ya da ürün hedefi varsa sığ yazım yetmez: gelen veri hâlâ süzülüdür ve liste görünmez bir süzgeçle kalırdı; devamını
+    // yükleyen eylem adresi terimsiz okuduğu için ikinci sayfa da süzülmemiş gelirdi.
     if (urlState.q || urlState.productId) {
       startNav(() => router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '', productId: '' }), { scroll: false }));
       return;
@@ -79,7 +61,7 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     writeUrl({ creating: next });
   };
 
-  /** Süzgeç değişimi: URL'e yaz + RSC'yi yeniden okut (süzülmüş ilk sayfa gelir). */
+  /** Süzgeç değişimi: adrese yazılır ve RSC süzülmüş ilk sayfayı yeniden okur. */
   const applyFilters = (patch: Partial<ProductsUrlState>) => {
     startNav(() => router.replace(productsUrl({ ...urlState, ...patch, tab }), { scroll: false }));
   };
@@ -87,9 +69,8 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
   // Arama: giriş yerel (anında yazılır), URL'e gecikmeli — mekanizma ortak (`useSearchDraft`).
   const { draft: search, onDraft: onSearch, reset: resetSearch } = useSearchDraft(urlState.q, (q) => applyFilters({ q }));
 
-  // ── Sayfalama: ilk sayfa sunucudan, devamı action ile EKLENİR ──
-  // Sunucu verisi değişince (süzgeç/revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin
-  // satırları yeni listede kalır.
+  // İlk sayfa sunucudan gelir, devamı eylemle eklenir; sunucu verisi değişince eklenen sayfalar sıfırlanır, yoksa eski süzgecin
+  // satırları yeni listede kalırdı.
   const [extraPages, setExtraPages] = useState<ProductView[]>([]);
   const [cursor, setCursor] = useState(data.nextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -99,12 +80,8 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
   }, [data.products, data.nextCursor]);
 
   /**
-   * YEREL FİYAT YAMALARI — ürün kimliğiyle. Fiyat yazıldığında liste YENİDEN OKUNMAZ: sunucu
-   * zaten yazdı, satırın gösterdiği iki sayı (tutar + marj) yerinde düzeltilir. Yeniden okuma
-   * listeyi baştan kurar, kaydırma yerini ve seçimi oynatırdı (kullanıcı kararı: ekran oynamaz).
-   *
-   * Sunucu verisi gerçekten yenilendiğinde (süzgeç, yenileme) yamalar düşer — gerçek her zaman
-   * sunucunun döndürdüğüdür.
+   * Yerel fiyat yamaları, ürün kimliğiyle: yazılan fiyat satırın tutarını ve marjını yerinde düzeltir, çünkü yeniden okuma listeyi
+   * baştan kurar ve kaydırmayı oynatırdı. Sunucu verisi yenilenince yamalar düşer.
    */
   const [pricePatches, setPricePatches] = useState<Record<string, ProductPriceSummary>>({});
   useEffect(() => setPricePatches({}), [data.products]);
@@ -142,30 +119,24 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
       .finally(() => setLoadingMore(false));
   };
 
-  // Seçim KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme yansımaz).
-  // İlk değer ADRESTEN (`?p=`, 16.08 — tarif ekranının deseni): yenilemede seçim korunur, önizleme
-  // bağlantısı paylaşılabilir. Tıklamada SIĞ yazılır (`writeUrl`): panel yüklenmiş listeden
-  // beslenir, seçim için sunucuya gitmenin getireceği veri yok.
+  // Seçim kimlikle tutulur ve kayıt taze listeden türer; ilk değer adresten (`?p=`) gelir ki yenilemede korunsun, tıklamada sığ
+  // yazılır, çünkü panel yüklenmiş listeden beslenir.
   const [selectedId, setSelectedId] = useState<string | null>(urlState.selected || null);
   const [editing, setEditing] = useState(false);
   const onSelect = (id: string) => {
     setSelectedId(id);
     writeUrl({ selected: id });
   };
-  // Seçili ürün süzülmüş ilk sayfada olmayabilir (liste keyset sayfalı) — o zaman sunucunun
-  // HEDEFLİ okuması (`data.pinned`) devreye girer; URL'in söylediği ürün yerine sessizce ilk
-  // satırı göstermek, adresle ekranı ayrıştırırdı.
+  // Seçili ürün süzülmüş ilk sayfada olmayabilir; o zaman sunucunun hedefli okuması (`data.pinned`) geçer, yoksa adres başka ürünü
+  // söylerken ekran ilk satırı gösterirdi.
   const selected =
     products.find((p) => p.id === selectedId) ??
     (selectedId && data.pinned?.id === selectedId ? data.pinned : null) ??
     products[0] ??
     null;
 
-  // URL'DEN GELEN ÜRÜNLE DÜZENLEME AÇIK GELİR (16.08, fiyat ekranının deseni): `?productId=` ile
-  // gelen köprüde liste sunucuda o ürüne süzülü (`toProductFilters.ids`), satır seçilir ve düzenleme
-  // diyaloğu açılır. `ref` ile TEK SEFER: kapatınca parametre düşene kadar efekt yeniden açmasın.
-  // (Eski künye "düzenlemeyi adrese taşımak yarım iş — hangi kayıt bilinmez" diyordu; kimlik
-  // adreste taşınınca itiraz düştü. Oluşturma niyeti `new=1` ile zaten adresteydi.)
+  // Adresteki ürünle (`?productId=`) liste sunucuda o ürüne süzülü gelir, satır seçilir ve düzenleme penceresi açılır. Açılış `ref` ile
+  // bir kez yapılır, yoksa kapatılan pencere parametre düşene kadar yeniden açılırdı.
   const openedFromUrl = useRef<string | null>(null);
   useEffect(() => {
     if (!urlState.productId || openedFromUrl.current === urlState.productId) return;
@@ -175,10 +146,8 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     setEditing(true);
   }, [urlState.productId, products]);
 
-  // Kapanışta URL hedefi de düşer: parametre kalsaydı liste tek ürüne süzülü kalır (gizli süzgeç)
-  // ve yenilemede diyalog yeniden açılırdı. Gerçek gezinme şart — sığ yazım listeyi tazelemez.
-  // Seçim (`p=`) diyaloğun ürününe devrolur: köprüden gelinen ürün, diyalog kapanınca da seçili
-  // ve paylaşılabilir kalmalı.
+  // Kapanışta adres hedefi düşer, yoksa liste tek ürüne süzülü kalırdı; seçim (`p=`) pencerenin ürününe devrolur ki ürün seçili ve
+  // paylaşılabilir kalsın.
   const closeEdit = () => {
     setEditing(false);
     if (urlState.productId) applyFilters({ productId: '', selected: urlState.productId });
@@ -197,12 +166,14 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     onStatusFilter: (status: StatusFilter) => applyFilters({ status }),
     onlyIncomplete: urlState.incomplete,
     onToggleIncomplete: () => applyFilters({ incomplete: !urlState.incomplete }),
+    rateGap: urlState.rateGap ?? null,
+    onToggleRateGap: (country: ProductVatRate['country']) => applyFilters({ rateGap: urlState.rateGap === country ? null : country }),
     navPending: pending,
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,
-    // AÇIK SATIR ham durumdan gelir, `selected` türevinden DEĞİL: türevin "hiçbiri" hâli listenin
-    // ilk satırına düşüyor ve kırılımı kapatmak onu yeniden açıyordu (dev modda ölçüldü).
+    // Açık satır ham durumdan gelir, `selected` türevinden değil: türevin "hiçbiri" hâli ilk satıra düşer ve kırılımı kapatmak onu
+    // yeniden açardı.
     selectedId: selectedId || null,
     onSelect,
     creating,
@@ -212,8 +183,7 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     onLocalPrice,
   };
 
-  // ÜRÜN formu burada; kategori/koleksiyon formları kendi sekme modüllerinde. Kabuk yalnız niyeti
-  // taşır, hangi formun açıldığını bilmez.
+  // Ürün formu burada, kategori ve koleksiyon formları kendi sekme modüllerindedir; kabuk yalnız niyeti taşır.
   const productDialog = tab === 'products' && creating ? 'create' : editing ? 'edit' : null;
 
   return (

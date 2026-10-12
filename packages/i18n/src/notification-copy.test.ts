@@ -154,6 +154,23 @@ describe('staffNotificationBrief', () => {
     expect(staffNotificationBrief({ kind: 'ticket_opened', payload: { ticketType: 'yarin_gelecek_tip' } })!.subtitle).toBeNull();
   });
 
+  it('uzaktan satış eşiği: aşılma insan işi ve "aşıldı" der, yaklaşma bakılacak iş ve tutarı taşır', () => {
+    const payload = { year: 2027, yearTotalCents: 850_000, thresholdCents: 1_000_000, sincePreviousYear: false };
+    const asildi = staffNotificationBrief({ kind: 'distance_sale_threshold', payload: { ...payload, warning: 'exceeded' } })!;
+    expect(asildi.tone).toBe('alert');
+    expect(asildi.title).toBe('Uzaktan satış eşiği aşıldı — 2027');
+    const gecenYil = staffNotificationBrief({
+      kind: 'distance_sale_threshold',
+      payload: { ...payload, warning: 'exceeded', sincePreviousYear: true },
+    })!;
+    expect(gecenYil.title).toBe('Uzaktan satış eşiği geçen yıl aşıldı');
+    expect(gecenYil.subtitle).toContain('2027 boyunca');
+    const yaklasti = staffNotificationBrief({ kind: 'distance_sale_threshold', payload: { ...payload, warning: 'second' } })!;
+    expect(yaklasti.tone).toBe('attention');
+    expect(yaklasti.title).toBe('Uzaktan satış eşiğine yaklaşıldı — 2027');
+    expect(yaklasti.subtitle).toContain('%85');
+  });
+
   it('referanssız payload başlığı bozmaz; bilinmeyen türde null — genel metin yüzeyin işi', () => {
     const brief = staffNotificationBrief({ kind: 'document_undeliverable', payload: {} });
     expect(brief!.title).toContain('Ulaştırılamayan belge');

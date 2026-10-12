@@ -265,6 +265,7 @@ function ValueEditor({ row, draft, onChange, label, accountOptions, invoiceTempl
         />
       );
     case 'integer':
+    case 'year':
       return (
         <InputField
           label={label}

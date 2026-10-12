@@ -5,29 +5,20 @@ import { frameSourcesOf, thumbnailImageUrl } from '@lezzet/application';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { ProductsClient } from './products-client';
 import { readRowSummaries, toBundleViews, toProductViews } from './products-read';
-import { parseProductsUrl, toProductFilters } from './products-url';
+import { parseProductsUrl, RATE_COUNTRIES, toProductFilters } from './products-url';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { guarded, requireAdmin } from '@/lib/guard';
 import type { CategoryView, CollectionView, FamilyView } from './products-types';
 
-// Admin katalog yönetimi — Ürünler. Okuma burada (RSC) yapılır, DB satırları serileştirilebilir
-// view-model'e (& ile TÜRETİLEREK) indirilir; yalnız türetilmiş/join alanlar eklenir.
-//
-// SÜZME VE SAYFALAMA SUNUCUDA (STACK §6): süzgeçler URL'den okunur ve servise parametre olarak iner;
-// client tam listeyi çekip filtrelemez. Ürünler keyset sayfalı gelir (ilk sayfa + imleç), devamını
-// client action ile ekler. Kategori ve koleksiyon TAM gelir — tavanı onlarla sınırlı ve açılır
-// menüleri besliyor.
-//
-// N+1 YOK: varyantlar ve koleksiyon üyelikleri gömülü `select` ile aynı turda gelir (ürün başına ayrı
-// sorgu değil). Sayfa açılışı SABİT sayıda sorgu atar; ürün sayısıyla artmaz.
+// Ürünler: okuma burada, satırlar serileştirilebilir view-model'e türetilerek indirilir. Süzme ve keyset sayfalama sunucuda (STACK §6);
+// varyantlar ve koleksiyon üyelikleri gömülü seçimle aynı turda gelir, ki sayfa açılışı ürün sayısıyla artmayan sabit sorgu atsın.
 
 interface ProductsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  // Rol kapısı SAYFADA: layout personeli içeri alır, katalog yönetimi ise personelin bir ALT
-  // KÜMESİNE açıktır — ray da öyle diyor (`ops-nav`: bu bağlantı yalnız yöneticiye çizilir).
+  // Rol kapısı sayfada: layout personeli içeri alır, katalog yönetimi ise yalnız yöneticiye açıktır.
   const access = await guarded(requireAdmin);
   if (!access.ok)
     return (
@@ -45,13 +36,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const categorySvc = new CategoryService(db);
   const collectionSvc = new CollectionService(db);
 
-  // Paketler ÖZET olarak okunur (`bundle_list_rows()`): satır başına kaç kalem, atanmış toplam, "ayrı
-  // ayrı alınsa", maliyet, KDV'siz gelir. Kalemlerin kendisi burada YOK — onlar paket diyaloğu
-  // açılınca, yalnız o paket için okunur. PARTİLER de gelmez: son tarih satır açılınca, o boyların
-  // kendi turunda okunur. Ürün formu bu satırlardan besleniyor ("bu ürün N pakette kullanılıyor").
-  //
-  // Depo bağlamı ve depo adları ürün okumasıyla PARALEL alınır: satırın stok özeti ikisine de bağlı
-  // ama hiçbiri ürün listesini beklemek zorunda değil.
+  // Paketler özet olarak okunur (`bundle_list_rows()`); kalemleri paket penceresi, partileri satırın kırılımı kendi turunda okur.
+  // Depo bağlamı ve adları ürün okumasıyla paralel alınır, çünkü hiçbiri ürün listesini beklemek zorunda değil.
   const [
     productPage,
     { byCategory, ...counts },
@@ -62,37 +48,39 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     pinnedPage,
     warehouseCtx,
     warehouseLabels,
+    rateGapCounts,
   ] = await Promise.all([
     productSvc.listWithRelations({ filters, limit: DEFAULT_PAGE_SIZE }),
-    // Dört sayı TEK okumada (`product_counts`): başlık sayaçları + kategori başına ürün sayısı.
+    // Başlık sayaçları ve kategori başına ürün sayısı tek okumada (`product_counts`).
     productSvc.counts(filters),
     categorySvc.list(),
     collectionSvc.listWithProductIds(),
     new BundleService(db).listRows(),
     new ProductFamilyService(db).list(),
-    // SEÇİLİ ürün (`?p=`) HEDEFLİ okunur (16.08): liste keyset sayfalı — paylaşılan bağlantının
-    // ürünü ilk sayfada olmayabilir ve önizleme o zaman sessizce İLK satırı gösterirdi (URL başka
-    // ürünü söylerken). Tek satırlık ek okuma; parametre yokken hiç yapılmaz.
+    // Seçili ürün (`?p=`) hedefli okunur, çünkü keyset sayfalı listede paylaşılan bağlantının ürünü ilk sayfada olmayabilir.
     urlState.selected ? productSvc.listWithRelations({ filters: { ids: [urlState.selected] }, limit: 1 }) : null,
     readWarehouseContext(),
     readWarehouseLabels(),
+    // "Oranı eksik" sayısı öteki süzgeçlerle birlikte sayılır; `product_counts` bu süzgeci taşımaz.
+    Promise.all(
+      RATE_COUNTRIES.map(
+        async (country) => [country, await productSvc.countMatching({ ...filters, missingCountryRate: country })] as const,
+      ),
+    ),
   ]);
 
-  // Üyeler aile başına okunuyor. **N+1 ama bilinçli:** aile operatörün elle kurduğu, doğal tavanlı
-  // bir küme (`CLAUDE §1`) — bugün bir avuç, yarın birkaç düzine. Tek turda okumak için ürün
-  // servisine "ailesi olan hepsi" diye bir kapı açmak gerekirdi ve o kapı yalnız bu ekranı
-  // ilgilendiriyor. Sayı büyürse kapı istenir, bugün istenmez.
+  // Üyeler aile başına okunur: aile operatörün elle kurduğu tavanlı bir kümedir ve tek tur için açılacak kapı yalnız bu ekranı
+  // ilgilendirirdi.
   const familyMembers = await Promise.all(families.map((family) => productSvc.listFamilyMembers(family.id)));
 
-  // Ürün indirgemesi action ile PAYLAŞILIR (products-read) — ilk sayfa ve sonraki sayfalar aynı şekli
-  // üretsin diye. Koleksiyon ADLARI üyelik id'lerinden çözülür; id'ler ürünle gömülü geldi (join yok).
+  // Ürün indirgemesi eylemle paylaşılır (`products-read`) ki ilk sayfa ve sonrakiler aynı şekli üretsin; koleksiyon adları ürünle
+  // gömülü gelen üyelik kimliklerinden çözülür.
   const names = {
     category: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
     collection: new Map(collectionRows.map((c) => [c.id, resolveLocalizedText(c.name)])),
   };
-  // Satırın stok ve fiyat özetleri — kurulum `products-read`te, çünkü sonraki sayfaları getiren
-  // action da aynı sayıları üretmek zorunda. Hedefli okunan `?p=` ürünü de kümeye girer, yoksa
-  // paylaşılan bağlantının satırı özetsiz kalırdı.
+  // Satırın stok ve fiyat özetleri `products-read`te kurulur, çünkü sonraki sayfaları getiren eylem de aynı sayıları üretir; hedefli
+  // okunan `?p=` ürünü de kümeye girer, yoksa satırı özetsiz kalırdı.
   const summaries = await readRowSummaries(db, [...productPage.rows, ...(pinnedPage?.rows ?? [])], {
     categoryNames: names.category,
     warehouseIds: warehouseCtx.visibleWarehouseIds,
@@ -100,13 +88,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   });
   const productViews = toProductViews(productPage.rows, names, summaries);
 
-  // Görsel URL'i public bucket'tan saf birleştirmeyle kurulur (05.11) — ne async çağrı ne ağ turu;
-  // `?v=<damga>` sayesinde dosya değişince adres de değişir, arada tam cache.
-  // Kategori başına ürün sayısı: liste sayfalı olduğu için client'ta türetilemez → sunucudan gelir.
+  // Görsel adresi saf birleştirmeyle kurulur ve `?v=<damga>` taşır, dosya değişince adres de değişsin; kategori başına ürün sayısı
+  // liste sayfalı olduğu için sunucudan gelir.
   const categoryViews: CategoryView[] = categories.map((c) => ({
     ...c,
     count: byCategory.get(c.id) ?? 0,
-    // Özgün dosya düzenleme formunun; liste hücresi CDN çerçevesini çizer (05.37).
+    // Özgün dosya düzenleme formunundur; liste hücresi CDN çerçevesini çizer.
     imageUrl: publicImageUrl(c.imageKey, c.imageUpdatedAt),
     frames: frameSourcesOf(c),
   }));
@@ -130,10 +117,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       members: members.map((member) => ({
         productId: member.id,
         productName: resolveLocalizedText(member.name),
-        // Kısıt doluyken etiketi zorunlu kılıyor, ama tip `nullable` — okuma tarafı boşu da
-        // karşılayabilmeli (elle SQL'le yazılmış bir satır kısıtı atlamış olabilir).
+        // Kısıt etiketi zorunlu kılar ama tip `nullable`; elle yazılmış bir satır kısıtı atlamış olabilir.
         label: member.familyLabel ?? { tr: '', fr: '', de: '' },
-        // Yalnız küçük resim olarak çiziliyor (28–32 px) — CDN kare@200 (05.37).
+        // Yalnız küçük resim olarak çizilir (28–32 px), CDN kare@200.
         imageUrl: thumbnailImageUrl(member),
         status: member.status,
       })),
@@ -147,6 +133,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         nextCursor: productPage.nextCursor,
         pinned: pinnedPage ? (toProductViews(pinnedPage.rows, names, summaries)[0] ?? null) : null,
         counts,
+        rateGaps: Object.fromEntries(rateGapCounts),
         categories: categoryViews,
         collections: collectionViews,
         bundles: bundleViews,

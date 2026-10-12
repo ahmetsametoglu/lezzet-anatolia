@@ -102,7 +102,7 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
 
   const searchVariants = (term: string) => {
     if (!customer) return;
-    void searchVariantsAction(customer.id, term, delivery?.warehouseId ?? null).then(({ data }) =>
+    void searchVariantsAction(customer.id, term, delivery?.warehouseId ?? null, addressId || null).then(({ data }) =>
       setVariantOptions(data ?? []),
     );
   };

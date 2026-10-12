@@ -7,8 +7,10 @@ import { validateRoleSet } from '@lezzet/domain-core';
 import { UserRoleEnum } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
-import type { ActionResult } from '@/lib/error';
-import { SETTING_BY_KEY } from './settings-catalog';
+import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { repriceAllAuto } from '@/lib/pricing/auto-price';
+import { PRICES_PATH } from '../prices/prices-url';
+import { SETTING_BY_KEY, type SettingDef } from './settings-catalog';
 import { invoiceTemplateProblem, parseSettingValue } from './settings-labels';
 import { readInvoiceTemplateList } from './pennylane-read';
 import { SettingWriteSchema, StaffFormSchema } from './settings-types';
@@ -27,6 +29,21 @@ const CONSTRAINT_MESSAGE: Record<string, string> = {
 };
 
 const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT_MESSAGE);
+
+/**
+ * Uzaktan satış ayarı eşik kararını, karar da Almanya'daki tüketiciye uygulanan oranı ve otomatik fiyatı değiştirir; fiyatlar ayarla
+ * aynı turda hizalanır. Ayar yazılmış olduğu için hizalama düşerse bunu söyleyen cümle döner, ayar geri alınmaz.
+ */
+async function realignAfter(def: SettingDef): Promise<string | null> {
+  if (def.section !== 'distanceSales') return null;
+  try {
+    await repriceAllAuto(serviceDb());
+    revalidatePath(PRICES_PATH);
+    return null;
+  } catch (error) {
+    return `Ayar kaydedildi ama otomatik fiyatlar hizalanamadı: ${getErrorMessage(error)} Fiyatlar ekranından yeniden hizalayın.`;
+  }
+}
 
 // ── Ayarlar ─────────────────────────────────────────────────────────────────
 
@@ -80,6 +97,8 @@ export async function saveSettingAction(input: unknown): Promise<ActionResult<{ 
       description: def.help,
     });
     revalidatePath(SETTINGS_PATH);
+    const realignError = await realignAfter(def);
+    if (realignError) return { data: null, error: realignError };
     return { data: { key: def.key }, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };
@@ -104,7 +123,7 @@ export async function resetSettingAction(input: { key: string }): Promise<Action
 
     await new SettingsService(serviceDb()).set(def.key, def.fallback, { scopeType: 'global', description: def.help });
     revalidatePath(SETTINGS_PATH);
-    return { data: null, error: null };
+    return { data: null, error: await realignAfter(def) };
   } catch (error) {
     return { data: null, error: readable(error) };
   }

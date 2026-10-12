@@ -64,6 +64,8 @@ export function formatSettingValue(def: SettingDef, value: SettingValue, names: 
       return `%${num(asNumber(value))}`;
     case 'integer':
       return def.unit ? `${num(asNumber(value))} ${def.unit}` : num(asNumber(value));
+    case 'year':
+      return String(asNumber(value));
     case 'time':
       return String(value);
     case 'boolean':
@@ -105,7 +107,7 @@ export function invoiceTemplateProblem(list: Exclude<InvoiceTemplateList, { stat
 /** Düzenleme kutusuna yazılacak başlangıç metni — para/yüzde kutuları SAYI ister. */
 export function toEditableNumber(def: SettingDef, value: SettingValue): number | null {
   if (def.kind === 'money') return fromCents(asNumber(value));
-  if (def.kind === 'percent' || def.kind === 'integer') return asNumber(value);
+  if (def.kind === 'percent' || def.kind === 'integer' || def.kind === 'year') return asNumber(value);
   return null;
 }
 

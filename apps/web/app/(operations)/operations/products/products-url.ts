@@ -1,11 +1,12 @@
 import { PRODUCT_TABS, PRODUCTS_PATH, type ProductTab } from './products-paths';
-import { ProductStatusEnum, type ProductStatus } from '@lezzet/types';
+import { ProductStatusEnum, ProductVatRateSchema, type ProductStatus, type ProductVatRate } from '@lezzet/types';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
-// Ekran durumunun URL SÖZLEŞMESİ — tek kaynak. Sekme ve süzgeçler URL'de taşınır çünkü:
-//  · yenileme/paylaşımda aynı görünüm açılır,
-//  · SUNUCU okuyabilir → süzme sunucuda yapılır (STACK §6), client tam listeyi çekip filtrelemez.
-// Ayrıştırma (URL → durum) ve yazma (durum → URL) BURADA; sayfa ve client aynı işi iki kez yazmaz.
+// Ekranın URL sözleşmesi: sekme ve süzgeçler adreste taşınır, çünkü yenilemede aynı görünüm açılmalı ve süzme sunucuda yapılır
+// (STACK §6). Ayrıştırma ve yazma burada, sayfa ve istemci aynı işi iki kez yazmaz.
+
+/** Oranı eksik süzgecinin ülkeleri: satıcının ülkesi dışındakiler, çünkü onun oranı ürünün kendi kaydındadır. */
+export const RATE_COUNTRIES = ProductVatRateSchema.shape.country.options;
 
 /** Süzgeç durumu — servis `ProductFilters`'ının ekran karşılığı ('all' = süzgeç yok). */
 export interface ProductsUrlState {
@@ -17,29 +18,35 @@ export interface ProductsUrlState {
   status: ProductStatus | 'all';
   incomplete: boolean;
   /**
-   * Oluşturma formu açık mı (`new=1`). NE oluşturulacağını `tab` söyler — türü ayrıca tutmak
-   * çelişebilecek bir durum doğururdu (`tab=packages&new=category`). Adreste yaşıyor çünkü sekme de
-   * orada: yenilemede aynı form açık kalır, paylaşılan link doğrudan forma düşer ve sekme değişince
-   * niyet TEK yerde düşer (ayrı bir sıfırlama etkisine gerek yok).
+   * Yalnız bu ülkenin KDV oranı girilmemiş ürünler (`rateGap=DE`); oranı olmayan ürün o ülkenin tüketicisine satılmaz. İsteğe bağlı,
+   * çünkü başka ekranların köprüleri bu süzgeci taşımaz.
+   */
+  rateGap?: ProductVatRate['country'] | null;
+  /**
+   * Oluşturma formu açık mı (`new=1`); ne oluşturulacağını `tab` söyler, türü ayrıca tutmak çelişen bir durum doğururdu. Adreste
+   * yaşar ki yenilemede form açık kalsın ve sekme değişince niyet tek yerde düşsün.
    */
   creating: boolean;
-  /**
-   * DIŞ KÖPRÜNÜN hedefi (16.08, fiyat ekranının deseni): doluyken liste o ürüne süzülür, satır
-   * seçili ve DÜZENLEME diyaloğu açık gelir; kapanınca parametre düşer, tam liste geri gelir.
-   * (Eski künye "yalnız düzenlemeyi adrese taşımak yarım iş olurdu — hangi kaydın düzenlendiği
-   * bilinmez" diyordu; kimlik adreste taşınınca o itiraz düştü.)
-   */
+  /** Dış köprünün hedefi: doluyken liste o ürüne süzülür ve düzenleme penceresi açık gelir; kapanınca parametre düşer. */
   productId: string;
   /**
-   * SEÇİLİ satır (`p=<id>`, 16.08 — tarif ekranının `?r=` deseni): önizleme panelinin bağlantısı
-   * paylaşılabilmeli ve yenilemede seçim kaybolmamalı. `productId`den FARKI: bu bir süzgeç ve
-   * diyalog tetiği DEĞİL, salt seçim — liste süzülmez, diyalog açılmaz; yazımı da SIĞDIR
-   * (`replaceState`, sunucuya gitmez — panel zaten yüklenmiş listeden beslenir).
+   * Seçili satır (`p=<id>`): bağlantı paylaşılabilsin ve yenilemede seçim kaybolmasın. `productId`den farkı süzgeç ya da pencere
+   * tetiği olmamasıdır; yazımı sığdır, çünkü panel yüklenmiş listeden beslenir.
    */
   selected: string;
 }
 
-const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: '', selected: '' };
+const DEFAULT_URL_STATE: ProductsUrlState = {
+  tab: 'products',
+  q: '',
+  cat: 'all',
+  status: 'all',
+  incomplete: false,
+  rateGap: null,
+  creating: false,
+  productId: '',
+  selected: '',
+};
 
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseProductsUrl(params: RawParams): ProductsUrlState {
@@ -49,6 +56,7 @@ export function parseProductsUrl(params: RawParams): ProductsUrlState {
     cat: one(params.cat) || DEFAULT_URL_STATE.cat,
     status: oneOf(params.status, ProductStatusEnum.options, DEFAULT_URL_STATE.status),
     incomplete: one(params.incomplete) === '1',
+    rateGap: RATE_COUNTRIES.find((country) => country === one(params.rateGap)) ?? null,
     creating: one(params.new) === '1',
     productId: one(params.productId).trim(),
     selected: one(params.p).trim(),
@@ -56,8 +64,8 @@ export function parseProductsUrl(params: RawParams): ProductsUrlState {
 }
 
 /**
- * Ekran durumu → URL. Varsayılan değerler YAZILMAZ (temiz adres: süzgeçsiz liste `/operations/products`).
- * Sıra sabit tutulur ki aynı görünüm daima aynı adresi üretsin (paylaşım/önbellek tutarlılığı).
+ * Ekran durumu → URL; varsayılan değerler yazılmaz ki süzgeçsiz liste temiz adreste dursun. Sıra sabittir, çünkü aynı görünüm
+ * paylaşımda ve önbellekte daima aynı adresi üretmeli.
  */
 export function productsUrl(state: ProductsUrlState): string {
   const p = new URLSearchParams();
@@ -66,6 +74,7 @@ export function productsUrl(state: ProductsUrlState): string {
   if (state.cat !== DEFAULT_URL_STATE.cat) p.set('cat', state.cat);
   if (state.status !== DEFAULT_URL_STATE.status) p.set('status', state.status);
   if (state.incomplete) p.set('incomplete', '1');
+  if (state.rateGap) p.set('rateGap', state.rateGap);
   if (state.creating) p.set('new', '1');
   if (state.productId) p.set('productId', state.productId);
   if (state.selected) p.set('p', state.selected);
@@ -79,6 +88,7 @@ export function toProductFilters(state: ProductsUrlState): {
   categoryId?: string;
   status?: ProductStatus;
   onlyIncomplete?: boolean;
+  missingCountryRate?: ProductVatRate['country'];
   ids?: string[];
 } {
   return {
@@ -86,6 +96,7 @@ export function toProductFilters(state: ProductsUrlState): {
     categoryId: state.cat === 'all' ? undefined : state.cat,
     status: state.status === 'all' ? undefined : state.status,
     onlyIncomplete: state.incomplete || undefined,
+    missingCountryRate: state.rateGap ?? undefined,
     // Tek ürün hedefi servis `ids` süzgecine biner (fiyat ekranıyla aynı yol).
     ids: state.productId ? [state.productId] : undefined,
   };

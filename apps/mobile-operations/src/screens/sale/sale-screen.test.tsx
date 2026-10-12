@@ -387,6 +387,19 @@ it('yetersiz stok cevabı adı ve kalanıyla görünür — sepet BOZULMAZ', asy
   expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy();
 });
 
+// Satış yeri reddi genel "kapanmadı" cümlesine düşseydi personel aynı sepeti boşuna yeniden dener; cümle sebebi söylemeli.
+it('Fransa dışındaki depodan satış reddi kendi cümlesiyle görünür', async () => {
+  const ret = { status: 'sale_origin_unsupported' };
+  withNetwork(ret, ret);
+  await renderSale();
+  await addSimit();
+  await pickCash();
+
+  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await waitFor(() => expect(screen.getByTestId('toast-message')).toBeTruthy());
+  expect(screen.getByTestId('toast-message')).toHaveTextContent(saleCopy.result.originUnsupported);
+});
+
 it('çok boylu ürün boyunu çekmecede seçer — istek SEÇİLEN boyun kimliğini taşır', async () => {
   withNetwork({ status: 'ok', orderId: COK_ID, totalCents: 1700, referenceNo: null, paymentRecorded: true });
   await renderSale();

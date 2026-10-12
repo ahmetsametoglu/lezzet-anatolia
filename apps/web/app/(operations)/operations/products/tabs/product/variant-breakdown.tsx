@@ -13,7 +13,7 @@ import { setChannelPriceAction } from '@/lib/prices/price-actions';
 import { expiryParts } from '@/lib/stock/batch-labels';
 import type { PriceRow } from '@/lib/pricing/price-rows';
 import { sizeLabel, type ProductView } from '../../products-types';
-import { removeCountryPriceAction, setCountryPriceAction } from '../../actions/country-price';
+import { removeCountryPriceAction, setCountryPriceAction } from '@/app/(operations)/operations/country-price-actions';
 import { PriceEditCell } from './price-edit-cell';
 import { cellMargin, marginAt, marginForAmount } from './price-math';
 import { PricePeekDialog } from './price-peek-dialog';
@@ -354,6 +354,7 @@ export function VariantBreakdown({ product, state, onRefresh, onSaved, onCountry
       {formRow === null || detail === null ? null : (
         <PriceDialog
           row={formRow}
+          countries={{ prices: byVariant.get(formRow.variantId)?.countryPrices ?? {}, vat: detail.countryVat }}
           stepCents={detail.autoPriceStepCents}
           onClose={() => {
             setFormRow(null);
