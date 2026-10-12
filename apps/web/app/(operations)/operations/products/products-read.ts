@@ -3,8 +3,9 @@ import { frameSourcesOf, readCostBasis, thumbnailImageUrl } from '@lezzet/applic
 import { PriceService, StockService, type Db } from '@lezzet/database';
 import { titleOf } from '@/lib/catalog/title';
 import { resolveLocalizedText, type BundleListRow, type ProductWithRelations } from '@lezzet/types';
-import { toChannelMaps, toPriceRows, type PriceRow } from '@/lib/pricing/price-rows';
-import { toLevelRows, type StockLevelRow } from '@/lib/stock/level-rows';
+import { toChannelMaps, toPriceRows } from '@/lib/pricing/price-rows';
+import { toLevelRows } from '@/lib/stock/level-rows';
+import { summarizePrices, summarizeStock } from './products-summary';
 import type { BundleView, ProductPriceSummary, ProductStockSummary, ProductView } from './products-types';
 
 // Sunucu-tarafı okuma yardımcıları. Ürün sayfası İKİ yerden okunur — ilk sayfa RSC'de (page.tsx),
@@ -80,54 +81,6 @@ export async function readRowSummaries(db: Db, rows: ProductWithRelations[], dep
     ),
     price: summarizePrices(toPriceRows({ products: rows, prices: toChannelMaps(b2c, b2b), costs, categoryNames: deps.categoryNames })),
   };
-}
-
-/**
- * Boy satırlarını ÜRÜN özetine toplar. Kaynak `toLevelRows`tur: "asgari eşiğin altında" kararı
- * orada yaşar ve liste onu yeniden hesaplamaz. Depo sayısı malı OLAN depolardan sayılır — satırın
- * kırılımı (`warehouses`) zaten boş depoyu taşımaz.
- */
-export function summarizeStock(rows: readonly StockLevelRow[]): Map<string, ProductStockSummary> {
-  const byProduct = new Map<string, { availableQty: number; warehouses: Set<string>; belowMin: boolean }>();
-  for (const row of rows) {
-    const acc = byProduct.get(row.productId) ?? { availableQty: 0, warehouses: new Set<string>(), belowMin: false };
-    acc.availableQty += row.availableQty;
-    acc.belowMin = acc.belowMin || row.belowMin;
-    for (const split of row.warehouses) {
-      if (split.availableQty > 0) acc.warehouses.add(split.warehouseId);
-    }
-    byProduct.set(row.productId, acc);
-  }
-  return new Map(
-    [...byProduct].map(([productId, acc]) => [
-      productId,
-      { availableQty: acc.availableQty, warehouseCount: acc.warehouses.size, belowMin: acc.belowMin },
-    ]),
-  );
-}
-
-/**
- * Fiyat satırlarını ürünün BİRİNCİL boyuna indirger: ilk aktif boy, hiç aktif yoksa ilk boy.
- * Sıra `toPriceRows`un verdiği sıradır (boylar `sortOrder` ile gelir), yani liste her yenilemede
- * aynı boyu gösterir. Marj ve hedef karşılaştırması satırdan OLDUĞU GİBİ alınır — fiyat ekranıyla
- * aynı tanım.
- */
-export function summarizePrices(rows: readonly PriceRow[]): Map<string, ProductPriceSummary> {
-  const byProduct = new Map<string, ProductPriceSummary>();
-  const chosenActive = new Set<string>();
-  for (const row of rows) {
-    const already = byProduct.get(row.productId);
-    if (already && (chosenActive.has(row.productId) || !row.variantActive)) continue;
-    byProduct.set(row.productId, {
-      b2cCents: row.b2c.amountCents,
-      b2bCents: row.b2b.amountCents,
-      marginPercent: row.marginPercent,
-      belowTarget: row.belowTarget,
-      autoPrice: row.autoPrice,
-    });
-    if (row.variantActive) chosenActive.add(row.productId);
-  }
-  return byProduct;
 }
 
 export function toProductViews(rows: ProductWithRelations[], names: NameMaps, summaries: ProductSummaries = {}): ProductView[] {

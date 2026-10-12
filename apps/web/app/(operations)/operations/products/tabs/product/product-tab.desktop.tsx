@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { PRODUCTS_COLUMN_TRACKS } from '../../products-columns';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
@@ -13,8 +12,6 @@ import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import { DeclarationMarks } from './declaration-marks';
 import { ProductPreview } from './product-preview';
 import { StatusBadge } from './status-badge';
-import { useRowDetail } from './use-row-detail.hook';
-import { VariantBreakdown } from './variant-breakdown';
 import {
   sizeLabel,
   type ProductPriceSummary,
@@ -151,34 +148,8 @@ export function ProductsTab(props: ProductsViewProps) {
     products.find((p) => p.id === selectedId) ?? (data.pinned?.id === selectedId ? data.pinned : null) ?? null;
   const missingCount = data.counts.incomplete;
 
-  // Boy kırılımı AÇIKKEN okunur (`use-row-detail`): barkod, depo dağılımı, en yakın parti ve kanal
-  // fiyatları tek turda gelir. Açma hücresi burada kuruluyor çünkü durumu bu bileşen tutuyor.
-  const { openId, toggle, invalidate, state: detailState } = useRowDetail();
-  const columns = useMemo<Column<ProductView>[]>(
-    () =>
-      COLUMNS.map((column) =>
-        column.key === 'expand'
-          ? {
-              ...column,
-              cell: (row: ProductView) => (
-                <button
-                  type="button"
-                  aria-label={openId === row.id ? 'Boyları kapat' : 'Boyları aç'}
-                  aria-expanded={openId === row.id}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggle(row.id);
-                  }}
-                  className="cursor-pointer rounded-md px-1 py-0.5 font-ops-display text-ops-sm text-ops-muted hover:bg-ops-surface-sunken hover:text-ops-ink"
-                >
-                  {openId === row.id ? '⌃' : '⌄'}
-                </button>
-              ),
-            }
-          : column,
-      ),
-    [openId, toggle],
-  );
+  // Boylar listede DEĞİL, panelde (kullanıcı kararı): satırın altında açılan kırılım listeyi aşağı
+  // itiyor, göz hizasını bozuyordu. Böylece satırın tek anlamı kaldı — seçmek.
 
   return (
     <>
@@ -213,8 +184,7 @@ export function ProductsTab(props: ProductsViewProps) {
         <div className="flex min-h-0 flex-col border-r border-ops-line">
           <Table
             busy={props.navPending}
-            columns={columns}
-            renderSubRow={(r) => (r.id === openId ? <VariantBreakdown product={r} state={detailState} onRefresh={() => invalidate(r.id)} /> : null)}
+            columns={COLUMNS}
             rows={products}
             rowKey={(r) => r.id}
             onRowClick={(r) => onSelect(r.id)}
@@ -231,7 +201,13 @@ export function ProductsTab(props: ProductsViewProps) {
             footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
           />
         </div>
-        <ProductPreview product={selected} onEdit={openEdit} families={data.families} onSelectProduct={onSelect} />
+        <ProductPreview
+          product={selected}
+          onEdit={openEdit}
+          families={data.families}
+          onSelectProduct={onSelect}
+          onLocalPrice={props.onLocalPrice}
+        />
       </div>
     </>
   );

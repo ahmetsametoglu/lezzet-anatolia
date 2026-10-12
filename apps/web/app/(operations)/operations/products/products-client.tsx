@@ -8,7 +8,10 @@ import { ProductFormDialog } from './tabs/product/product-form-dialog';
 import { ProductsDesktop } from './products.desktop';
 import { productsUrl, type ProductsUrlState } from './products-url';
 import type { ProductTab } from './products-paths';
-import type { ProductsData, ProductView, StatusFilter } from './products-types';
+import { marginAfterWrite } from './tabs/product/price-math';
+import type { PriceRow } from '@/lib/pricing/price-rows';
+import type { Channel } from '@lezzet/types';
+import type { ProductPriceSummary, ProductsData, ProductView, StatusFilter } from './products-types';
 
 // Ürünler ekranı client kökü: tek durum ağacı burada, modal görünümün üstünde. Operasyon web'i
 // masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
@@ -95,7 +98,36 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     setCursor(data.nextCursor);
   }, [data.products, data.nextCursor]);
 
-  const products = [...data.products, ...extraPages];
+  /**
+   * YEREL FİYAT YAMALARI — ürün kimliğiyle. Fiyat yazıldığında liste YENİDEN OKUNMAZ: sunucu
+   * zaten yazdı, satırın gösterdiği iki sayı (tutar + marj) yerinde düzeltilir. Yeniden okuma
+   * listeyi baştan kurar, kaydırma yerini ve seçimi oynatırdı (kullanıcı kararı: ekran oynamaz).
+   *
+   * Sunucu verisi gerçekten yenilendiğinde (süzgeç, yenileme) yamalar düşer — gerçek her zaman
+   * sunucunun döndürdüğüdür.
+   */
+  const [pricePatches, setPricePatches] = useState<Record<string, ProductPriceSummary>>({});
+  useEffect(() => setPricePatches({}), [data.products]);
+
+  const products = [...data.products, ...extraPages].map((product) => {
+    const patch = pricePatches[product.id];
+    return patch ? { ...product, price: patch } : product;
+  });
+
+  /** Yazılan fiyat satıra yansır — yalnız BİRİNCİL boyun fiyatı satırın gösterdiği sayıdır. */
+  const onLocalPrice = (productId: string, variantId: string, channel: Channel, amountCents: number, row: PriceRow) => {
+    const current = products.find((product) => product.id === productId)?.price;
+    if (!current || current.variantId !== variantId) return;
+    setPricePatches((prev) => ({
+      ...prev,
+      [productId]: {
+        ...current,
+        [channel === 'b2c' ? 'b2cCents' : 'b2bCents']: amountCents,
+        // Marj iki kanalın en darıdır; kuralı motordan okuyan tek yer `marginAfterWrite`.
+        marginPercent: marginAfterWrite(row, channel, amountCents),
+      },
+    }));
+  };
 
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
@@ -175,6 +207,7 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     openCreate: () => setCreatingIntent(true),
     closeCreate: () => setCreatingIntent(false),
     openEdit: () => setEditing(true),
+    onLocalPrice,
   };
 
   // ÜRÜN formu burada; kategori/koleksiyon formları kendi sekme modüllerinde. Kabuk yalnız niyeti

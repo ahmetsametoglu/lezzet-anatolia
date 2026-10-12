@@ -1,15 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Channel } from '@lezzet/types';
 import { loadProductRowDetailAction } from '../../actions/row-detail';
 import type { VariantRowDetail } from '../../products-types';
+import { marginAfterWrite } from './price-math';
 
 /**
- * Açılan satırın ayrıntısı: AÇILINCA okunur, kapanınca atılmaz.
+ * Seçili ürünün BOY AYRINTISI: barkod · depo dağılımı · en yakın parti · kanal fiyatları.
+ * Listeyle gelmeyen dört şey; tek turda okunur ve okunduğu üründe önbellekte kalır.
  *
- * Önbellek bilinçli: operatör iki ürünü karşılaştırırken satırları açıp kapatıyor ve her açılışta
- * aynı turu yeniden ödemek, kapanmış bir satırın verisini silmek demekti. Fiyat yazıldıktan sonra
- * ilgili ürünün kaydı `invalidate` ile düşürülür — ekran kendi yazdığı değeri bayat göstermesin.
+ * Önbellek bilinçli: operatör iki ürün arasında gidip gelirken her dönüşte aynı turu ödemek ve
+ * kartları iskelete düşürmek, ekranı sebepsiz oynatırdı.
  */
 export interface RowDetailState {
   /** `null` → okuma sürüyor; dizi → geldi. */
@@ -17,48 +19,57 @@ export interface RowDetailState {
   error: string | null;
 }
 
-export function useRowDetail() {
-  const [openId, setOpenId] = useState<string | null>(null);
+export function useRowDetail(productId: string | null, enabled: boolean) {
   const [cache, setCache] = useState<Record<string, RowDetailState>>({});
   /**
-   * "İstendi" kümesi REF'te durur, state'te değil — ve bu, ölçülmüş bir arızanın düzeltmesidir:
-   * küme `cache`in kendisiyken effect'in bağımlılığı da `cache` oluyordu, istek başlar başlamaz
-   * ilk `setCache` effect'i yeniden kurup temizleyiciyi çalıştırıyor, dönen cevap `alive = false`
-   * olduğu için atılıyordu. Ekranda hücreler sonsuza kadar iskelet kalıyordu (dev modda görüldü).
+   * "İstendi" kümesi REF'te durur, state'te değil — ölçülmüş bir arızanın düzeltmesi: küme
+   * `cache`in kendisiyken effect'in bağımlılığı da `cache` oluyor, ilk yazım effect'i yeniden
+   * kurup temizleyiciyi çalıştırıyor ve dönen cevap atılıyordu (hücreler sonsuza kadar iskelet).
    */
   const requested = useRef(new Set<string>());
-  /** `invalidate` sonrası okumayı yeniden başlatan tetik — açık satır değişmediği için gerekli. */
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
-    if (openId === null || requested.current.has(openId)) return;
-    requested.current.add(openId);
+    if (!enabled || productId === null || requested.current.has(productId)) return;
+    requested.current.add(productId);
     let alive = true;
-    setCache((prev) => ({ ...prev, [openId]: { rows: null, error: null } }));
-    void loadProductRowDetailAction(openId).then(({ data, error }) => {
+    // Yalnız HİÇ veri yokken iskelete düşülür: yenilemede kartlar yerinde kalır, ekran oynamaz.
+    setCache((prev) => (prev[productId] ? prev : { ...prev, [productId]: { rows: null, error: null } }));
+    void loadProductRowDetailAction(productId).then(({ data, error }) => {
       if (!alive) return;
-      setCache((prev) => ({ ...prev, [openId]: { rows: data, error } }));
+      setCache((prev) => ({ ...prev, [productId]: { rows: data, error } }));
     });
     return () => {
       alive = false;
     };
-  }, [openId, reloadToken]);
+  }, [productId, enabled, reloadToken]);
 
-  const toggle = useCallback((productId: string) => {
-    setOpenId((current) => (current === productId ? null : productId));
-  }, []);
-
-  /** Okumayı yeniden denetir (düşen istek) ya da yazma sonrası bayat kaydı düşürür. */
-  const invalidate = useCallback((productId: string) => {
-    // İki yerden de düşer: "istendi" işareti kalsaydı yeniden okuma hiç başlamazdı.
-    requested.current.delete(productId);
-    setCache((prev) => {
-      const next = { ...prev };
-      delete next[productId];
-      return next;
-    });
+  /** Yeniden okur (düşen istek ya da tam formdan dönüş) — mevcut kartlar silinmez. */
+  const refresh = useCallback((id: string) => {
+    requested.current.delete(id);
     setReloadToken((token) => token + 1);
   }, []);
 
-  return { openId, toggle, invalidate, state: openId === null ? undefined : cache[openId] };
+  /**
+   * Yazılan fiyatı YERİNDE uygular: sunucu zaten yazdı, ekranın onu yeniden okumasına gerek yok.
+   * Liste ve kartlar aynı anda güncellenir, hiçbir şey yeniden yüklenmez (kullanıcı kararı).
+   */
+  const applyPrice = useCallback((id: string, variantId: string, channel: Channel, amountCents: number) => {
+    setCache((prev) => {
+      const entry = prev[id];
+      if (!entry?.rows) return prev;
+      const rows = entry.rows.map((row) => {
+        if (row.variantId !== variantId || row.price === null) return row;
+        const price = {
+          ...row.price,
+          [channel]: { ...row.price[channel], amountCents },
+          marginPercent: marginAfterWrite(row.price, channel, amountCents),
+        };
+        return { ...row, price };
+      });
+      return { ...prev, [id]: { ...entry, rows } };
+    });
+  }, []);
+
+  return { state: productId === null ? undefined : cache[productId], refresh, applyPrice };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceRow } from '@/lib/pricing/price-rows';
 import type { StockLevelRow } from '@/lib/stock/level-rows';
-import { summarizePrices, summarizeStock } from './products-read';
+import { summarizePrices, summarizeStock } from './products-summary';
 
 // Liste satırının stok ve fiyat özetleri — ikisi de SESSİZCE yanlış olabilen kararlar taşıyor:
 // hangi boyun fiyatı yazılıyor ve kaç depo sayılıyor. Yanlışlık ekranda hata vermez, sadece başka

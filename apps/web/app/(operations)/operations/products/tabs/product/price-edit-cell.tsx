@@ -9,20 +9,20 @@ import type { PriceRow } from '@/lib/pricing/price-rows';
 import { marginForAmount } from './price-math';
 
 // SATIR İÇİ FİYAT — günlük düzeltmenin yeri. Hedef marj, otomatik anahtar ve ileri tarih kararı
-// burada VERİLMEZ: onlar tam formun işi (çift tık). Bu hücre tek soruya cevap verir: "bu boyun bu
-// kanaldaki tutarı ne olsun".
+// burada VERİLMEZ: onlar tam formun işi (çift tık).
 //
 // Kaydetmek YENİ FİYAT SATIRI yazar (`setChannelPriceAction`): geçmiş korunur, verilmiş siparişler
-// etkilenmez. Boş ve sıfır tutar eylem tarafından reddedilir; ekran da kaydetmeyi hiç denemez.
+// etkilenmez. Sıfır ve boş tutar eylem tarafından reddedilir; ekran da denemez.
 //
-// OTOMATİK FİYATLI üründe hücre kilitlidir ve bu bir engel değil bir açıklamadır: elle yazılan
-// tutar bir sonraki otomatik hesapta silinirdi (tam formun kuralıyla aynı).
+// YÜKSEKLİK SABİTTİR: tutar kutusu ve altındaki marj satırı her hâlde aynı yeri kaplar — kutu
+// açılınca, yazarken, kaydederken ve hata çıkınca. Marj satırı düzenlemeye GİRİLİNCE belirseydi
+// kart her tıklamada büyüyüp küçülürdü (kullanıcı kararı: ekranda oynama yok).
 
 interface PriceEditCellProps {
   row: PriceRow;
   channel: Channel;
-  /** Kaydedildi: liste özetleri ve kırılım bayatlar, çağıran ikisini de tazeler. */
-  onSaved: () => void;
+  /** Yazıldı — çağıran kendi görünümünü yerinde günceller, liste YENİDEN OKUNMAZ. */
+  onSaved: (amountCents: number) => void;
   /** Çift tık — tam form; tutarın yanında hedef marj ve tarih de değişebilsin. */
   onOpenForm: () => void;
 }
@@ -34,45 +34,18 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (row.autoPrice) {
-    return (
-      <span
-        title="Otomatik fiyat açık — tutar hedef marjdan hesaplanıyor. Değiştirmek için hedef marjı düzenleyin."
-        onDoubleClick={onOpenForm}
-        className="flex h-[30px] w-full cursor-pointer items-center justify-end gap-1.5 rounded-ops-btn bg-ops-surface-sunken px-2 font-ops-mono text-ops-sm font-semibold text-ops-body"
-      >
-        <span className="font-ops-display text-ops-micro">oto</span>
-        {money(cell.amountCents)}
-      </span>
-    );
-  }
-
-  if (!editing) {
-    return (
-      <span
-        role="button"
-        tabIndex={0}
-        title="Tek tık: tutarı düzelt · Çift tık: tam form (hedef marj · otomatik · ileri tarih)"
-        onClick={() => {
-          setDraft(cell.amountCents === null ? '' : String(fromCents(cell.amountCents)));
-          setEditing(true);
-        }}
-        onDoubleClick={onOpenForm}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter') return;
-          setDraft(cell.amountCents === null ? '' : String(fromCents(cell.amountCents)));
-          setEditing(true);
-        }}
-        className="flex h-[30px] w-full cursor-pointer items-center justify-end rounded-ops-btn border border-dashed border-ops-line-strong bg-ops-white px-2 font-ops-mono text-ops-sm font-semibold text-ops-ink hover:border-ops-olive"
-      >
-        {money(cell.amountCents)}
-      </span>
-    );
-  }
-
   const parsed = Number(draft.replace(',', '.'));
   const valid = Number.isFinite(parsed) && parsed > 0;
-  const nextMargin = valid ? marginForAmount(channel, parsed, row) : null;
+  const nextMargin = editing && valid ? marginForAmount(channel, parsed, row) : null;
+
+  const open = () => {
+    if (row.autoPrice) return;
+    setError(null);
+    // Ondalık ayırıcı VİRGÜL: kutuya "11.43" düşmesi, operatörün yazdığı biçimden başka bir dil
+    // konuşmak olurdu (ekranın her yerinde "11,43 €").
+    setDraft(cell.amountCents === null ? '' : String(fromCents(cell.amountCents)).replace('.', ','));
+    setEditing(true);
+  };
 
   const commit = async () => {
     if (!valid || busy) return;
@@ -90,40 +63,65 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
       return;
     }
     setEditing(false);
-    onSaved();
+    onSaved(cents);
   };
 
+  // Alt satırın İÇERİĞİ değişir, VARLIĞI değişmez.
+  const note = error
+    ? { text: error, cls: 'text-ops-red' }
+    : nextMargin !== null
+      ? { text: `${percent(row.marginPercent)} → ${percent(nextMargin)}`, cls: 'text-ops-olive-dark font-semibold' }
+      : row.autoPrice
+        ? { text: 'otomatik fiyat', cls: 'text-ops-olive' }
+        : { text: row.marginPercent === null ? 'marj bilinmiyor' : `marj ${percent(row.marginPercent)}`, cls: 'text-ops-muted' };
+
   return (
-    <span className="flex flex-col items-end gap-0.5">
-      <span className="flex h-[30px] w-full items-center gap-1 rounded-ops-btn border-[1.5px] border-ops-olive bg-ops-white px-2 shadow-[0_0_0_3px_rgba(95,122,44,0.14)]">
-        {busy ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-ops-olive-line border-t-ops-olive" /> : null}
-        <input
-          autoFocus
-          inputMode="decimal"
-          value={draft}
-          disabled={busy}
-          // Açılışta tutarın TAMAMI seçili gelir: operatör yeni fiyatı yazmaya başlar. Seçilmeden
-          // açıldığında yazılan rakam eskisinin sonuna ekleniyordu (11,43 + 9,90 → 11.439,90).
-          onFocus={(event) => event.target.select()}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => void commit()}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') void commit();
-            if (event.key === 'Escape') setEditing(false);
-          }}
-          className="w-full bg-transparent text-right font-ops-mono text-ops-sm font-semibold text-ops-ink outline-none"
-        />
-      </span>
-      {error !== null ? (
-        <span className="font-ops-body text-ops-micro text-ops-red">{error}</span>
+    <span className="flex flex-col gap-0.5">
+      {editing ? (
+        <span className="flex h-[30px] items-center gap-1 rounded-ops-btn border-[1.5px] border-ops-olive bg-ops-white px-2 shadow-[0_0_0_3px_rgba(95,122,44,0.14)]">
+          {busy ? <span className="h-3 w-3 flex-none animate-spin rounded-full border-2 border-ops-olive-line border-t-ops-olive" /> : null}
+          <input
+            autoFocus
+            inputMode="decimal"
+            value={draft}
+            disabled={busy}
+            // Açılışta tutarın TAMAMI seçili gelir: operatör yeni fiyatı yazmaya başlar. Seçilmeden
+            // açıldığında yazılan rakam eskisinin sonuna ekleniyordu (11,43 + 9,90 → 11.439,90).
+            onFocus={(event) => event.target.select()}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => void commit()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') void commit();
+              if (event.key === 'Escape') setEditing(false);
+            }}
+            className="w-full min-w-0 bg-transparent text-right font-ops-mono text-ops-sm font-semibold text-ops-ink outline-none"
+          />
+        </span>
       ) : (
-        <span className="font-ops-body text-ops-micro text-ops-muted">
-          {nextMargin === null
-            ? 'maliyet bilinmiyor'
-            : `marj ${percent(row.marginPercent)} → `}
-          {nextMargin === null ? null : <span className="font-semibold text-ops-olive-dark">{percent(nextMargin)}</span>}
+        <span
+          role={row.autoPrice ? undefined : 'button'}
+          tabIndex={row.autoPrice ? undefined : 0}
+          title={
+            row.autoPrice
+              ? 'Otomatik fiyat açık — tutar hedef marjdan hesaplanıyor. Çift tık: hedef marjı düzenle.'
+              : 'Tek tık: tutarı düzelt · Çift tık: tam form (hedef marj · otomatik · ileri tarih)'
+          }
+          onClick={open}
+          onDoubleClick={onOpenForm}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') open();
+          }}
+          className={[
+            'flex h-[30px] items-center justify-end rounded-ops-btn px-2 font-ops-mono text-ops-sm font-semibold',
+            row.autoPrice
+              ? 'cursor-pointer bg-ops-surface-sunken text-ops-body'
+              : 'cursor-pointer border border-dashed border-ops-line-strong bg-ops-white text-ops-ink hover:border-ops-olive',
+          ].join(' ')}
+        >
+          {money(cell.amountCents)}
         </span>
       )}
+      <span className={['truncate text-right font-ops-body text-ops-micro', note.cls].join(' ')}>{note.text}</span>
     </span>
   );
 }

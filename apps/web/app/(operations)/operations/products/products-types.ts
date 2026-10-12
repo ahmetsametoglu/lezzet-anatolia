@@ -5,6 +5,7 @@
 import type {
   BarcodeKind,
   Category,
+  Channel,
   Collection,
   KeysetCursor,
   LocalizedText,
@@ -45,6 +46,8 @@ export interface ProductStockSummary {
  * `null` yalnız yöneticide dolar: fiyat ve maliyet başka role çizilmez.
  */
 export interface ProductPriceSummary {
+  /** Tutarların geldiği boy — fiyat yazıldığında satırın değişip değişmeyeceği buna bakar. */
+  variantId: string;
   /** Kanal tabanında tutarlar: b2c KDV dahil, b2b KDV hariç (DOMAIN §5). */
   b2cCents: number | null;
   b2bCents: number | null;
@@ -258,4 +261,9 @@ export interface ProductsViewProps {
   openCreate: () => void;
   closeCreate: () => void;
   openEdit: () => void;
+  /**
+   * Fiyat yazıldı — satırın özeti YERİNDE düzeltilir, liste yeniden OKUNMAZ (kullanıcı kararı:
+   * yazma sırasında ekran oynamaz). Yalnız BİRİNCİL boyun fiyatı satırı değiştirir.
+   */
+  onLocalPrice: (productId: string, variantId: string, channel: Channel, amountCents: number, row: PriceRow) => void;
 }

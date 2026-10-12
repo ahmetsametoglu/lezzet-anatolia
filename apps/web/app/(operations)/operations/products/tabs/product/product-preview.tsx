@@ -5,9 +5,12 @@ import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { StatusBadge } from './status-badge';
 import { PricePeekDialog } from './price-peek-dialog';
 import { StockPeekDialog } from './stock-peek-dialog';
-import { DECLARATION_GAP_LABELS, missingDeclarations, resolveLocalizedText } from '@lezzet/types';
+import { DECLARATION_GAP_LABELS, missingDeclarations, resolveLocalizedText, type Channel } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
+import type { PriceRow } from '@/lib/pricing/price-rows';
 import { filledContentLangs, type FamilyView, type ProductView } from '../../products-types';
+import { useRowDetail } from './use-row-detail.hook';
+import { VariantCards } from './variant-cards';
 
 // Seçili ürün paneli — Ürünler ekranının sağ sütunu. SALT görünüm: türetilmiş bilgi gösterir,
 // düzenleme modal'da (Düzenle) yapılır. Fiyat/stok burada düzenlenmez, kendi ekranlarına köprü verir.
@@ -84,7 +87,16 @@ interface ProductPreviewProps {
   families: FamilyView[];
   /** Kardeşe tıklayınca SOLDAKİ tabloda o ürün seçilir — rayda gezinmek listeyi de takip etsin. */
   onSelectProduct: (productId: string) => void;
+  /** Fiyat yazıldı — liste satırının özeti YENİDEN OKUNMADAN yerinde düzeltilir. */
+  onLocalPrice: (productId: string, variantId: string, channel: Channel, amountCents: number, row: PriceRow) => void;
 }
+
+/** Panelin iki yüzü: ürünün kendisi ve boyları. Boylar sekmesi açılana kadar ayrıntı OKUNMAZ. */
+const PANEL_TABS = [
+  { key: 'summary', label: 'Özet' },
+  { key: 'variants', label: 'Boylar' },
+] as const;
+type PanelTab = (typeof PANEL_TABS)[number]['key'];
 
 /**
  * **Ailenin öteki çeşitleri** (05.15) — müşterinin ürün sayfasında gördüğü kartların operasyon
@@ -158,23 +170,56 @@ function FamilySiblings({
   );
 }
 
-export function ProductPreview({ product, onEdit, families, onSelectProduct }: ProductPreviewProps) {
+export function ProductPreview({ product, onEdit, families, onSelectProduct, onLocalPrice }: ProductPreviewProps) {
   // Bakış diyalogları panelin KENDİ durumu: seçim değişince (`product` değişir) açık diyalog o
   // ürünle yeniden kurulur — `key` ürün kimliği, bayat veri sızmaz.
   const [peek, setPeek] = useState<'prices' | 'stock' | null>(null);
+  // Sekme seçimi ÜRÜN DEĞİŞİNCE korunur: boylara bakarken başka ürüne geçen operatör onun da
+  // boylarını görmek ister; sekmeyi sıfırlamak her seçimde bir adım geri attırırdı.
+  const [tab, setTab] = useState<PanelTab>('summary');
+  const detail = useRowDetail(product?.id ?? null, tab === 'variants');
+
   return (
     <div className="flex min-h-0 flex-col overflow-y-auto bg-ops-subtle">
-      {/* Sticky başlık */}
-      <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-ops-line bg-ops-subtle px-5 py-[11px]">
-        <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-[0.1em] text-ops-muted">Seçili ürün · önizleme</span>
-        <span className="rounded-md bg-ops-line px-2 py-0.5 font-ops-display text-ops-micro font-medium text-ops-muted">
-          salt görünüm · Düzenle ile aç
-        </span>
+      {/* Sticky sekme çubuğu — panel artık salt görünüm değil: fiyat buradan yazılıyor. */}
+      <div className="sticky top-0 z-[1] flex items-center gap-1 border-b border-ops-line bg-ops-subtle px-3 py-2">
+        {PANEL_TABS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setTab(item.key)}
+            className={[
+              'cursor-pointer rounded-ops-btn px-3 py-1 font-ops-display text-ops-sm',
+              tab === item.key ? 'bg-ops-ink font-semibold text-ops-card' : 'text-ops-body hover:bg-ops-surface-sunken',
+            ].join(' ')}
+          >
+            {item.key === 'variants' && product ? `${item.label} · ${product.variants.length}` : item.label}
+          </button>
+        ))}
       </div>
 
       {product === null ? (
         <div className="flex flex-1 items-center justify-center p-8 text-center font-ops-body text-ops-base text-ops-faint">
           Ayrıntı için bir ürün seçin
+        </div>
+      ) : tab === 'variants' ? (
+        <div className="flex flex-col gap-2.5 px-3.5 py-3">
+          <VariantCards
+            product={product}
+            state={detail.state}
+            onRefresh={() => detail.refresh(product.id)}
+            onSaved={(variantId, channel, amountCents, row) => {
+              detail.applyPrice(product.id, variantId, channel, amountCents);
+              onLocalPrice(product.id, variantId, channel, amountCents, row);
+            }}
+          />
+          <button
+            type="button"
+            onClick={onEdit}
+            className="cursor-pointer rounded-ops-btn bg-ops-ink py-[9px] text-center font-ops-display text-ops-sm font-semibold text-ops-card hover:bg-ops-ink-hover"
+          >
+            Ürünü düzenle
+          </button>
         </div>
       ) : (
         <div className="flex flex-col gap-3.5 px-5 py-4">
