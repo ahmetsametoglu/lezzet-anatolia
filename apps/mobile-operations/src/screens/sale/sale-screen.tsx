@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { SaleCatalogProduct } from '@lezzet/types';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -26,6 +27,7 @@ import { useOperationsSections } from '@/screens/operations/sections-context';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { saleCopy } from './copy';
 import { useWarehouseStatus } from '@/screens/warehouse/warehouse-status';
+import { SaleCustomerCard } from './components/sale-customer-card';
 import { useSalePlace, useSaleContext } from './sale-context';
 import { selectionOf } from './use-sale.hook';
 
@@ -64,6 +66,17 @@ export function SaleScreen() {
   /* Arama çekmecesi EKRANIN durumu, kancanın değil: aramanın kendisi (metin, sonuçlar) kancada
      yaşıyor ve orada kalıyor; açık/kapalı yalnız bu ekranın bir yüzeyi. */
   const [searchOpen, setSearchOpen] = useState(false);
+  /* Müşteri değişince sepet boşalır (fiyat müşteriye göre çözülür); dolu sepette önce sorulur. */
+  const [customerChange, setCustomerChange] = useState<'pick' | 'remove' | null>(null);
+  const changeCustomer = (change: 'pick' | 'remove') => {
+    if (sale.lines.length > 0) {
+      setCustomerChange(change);
+      return;
+    }
+    if (change === 'pick') router.push('/sale/customer');
+    else sale.setCustomer(null);
+  };
+  const catalogOpen = sale.status !== 'closed' && sale.status !== 'mismatch';
   const draftReady =
     !offline &&
     !sale.unresolved &&
@@ -77,7 +90,9 @@ export function SaleScreen() {
     <View style={styles.screen} testID="sale-screen">
       <OperationsStackHeader
         title={t.title}
-        subtitle={place === 'van' ? t.van.subtitle : t.subtitle}
+        subtitle={
+          sale.customer === null ? (place === 'van' ? t.van.subtitle : t.subtitle) : place === 'van' ? t.van.subtitleNamed : t.subtitleNamed
+        }
         onBack={() => router.back()}
         backLabel={t.back}
         testID="sale-header"
@@ -87,7 +102,16 @@ export function SaleScreen() {
         Giriş tasarımın iki düğmesidir (Barkod okut, Ürün ara); arama çekmecede durur ve gövde tazelenirken sökülmez, sökülseydi her
         tuşta IME kompozisyonu ölürdü.
       */}
-      {sale.status === 'closed' ? null : (
+      <View style={styles.customerBlock}>
+        <SaleCustomerCard
+          customer={sale.customer}
+          locked={sale.unresolved}
+          onPick={() => changeCustomer('pick')}
+          onRemove={() => changeCustomer('remove')}
+        />
+      </View>
+
+      {!catalogOpen ? null : (
         <View style={styles.entryBlock}>
           <PrimaryButton
             label={t.scanCta}
@@ -121,6 +145,10 @@ export function SaleScreen() {
       ) : sale.status === 'closed' ? (
         <View style={styles.block}>
           <OperationsNoticeBlock variant="empty" title={t.closed.title} description={t.closed.body} testID="sale-closed" />
+        </View>
+      ) : sale.status === 'mismatch' ? (
+        <View style={styles.block}>
+          <OperationsNoticeBlock variant="error" title={t.mismatch.title} description={t.mismatch.body} testID="sale-mismatch" />
         </View>
       ) : sale.status === 'error' ? (
         <View style={styles.block}>
@@ -225,7 +253,7 @@ export function SaleScreen() {
         Okutma yüzen düğmede de durur, çünkü üstteki giriş düğmesi listeyle kayıp gider; sepet çubuğu varken daire onun kadar yukarı
         kalkar, yoksa tutarı örterdi.
       */}
-      {sale.status === 'closed' ? null : (
+      {!catalogOpen ? null : (
         <OperationsScanFab
           icon="scan"
           tone="scan"
@@ -360,6 +388,23 @@ export function SaleScreen() {
           </View>
         )}
       </BottomSheet>
+
+      <OperationsConfirmSheet
+        visible={customerChange !== null}
+        title={t.customer.changeTitle}
+        message={t.customer.changeBody}
+        confirmLabel={t.customer.changeConfirm}
+        cancelLabel={t.customer.changeCancel}
+        tone="error"
+        onConfirm={() => {
+          const change = customerChange;
+          setCustomerChange(null);
+          sale.setCustomer(null);
+          if (change === 'pick') router.push('/sale/customer');
+        }}
+        onCancel={() => setCustomerChange(null)}
+        testID="sale-customer-change-sheet"
+      />
     </View>
   );
 }
@@ -431,6 +476,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space.lg,
+  },
+  customerBlock: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingBottom: operationsTheme.space.xl,
   },
   /** İki giriş düğmesi alt alta, listeyle aynı yan nefes. */
   entryBlock: {

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CatalogImage, SaleCatalogProduct, SalePlace, SaleVariant } from '@lezzet/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CatalogImage, SaleCatalogProduct, SalePlace, SaleVariant, StaffCustomerOption } from '@lezzet/types';
 
-import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite } from '@/lib/api/sale';
+import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite, type SaleScope } from '@/lib/api/sale';
 import { newRequestKey } from '@/lib/request-key';
 /* Çevrimdışı sinyali deponunkiyle aynıdır: yerinde satış da depo kapsamlı bir yazmadır, iki ayrı sinyal bir gün ayrışır ve iki ekran
    aynı hat için farklı şey söylerdi. */
@@ -52,8 +52,14 @@ interface SaleNotice {
   text: string;
 }
 
-/** `closed`: bu depoda kapı satışı yapılmaz (QUALITE); tekrar denemek anlamsız olduğu için hatadan ayrıdır. */
-type CatalogStatus = 'loading' | 'error' | 'closed' | 'ready';
+/**
+ * `closed`: bu depoda anonim satış yapılmaz (QUALITE), müşteri seçilince açılır; `mismatch`: seçilen müşterinin işi deponun işi değil.
+ * İkisi de tekrar denemekle düzelmediği için hatadan ayrıdır.
+ */
+type CatalogStatus = 'loading' | 'error' | 'closed' | 'mismatch' | 'ready';
+
+/** Tahsilat türü; vadeli kapıda para almaz, havaleyle ve müşterinin açık bakiyesine yazılır. */
+export type SalePayment = 'cash' | 'card' | 'credit';
 
 /** Çekmecede seçili boyun satış künyesi (fiyat/kalan) — tek ve çok boylunun ortak görünümü. */
 export interface DraftSelection {
@@ -95,7 +101,9 @@ export function selectionOf(draft: SaleDraft): DraftSelection | null {
 export interface SaleReceipt {
   totalCents: number;
   referenceNo: string | null;
-  method: 'cash' | 'card';
+  method: SalePayment;
+  /** Adı belli satışın müşterisi; anonim satışta `null`. */
+  customerName: string | null;
   at: string;
   /** Kasa ayarsızsa satış kapanır ama para deftere geçmez — fiş bunu SUSMAZ. */
   paymentRecorded: boolean;
@@ -119,7 +127,10 @@ export function useSale(place: SalePlace) {
     Tahsilat türünün varsayılanı yoktur: kartla tahsil edilip "nakit" yazılan satış sefer kapanışının nakit beklentisini bozar. Seçim
     yapılmadan düğme açılmaz ve başarıda sıfırlanır.
   */
-  const [payment, setPayment] = useState<'cash' | 'card' | null>(null);
+  const [payment, setPayment] = useState<SalePayment | null>(null);
+  /* Fiyat müşteriye göre çözüldüğü için müşteri değişince sepet baştan kurulur; katalog da onun fiyatıyla yeniden okunur. */
+  const [customer, setCustomerState] = useState<StaffCustomerOption | null>(null);
+  const scope = useMemo<SaleScope>(() => ({ place, customerId: customer?.id ?? null }), [place, customer]);
   const [sending, setSending] = useState(false);
   /*
     Sonucu bilinmeyen satış: gönderilen kimlik ve sepet kesin cevap gelene kadar cihazda ve burada durur, sepet kilitlidir. Sunucu aynı
@@ -147,6 +158,7 @@ export function useSale(place: SalePlace) {
         return;
       }
       setPending(stored);
+      setCustomerState(stored.customer ?? null);
       setLines(stored.lines);
       setPayment(stored.payment);
     })();
@@ -164,18 +176,20 @@ export function useSale(place: SalePlace) {
     async (term: string, cursor?: string) => {
     const seq = ++seqRef.current;
     const result = await trackWarehouse(
-      fetchSaleCatalog({ q: term.trim().length === 0 ? undefined : term.trim(), cursor, place }),
+      fetchSaleCatalog({ q: term.trim().length === 0 ? undefined : term.trim(), cursor, scope }),
     );
     if (seq !== seqRef.current) return; // geciken cevap — taze listeyi ezmesin
     if (result.error !== null) {
-      setStatus(result.error === 'door_sale_closed' ? 'closed' : 'error');
+      setStatus(
+        result.error === 'door_sale_closed' ? 'closed' : result.error === 'customer_business_mismatch' ? 'mismatch' : 'error',
+      );
       return;
     }
     setProducts((prev) => (cursor === undefined ? result.data.products : [...prev, ...result.data.products]));
     setNextCursor(result.data.nextCursor);
     setStatus('ready');
     },
-    [place],
+    [scope],
   );
 
   useEffect(() => {
@@ -209,14 +223,14 @@ export function useSale(place: SalePlace) {
     });
     if (!multi) return;
     void (async () => {
-      const result = await fetchSaleVariants(product.slug, place);
+      const result = await fetchSaleVariants(product.slug, scope);
       setDraft((current) => {
         if (current === null || current.product.id !== product.id) return current; // çekmece değişti
         return { ...current, variants: result.error !== null ? 'error' : result.data.variants };
       });
     })();
     },
-    [place],
+    [scope],
   );
 
   const closeDraft = useCallback(() => setDraft(null), []);
@@ -230,7 +244,7 @@ export function useSale(place: SalePlace) {
     (code: string) => {
       setScanOpen(false);
       void (async () => {
-        const result = await scanSaleCode(code, place);
+        const result = await scanSaleCode(code, scope);
         if (result.error !== null) {
           setNotice({ tone: 'error', text: t.scan.error });
           return;
@@ -260,7 +274,7 @@ export function useSale(place: SalePlace) {
         });
       })();
     },
-    [place, setNotice],
+    [place, scope, setNotice],
   );
 
   /**
@@ -269,7 +283,7 @@ export function useSale(place: SalePlace) {
    */
   const describeDevCode = useCallback(
     async (code: string): Promise<string | null> => {
-      const result = await scanSaleCode(code, place);
+      const result = await scanSaleCode(code, scope);
       if (result.error !== null) return null;
       const data = result.data;
       if (data.status === 'ok') {
@@ -278,7 +292,7 @@ export function useSale(place: SalePlace) {
       if (data.status === 'not_here') return fillCopy(t.scan.devNotHere, { name: data.name });
       return null;
     },
-    [place],
+    [scope],
   );
 
   /** Boy seçimi fiyat metnini de tazeler: pazarlık alanı hep SEÇİLİ boyun listesiyle açılır. */
@@ -343,8 +357,22 @@ export function useSale(place: SalePlace) {
   );
 
   const choosePayment = useCallback(
-    (method: 'cash' | 'card') => {
-      if (pending === null) setPayment(method);
+    (method: SalePayment) => {
+      if (pending !== null || (method === 'credit' && customer === null)) return;
+      setPayment(method);
+    },
+    [customer, pending],
+  );
+
+  /** Müşteri seçimi ya da kaldırma: sonucu bilinmeyen satış varken değişmez, değişince sepet ve arama baştan başlar. */
+  const setCustomer = useCallback(
+    (next: StaffCustomerOption | null) => {
+      if (pending !== null) return;
+      setCustomerState(next);
+      setLines([]);
+      setPayment(null);
+      setDraft(null);
+      setSearchState('');
     },
     [pending],
   );
@@ -368,6 +396,7 @@ export function useSale(place: SalePlace) {
             warehouseId: saleWarehouseOf(place),
             createdAt: new Date().toISOString(),
             payment,
+            customer,
             // CDN türevleri saklanmaz: kayıt küçük kalsın, görsel tek adresten çizilir.
             lines: lines.map((line) => ({ ...line, image: { ...line.image, frames: null } })),
           });
@@ -380,15 +409,18 @@ export function useSale(place: SalePlace) {
       // Kayıt istekten önce yazılır: istek gidip cevap gelmeden uygulama kapanırsa geri yüklenecek olan budur.
       await savePendingSale(sale);
       const result = await trackWarehouse(
-        sellOnSite({
-          lines: sale.lines.map((line) => ({
-            variantId: line.variantId,
-            qty: line.qty,
-            ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
-          })),
-          paymentMethod: sale.payment,
-          idempotencyKey: sale.key,
-        }, place),
+        sellOnSite(
+          {
+            lines: sale.lines.map((line) => ({
+              variantId: line.variantId,
+              qty: line.qty,
+              ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
+            })),
+            ...(sale.payment === 'credit' ? { paymentMethod: 'bank_transfer', onAccount: true } : { paymentMethod: sale.payment }),
+            idempotencyKey: sale.key,
+          },
+          { place, customerId: sale.customer?.id ?? null },
+        ),
       );
       setSending(false);
 
@@ -410,6 +442,7 @@ export function useSale(place: SalePlace) {
           totalCents: outcome.totalCents,
           referenceNo: outcome.referenceNo,
           method: sale.payment,
+          customerName: sale.customer?.name ?? null,
           at: new Date().toISOString(),
           paymentRecorded: outcome.paymentRecorded,
         });
@@ -419,7 +452,7 @@ export function useSale(place: SalePlace) {
       // Reddin üçünde de sepet KORUNUR: personel adedi düşürüp ya da kalemi çıkarıp yeniden dener.
       setNotice(noticeOfRefusal(outcome));
     })();
-  }, [email, lines, payment, pending, place, reload, sending, setNotice]);
+  }, [customer, email, lines, payment, pending, place, reload, sending, setNotice]);
 
   /** Vazgeç: bekleyen kayıt ve sepet silinir; satış sunucuya ulaştıysa kayıt orada kalır, onay çekmecesi bunu söyler. */
   const discardPending = useCallback(() => {
@@ -452,6 +485,8 @@ export function useSale(place: SalePlace) {
     setDraftQty,
     setDraftPrice,
     confirmDraft,
+    customer,
+    setCustomer,
     lines,
     removeLine,
     indicativeTotalCents,
@@ -485,5 +520,6 @@ function noticeOfRefusal(outcome: Exclude<SaleOutcome, { status: 'ok' }>): SaleN
     return { tone: 'error', text: fillCopy(t.result.blockedIntro, { lines: outcome.lines.join(', ') }) };
   }
   if (outcome.status === 'no_payment_account') return { tone: 'error', text: t.result.noPaymentAccount };
+  if (outcome.status === 'credit_not_allowed') return { tone: 'error', text: t.result.creditNotAllowed[outcome.reason] };
   return { tone: 'error', text: t.result.failed };
 }

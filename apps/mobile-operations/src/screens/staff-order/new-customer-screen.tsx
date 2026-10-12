@@ -14,8 +14,8 @@ import { useStaffOrderContext } from './staff-order-context';
 import { useNewCustomer, type NewCustomerBlock } from './use-new-customer.hook';
 
 /*
-  Yeni profesyonel kayıtta eksik olan alttaki düğmenin üstünde yazar; alanın altına hata satırı girmez ki form kaymasın. Kayıt
-  açılınca ya da aynı kayıt seçilince sipariş sayfasına dönülür.
+  Yeni profesyonel kayıtta eksik olan alttaki düğmenin üstünde yazar; alanın altına hata satırı girmez ki form kaymasın. Açılan ya da
+  aynı SIRET'le bulunan kayıt çağıranın akışına (sipariş, yerinde satış) verilir.
 */
 
 const c = t.newCustomer;
@@ -33,16 +33,30 @@ const WHY: Record<Exclude<NewCustomerBlock, null>, string> = {
 export function StaffNewCustomerScreen() {
   const router = useRouter();
   const order = useStaffOrderContext();
-  const form = useNewCustomer();
+  return (
+    <NewCustomerForm
+      subtitle={c.subtitle}
+      onChosen={(customer) => {
+        if (order.customer?.id !== customer.id) order.selectCustomer(customer);
+        router.dismissTo('/order');
+      }}
+    />
+  );
+}
 
-  const choose = (customer: StaffCustomerOption) => {
-    if (order.customer?.id !== customer.id) order.selectCustomer(customer);
-    router.dismissTo('/order');
-  };
+interface NewCustomerFormProps {
+  subtitle: string;
+  /** Açılan kayıt ya da aynı SIRET'le var olan kayıt; ikisinde de akış o müşteriyle sürer. */
+  onChosen: (customer: StaffCustomerOption) => void;
+}
+
+export function NewCustomerForm({ subtitle, onChosen }: NewCustomerFormProps) {
+  const router = useRouter();
+  const form = useNewCustomer();
 
   const submit = async () => {
     const customer = await form.submit();
-    if (customer !== null) choose(customer);
+    if (customer !== null) onChosen(customer);
   };
 
   const siretBlock = form.block === 'siret' || form.block === 'siretInvalid' || form.block === 'notFound';
@@ -52,7 +66,7 @@ export function StaffNewCustomerScreen() {
       <OperationsStackHeader
         subtitleLines={1}
         title={c.title}
-        subtitle={c.subtitle}
+        subtitle={subtitle}
         onBack={() => router.back()}
         backLabel={t.back}
         testID="staff-order-new-customer-header"
@@ -68,7 +82,7 @@ export function StaffNewCustomerScreen() {
           density="compact"
           testID="staff-order-new-customer-siret"
         />
-        <RegistrySlot registry={form.registry} duplicate={form.duplicate} onPickExisting={choose} />
+        <RegistrySlot registry={form.registry} duplicate={form.duplicate} onPickExisting={onChosen} />
         <TextField
           label={c.name}
           value={form.name}

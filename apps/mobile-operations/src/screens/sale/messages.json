@@ -9,8 +9,8 @@
   },
   "retry": "Tekrar dene",
   "closed": {
-    "title": "Bu depoda yerinde satış yapılmaz",
-    "body": "QUALITE deposundan kimliği sorulmayan alıcıya satış yazılmaz."
+    "title": "Bu depoda anonim satış yapılmaz",
+    "body": "QUALITE deposundan kimliği sorulmayan alıcıya satış yazılmaz; profesyonel müşteriyi seçin, satış onun adına ve fiyatıyla yazılır."
   },
   "searchPlaceholder": "Ürün adıyla ara",
   "searchEmpty": "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin.",
@@ -18,7 +18,8 @@
     "subtitle": "araçtan satış · anonim satış",
     "empty": "Araçta satılacak mal yok.",
     "emptyHint": "Kurye günü → Araca serbest ürün ile depodan mal alın; sipariş kutuları burada satılmaz.",
-    "searchEmpty": "Araçta eşleşen ürün yok — burada yalnız aracındaki mal satılır."
+    "searchEmpty": "Araçta eşleşen ürün yok — burada yalnız aracındaki mal satılır.",
+    "subtitleNamed": "araçtan satış · müşteri adına"
   },
   "loadMore": "Daha fazla göster",
   "scanCta": "Barkod okut",
@@ -62,17 +63,18 @@
     "negotiated": "pazarlık",
     "remove": "{name} kalemini çıkar",
     "removeMark": "✕",
-    "total": "ara toplam {total}",
+    "total": "ara toplam {total} · {basis}",
     "totalNote": "kesin toplam (indirim · KDV) satış yazılınca sunucudan gelir"
   },
   "payment": {
     "heading": "TAHSİLAT",
     "cash": "Nakit",
-    "card": "Kart"
+    "card": "Kart",
+    "credit": "Vadeli"
   },
   "cta": {
     "idle": "Sepet boş",
-    "pickPayment": "Tahsilat türünü seçin — nakit mi kart mı?",
+    "pickPayment": "Tahsilat türünü seçin",
     "ready": "Satışı tamamla · {total}",
     "sending": "Yazılıyor…"
   },
@@ -83,7 +85,12 @@
     "insufficientLine": "{name} (kalan {n})",
     "blockedIntro": "Satışa kapalı kalem — satış yazılmadı: {lines}",
     "failed": "Satış kapanmadı — bir daha deneyin; sürerse yöneticiye haber verin.",
-    "network": "Bağlantı koptu. Hat gelince aynı sepetle yeniden tamamlayın; satış iki kez yazılmaz."
+    "network": "Bağlantı koptu. Hat gelince aynı sepetle yeniden tamamlayın; satış iki kez yazılmaz.",
+    "creditNotAllowed": {
+      "not_enabled": "Bu müşteriye vade açık değil — satış yazılmadı.",
+      "overdue": "Müşterinin vadesi geçmiş borcu var — vadeli satış yazılmadı.",
+      "limit_exceeded": "Vade limiti bu satışa yetmiyor — satış yazılmadı."
+    }
   },
   "receipt": {
     "title": "Satış Tamam",
@@ -95,7 +102,8 @@
     "metaNoRef": "{method} · referanssız · {stamp}",
     "note": "Stok hareketi işlendi. Fiş yazdırma bu sürümde bağlı değil.",
     "again": "Yeni satış",
-    "leave": "Depoya dön"
+    "leave": "Depoya dön",
+    "creditNote": "Vadeli satış: tutar müşterinin açık bakiyesine eklendi, kapıda para alınmadı."
   },
   "addClosed": "Sepete ekleme kapalı",
   "offline": {
@@ -113,7 +121,7 @@
     "discardCancel": "Geri",
     "stale": "Önceki bir satışın sonucu bilinmiyor; Son satışlar'a bakın."
   },
-  "footnote": "Anonim satış — müşteri kaydı istenmez. Ödeme alınınca hareket anında stoktan iner. Pazarlık fiyatı meşrudur, sapan satır işaretli kalır.",
+  "footnote": "Müşteri seçilmezse satış anonim yazılır; müşteri kaydı istenmez. Ödeme alınınca hareket anında stoktan iner. Pazarlık fiyatı meşrudur, sapan satır işaretli kalır.",
   "recentLink": "Son satışlar ›",
   "cartBar": {
     "summary": "Sepet · {n} kalem · ~{total}",
@@ -149,7 +157,30 @@
       "cash": "Nakit",
       "card": "Kart",
       "online": "Online",
-      "bank_transfer": "Havale"
+      "bank_transfer": "Vadeli"
     }
+  },
+  "subtitleNamed": "kapıya gelen müşteri · müşteri adına",
+  "mismatch": {
+    "title": "Bu müşteri bu deponun işinde değil",
+    "body": "Bu depodan satış yalnız deponun işindeki müşteriye yazılır; başka müşteri seçin."
+  },
+  "customer": {
+    "eyebrow": "MÜŞTERİ",
+    "anonymous": "Anonim satış",
+    "anonymousHint": "profesyonel müşteri için seçin",
+    "pick": "seç ›",
+    "remove": "kaldır",
+    "removeLabel": "Müşteriyi kaldır",
+    "changeTitle": "Müşteri değişsin mi?",
+    "changeBody": "Fiyat müşteriye göre çözülür; sepet boşalır, ürünler yeni fiyatla yeniden eklenir.",
+    "changeConfirm": "Sepeti boşalt",
+    "changeCancel": "Vazgeç",
+    "pickerSubtitle": "Yerinde satış",
+    "newSubtitle": "Yerinde satış · müşteri"
+  },
+  "credit": {
+    "open": "Vadeli satışta kapıda para alınmaz; tutar müşterinin açık bakiyesine eklenir. Kalan limit ~{rest}.",
+    "none": "Bireysel müşteride vadeli satış yok."
   }
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CatalogImageSchema, SalePlaceEnum, type SalePlace } from '@lezzet/types';
+import { CatalogImageSchema, SalePlaceEnum, StaffCustomerOptionSchema, type SalePlace } from '@lezzet/types';
 
 import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
@@ -27,7 +27,10 @@ const PendingSaleSchema = z.object({
   /** Tesis satışında cihazın seçili deposu; araçta depoyu sunucu seferden çözer, `null`dır. */
   warehouseId: z.string().nullable(),
   createdAt: z.string(),
-  payment: z.enum(['cash', 'card']),
+  /** Vadeli satış (`credit`) havaleyle ve müşterinin açık bakiyesine yazılır. */
+  payment: z.enum(['cash', 'card', 'credit']),
+  /** Satışın alıcısı; yeniden gönderim aynı müşteriye gider. Müşterisiz kayıt anonim satıştır. */
+  customer: StaffCustomerOptionSchema.nullish(),
   lines: z.array(PendingSaleLineSchema).min(1),
 });
 export type PendingSale = z.infer<typeof PendingSaleSchema>;

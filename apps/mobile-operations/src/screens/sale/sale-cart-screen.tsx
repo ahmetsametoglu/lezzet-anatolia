@@ -17,8 +17,10 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { saleCopy } from './copy';
+import { subtotalBasisOf } from '@/screens/staff-order/staff-order-format';
 import { useWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { useSaleContext } from './sale-context';
+import { saleCreditOf } from './sale-credit';
 
 /*
   Satış sepeti (`/sale/cart`): kalemlerin son kontrolü, tahsilat türünün bilinçli seçimi (varsayılan yok) ve tek CTA. Durum katalogla
@@ -36,6 +38,7 @@ export function SaleCartScreen() {
   const { offline } = useWarehouseStatus();
   const locked = sale.unresolved;
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const credit = saleCreditOf(sale.customer, sale.indicativeTotalCents);
 
   /* Satış yazılınca fişe `replace` ile geçilir, çünkü sepet sıfırlandı ve geriye basan boş sepete düşerdi; yönlendirme ekranın işi
      olduğu için etkidedir, hook rota bilmez. */
@@ -57,7 +60,8 @@ export function SaleCartScreen() {
     <View style={styles.screen} testID="sale-cart-screen">
       <OperationsStackHeader
         title={t.cartScreen.title}
-        subtitle={t.cartScreen.subtitle}
+        subtitle={sale.customer?.name ?? t.cartScreen.subtitle}
+        subtitleLines={1}
         onBack={() => router.back()}
         backLabel={t.back}
         testID="sale-cart-header"
@@ -103,7 +107,10 @@ export function SaleCartScreen() {
               </View>
             ))}
             <Text style={styles.cartTotal} testID="sale-cart-total">
-              {fillCopy(t.cart.total, { total: money(sale.indicativeTotalCents) })}
+              {fillCopy(t.cart.total, {
+                total: money(sale.indicativeTotalCents),
+                basis: subtotalBasisOf(sale.customer ?? { channel: 'b2c' }),
+              })}
             </Text>
             <Text style={styles.hint}>{t.cart.totalNote}</Text>
 
@@ -112,7 +119,7 @@ export function SaleCartScreen() {
               {/* Kilitliyken seçim değiştirilemez; seçilmiş tür düz metindir, çalışmayan bir düğme gibi görünmesin. */}
               {locked ? (
                 <Text style={styles.cartName} testID="sale-payment-locked">
-                  {sale.payment === 'card' ? t.payment.card : t.payment.cash}
+                  {sale.payment === null ? '' : t.payment[sale.payment]}
                 </Text>
               ) : (
                 <View style={styles.chipRow}>
@@ -128,7 +135,27 @@ export function SaleCartScreen() {
                     onPress={() => sale.setPayment('card')}
                     testID="sale-payment-card"
                   />
+                  {credit?.open ? (
+                    <OperationsChoiceChip
+                      label={t.payment.credit}
+                      selected={sale.payment === 'credit'}
+                      onPress={() => sale.setPayment('credit')}
+                      testID="sale-payment-credit"
+                    />
+                  ) : null}
                 </View>
+              )}
+              {/* Açık vadelinin sonucu seçilince, kapalı vadelinin sebebi müşteri seçiliyken yazar. */}
+              {credit === null ? null : credit.open ? (
+                sale.payment === 'credit' ? (
+                  <Text style={styles.creditBox} testID="sale-credit-note">
+                    {credit.text}
+                  </Text>
+                ) : null
+              ) : (
+                <Text style={styles.hint} testID="sale-credit-closed">
+                  {credit.text}
+                </Text>
               )}
             </View>
           </>
@@ -214,6 +241,16 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
+  },
+  creditBox: {
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors['success-bg'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors['olive-dark'],
   },
   chipRow: {
     flexDirection: 'row',

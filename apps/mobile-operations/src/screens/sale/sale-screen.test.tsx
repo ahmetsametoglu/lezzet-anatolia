@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
+import { Pressable } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import type { SaleCatalogProduct, SalePlace, SaleVariant, StaffWarehouse } from '@lezzet/types';
+import type { SaleCatalogProduct, SalePlace, SaleVariant, StaffCustomerOption, StaffWarehouse } from '@lezzet/types';
 
 import { SaleScreen } from './sale-screen';
 import { SaleCartScreen } from './sale-cart-screen';
 import { SaleHistoryScreen } from './sale-history-screen';
 import { SaleReceiptScreen } from './sale-receipt-screen';
-import { SaleProvider } from './sale-context';
+import { saleCopy } from './copy';
+import { SaleProvider, useSaleContext } from './sale-context';
 import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
 import { resetToast } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
@@ -178,7 +180,7 @@ function withSession(children: ReactNode, sections: OperationsSection[] = ['ware
   );
 }
 
-async function renderSale(place: SalePlace = 'facility', sections: OperationsSection[] = ['warehouse']) {
+async function renderSale(place: SalePlace = 'facility', sections: OperationsSection[] = ['warehouse'], extra?: ReactNode) {
   // Katalog + sepet AYNI sağlayıcı altında birlikte çizilir: akış testleri rota geçişini değil,
   // iki yüzeyin ORTAK durumunu sınar (gezinme expo-router'ın işi, bizim iddiamız değil).
   await render(
@@ -191,11 +193,31 @@ async function renderSale(place: SalePlace = 'facility', sections: OperationsSec
         <SaleReceiptScreen />
         {/* Toast taşıyıcısı testte de çizilir, çünkü olumsuz cevaplar bu kanaldan geçer. */}
         <ToastHost />
+        {extra}
       </SaleProvider>,
       sections,
     ),
   );
   await waitFor(() => expect(screen.getByTestId(`sale-product-${TEK_ID}`)).toBeTruthy());
+}
+
+const MUSTERI: StaffCustomerOption = {
+  id: '00000000-0000-4000-8000-000000000c01',
+  name: 'Restaurant Oberjaegerhof',
+  phone: null,
+  email: null,
+  type: 'company',
+  channel: 'b2b',
+  isDraft: false,
+  siret: null,
+  b2bPending: false,
+  credit: { termDays: 30, limitCents: 150_000, remainingCents: 124_000, overdue: false },
+};
+
+/** Seçicinin yerine geçer: seçim satış bağlamına yazılır; seçicinin kendisi bu dosyanın konusu değil. */
+function MusteriSec() {
+  const sale = useSaleContext();
+  return <Pressable testID="test-musteri-sec" onPress={() => sale.setCustomer(MUSTERI)} />;
 }
 
 /** Tek boylu ürünü çekmeceden sepete ekler (varsayılan adet 1, fiyata dokunmadan). */
@@ -279,6 +301,26 @@ it('dokunulmamış fiyat İSTEKTE YOK; satış yazılınca sepet sıfırlanır v
   expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // satış kapandı, sepet boş
 });
 
+it('vadeli satış müşterinin adına, havale yöntemi ve vadeli bayrağıyla gider; fiş tahsilat beklemez', async () => {
+  withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 475, referenceNo: 'SP-26-0010', paymentRecorded: false });
+  await renderSale('facility', ['warehouse'], <MusteriSec />);
+  await fireEvent.press(screen.getByTestId('test-musteri-sec'));
+  // Fiyat müşteriye göre çözülür: katalog onun adıyla yeniden okunur.
+  await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes(`customerId=${MUSTERI.id}`))).toBe(true));
+  await waitFor(() => expect(screen.getByTestId(`sale-product-${TEK_ID}`)).toBeTruthy());
+  await addSimit();
+
+  await fireEvent.press(screen.getByTestId('sale-payment-credit'));
+  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
+
+  expect(postBody()).toMatchObject({ paymentMethod: 'bank_transfer', onAccount: true });
+  const sent = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
+  expect(String(sent?.[0])).toContain(`customerId=${MUSTERI.id}`);
+  expect(screen.getByTestId('sale-receipt-credit')).toBeTruthy();
+  expect(screen.queryByTestId('sale-receipt-payment-missing')).toBeNull();
+});
+
 it('pazarlık fiyatı yalnız DEĞİŞTİRİLEN kalemde gider (yönetici)', async () => {
   withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 400, referenceNo: null, paymentRecorded: true });
   await renderSale('facility', ['warehouse', 'management']);
@@ -354,7 +396,7 @@ it('tahsilat türü SEÇİLMEDEN satış yazılamaz — para yazan alanda varsay
   await renderSale();
   await addSimit();
 
-  expect(screen.getByText('Tahsilat türünü seçin — nakit mi kart mı?')).toBeTruthy();
+  expect(screen.getByText(saleCopy.cta.pickPayment)).toBeTruthy();
   await fireEvent.press(screen.getByTestId('sale-cta'));
   expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(false);
 

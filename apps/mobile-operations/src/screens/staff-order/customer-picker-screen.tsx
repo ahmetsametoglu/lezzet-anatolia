@@ -17,8 +17,8 @@ import { useStaffOrderContext } from './staff-order-context';
 import { MIN_SEARCH_TERM, usePickerSearch, type PickerFetch } from './use-picker-search.hook';
 
 /*
-  Müşteri seçici: arama kutusu, yeni kayıt düğmesi ve durum satırı üstte sabittir, liste altlarında açılır. Liste iki harften önce
-  boştur; ararken önceki sonuçlar soluk kalır ve yalnız satırların içi değişir.
+  Müşteri seçici: arama kutusu, yeni kayıt düğmesi ve durum satırı üstte sabittir, liste altlarında açılır. Sipariş girişi ve yerinde
+  satış aynı seçiciyi kullanır; seçimin nereye yazılacağını çağıran verir.
 */
 
 const p = t.customerPicker;
@@ -32,13 +32,28 @@ export function StaffCustomerPickerScreen() {
   const router = useRouter();
   const order = useStaffOrderContext();
   const workplace = useOperationsWorkplace();
-  const search = usePickerSearch(fetchCustomers, false);
+  return (
+    <CustomerPicker
+      subtitle={[p.subtitle, workplace].filter(Boolean).join(' · ')}
+      onPick={(customer) => {
+        /* Aynı müşteri yeniden seçilirse sepet korunur; başka müşteri fiyatı değiştirdiği için siparişi baştan kurar. */
+        if (order.customer?.id !== customer.id) order.selectCustomer(customer);
+        router.back();
+      }}
+      onNewRecord={() => router.push('/order/new-customer')}
+    />
+  );
+}
 
-  const pick = (customer: StaffCustomerOption) => {
-    /* Aynı müşteri yeniden seçilirse sepet korunur; başka müşteri fiyatı değiştirdiği için siparişi baştan kurar. */
-    if (order.customer?.id !== customer.id) order.selectCustomer(customer);
-    router.back();
-  };
+interface CustomerPickerProps {
+  subtitle: string;
+  onPick: (customer: StaffCustomerOption) => void;
+  onNewRecord: () => void;
+}
+
+export function CustomerPicker({ subtitle, onPick, onNewRecord }: CustomerPickerProps) {
+  const router = useRouter();
+  const search = usePickerSearch(fetchCustomers, false);
 
   const short = search.term.trim().length < MIN_SEARCH_TERM;
   const statusText = short
@@ -76,7 +91,7 @@ export function StaffCustomerPickerScreen() {
       <OperationsStackHeader
         subtitleLines={1}
         title={p.title}
-        subtitle={[p.subtitle, workplace].filter(Boolean).join(' · ')}
+        subtitle={subtitle}
         onBack={() => router.back()}
         backLabel={t.back}
         testID="staff-order-customer-picker-header"
@@ -90,19 +105,13 @@ export function StaffCustomerPickerScreen() {
           autoFocus
           testID="staff-order-customer-search"
         />
-        <SecondaryButton
-          label={p.newRecord}
-          icon="plus"
-          elevation="flat"
-          onPress={() => router.push('/order/new-customer')}
-          testID="staff-order-new-customer"
-        />
+        <SecondaryButton label={p.newRecord} icon="plus" elevation="flat" onPress={onNewRecord} testID="staff-order-new-customer" />
         <ListStatus text={statusText} busy={search.busy} testID="staff-order-customer-status" />
       </View>
       <FlatList
         data={search.rows}
         keyExtractor={(row) => row.id}
-        renderItem={({ item }) => <CustomerRow customer={item} onPress={() => pick(item)} />}
+        renderItem={({ item }) => <CustomerRow customer={item} onPress={() => onPick(item)} />}
         getItemLayout={(_, index) => ({ length: CUSTOMER_ROW_HEIGHT, offset: CUSTOMER_ROW_HEIGHT * index, index })}
         ListEmptyComponent={message}
         ListFooterComponent={

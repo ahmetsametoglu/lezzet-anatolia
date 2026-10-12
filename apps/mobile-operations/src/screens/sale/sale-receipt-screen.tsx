@@ -14,23 +14,8 @@ import { saleCopy } from './copy';
 import { useSaleContext } from './sale-context';
 
 /*
-  YERİNDE SATIŞ · FİŞ — `/sale/receipt` (Operasyon Mobil v3:22).
-
-  ── NEDEN KENDİ EKRANI ──────────────────────────────────────────────────────
-  Sonuç, sepet ekranında tek satırlık bir bildirimdi ve satış kapanınca sepet BOŞALIYORDU: cevabı
-  okuyan göz, "sepet boş" ekranının üstünde asılı duran bir cümleye bakıyordu. Referans numarası ve
-  tutar da o satıra sığmıyordu. Fiş artık o satışın kendi sayfası — ne yazıldığını, kaça, neyle ve
-  ne zaman yazıldığını bir arada söylüyor.
-
-  ── ZAMAN CİHAZIN, SUNUCUNUN DEĞİL ──────────────────────────────────────────
-  `OnSiteSaleResponse` bir zaman damgası taşımıyor; damga cevabın geldiği anda yazılıyor
-  (`use-sale.hook.ts` künyesi). Bu bir belge değil, "az önce ne oldu" sayfasıdır ve yazdırma zaten
-  bu sürümde bağlı değil — sunucu damgası gerektiğinde sözleşmeye alan eklenir, ekran uydurmaz.
-
-  ── KASA AYARSIZSA FİŞ SUSMAZ ───────────────────────────────────────────────
-  Satış kapanmış ama para deftere geçmemiş olabilir (`paymentRecorded === false`). Yeşil bir "tamam"
-  ekranının altında bu gerçeği saklamak, arızayı gözden kaçırmak olurdu; uyarı kartın içinde,
-  tutarın hemen altında duruyor.
+  Yazılmış satışın kendi sayfası: ne yazıldığını, kaça, neyle ve ne zaman yazıldığını bir arada söyler; damga cevabın geldiği andır,
+  çünkü cevap zaman taşımaz. Para deftere geçmediyse uyarı tutarın hemen altında durur, yeşil "tamam" onu saklamaz.
 */
 
 const t = saleCopy;
@@ -85,11 +70,21 @@ export function SaleReceiptScreen() {
           <Text style={styles.total} testID="sale-receipt-total">
             {money(receipt.totalCents)}
           </Text>
+          {receipt.customerName === null ? null : (
+            <Text style={styles.meta} testID="sale-receipt-customer">
+              {receipt.customerName}
+            </Text>
+          )}
           <Text style={styles.meta} testID="sale-receipt-meta">
             {meta}
           </Text>
 
-          {receipt.paymentRecorded ? null : (
+          {/* Vadelide tahsilat yoktur; uyarı yalnız parası alınıp deftere geçmeyen satışta çıkar. */}
+          {receipt.method === 'credit' ? (
+            <Text style={[styles.meta, styles.centered]} testID="sale-receipt-credit">
+              {t.receipt.creditNote}
+            </Text>
+          ) : receipt.paymentRecorded ? null : (
             <Text style={styles.warn} testID="sale-receipt-payment-missing">
               {t.result.paymentMissing}
             </Text>
@@ -169,6 +164,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.muted,
   },
+  centered: { textAlign: 'center' },
   warn: {
     marginTop: operationsTheme.space.md,
     padding: operationsTheme.space.xl,

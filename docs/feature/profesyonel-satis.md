@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 tamamlandı (ortak katman, mobil uçlar ve mobil ekran).** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil).** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -146,10 +146,15 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   yeni adres müşterinin defterine eklenir.
 
 **Faz 3 — araçtan profesyonele vadeli satış**
-- Yerinde satışa isteğe bağlı müşteri: seçilirse fiyat, kanal ve KDV tabanı müşteriden gelir; müşterinin işi aracın işiyle tutar.
-- Vadeli araç satışında hızlı satış kapısı (`packages/application/src/order/quick-sale.ts`) kapı hesabı aramaz ve tahsilat
-  yazmaz; başka dal değişmez.
-- QUALITE deposunda yerinde satış yalnız anonim alıcıya kapalı kalır; adı belli profesyonel müşteriye açılır.
+- Yerinde satışa isteğe bağlı müşteri (`?customerId=`): seçilirse fiyat, kanal ve KDV müşteriden okunur, borç her tabanda KDV
+  dahil yazılır; müşterinin işi deponun işiyle tutmazsa satış açılmaz. Anonim satış olduğu gibi kalır.
+- Vadeli satış yalnız seçilmiş müşteride, havale yöntemiyle ve vade freni (`resolveCheckoutPayment`) izin verirse yazılır; hızlı
+  satış kapısı (`packages/application/src/order/quick-sale.ts`) vadeli siparişte kapı hesabı aramaz ve tahsilat yazmaz.
+- QUALITE deposunda anonim satış kapalı kalır; adı belli QUALITE müşterisine açılır.
+- Mobil ekran: katalogda müşteri satırı (sipariş girişinin seçicisi ve yeni kaydı), sepette vadeli seçeneği ve sebebi.
+- Ölçüldü: vadeli araç satışı seferin beklenen nakdine girmez (beklenen nakit tahsilat hareketinden sayılır); geri bildirim daveti
+  doğmaz (kapı satışında teslim kaydı yoktur, profesyonel müşteri zaten dışarıda); ödenmemiş satış havale kuyruğunda aday olur;
+  B2B nakdi kasaya fiş olarak değil kasa girişi olarak gider (`register/plan.ts`, `sync.ts`).
 
 **Faz 4 — satış faturası Pennylane'de**
 - S0: Pennylane anahtarına satış faturası ve müşteri yetkileri; şablonda IBAN ve "açıklamaya fatura numarasını yazın"; iki
@@ -192,9 +197,6 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 
 ## 7. Ölçülecekler
 
-- Vadeli araç satışı "tamamlandı" durumunda ödemesiz kalır (ödeme ayrı eksen); bunu okuyan yerler (geri bildirim daveti,
-  raporlar) kontrol edilir.
-- Kapı satışında B2B nakdi ilk kez doğar; kasa planının onu kasa girişi olarak yazdığı ölçülür (`packages/application/src/register/`).
 - Aracı hesabın türü ve iade yolu: B2B iadesi bankadan havaleyle dönmeli (`packages/domain-core/src/payment/refund-method.ts`).
 - API ile kesilen faturanın e-fatura gönderimi: API'de faturayı alıcının platformuna gönderen ayrı uç var
   (`POST customer_invoices/{id}/send_to_pa`); tetik ve hata dönüşleri Faz 4'te sandbox'ta ölçülür.
