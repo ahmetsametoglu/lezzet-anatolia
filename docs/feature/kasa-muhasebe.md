@@ -487,8 +487,8 @@ yazılır; yarıda kalan ya da tekrar eden tur kendiliğinden doğru sonuca iner
 
 **Kapsam:** eşlenmiş banka hesaplarının hareketleri; yönü çıkış olan fatura ve fişler (karşı tarafı tedarikçi ya
 da cari); e-faturalar; bu belgelerle bu hareketler arasındaki bağlar. Sözleşme, bordro ve dekont Pennylane'e
-gitmez. B2B satış faturası Faz 4'tedir. Para birimi avro olmayan belge yüklenmez, "Pennylane'e elle" diye
-gösterilir.
+gitmez. B2B satış faturası Pennylane'de kendi akışıyla kesilir ([`profesyonel-satis.md`](profesyonel-satis.md), Faz 4).
+Para birimi avro olmayan belge yüklenmez, "Pennylane'e elle" diye gösterilir.
 
 **Bağın tutarı:** Pennylane bağda tutar taşımaz; hareketi faturalara açılma sırasıyla dağıtır, eşleme sırası dağılımı
 değiştirmiyor (03.10 ölçümü). Bizim bağımız bağlanma sırasıyla dağılır: üç bağlama yolunun (banka kuyruğu, belgenin

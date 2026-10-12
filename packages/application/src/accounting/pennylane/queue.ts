@@ -1,22 +1,23 @@
-import { MoneyDocumentService, MoneyMovementService, PennylaneQueueService, type Db } from '@lezzet/database';
+import { MoneyDocumentService, MoneyMovementService, PennylaneQueueService, SalesInvoiceService, type Db } from '@lezzet/database';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { PennylaneQueue } from '@lezzet/types';
 import { notifyPennylaneDocumentStuck, notifyPennylaneMatchStuck } from '../../notification/staff-events';
 import { deferBlocked, deferFailed } from '../../queue/defer';
 import { PENNYLANE_SYNC_JOB } from './bank-feed';
 import { categoryResolver, type CategoryResolver } from './category';
-import { privateDocumentFiles, writeDocument, type DocumentFileReader } from './documents';
+import { privateDocumentFiles, writeDocument, type DocumentFileReader, type DocumentWriteResult } from './documents';
 import { writeMovementMatches } from './matches';
 import type { PennylanePort } from './port';
+import { writeSalesInvoice, type SalesInvoiceWriteResult } from './sales-invoice';
 
 /**
- * Pennylane yazım kuyruğunun turu: alış belgesi yüklenir ya da güncellenir, banka satırının eşleşmesi yazılır. Duran satır sebebiyle
- * bekler ve muhasebeye bir kez haber verir, düşen yazım ortak kuyruk kuralıyla ertelenir.
+ * Pennylane yazım kuyruğunun turu: alış belgesi yüklenir ya da güncellenir, satış faturası kesilir, banka satırının eşleşmesi yazılır.
+ * Duran satır sebebiyle bekler ve muhasebeye bir kez haber verir, düşen yazım ortak kuyruk kuralıyla ertelenir.
  */
 
 const BATCH = 20;
 
-export type PennylaneQueueOutcome = 'uploaded' | 'updated' | 'paid' | 'matched' | 'unchanged' | 'skipped' | 'blocked' | 'failed';
+export type PennylaneQueueOutcome = 'uploaded' | 'updated' | 'paid' | 'issued' | 'matched' | 'unchanged' | 'skipped' | 'blocked' | 'failed';
 
 interface QueueContext {
   now: Date;
@@ -40,6 +41,7 @@ export async function syncPennylaneQueue(
     uploaded: 0,
     updated: 0,
     paid: 0,
+    issued: 0,
     matched: 0,
     unchanged: 0,
     skipped: 0,
@@ -62,7 +64,7 @@ export async function processPennylaneQueueRow(
   const queue = new PennylaneQueueService(db);
   try {
     const result = row.documentId
-      ? await writeDocument(db, pennylane, row.documentId, ctx)
+      ? await writeQueuedDocument(db, pennylane, row.documentId, ctx)
       : await writeMovementMatches(db, pennylane, row.movementId!);
     if (result.status === 'blocked') {
       // Dosyasız belge çoğu zaman dosyası yüklenmek üzere olan belgedir; dosya gelince kuyruğa yeniden düşer, haber gürültü olurdu.
@@ -84,6 +86,17 @@ export async function processPennylaneQueueRow(
     }
     return 'failed';
   }
+}
+
+/** Akış kaydı olan belge müşteriye kesilen satış faturasıdır, olmayan alış belgesidir. */
+async function writeQueuedDocument(
+  db: Db,
+  pennylane: PennylanePort,
+  documentId: string,
+  ctx: QueueContext,
+): Promise<DocumentWriteResult | SalesInvoiceWriteResult> {
+  const invoice = await new SalesInvoiceService(db).findByDocument(documentId);
+  return invoice ? writeSalesInvoice(db, pennylane, invoice, ctx) : writeDocument(db, pennylane, documentId, ctx);
 }
 
 /** Yazılamayan kaydın haberi, kayıt ve sebep başına bir kez. */

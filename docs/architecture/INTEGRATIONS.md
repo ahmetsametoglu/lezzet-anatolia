@@ -154,8 +154,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 ## Muhasebe
 
 - Pennylane QUALITE'nin iç defteridir, Lezzet ile toptan operasyonunun buluştuğu yer; akış `docs/feature/kasa-muhasebe.md`de.
-  B2C satış Pennylane'e yalnız Hiboutik'ten, banka hareketi bankadan doğrudan girer; bizden giden yalnız alış faturası ve
-  eşleşmedir. Muhasebeci kendi yazılımını kullanır; ona giden dosya Pennylane'den üretilir.
+  B2C satış Pennylane'e yalnız Hiboutik'ten, banka hareketi bankadan doğrudan girer; bizden giden alış faturası, eşleşme ve B2B
+  satış faturasıdır. Muhasebeci kendi yazılımını kullanır; ona giden dosya Pennylane'den üretilir.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) kuyrukla Pennylane'e yüklenir (`pennylane_sync`):
   karşı tarafın tedarikçisi dış referansla bulunur ya da açılır, belge değişince fark güncellenir, nakitle kapanan belge ödendi
   işaretini alır. Belge dosyası PDF, JPEG ya da PNG'dir; Pennylane başka türü almıyor.
@@ -165,6 +165,9 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Pennylane şirketi iki işle ortaktır ve iki işin belgesi Pennylane'e bizden gider (`docs/feature/iki-is.md`). Tedarikçi açılmadan
   önce aynı firmanın elle açılmış kaydı aranıp bağlanır, Pennylane'e elle girilmiş fatura sahiplenilmez. Bizde olmayan faturaya
   kurulan eşleşmeye dokunulmaz; o hareket işaretlenir ve belgesi bizde girilene kadar izah bekler.
+- B2B satış faturası bizde açılır (`sales-invoice-open`, on dakikada bir) ve aynı kuyrukla Pennylane'de kesilir: müşteri dış
+  referansla (`cus:<kimlik>`) bulunur ya da fatura adresiyle açılır, fatura taslak açılır (`sinv:<belge>`), Pennylane'in toplamı
+  bizimkiyle aynıysa kesinleşir ve müşteriye e-postayla gider (`docs/feature/profesyonel-satis.md`, Faz 4).
 - Raporlar ekranındaki satış dosyası ve hareket dökümü genel amaçlı dışa aktarımdır, muhasebe akışının parçası değildir.
 - e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası muhasebecinin platformuna gelir;
   Lezzet'in alış belgesi Pennylane'e kopyasından bizden yüklenir.

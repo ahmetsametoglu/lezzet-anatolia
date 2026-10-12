@@ -8,7 +8,13 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
 import { setAiUsageRecorder } from '@lezzet/ai';
-import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB, REGISTER_CHECK_JOB, installEmailKeySource } from '@lezzet/application';
+import {
+  BANK_FEED_QUIET_JOB,
+  PENNYLANE_SYNC_JOB,
+  REGISTER_CHECK_JOB,
+  SALES_INVOICE_OPEN_JOB,
+  installEmailKeySource,
+} from '@lezzet/application';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
 import { serviceDb } from '@lezzet/database';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
@@ -42,6 +48,7 @@ import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user
 import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
 import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
 import { pennylaneSyncJob } from './jobs/pennylane-sync';
+import { salesInvoiceOpenJob } from './jobs/sales-invoice-open';
 import { bankFeedQuietJob } from './jobs/bank-feed-quiet';
 import { REGISTER_CLOSE_DAY, registerCloseCron, registerCloseDayJob } from './jobs/register-close-day';
 import { registerCheckCron, registerCheckDayJob } from './jobs/register-check-day';
@@ -281,6 +288,12 @@ cron.schedule(
 // Beşin katından bir dakika sonra, aynı dakikaya düşen işlerle birbirini bekletmesin.
 cron.schedule('1-59/5 * * * *', () => {
   void runJob(PENNYLANE_SYNC_JOB, pennylaneSyncJob);
+});
+
+// Satış faturası on dakikada bir açılır: teslim başına fatura teslim günü kesilmeli, ay sonu faturası ayın son günü akşamı açılır.
+// Pennylane eşitlemesinden bir dakika önce: kuyruğa giren fatura bir dakika sonra kesilir.
+cron.schedule('*/10 * * * *', () => {
+  void runJob(SALES_INVOICE_OPEN_JOB, salesInvoiceOpenJob);
 });
 
 // "Hareket gelmiyor" denetimi günde bir, mesai başında: sessizlik gün ölçeğindedir ve bankanın bağlantısını mesaide yenilemek gerekir.

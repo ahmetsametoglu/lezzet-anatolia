@@ -591,6 +591,7 @@ export {
 } from './accounting/document';
 export { addMovementTag, setMovementTagActive, tagMovement, type TagMovementOutcome, type TagOutcome } from './accounting/tags';
 export { linkAwaitingTransfers } from './accounting/transfer-link';
+export { SALES_INVOICE_OPEN_JOB, openSalesInvoices } from './accounting/sales-invoice';
 export {
   addMovementNature,
   natureProblemOf,

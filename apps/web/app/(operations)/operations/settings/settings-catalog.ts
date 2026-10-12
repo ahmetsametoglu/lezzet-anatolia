@@ -14,6 +14,7 @@ import {
   CONVERSATION_DEFAULT_HANDLER_HELP,
   CONVERSATION_DEFAULT_HANDLER_KEY,
   PENNYLANE_CATEGORY_KEYS,
+  PENNYLANE_INVOICE_TEMPLATE_KEYS,
   TICKET_DEFAULT_HANDLER_FALLBACK,
   TICKET_DEFAULT_HANDLER_HELP,
   TICKET_DEFAULT_HANDLER_KEY,
@@ -377,6 +378,16 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     kind: 'text' as const,
     exceptionScopes: NONE,
     fallback: BUSINESS_LABELS[business],
+  })),
+  ...BusinessEnum.options.map((business) => ({
+    key: PENNYLANE_INVOICE_TEMPLATE_KEYS[business],
+    label: `Fatura şablonu — ${BUSINESS_LABELS[business]}`,
+    help: `${BUSINESS_LABELS[business]} satış faturalarının kesildiği Pennylane şablonunun kimliği (logo, ticari ad, IBAN).`,
+    section: 'bankFeed' as const,
+    kind: 'integer' as const,
+    min: 1,
+    unsetNote: "Fatura Pennylane'in varsayılan şablonuyla kesilir.",
+    exceptionScopes: NONE,
   })),
 
   // ── Stok & tazelik ────────────────────────────────────────────────────────

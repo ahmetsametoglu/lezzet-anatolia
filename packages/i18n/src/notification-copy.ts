@@ -329,6 +329,8 @@ const PENNYLANE_ENGELI: Record<string, string> = {
   supplier_ambiguous: "Pennylane'de bu firmaya uyan birden çok tedarikçi var",
   supplier_taken: "Pennylane'deki tedarikçi bizde başka bir karşı tarafa bağlı",
   foreign_matches: "Pennylane'de bizde olmayan bir faturaya da eşli, eşleşme elle düzeltilmeli",
+  billing_address: 'müşterinin fatura adresi yok',
+  total_mismatch: "Pennylane'in hesapladığı toplam bizimkinden farklı, taslak kesinleşmedi",
 };
 
 /** Pennylane engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */
