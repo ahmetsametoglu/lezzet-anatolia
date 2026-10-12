@@ -29,7 +29,7 @@ uygundur. Sistemde ayrı bir satış rolü yoktur: siparişi personel girer, tes
 | 14 | **Müşteri ayrıca boş bir hesap açtıysa boş hesap silinir** | Boş hesap GDPR silmeyle kapanır (giriş silinir, e-posta boşalır), e-posta ofisin açtığı kayda yazılır, müşteri yeniden girer ve kayıt ona bağlanır; birleştirme kullanılmaz. |
 | 15 | **Yeni profesyonel kayıt yöneticinin işlemlerini bekler; mevcut akış değişmez** | Sahada açılan kayıt, yönetici B2B onayını ve vade iznini (limit, süre) verene kadar perakende fiyatla ve peşin yollarla alır; QUALITE müşterisi sayılmaz, vadeli sipariş giremez. |
 | 16 | **Limit aşılınca vadeli sipariş yazılmaz; yönetici limiti artırınca seçenek açılır** | Bugünkü davranış: ödeme seçenekleri her okumada müşterinin güncel limitinden hesaplanır. Tek seferlik geçirme yolu kurulmaz. |
-| 17 | **Satış faturası taslak ve onayla başlar** | Teslimden sonra taslak kendiliğinden hazırlanır, ofis onaylayınca kesinleşir; akış sürtünmesiz olmalı (§5, Faz 4). İleride onay kendiliğinden verilebilir, yapı aynı kalır. |
+| 17 | **Bilgisi tam satış faturası teslimde kendiliğinden kesilir; eksik olan onay bekler** | Fatura teslim edilen miktarlardan hazırlanır, hemen kesinleşir ve müşteriye gider. SIREN ya da fatura adresi yoksa ya da kayıt B2B onayı almamışsa "Kesilecek faturalar" listesinde onay bekler (§5, Faz 4). Kesinleşen fatura düzenlenmez; düzeltme alacak notu ve yeni faturadır. |
 | 18 | **Varsayılan fatura modu teslim başına** | Her teslimden sonra bir fatura; ay sonu toplu fatura müşteri başına seçilen bir ayardır. |
 | 19 | **Fatura iki görünümle, tek numara sırasıyla kesilir** | QUALITE ve Lezzet Anatolie için ayrı Pennylane şablonu (logo, ticari ad); numara sırası ortak. Mevzuat tek ve kesintisiz sırayı ister; Pennylane'de numaralandırma şablondan bağımsızdır (§3). |
 
@@ -148,13 +148,14 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   kararı bu fazda güncellenir.
 - İçerik teslim edilen miktarlardan; KDV kırılımı ve ters yükleme ibaresi muhasebe dökümünün hesabından
   (`packages/domain-core/src/accounting/export.ts`).
-- **Taslak ve onay (karar 17):** teslim biter bitmez sistem taslağı teslim edilen miktarlardan kendisi hazırlar; kimse veri girmez.
-  Ofis tek bir "Kesilecek faturalar" listesinde onaylar. Dikkat isteyen taslak işaretli gelir (kapıda geri çevrilen kalem,
-  pazarlıklı fiyat, eksik fatura bilgisi); işaretsizler tek düğmeyle topluca kesilir. Onaylanmayan taslak ertesi sabah panoda
-  görünür, çünkü fatura teslimde kesilmeli (§3). Düzeltme siparişte yapılır ve taslak yeniden hesaplanır; faturaya elle tutar
-  yazılmaz. Taslak bizde durur, Pennylane'e yalnız onaylanan fatura gider. Kesildikten sonraki iade alacak notu taslağı olarak
-  aynı listeye düşer.
-- Teslim başına modda (varsayılan, karar 18) taslak teslimden hemen sonra, ay sonu modunda ayın son günü hazırlanır.
+- **Teslimde kendiliğinden (karar 17):** teslim biter bitmez fatura teslim edilen miktarlardan hazırlanır; kimse veri girmez.
+  Bilgisi tam olan (SIREN, fatura adresi, B2B onayı) hemen kesinleşir, Pennylane'e gider ve müşteriye gönderilir. Bilgisi eksik
+  olan "Kesilecek faturalar" listesinde bekler: eksik müşteri kaydında tamamlanır, fatura yeniden hesaplanır ve onaylanınca
+  kesilir. Onaylanmayan ertesi sabah panoda görünür, çünkü fatura teslimde kesilmeli (§3). Faturaya elle tutar yazılmaz.
+  Bekleyeni yönetici ve muhasebe rolü web operasyonda onaylar (varsayılan; mobil yönetime sonra eklenebilir). Kesildikten
+  sonraki iade alacak notu taslağı olarak aynı listeye düşer.
+- Teslim başına modda (varsayılan, karar 18) fatura teslimden hemen sonra, ay sonu modunda ayın son günü kesilir; bilgisi
+  eksik olan iki modda da onay bekler.
 - Şablon işten seçilir (QUALITE · Lezzet Anatolie, karar 19); iki şablonda da yasal ad QUALITE ve SIREN görünür. Pennylane
   şablon sayısı plana bağlı (Essentiel'de en çok 5).
 - Vade günü tek kuralla: fatura günü + müşterinin vadesi, ama faturadaki ilk teslimin on günlük diliminin bitiminden 30
@@ -173,13 +174,9 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 
 ## 6. Açık sorular
 
-1. **Fatura teslimde kendiliğinden mi kesilir?** Karar 17 taslak ve onay der. Kullanıcının sorusu üzerine öneri: bilgisi tam
-   fatura teslimde kendiliğinden kesilir, işaretli olan (SIREN ya da fatura adresi eksik, onaysız kayıt) onay listesinde bekler.
-   Pennylane'de kesinleşen fatura düzenlenemez; düzeltme alacak notu ve yeni faturadır, müşteri kaydı ise güncellenebilir (§8).
-2. Onay bekleyen faturayı yönetici ve muhasebe rolü web operasyonda onaylar (varsayılan; mobil yönetime sonra eklenebilir).
-3. Bekleyen: şirketin e-fatura alım kaydının EBP'de olup olmadığını kullanıcı teyit ettiriyor; teyitten sonra Pennylane'de
+1. Bekleyen: şirketin e-fatura alım kaydının EBP'de olup olmadığını kullanıcı teyit ettiriyor; teyitten sonra Pennylane'de
    gönderim açılır.
-4. Bekleyen: muhasebeciye giden dosyanın biçimi, muhasebeci istediğinde belirlenir.
+2. Bekleyen: muhasebeciye giden dosyanın biçimi, muhasebeci istediğinde belirlenir.
 
 ## 7. Ölçülecekler
 
