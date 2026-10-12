@@ -16,4 +16,9 @@ describe('phoneMetaLine', () => {
     expect(phoneMetaLine(oil, 'tr')).not.toContain('/ kg');
     expect(phoneMetaLine({ ...oil, comparisonUnit: 'kg' }, 'tr')).toMatch(/16,67\s€ \/ kg/);
   });
+
+  // KDV notu tek başına kalırsa fiyatı olmayan ürüne fiyat varmış gibi okunur.
+  it('fiyatsız boyda satır boştur', () => {
+    expect(phoneMetaLine({ ...oil, priceCents: null, comparisonCents: null, comparisonUnit: null }, 'tr')).toBe('');
+  });
 });

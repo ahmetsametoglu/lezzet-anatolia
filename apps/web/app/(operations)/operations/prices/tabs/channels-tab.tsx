@@ -81,7 +81,9 @@ export function ChannelsTab({ data, rows, hasMore, loadingMore, onLoadMore, onEd
         rows={rows}
         rowKey={(r) => r.variantId}
         onRowClick={(r) => onEdit(r.variantId)}
-        empty={<CleanState filtered={Boolean(search) || scope !== 'all'} scopeLabel={SCOPE_LABEL[scope]} />}
+        empty={
+          <CleanState filtered={Boolean(search) || scope !== 'all'} serverScope={scope === 'country'} scopeLabel={SCOPE_LABEL[scope]} />
+        }
         footer={
           <>
             <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
@@ -171,18 +173,24 @@ function CountryCell({ row, country, channel }: CountryCellProps) {
 
 interface CleanStateProps {
   filtered: boolean;
+  /** Süzgeci sunucu uyguladı; boş liste bütün kataloğun cevabıdır, yüklenmiş sayfanın değil. */
+  serverScope: boolean;
   scopeLabel: string;
 }
 
-/** Boş hâl. Süzgeç sonucu boşsa bu bir EKSİKLİK değil, iyi haber olabilir — metin ikisini ayırır. */
-function CleanState({ filtered, scopeLabel }: CleanStateProps) {
+/** Boş hâl. Süzgeç sonucu boşsa bu bir eksiklik değil, iyi haber olabilir; metin ikisini ayırır. */
+function CleanState({ filtered, serverScope, scopeLabel }: CleanStateProps) {
   if (!filtered) {
     return <EmptyState title="Henüz fiyatlanacak boy yok" description="Ürün eklendiğinde boyları burada listelenir." />;
   }
   return (
     <EmptyState
       title="Bu süzgeçte satır yok"
-      description={`“${scopeLabel}” ölçütüne uyan boy bulunamadı — yüklenmiş sayfalarda. Liste sayfalıdır; aşağı kaydırıp devamını yükleyince ölçüte uyan satır çıkabilir.`}
+      description={
+        serverScope
+          ? `“${scopeLabel}” ölçütüne uyan boy yok.`
+          : `“${scopeLabel}” ölçütüne uyan boy bulunamadı — yüklenmiş sayfalarda. Liste sayfalıdır; aşağı kaydırıp devamını yükleyince ölçüte uyan satır çıkabilir.`
+      }
     />
   );
 }

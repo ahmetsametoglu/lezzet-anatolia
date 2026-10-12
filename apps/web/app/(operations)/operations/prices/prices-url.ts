@@ -1,25 +1,22 @@
-// Fiyat ekranının URL SÖZLEŞMESİ — tek kaynak (stok ve ürünler ekranlarının deseni). Sekme ve
-// süzgeçler adreste taşınır: yenilemede aynı görünüm açılır ve SUNUCU okuyabildiği için süzme
-// sunucuda yapılabilir.
-//
-// İmleç adrese YAZILMAZ (CLAUDE.md §1): paylaşılan link listenin ortasından başlamamalı.
+import { COUNTRY_LABELS, ProductVatRateSchema } from '@lezzet/types';
+
+// Fiyat ekranının URL sözleşmesi: sekme ve süzgeçler adreste taşınır ki yenilemede aynı görünüm açılsın ve sunucu süzebilsin. İmleç
+// adrese yazılmaz, çünkü paylaşılan bağlantı listenin ortasından başlamamalı.
 
 export const PRICES_PATH = '/operations/prices';
 
 export const PRICE_TABS = ['channels', 'customers', 'coupons', 'offers'] as const;
 export type PriceTab = (typeof PRICE_TABS)[number];
 
+/** Ülke fiyatı süzgecinin ülkesi; ülke fiyatı satıcının ülkesi dışındaki tek ülkede yazılır. */
+export const PRICED_COUNTRY = ProductVatRateSchema.shape.country.options[0];
+
 /**
- * Satır süzgeci — "hangi boylar görünsün".
- *  · `all`     → hepsi
- *  · `below`   → hedef marjın altında satılanlar (uyarı kuyruğu)
- *  · `missing` → en az bir kanalda fiyatı olmayanlar (o kanalda satışa kapalı)
- *  · `auto`    → otomatik fiyatı açık ürünlerin boyları
- *
- * Üçü de SUNUCUDA süzülemez ve bu bilinçli: marj bir KARARDIR (motorun işi), fiyat eksikliği ise
- * satırın YOKLUĞUdur — ikisi de SQL süzgecine çevrilseydi ölçüt iki yerde yaşardı.
+ * Satır süzgeci: `below` hedef marjın altı, `missing` en az bir kanalda fiyatsız, `auto` otomatik fiyatlı, `country` ülke fiyatı yazılmış
+ * boylar. Marj motorun kararı, eksiklik satırın yokluğu olduğu için ikisi yüklenmiş sayfada süzülür; ülke fiyatı bir satırın varlığıdır,
+ * ürünü sunucu, boyu sayfa süzer.
  */
-export const PRICE_SCOPES = ['all', 'below', 'missing', 'auto'] as const;
+export const PRICE_SCOPES = ['all', 'below', 'missing', 'auto', 'country'] as const;
 export type PriceScope = (typeof PRICE_SCOPES)[number];
 
 export interface PricesUrlState {
@@ -30,10 +27,8 @@ export interface PricesUrlState {
   cat: string;
   scope: PriceScope;
   /**
-   * DIŞ KÖPRÜNÜN hedefi (16.08): ürünler önizlemesindeki "Fiyatlar →" 26.07'den beri
-   * `?productId=` gönderiyordu ama sayfa parametreyi hiç okumamıştı — köprü sessizce süzgeçsiz
-   * listeye düşüyordu. Doluyken liste o ürüne süzülür ve fiyat diyaloğu AÇIK gelir; diyalog
-   * kapanınca parametre düşer, tam liste geri gelir (gizli süzgeç bırakılmaz).
+   * Ürünler önizlemesindeki "Fiyatlar →" köprüsünün hedefi: liste o ürüne süzülür ve fiyat penceresi açık gelir. Pencere kapanınca
+   * parametre düşer, çünkü kalsaydı liste görünmeyen bir süzgeçle tek ürüne bağlı kalırdı.
    */
   productId: string;
 }
@@ -43,7 +38,7 @@ const DEFAULTS: PricesUrlState = { tab: 'channels', q: '', cat: 'all', scope: 'a
 type RawParams = Record<string, string | string[] | undefined>;
 const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
 
-/** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
+/** URL → ekran durumu; tanınmayan değer varsayılana düşer ki bozuk bağlantı ekranı kırmasın. */
 export function parsePricesUrl(params: RawParams): PricesUrlState {
   const tabRaw = one(params.tab);
   const scopeRaw = one(params.scope);
@@ -56,7 +51,7 @@ export function parsePricesUrl(params: RawParams): PricesUrlState {
   };
 }
 
-/** Ekran durumu → URL. Varsayılanlar YAZILMAZ (temiz adres); sıra sabit (aynı görünüm = aynı adres). */
+/** Ekran durumu → URL; varsayılanlar yazılmaz ve sıra sabittir, çünkü aynı görünüm daima aynı adresi üretmeli. */
 export function pricesUrl(state: PricesUrlState): string {
   const p = new URLSearchParams();
   if (state.tab !== DEFAULTS.tab) p.set('tab', state.tab);
@@ -68,13 +63,18 @@ export function pricesUrl(state: PricesUrlState): string {
   return qs ? `${PRICES_PATH}?${qs}` : PRICES_PATH;
 }
 
-/** SERVİS süzgeçleri — yalnız sunucunun uygulayabileceği olanlar (`scope` motorun işi, bkz. yukarı). */
-export function toPriceFilters(state: PricesUrlState): { query?: string; categoryId?: string; ids?: string[] } {
+/** Servis süzgeçleri: yalnız sunucunun uygulayabildikleri; marj ve eksiklik süzgeci sayfada kalır (`PRICE_SCOPES`). */
+export function toPriceFilters(state: PricesUrlState): {
+  query?: string;
+  categoryId?: string;
+  ids?: string[];
+  hasCountryPrice?: typeof PRICED_COUNTRY;
+} {
   return {
     query: state.q || undefined,
     categoryId: state.cat === 'all' ? undefined : state.cat,
-    // Tek ürün hedefi servis `ids` süzgecine biner — okuma yolunda yeni bir dal yok.
     ids: state.productId ? [state.productId] : undefined,
+    hasCountryPrice: state.scope === 'country' ? PRICED_COUNTRY : undefined,
   };
 }
 
@@ -82,17 +82,15 @@ export const SCOPE_LABEL: Record<PriceScope, string> = {
   all: 'Tümü',
   below: 'Marj-altı',
   missing: 'Fiyatı eksik',
-  // Kolon adı (`auto_price`) ekrana YAZILMAZ: operatörün gördüğü şey veritabanı alanı değil,
-  // ürünün davranışıdır. Süzgeç zaten "açık olanlar" demek — sıfat da gereksiz.
+  // Kolon adı (`auto_price`) yazılmaz, çünkü operatörün gördüğü veritabanı alanı değil ürünün davranışıdır.
   auto: 'Otomatik fiyatlandırma',
+  country: `${COUNTRY_LABELS[PRICED_COUNTRY]} fiyatı olan`,
 };
 
 export const TAB_LABEL: Record<PriceTab, string> = {
   channels: 'Kanal fiyatları',
   customers: 'Müşteriye özel',
   coupons: 'Kupon & kampanya',
-  // Tasarım bu sekmeye "Near-expiry" diyor; operasyon yüzeyi TÜRKÇEDİR ve aynı kuyruk stok
-  // ekranında zaten "Yaklaşan tarihli" adıyla duruyor. İki ekranda iki ad, tek kuyruğu iki iş
-  // gibi gösterirdi.
+  // Aynı kuyruk stok ekranında "Yaklaşan tarihli" adıyla duruyor; iki ekranda iki ad tek kuyruğu iki iş gibi gösterirdi.
   offers: 'Yaklaşan tarihli',
 };

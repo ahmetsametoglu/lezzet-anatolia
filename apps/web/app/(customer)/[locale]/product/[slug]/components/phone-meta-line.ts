@@ -9,12 +9,16 @@ export type HeadSelling = Pick<
   'priceCents' | 'wasCents' | 'comparisonCents' | 'comparisonUnit' | 'limitLabel' | 'stockStatus' | 'soldOut'
 >;
 
-/** Fiyatın altındaki satır. Birim fiyatın birimi veriden gelir, çünkü sıvıyı kiloyla yazmak kıyası yanlış yapar. */
+/**
+ * Fiyatın altındaki satır; birim fiyatın birimi veriden gelir, çünkü sıvıyı kiloyla yazmak kıyası yanlış yapar. Fiyatsız boyda satır
+ * boştur, çünkü KDV notu ancak bir fiyatı anlatır.
+ */
 export function phoneMetaLine(selling: HeadSelling | null, locale: Locale): string {
   const copy = productMessages[locale];
   const comparison = selling?.comparisonCents ?? null;
   const unit = selling?.comparisonUnit ?? null;
   const was = selling?.wasCents;
+  if (selling?.priceCents == null) return '';
   return [
     comparison === null || unit === null
       ? null

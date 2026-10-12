@@ -9,9 +9,9 @@ import { CustomerPriceDialog } from './customer-price-dialog';
 import { PriceGroupDialog } from './price-group-dialog';
 import { DiscountDialog } from './discount-dialog';
 import { PriceDialog } from '@/components/operation/prices/price-dialog';
+import { PRICE_CHANNELS } from '@/components/operation/prices/country-prices';
 import { PricesDesktop } from './prices.desktop';
-import { countCountryPrices } from './channel-rows';
-import { pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
+import { PRICED_COUNTRY, pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
 import type { CustomerPriceRow, DiscountRow, PriceGroupRow, PriceRow, PricesData } from './prices-types';
 
 // Fiyat ekranının istemci kökü: tek durum ağacı burada, diyaloglar görünümün üstünde. Sekme gerçek gezinmedir, çünkü okuma sunucuda
@@ -76,7 +76,6 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     priced: all.filter((r) => !r.missingPrice).length,
     below: all.filter((r) => r.belowTarget === true).length,
     missing: all.filter((r) => r.missingPrice).length,
-    countryPrices: countCountryPrices(all),
   };
 
   // Düzenlenen satır KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme
@@ -219,6 +218,9 @@ function matchesScope(row: PriceRow, scope: PriceScope): boolean {
       return row.missingPrice;
     case 'auto':
       return row.autoPrice;
+    // Sunucu ülke fiyatı olan ürünleri getirir; ürünün öteki boyları sayfada elenir.
+    case 'country':
+      return PRICE_CHANNELS.some((channel) => (row.countryPrices[PRICED_COUNTRY]?.[channel].amountCents ?? null) !== null);
     default:
       return true;
   }

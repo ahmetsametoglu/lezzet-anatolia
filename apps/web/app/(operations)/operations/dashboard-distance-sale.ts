@@ -1,5 +1,6 @@
 import type { DistanceSaleThresholdStatus } from '@lezzet/application/accounting/distance-sale-threshold';
-import { dayMonth, money } from '@/components/operation/ui/format';
+import { formatCompactEuro } from '@lezzet/helper';
+import { dayMonth } from '@/components/operation/ui/format';
 import type { QueueFact } from './dashboard-read';
 
 /**
@@ -31,6 +32,7 @@ export function distanceSaleFact(status: DistanceSaleThresholdStatus, href: stri
     tone: 'amber',
     title: 'Uzaktan satış eşiğine yaklaşıldı',
     stamp: status.thresholdCents > 0 ? `%${Math.floor((status.yearTotalCents * 100) / status.thresholdCents)}` : null,
-    detail: `${status.year}: ${money(status.yearTotalCents)} / ${money(status.thresholdCents)}, KDV hariç. Eşik aşılınca Almanya'daki tüketiciye Alman KDV'si yazılır.`,
+    // Tutarlar eşik kartının biçiminde: eşik tam euro bir sınırdır ve kuruşsuz yazılır.
+    detail: `${status.year}: ${formatCompactEuro(status.yearTotalCents, 'tr')} / ${formatCompactEuro(status.thresholdCents, 'tr')}, KDV hariç. Eşik aşılınca Almanya'daki tüketiciye Alman KDV'si yazılır.`,
   };
 }

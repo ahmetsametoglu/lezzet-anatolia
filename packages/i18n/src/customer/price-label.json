@@ -5,10 +5,7 @@
       "FR": "Bu ürün Fransa için satışta değil",
       "DE": "Bu ürün Almanya için satışta değil"
     },
-    "cardNotSoldIn": {
-      "FR": "Fransa'da satılmıyor",
-      "DE": "Almanya'da satılmıyor"
-    }
+    "cardNotSold": "Satışta değil"
   },
   "fr": {
     "from": "dès {price}",
@@ -16,10 +13,7 @@
       "FR": "Ce produit n'est pas vendu en France",
       "DE": "Ce produit n'est pas vendu en Allemagne"
     },
-    "cardNotSoldIn": {
-      "FR": "Non vendu en France",
-      "DE": "Non vendu en Allemagne"
-    }
+    "cardNotSold": "Indisponible"
   },
   "de": {
     "from": "ab {price}",
@@ -27,9 +21,6 @@
       "FR": "Dieses Produkt wird in Frankreich nicht verkauft",
       "DE": "Dieses Produkt wird in Deutschland nicht verkauft"
     },
-    "cardNotSoldIn": {
-      "FR": "Nicht in Frankreich erhältlich",
-      "DE": "Nicht in Deutschland erhältlich"
-    }
+    "cardNotSold": "Nicht erhältlich"
   }
 }

@@ -77,12 +77,13 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
       name: product.name,
       image: product.image,
       priceLabel: productPriceLabel(product.priceCents, locale),
-      soldOut: product.soldOut,
+      // O ülkede satılmayan üründe ülke notu tükendi ve bölge hâllerinin önüne geçer; ürün bu ülkede hiç alınamaz.
+      soldOut: product.soldOut && !product.notSoldIn,
       soldOutLabel: copy.card.soldOut,
       discountLabel: cardBadgeOf(product, { offer: copy.card.offer }),
-      // O ülkede satılmayan ürünün sebebi yerin şeridinde durur, çünkü kart için soru aynı: ürün buraya gelmiyor.
-      placeNote: product.notSoldIn ? priceLabelMessages[locale].cardNotSoldIn[product.notSoldIn] : placeNote,
-      dimmed,
+      // Ülkeli cümle kare kartın tek satırına sığmaz; şerit kısa notu taşır, cümle ürün sayfasında durur.
+      placeNote: product.notSoldIn ? priceLabelMessages[locale].cardNotSold : placeNote,
+      dimmed: dimmed && !product.notSoldIn,
       quantityLabel: cardQuantityOf(product, copy.card, locale),
     };
   };

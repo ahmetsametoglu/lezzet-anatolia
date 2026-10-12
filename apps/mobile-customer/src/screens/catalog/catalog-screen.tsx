@@ -120,14 +120,15 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
       name: product.name,
       image: product.image,
       priceLabel: productPriceLabel(product.priceCents, locale),
-      soldOut: product.soldOut,
+      // O ülkede satılmayan üründe ülke notu tükendi ve bölge hâllerinin önüne geçer; ürün bu ülkede hiç alınamaz.
+      soldOut: product.soldOut && !product.notSoldIn,
       soldOutLabel: t.card.soldOut,
       /* Rozet yalnız fırsat: kapsam kampanyası her karta basılsa sepette bir kez inen indirim ürün başına vaat gibi okunurdu. */
       discountLabel: cardBadgeOf(product, { offer: t.card.offer }),
-      // O ülkede satılmayan ürünün sebebi yerin şeridinde durur, çünkü kart için soru aynı: ürün buraya gelmiyor.
-      placeNote: product.notSoldIn ? priceLabelMessages[locale].cardNotSoldIn[product.notSoldIn] : placeNote,
+      // Ülkeli cümle kare kartın tek satırına sığmaz; şerit kısa notu taşır, cümle ürün sayfasında durur.
+      placeNote: product.notSoldIn ? priceLabelMessages[locale].cardNotSold : placeNote,
       /* Solma yalnız kapalı kapıda: kargoyla ya da stok girince gelebilen ürünü soldurmak müşteriyi olmayan bir kapıdan çevirirdi. */
-      dimmed,
+      dimmed: dimmed && !product.notSoldIn,
       quantityLabel: cardQuantityOf(product, t.card, locale),
     };
   };

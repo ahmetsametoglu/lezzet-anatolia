@@ -12,7 +12,7 @@ import { vatRateLabel } from '@/components/operation/form/document-form/labels';
 import type { BusinessFilter } from '@/lib/business-filter';
 import { settingsLink } from '../settings/settings-url';
 import { generateExportAction, generateMovementExportAction, matchInvoiceAction } from './actions';
-import { ossFootnote, thresholdBadge, thresholdNote } from './distance-sale-labels';
+import { ossFootnote, previousYearSource, thresholdAmount, thresholdBadge, thresholdDetail, thresholdNote } from './distance-sale-labels';
 import { COST_LABEL, NOTES } from './reports-labels';
 import type { ChannelCard, DistanceSaleView, ExportView, InvoiceQueueRow, MetricView, PnlRow, VariantProfitRow } from './reports-types';
 import { monthLabel, quarterLabel } from './reports-url';
@@ -338,6 +338,7 @@ const SECTION_LABEL = 'font-ops-display text-ops-micro font-semibold uppercase t
 const NOTE_TONE = {
   blue: 'border-ops-blue-line bg-ops-blue-bg text-ops-blue-dark',
   amber: 'border-ops-amber-line bg-ops-amber-bg text-ops-amber-dark',
+  neutral: 'border-ops-line bg-ops-surface-sunken text-ops-body',
 } as const;
 
 interface DistanceSaleSectionProps {
@@ -350,7 +351,7 @@ function DistanceSaleSection({ view, business }: DistanceSaleSectionProps) {
   const { status, warningPercents } = view;
   const badge = thresholdBadge(status, warningPercents);
   const note = thresholdNote(status);
-  const footnote = ossFootnote(view.oss);
+  const footnote = ossFootnote(view.oss, status, view.quarter.quarter);
   const scope = business === 'all' ? '' : ' · şirketin tamamı';
   return (
     <>
@@ -375,6 +376,7 @@ function DistanceSaleSection({ view, business }: DistanceSaleSectionProps) {
             totalCents={status.yearTotalCents}
             thresholdCents={status.thresholdCents}
             marks={warningPercents}
+            source={null}
             fill={status.warning === 'exceeded' ? 'bg-ops-blue' : status.warning === 'none' ? 'bg-ops-olive' : 'bg-ops-amber'}
           />
           <ThresholdBar
@@ -382,11 +384,10 @@ function DistanceSaleSection({ view, business }: DistanceSaleSectionProps) {
             totalCents={status.previousYearTotalCents}
             thresholdCents={status.thresholdCents}
             marks={null}
+            source={previousYearSource(status, view.openingYear)}
             fill={status.sincePreviousYear ? 'bg-ops-blue' : 'bg-ops-gray-400'}
           />
-          <span className="font-ops-body text-ops-xs text-ops-body">
-            Toplam sistemdeki satış ve açılış ayarıdır · KDV hariç, iade düşülmüş, iptal sayılmaz
-          </span>
+          <span className="font-ops-body text-ops-xs text-ops-body">{thresholdDetail(status, warningPercents)}</span>
           {note ? (
             <p className={['rounded-ops-btn border px-3 py-2 font-ops-body text-ops-xs leading-relaxed', NOTE_TONE[note.tone]].join(' ')}>
               {note.text}
@@ -410,11 +411,13 @@ interface ThresholdBarProps {
   thresholdCents: number;
   /** Uyarı yüzdeleri; çubuğun üstünde işaret, altında tutar. */
   marks: readonly number[] | null;
+  /** Tutarın kaynağı ("açılış ayarı"); toplam yalnız sistemden geliyorsa `null`. */
+  source: string | null;
   fill: string;
 }
 
 /** Yılın toplamı eşiğe göre; eşiği geçen toplam çubuğu doldurur ve tutar sağda yazar, çubuk taşmaz. */
-function ThresholdBar({ year, totalCents, thresholdCents, marks, fill }: ThresholdBarProps) {
+function ThresholdBar({ year, totalCents, thresholdCents, marks, source, fill }: ThresholdBarProps) {
   const ratio = thresholdCents > 0 ? Math.min(1, totalCents / thresholdCents) : 0;
   return (
     <div className="grid grid-cols-[48px_minmax(0,1fr)_220px] items-start gap-x-4">
@@ -434,29 +437,36 @@ function ThresholdBar({ year, totalCents, thresholdCents, marks, fill }: Thresho
                 className="absolute -translate-x-full whitespace-nowrap pr-1 font-ops-mono text-ops-micro text-ops-muted"
                 style={{ left: `${mark}%` }}
               >
-                %{mark} · {money(Math.round((thresholdCents * mark) / 100))}
+                %{mark} · {thresholdAmount(Math.round((thresholdCents * mark) / 100))}
               </span>
             ))}
           </div>
         ) : null}
       </div>
       <span className="text-right font-ops-mono">
-        <span className="text-ops-base font-semibold text-ops-ink">{money(totalCents)}</span>
-        {marks ? <span className="text-ops-sm text-ops-muted"> / {money(thresholdCents)}</span> : null}
+        <span className="text-ops-base font-semibold text-ops-ink">{thresholdAmount(totalCents)}</span>
+        {marks ? <span className="text-ops-sm text-ops-muted"> / {thresholdAmount(thresholdCents)}</span> : null}
+        {source ? <span className="text-ops-sm text-ops-muted"> {source}</span> : null}
       </span>
     </div>
   );
 }
 
-const OSS_GRID = 'grid grid-cols-[minmax(0,1fr)_80px_130px_120px] items-center gap-x-4 px-4';
+const OSS_GRID = 'grid grid-cols-[minmax(0,1fr)_80px_130px_120px_90px] items-center gap-x-4 px-4';
 
 interface OssTableProps {
   view: DistanceSaleView;
 }
 
-/** OSS beyanının satırları: ülke ve oran başına KDV hariç satış ve KDV; toplam muhasebecinin beyanla kıyasladığı satırdır. */
+/**
+ * OSS beyanının satırları: ülke ve oran başına KDV hariç satış, KDV ve sipariş sayısı; toplam muhasebecinin beyanla kıyasladığı satırdır.
+ * İki oranlı sipariş iki satırda da sayılır, bu yüzden toplamın sipariş sayısı satırların toplamıdır, sipariş adedi değil.
+ */
 function OssTable({ view }: OssTableProps) {
-  const total = view.oss.lines.reduce((sum, line) => ({ net: sum.net + line.netCents, vat: sum.vat + line.vatCents }), { net: 0, vat: 0 });
+  const total = view.oss.lines.reduce(
+    (sum, line) => ({ net: sum.net + line.netCents, vat: sum.vat + line.vatCents, orders: sum.orders + line.orderCount }),
+    { net: 0, vat: 0, orders: 0 },
+  );
   return (
     <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-surface">
       <div
@@ -468,6 +478,7 @@ function OssTable({ view }: OssTableProps) {
           Satış
         </span>
         <span className="text-right">KDV</span>
+        <span className="text-right">Sipariş</span>
       </div>
       {view.oss.lines.map((line) => (
         <div
@@ -478,6 +489,7 @@ function OssTable({ view }: OssTableProps) {
           <span className="text-right font-ops-mono">{vatRateLabel(line.vatRate)}</span>
           <span className="text-right font-ops-mono">{money(line.netCents)}</span>
           <span className="text-right font-ops-mono">{money(line.vatCents)}</span>
+          <span className="text-right font-ops-mono">{num(line.orderCount)}</span>
         </div>
       ))}
       <div className={`${OSS_GRID} border-t border-ops-line py-2.5 font-ops-body text-ops-sm font-semibold text-ops-ink`}>
@@ -485,6 +497,7 @@ function OssTable({ view }: OssTableProps) {
         <span />
         <span className="text-right font-ops-mono">{money(total.net)}</span>
         <span className="text-right font-ops-mono">{money(total.vat)}</span>
+        <span className="text-right font-ops-mono">{num(total.orders)}</span>
       </div>
     </div>
   );

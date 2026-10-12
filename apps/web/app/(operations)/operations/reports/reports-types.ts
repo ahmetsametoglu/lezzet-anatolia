@@ -1,4 +1,4 @@
-import type { DistanceSaleThresholdStatus } from '@lezzet/application/accounting/distance-sale-threshold';
+import type { DistanceSaleThresholdDetail, DistanceSaleThresholdStatus } from '@lezzet/application/accounting/distance-sale-threshold';
 import type { OssSummary } from '@lezzet/domain-core';
 import type { Channel, Country } from '@lezzet/types';
 import type { PnlRowKey } from './reports-labels';
@@ -67,7 +67,7 @@ export interface ExportView {
   excludedGiftCount: number;
   excludedGiftCostCents: number | null;
   excludedGiftListCents: number | null;
-  /** Oran başına toplam; satırın tamamı bir ülkenin varış KDV'siyse `country` o ülkedir, satıcının satışıyla karışıksa `null`. */
+  /** Oran ve ülke başına toplam; `country` satıcının ülkesi dışındaki KDV ülkesidir, satıcının oranında ve ters yüklemede `null`. */
   byVatRate: { rate: number; netCents: number; vatCents: number; country: Country | null }[];
   /** Hareket dökümünün dönemi: kaç hareket, kaçı izahsız — dosyaya girmeden görünsün. */
   movementCount: number;
@@ -76,9 +76,11 @@ export interface ExportView {
 
 /** Uzaktan satış eşiğinin bugünkü durumu ve seçili ayın çeyreğinin OSS özeti; tutarlar KDV hariç cent. */
 export interface DistanceSaleView {
-  status: DistanceSaleThresholdStatus;
+  status: DistanceSaleThresholdStatus & DistanceSaleThresholdDetail;
   /** Çubuğun uyarı işaretleri, ayardan (yüzde). */
   warningPercents: readonly [number, number];
+  /** Sistemin açıldığı yıl, ayardan; daha önceki yılın tutarı yalnız açılış ayarından gelir. */
+  openingYear: number;
   quarter: { year: number; quarter: Quarter };
   oss: OssSummary;
 }

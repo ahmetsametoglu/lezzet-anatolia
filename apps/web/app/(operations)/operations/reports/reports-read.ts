@@ -1,8 +1,7 @@
 import { toCents } from '@lezzet/helper';
-import type { ChannelProfit, CompanyProfit, OssSummaryLine, VariantProfit } from '@lezzet/domain-core';
-import type { Country } from '@lezzet/types';
+import type { ChannelProfit, CompanyProfit, VariantProfit } from '@lezzet/domain-core';
 import { PNL_ROWS, profitTone } from './reports-labels';
-import type { ChannelCard, ExportView, MetricView, PnlRow, VariantProfitRow } from './reports-types';
+import type { ChannelCard, MetricView, PnlRow, VariantProfitRow } from './reports-types';
 
 // Raporlar ekranının saf indirgemeleri, kapı çıktısından görünüm satırına: euro→cent çevirisi ve etiketleme. Kâr hesabı motordadır
 // (`domain-core/accounting/profit`); ikinci bir hesap aynı sayıyı iki yerde türetir ve bir gün ayrışırdı.
@@ -66,19 +65,4 @@ export function toChannelCards(channels: readonly ChannelProfit[]): ChannelCard[
     contributionCents: c(channel.contribution),
     marginPct: channel.marginPct,
   }));
-}
-
-/**
- * KDV tablosunda oran satırının ülkesi: aynı oranın OSS satırları satırın tamamını tek ülkeden karşılıyorsa o ülke. Satıcının satışıyla
- * karışan ya da iş süzgeci yüzünden tutmayan satır etiketsiz kalır, çünkü etiket satırın bir kısmını yanlış adlandırırdı.
- */
-export function vatLineCountry(
-  line: Pick<ExportView['byVatRate'][number], 'rate' | 'netCents' | 'vatCents'>,
-  ossLines: readonly OssSummaryLine[],
-): Country | null {
-  const same = ossLines.filter((oss) => oss.vatRate === line.rate);
-  const countries = new Set(same.map((oss) => oss.country));
-  const netCents = same.reduce((sum, oss) => sum + oss.netCents, 0);
-  const vatCents = same.reduce((sum, oss) => sum + oss.vatCents, 0);
-  return countries.size === 1 && netCents === line.netCents && vatCents === line.vatCents ? [...countries][0]! : null;
 }

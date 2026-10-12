@@ -219,9 +219,9 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
 
   /**
    * Yer sorulmadan satın alma eylemi yalnız rota-only üründe çizilmez, çünkü kargolanabilen ürün her yere gider. `ready` beklenir ki
-   * kodu kayıtlı müşteri bir an "önce posta kodu" görmesin.
+   * kodu kayıtlı müşteri bir an "önce posta kodu" görmesin; o ülkede satılmayan boyda yer sorulmaz, posta kodu cevabı değiştirmez.
    */
-  const gated = routeOnly && ready && !place;
+  const gated = routeOnly && ready && !place && !selected.notSoldIn;
 
   // SEÇİLİ BOYUN sepetteki satırı — boy değişince bu da değişir. Varyantlı üründe "3 adet" bilgisi
   // ürüne değil BOYA aittir: 500 g'dan 3 alıp 1 kg'a geçen müşteriye hâlâ 3 göstermek yalan olur.

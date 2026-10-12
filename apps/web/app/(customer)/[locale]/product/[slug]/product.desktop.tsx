@@ -23,8 +23,12 @@ import type { ProductViewProps } from './product-types';
  * çünkü müşteri künyeyi okurken boy, fiyat ve sepet düğmesi ekranda kalmalı.
  */
 export function ProductDesktop({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
-  /** "Bu adrese gönderemiyoruz" hâli eylem sırasını değiştirir; ölçüt tek yerde ki yer ve ağırlık kararı ayrışmasın. */
-  const away = selected?.stockStatus === 'elsewhere';
+  /**
+   * "Bu adrese gönderemiyoruz" hâli eylem sırasını değiştirir; ölçüt tek yerde ki yer ve ağırlık kararı ayrışmasın. O ülkede satılmayan
+   * boyda ülke cümlesi öne geçer ve bu hâl yok sayılır, çünkü "haber ver" bu ülkede tutulamayacak bir söz olurdu.
+   */
+  const notSold = Boolean(selected?.notSoldIn);
+  const away = !notSold && selected?.stockStatus === 'elsewhere';
 
   /** Çeşit kartları yalnız boy seçicisi de olan üründe sola iner: iki seçici birden rafta dururken raf galeriden uzuyordu. */
   const familyOnLeft = product.family.length > 0 && product.variants.length > 1;
@@ -115,6 +119,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
               </a>
             )}
             {selected &&
+              !notSold &&
               (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
                 <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
               ) : (

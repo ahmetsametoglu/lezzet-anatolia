@@ -164,8 +164,6 @@ export interface PriceCounts {
   priced: number;
   below: number;
   missing: number;
-  /** Yüklenmiş satırlardaki ülke fiyatı sayısı, ülke başına. */
-  countryPrices: Partial<Record<Country, number>>;
 }
 
 /**
@@ -200,6 +198,8 @@ export interface PricesData {
   hiddenFromStorefront: HiddenFromStorefront | null;
   /** Otomatik fiyatın yuvarlama adımı (cent), ayardan; fiyat penceresinin önizlemesi yazımla aynı adımı kullansın. Yalnız kanal sekmesinde dolu. */
   autoPriceStepCents: number | null;
+  /** Ülke fiyatı yazılmış ürün sayısı, arama ve kategori süzgeciyle; yalnız kanal sekmesinde dolu. */
+  countryPriced: number | null;
 }
 
 /** prices-client'ın tuttuğu durum + eylemler; masaüstü görünümü bunu tüketir. */

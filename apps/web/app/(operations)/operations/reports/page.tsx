@@ -1,5 +1,6 @@
 import { ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
+import { SELLER_COUNTRY } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { buildExport, pendingInvoices } from '@/lib/accounting/export';
 import { buildMovementExport } from '@/lib/accounting/movement-export';
@@ -8,7 +9,7 @@ import { businessOfFilter } from '@/lib/business-filter';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { readDistanceSaleView } from './distance-sale-read';
 import { ReportsClient } from './reports-client';
-import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows, vatLineCountry } from './reports-read';
+import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows } from './reports-read';
 import type { ReportsData } from './reports-types';
 import { monthRange, parseReportsUrl, previousMonth, selectableMonths } from './reports-url';
 
@@ -93,14 +94,17 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       excludedGiftCount: exportData.summary.excludedGiftCount,
       excludedGiftCostCents: exportData.summary.excludedGiftCost === null ? null : toCents(exportData.summary.excludedGiftCost),
       excludedGiftListCents: exportData.summary.excludedGiftListValue === null ? null : toCents(exportData.summary.excludedGiftListValue),
-      byVatRate: exportData.summary.byVatRate.map((line) => {
-        const totals = { rate: line.vatRate, netCents: toCents(line.net), vatCents: toCents(line.vat) };
-        return { ...totals, country: distanceSale ? vatLineCountry(totals, distanceSale.monthOss.lines) : null };
-      }),
+      // Satıcının oranı ülkesiz yazılır; yabancı oran ülkesiyle, çünkü aynı oran iki ülkede ayrı beyan edilir.
+      byVatRate: exportData.summary.byVatRate.map((line) => ({
+        rate: line.vatRate,
+        netCents: toCents(line.net),
+        vatCents: toCents(line.vat),
+        country: line.country === SELLER_COUNTRY ? null : line.country,
+      })),
       movementCount: movementData.summary.movementCount,
       unexplainedMovementCount: movementData.summary.unexplainedCount,
     },
-    distanceSale: distanceSale?.view ?? null,
+    distanceSale,
     invoiceQueue: invoicePage.rows.map((sale) => ({
       orderId: sale.id,
       referenceNo: sale.referenceNo,

@@ -21,7 +21,7 @@ import { guarded, requireAdmin } from '@/lib/guard';
 import { readChannelPage } from './channel-read';
 import { PricesClient } from './prices-client';
 import { toCustomerPriceRows, toDiscountRows, toPriceRuleCustomerRows } from './prices-read';
-import { parsePricesUrl } from './prices-url';
+import { parsePricesUrl, PRICED_COUNTRY, toPriceFilters } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
 import {
   type CustomerPriceRow,
@@ -74,6 +74,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         collections: coupons?.collections ?? [],
         hiddenFromStorefront: channels?.hidden ?? null,
         autoPriceStepCents: channels?.stepCents ?? null,
+        countryPriced: channels?.countryPriced ?? null,
       }}
       urlState={urlState}
     />
@@ -83,18 +84,22 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
 
 type Db = ReturnType<typeof serviceDb>;
 
-/** Kanal fiyatları sekmesi: listenin ilk sayfası, vitrinden düşen ürün sayısı ve fiyat penceresinin yuvarlama adımı. */
+/**
+ * Kanal fiyatları sekmesi: listenin ilk sayfası, vitrinden düşen ürün sayısı, fiyat penceresinin yuvarlama adımı ve ülke fiyatı yazılmış
+ * ürün sayısı.
+ */
 async function readChannelTab(
   db: Db,
   urlState: ReturnType<typeof parsePricesUrl>,
   categoryNames: Map<string, string>,
-): Promise<{ rows: PriceRow[]; nextCursor: KeysetCursor | null; hidden: HiddenFromStorefront; stepCents: number }> {
-  const [page, hidden, stepCents] = await Promise.all([
+): Promise<{ rows: PriceRow[]; nextCursor: KeysetCursor | null; hidden: HiddenFromStorefront; stepCents: number; countryPriced: number }> {
+  const [page, hidden, stepCents, countryPriced] = await Promise.all([
     readChannelPage(db, { urlState, categoryNames }),
     countHiddenFromStorefront(db),
     new SettingsService(db).getNumber(AUTO_PRICE_STEP_KEY, AUTO_PRICE_STEP_DEFAULT),
+    new ProductService(db).countMatching({ ...toPriceFilters(urlState), hasCountryPrice: PRICED_COUNTRY }),
   ]);
-  return { ...page, hidden, stepCents };
+  return { ...page, hidden, stepCents, countryPriced };
 }
 
 /**

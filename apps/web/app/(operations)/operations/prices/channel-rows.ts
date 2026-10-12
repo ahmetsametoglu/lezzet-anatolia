@@ -69,16 +69,3 @@ export function withCountryPrices(
     belowTarget: verdicts.length === 0 ? null : verdicts.some(Boolean),
   };
 }
-
-/** Satırlardaki ülke fiyatı sayısı, ülke başına; boş hücrede genel fiyat geçer ve sayılmaz. */
-export function countCountryPrices(rows: readonly PriceRow[]): Partial<Record<Country, number>> {
-  return Object.fromEntries(
-    FOREIGN_COUNTRIES.map((country) => [
-      country,
-      rows.reduce(
-        (sum, row) => sum + PRICE_CHANNELS.filter((channel) => (row.countryPrices[country]?.[channel].amountCents ?? null) !== null).length,
-        0,
-      ),
-    ]),
-  );
-}

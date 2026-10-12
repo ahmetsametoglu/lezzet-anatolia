@@ -206,6 +206,8 @@ describe('ürün detayı', () => {
 
     expect(screen.getByTestId('product-not-sold')).toHaveTextContent('Bu ürün Almanya için satışta değil');
     expect(screen.queryByTestId('product-add')).toBeNull();
+    // Fiyat yokken KDV notu da yoktur; tek başına kalan "KDV dahil" fiyat varmış gibi okunur.
+    expect(screen.queryByTestId('product-meta')).toBeNull();
   });
 
   it('404 "ürün bulunamadı" der — ağ arızası hâliyle karıştırılmaz', async () => {

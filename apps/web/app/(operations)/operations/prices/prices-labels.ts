@@ -1,11 +1,11 @@
 import { targetMarginFor } from '@lezzet/domain-core';
 import { COUNTRY_LABELS, type Channel, type Country } from '@lezzet/types';
-import { countryColumnLabel, FOREIGN_COUNTRIES } from '@/components/operation/prices/country-prices';
+import { countryColumnLabel } from '@/components/operation/prices/country-prices';
 import { percent } from '@/components/operation/ui/format';
 import type { ChipTone } from '@/components/operation/ui/chip';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { PriceCounts, PricesData, PriceRow } from './prices-types';
-import type { PriceScope, PriceTab } from './prices-url';
+import { PRICED_COUNTRY, type PriceScope, type PriceTab } from './prices-url';
 
 // Fiyat ekranının SÖZLÜĞÜ — sayıdan cümleye geçiş tek yerde. Karar burada verilmez (motorun işi); burada yalnız kararın nasıl
 // okunacağı yazar.
@@ -77,19 +77,20 @@ export function rowStateNote(row: PriceRow): string {
 }
 
 /**
- * Süzgeç çipinin tonu anlam taşır: marj-altı bir kayıp uyarısıdır (kırmızı), eksik fiyat bir eksikliktir (amber), otomatik fiyat bir
- * davranış işaretidir (zeytin), hata değil.
+ * Süzgeç çipinin tonu anlam taşır: marj-altı bir kayıp uyarısıdır (kırmızı), eksik fiyat bir eksikliktir (amber), otomatik fiyat ve ülke
+ * fiyatı birer hâldir (zeytin), hata değil.
  */
 export const SCOPE_TONE: Record<PriceScope, ChipTone> = {
   all: 'olive',
   below: 'red',
   missing: 'amber',
   auto: 'olive',
+  country: 'olive',
 };
 
 /**
- * Sekmenin alt başlığı, masaüstü ve telefon aynı cümleyi kurar ki biri sekmeyi unutmasın. Sayaçlar yüklenmiş sayfaya aittir ve
- * metin bunu söyler.
+ * Sekmenin alt başlığı. Marj ve eksiklik sayaçları yüklenmiş sayfaya aittir ve metin bunu söyler; ülke fiyatı sayısı sunucunundur ve
+ * ürün sayar.
  */
 export function tabSubtitle(tab: PriceTab, data: PricesData, counts: PriceCounts): string {
   switch (tab) {
@@ -100,10 +101,8 @@ export function tabSubtitle(tab: PriceTab, data: PricesData, counts: PriceCounts
     case 'offers':
       return `${data.offers.length} parti karar bekliyor · teklif partiye bağlıdır, liste fiyatını değiştirmez`;
     default: {
-      const countries = FOREIGN_COUNTRIES.map(
-        (country) => ` · ${counts.countryPrices[country] ?? 0} ${COUNTRY_LABELS[country]} fiyatı`,
-      ).join('');
-      return `${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik${countries}`;
+      const priced = data.countryPriced === null ? '' : ` · ${data.countryPriced} üründe ${COUNTRY_LABELS[PRICED_COUNTRY]} fiyatı`;
+      return `${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik${priced}`;
     }
   }
 }

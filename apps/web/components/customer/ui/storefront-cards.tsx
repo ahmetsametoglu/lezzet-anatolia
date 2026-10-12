@@ -160,9 +160,11 @@ interface ProductCardProps {
  */
 export function ProductCard({ product, locale, labels, compact = false }: ProductCardProps) {
   const isOffer = product.wasCents !== undefined;
-  // "Bölgenizde şu an yok": ürün ağda var, müşterinin yerine ulaşamıyor. Tükendi DEĞİL — görsel
-  // yarı solar (tamamen değil: ürün gerçek ve geri gelecek), fiyat sessizleşir, ad ink kalır.
-  const away = product.stockStatus === 'elsewhere';
+  // O ülkede satılmayan üründe ülke cümlesi öteki hâllerin önüne geçer: tükendi ve bölge hâli bu ülkede karşılıksızdır.
+  const notSold = Boolean(product.notSoldIn);
+  const soldOut = !notSold && product.soldOut;
+  // "Bölgenizde şu an yok" tükendi değildir: ürün gerçek ve geri gelecek, bu yüzden görsel yarı solar ve fiyat sessizleşir.
+  const away = !notSold && product.stockStatus === 'elsewhere';
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-sand-200 bg-card">
       <Link href={productHref(product.slug)} className="relative cursor-pointer">
@@ -175,17 +177,17 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           /* Kart her yerde aynı ızgarada: masaüstü 4 sütun (~301 px, içerik 1360 px'te durur), mobil 2 sütun; yeni ızgara
              açılırsa bu değer de gözden geçirilir. */
           sizes={compact ? '50vw' : '310px'}
-          className={['!rounded-none', product.soldOut ? 'opacity-60 grayscale' : away ? 'opacity-85 grayscale-[.55]' : ''].join(' ')}
+          className={['!rounded-none', soldOut ? 'opacity-60 grayscale' : away ? 'opacity-85 grayscale-[.55]' : ''].join(' ')}
         />
         {/* Durum rozeti — tükendi fırsatı ezer: satın alınamayan üründe indirim vurgusu yanıltır. */}
-        {(product.soldOut || isOffer) && (
+        {(soldOut || isOffer) && (
           <span
             className={[
               'pointer-events-none absolute top-3 left-3 rounded-soft px-3 py-1 font-sans text-micro font-bold text-white',
-              product.soldOut ? 'bg-ink' : 'bg-terracotta',
+              soldOut ? 'bg-ink' : 'bg-terracotta',
             ].join(' ')}
           >
-            {product.soldOut ? labels.soldOut : labels.offer}
+            {soldOut ? labels.soldOut : labels.offer}
           </span>
         )}
       </Link>
@@ -195,7 +197,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           className={[
             'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
             compact ? 'text-note' : 'text-copy leading-tight',
-            product.soldOut ? 'text-body' : 'text-ink',
+            soldOut ? 'text-body' : 'text-ink',
           ].join(' ')}
         >
           {product.name}
@@ -210,7 +212,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
         </span>
         {/* Yer işareti künyenin ALTINDA, fiyatın üstünde (tasarım): ürünün ne olduğu okunduktan
             sonra, satın alma kararından önce. Tükendi hâli burada değil görselin köşesinde. */}
-        <StockMark status={product.stockStatus} locale={locale} />
+        {!notSold && <StockMark status={product.stockStatus} locale={locale} />}
         {labels.limit && (
           <Badge tone="offer" variant={compact ? 'plain' : 'tint'}>
             {labels.limit}
@@ -238,7 +240,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
         </div>
         {/* "Başlangıç fiyatı" notu tasarımda yalnız masaüstü kartında var, çünkü dar kartta iki satırlık açıklama ızgarayı
             düzensizleştirir. Fiyatı olmayan kartta not yazılmaz: anlattığı fiyat ekranda yok. */}
-        {!compact && labels.priceFrom && product.purchaseMode === 'options' && !product.soldOut && product.priceCents !== null && (
+        {!compact && labels.priceFrom && product.purchaseMode === 'options' && !soldOut && product.priceCents !== null && (
           <span className="font-sans text-micro text-body">{labels.priceFrom}</span>
         )}
       </div>
@@ -283,7 +285,8 @@ function ProductCardAction({ product, locale, labels, compact = false }: Product
       {label}
     </Link>
   );
-  return product.soldOut ? (
+  // O ülkede satılmayan ürün yalnız detaya açılır; "haber ver" bu ülkede tutulamayacak bir söz olurdu.
+  return product.notSoldIn || product.soldOut ? (
     detailLink(labels.details)
   ) : away ? (
     /* Kartta tek eylem "haber ver": dar kartta iki düğme sığmaz ve müşterinin sorusu "ne zaman alabilirim". Haberin kalem

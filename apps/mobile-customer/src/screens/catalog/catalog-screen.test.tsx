@@ -148,14 +148,14 @@ describe('CatalogScreen', () => {
     expect(screen.getAllByText('12,90 €')).toHaveLength(1);
   });
 
-  it('o ülkede satılmayan ürünün kartı fiyat çipi çizmez, şeridinde ülkeyi söyler', async () => {
-    mockCatalog(
-      page([catalogProduct(1), catalogProduct(2, { priceCents: null, notSoldIn: 'DE', comparisonCents: null, stockId: null })], null),
-    );
+  it('o ülkede satılmayan ürünün kartı fiyat çipi çizmez; tükenmiş olsa da şeridi satışta olmadığını söyler', async () => {
+    const notSold = { priceCents: null, notSoldIn: 'DE' as const, comparisonCents: null, stockId: null };
+    mockCatalog(page([catalogProduct(1), catalogProduct(2, { ...notSold, soldOut: true, stockStatus: 'out_of_stock' })], null));
 
     await render(<CatalogScreen />);
 
-    expect(await screen.findByTestId('product-urun-2-place-note')).toHaveTextContent("ALMANYA'DA SATILMIYOR");
+    expect(await screen.findByTestId('product-urun-2-place-note')).toHaveTextContent('SATIŞTA DEĞİL');
+    expect(screen.queryByText('TÜKENDİ')).toBeNull();
     expect(screen.queryByTestId('product-urun-1-place-note')).toBeNull();
     expect(screen.getAllByText('12,90 €')).toHaveLength(1);
   });
