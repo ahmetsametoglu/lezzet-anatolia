@@ -44,7 +44,8 @@ WhatsApp'ta "yolda" mesajının içine konamaz, ardından ayrı mesajla gider.
 
 ## 5. Açık
 
-- `delivery_code` şablonu Meta'da açılıp onaylanana ve sunucuya `META_PHONE_NUMBER_ID` girene kadar kod e-postayla gider.
+- `delivery_code` şablonu Meta'da açılıp onaylanana ve sunucuya `META_PHONE_NUMBER_ID` girene kadar kod e-postayla gider; API ile
+  başvuru uygulamanın WhatsApp izinleri yüzünden reddedildi, iş sosyal şeritte (KALAN K.77).
 - Mevcut `order_out_for_delivery` şablonunun üçüncü değişkeni "Teslimat aralığı"; sistemde saat aralığı verisi yok
   (`durak-sirasi.md` §"zaman penceresi"), şablon ayrıca olmayan bir varış bildirimini vaat ediyor. Kullanıcı kararı bekliyor.
 - Öteki sipariş şablonlarının WhatsApp'tan açılması ücret çalışmasına bağlı (`whatsapp-bildirimleri.md`); karar kullanıcıda.

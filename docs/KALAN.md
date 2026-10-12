@@ -123,6 +123,15 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [~] (15.9) **İnteraktif kartlar:** buton/liste/carousel/ürün kartı gönderimi (içerik ajandan, render 360dialog/Cloud API)
 - [ ] (15.10) ~~**Sohbette sipariş kapatma:** ajan sepeti kurar → rezervasyon (önce ayır) → **Stripe payment link, süresi rezervasyon TTL'ine eşit** → ödeme webhook'unda `confirmed`~~ → **YAZILMAYACAK: yerine SEPET BAĞI (07.09 · kullanıcı kararı) → `15.20`–`15.22`.**
 - [~] (15.11) **Utility template'ler:** sipariş onayı / kargo bildirimi şablonları onaylatılır; `packages/notify` WhatsApp API sürücüsü doldurulur; pencere içi serbest mesaj / pencere dışı template kararı `Conversation`'dan
+- [ ] (K.77) [hedef: sosyal] **Kapı kodu WhatsApp şablonu (`delivery_code`) açılamıyor — Meta uygulamasının WhatsApp izinleri** —
+  12.10'da API ile başvuru (`upsert_message_templates` ve tek şablon ucu) "Bu WhatsApp Business hesabı, mesaj şablonu oluşturma
+  iznine sahip değil" (kod 10 / 2388185) ile reddedildi, şablon oluşmadı. Ölçülen: sistem jetonu geçerli ve `whatsapp_business_management`
+  taşıyor, WABA onaylı ve işletme doğrulanmış, sistem kullanıcısı WABA'da `MANAGE`; uygulama incelemesinde (`28055964397429731`)
+  `whatsapp_business_management` ve `whatsapp_business_messaging` erişimi `none`, tek başvuru (11.10) yalnız Sayfa/Instagram
+  izinlerini istemiş. Yapılacak: şablon authentication, tr/fr/de, "Kodu kopyala", güvenlik önerisi ve süre uyarısı kapalı
+  (WhatsApp Manager'dan ya da izin düzelince API'yle: `.test-results/meta/sablon-kapi-kodu.mjs onizle|olustur|tek <dil>|durum`);
+  sunucuya `META_PHONE_NUMBER_ID` (mobile-api, backend, web). WhatsApp gönderimi ölçülmedi: test numarasına tek deneme kullanıcı
+  onayıyla. Neden: o zamana dek kapı kodu yalnız e-postayla gidiyor (`docs/feature/teslim-kodu.md`).
 - [~] (15.14) ~~**Ajanın Ticket açması:** şikâyette hangi sipariş → hangi ürün → birkaç netleştirme sorusu → `Ticket` (`conversation_id` bağlı; 16 servisleri)~~ → **Ajan talebi AÇMAZ, talep sayfasının bağlantısını verir** (kullanıcı kararı 10.09)
 - [~] (15.16) **Messenger/IG kimlik bağlama:** kimliksiz sosyal konuşmayı müşteri kaydına bağlayan operatör eylemi (`open_conversation`'ın "yalnız boşsa dolar" güvencesiyle aynı kural) + 04.10 çapraz-kanal çapasının (kod e-postaya gider, müşteri sohbetten geri yazar) Messenger/IG'ye genellenmesi — orada telefon HİÇ olmadığı için kimliğin tek otomatik yolu bu.
 - [~] (15.20) **Ajan sepeti OKUR ve YAZAR — kimliği olan sohbette (WhatsApp):** sepetteki kalemler, indirim ve toplam okunabilir; ajan sepete kalem ekler/çıkarır; müşteri sepete yönlendirilir
