@@ -9,6 +9,12 @@ import {
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
+/**
+ * İşleyicinin kirası Revolut'un 10 dakikalık yeniden gönderim aralığından kısadır: işlerken kapanan sürecin olayını ilk tekrar yeniden
+ * alır. En uzun işleme, aktarım raporunun en çok 30 saniyelik beklemesidir.
+ */
+const CLAIM_LEASE_SECONDS = 5 * 60;
+
 /** Dış sağlayıcı olayları: aynı olayın iki kez işlenmesini engeller. */
 export class WebhookEventService extends BaseDbService<WebhookEvent, WebhookEventInsert, WebhookEventUpdate> {
   constructor(supabase: SupabaseClient) {
@@ -16,20 +22,24 @@ export class WebhookEventService extends BaseDbService<WebhookEvent, WebhookEven
   }
 
   /**
-   * Kontrol ile yazım tek ifadede: "önce sorgula, yoksa yaz" arasında ikinci webhook girerse iki işleyici birden "yeni" der ve
-   * tahsilat iki kez yazılır. Düşmüş olayın (damgasız, hatalı) tekrarı yeniden alınır, yoksa sağlayıcının yeniden denemesi olayı
-   * kaybettirirdi; işlenmiş ya da hâlâ işlenen olayın tekrarı alınmaz.
+   * Karar veritabanında tek ifadededir (`claim_webhook_event`): "önce sorgula, yoksa yaz" arasında ikinci bildirim girerse iki işleyici
+   * birden "yeni" der ve tahsilat iki kez yazılırdı. Düşmüş ya da kirası dolmuş olayın tekrarı yeniden alınır, yoksa sağlayıcının
+   * yeniden denemesi olayı kaybettirirdi; işlenmiş ya da kirası süren olayın tekrarı alınmaz.
    */
   async claim(input: WebhookEventInsert): Promise<{ fresh: boolean; event: WebhookEvent }> {
-    const inserted = await this.bulkUpsertIgnoring([input], 'provider,event_id');
-    if (inserted[0]) return { fresh: true, event: inserted[0] };
-
-    const existing = await this.getOneBy({ provider: input.provider, eventId: input.eventId });
-    if (!existing) throw new Error(`webhook_event: olay sahiplenilemedi (${input.provider}/${input.eventId})`);
-    if (existing.processedAt !== null || existing.error === null) return { fresh: false, event: existing };
-    // Hata koşullu silinir: aynı anda gelen iki tekrardan satırı yalnız biri alır.
-    const retaken = await this.updateIf(existing.id, { isNull: ['processedAt'], notNull: ['error'] }, { error: null });
-    return retaken ? { fresh: true, event: retaken } : { fresh: false, event: existing };
+    const valid = this.insertSchema.parse(input);
+    const { data, error } = await this.supabase.rpc('claim_webhook_event', {
+      p_provider: valid.provider,
+      p_event_id: valid.eventId,
+      p_type: valid.type,
+      p_payload: valid.payload ?? null,
+      p_lease_seconds: CLAIM_LEASE_SECONDS,
+    });
+    if (error) throw error;
+    const result = data as { fresh: boolean; event: unknown };
+    const [event] = this.parseRows([result.event]);
+    if (!event) throw new Error(`webhook_event: olay sahiplenilemedi (${valid.provider}/${valid.eventId})`);
+    return { fresh: result.fresh, event };
   }
 
   /** İşlem bitti damgası — "geldi ama işlenemedi" ile "işlendi" ayrımını korur. */

@@ -1,9 +1,7 @@
 import { z } from 'zod';
 
-// Dış sağlayıcı olayları (07.5) — STACK §13 "Webhook güvenliği".
-//
-// Sağlayıcı aynı olayı birden çok kez gönderir; (provider, eventId) benzersizliği tek emniyettir.
-// `processedAt` idempotensin KAYNAĞI değil, izidir.
+// Dış sağlayıcı olayları (STACK §13 "Webhook güvenliği"): sağlayıcı aynı olayı birden çok kez gönderir, (provider, eventId)
+// benzersizliği tek emniyettir. `processedAt` idempotensin kaynağı değil, izidir.
 
 export const WebhookEventSchema = z.object({
   id: z.string().uuid(),
@@ -14,6 +12,8 @@ export const WebhookEventSchema = z.object({
   payload: z.record(z.unknown()).nullable(),
   processedAt: z.string().nullable(),
   error: z.string().nullable(),
+  /** İşleyicinin kirası; kirası dolan "işleniyor" olayın tekrarı yeniden alınır. */
+  claimedUntil: z.string().nullable(),
   createdAt: z.string(),
 });
 export type WebhookEvent = z.infer<typeof WebhookEventSchema>;

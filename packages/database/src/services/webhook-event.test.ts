@@ -19,7 +19,16 @@ afterAll(async () => {
   await db.from('webhook_event').delete().like('event_id', `evt_test_${stamp}%`);
 });
 
-describe('webhook olayı sahiplenme (02.4)', () => {
+/** Kiranın dolması: işleyici kirasını geçirdi; zaman beklemek yerine kira geçmişe çekilir. */
+async function expireLease(id: string) {
+  const { error } = await db
+    .from('webhook_event')
+    .update({ claimed_until: new Date(Date.now() - 1000).toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+describe('webhook olayı sahiplenme', () => {
   it('İLK geliş taze, İKİNCİ geliş taze DEĞİL — ve ikisi AYNI satırı gösterir', async () => {
     const ilk = await events.claim({ provider, eventId, type: 'payment_completed' });
     expect(ilk.fresh).toBe(true);
@@ -68,6 +77,31 @@ describe('webhook olayı sahiplenme (02.4)', () => {
     const [a, b] = await Promise.all([
       events.claim({ provider, eventId: ikizId, type: 'refund_completed' }),
       events.claim({ provider, eventId: ikizId, type: 'refund_completed' }),
+    ]);
+    expect([a.fresh, b.fresh].filter(Boolean)).toHaveLength(1);
+  });
+
+  it('İŞLENİRKEN kapanan sürecin olayı kirası sürerken alınmaz, kirası dolunca tekrarı yeniden alır', async () => {
+    // Süreç işlerken kapandı: satır ne damgalandı ne hata yazıldı. Kira olmasaydı olay sonsuza dek "işleniyor" kalır, aktarım ya da
+    // panelden yapılan iade deftere hiç düşmezdi.
+    const kapananId = `evt_test_${stamp}_kapanan`;
+    const ilk = await events.claim({ provider, eventId: kapananId, type: 'refund_completed' });
+    expect((await events.claim({ provider, eventId: kapananId, type: 'refund_completed' })).fresh).toBe(false);
+
+    await expireLease(ilk.event.id);
+    const tekrar = await events.claim({ provider, eventId: kapananId, type: 'refund_completed' });
+    expect(tekrar).toMatchObject({ fresh: true, event: { id: ilk.event.id } });
+    expect(Date.parse(tekrar.event.claimedUntil!)).toBeGreaterThan(Date.now());
+  });
+
+  it('kirası dolmuş olaya AYNI ANDA gelen iki tekrardan yalnız BİRİ alır — olay iki kez işlenmez', async () => {
+    const kiraId = `evt_test_${stamp}_kira`;
+    const ilk = await events.claim({ provider, eventId: kiraId, type: 'payout_completed' });
+    await expireLease(ilk.event.id);
+
+    const [a, b] = await Promise.all([
+      events.claim({ provider, eventId: kiraId, type: 'payout_completed' }),
+      events.claim({ provider, eventId: kiraId, type: 'payout_completed' }),
     ]);
     expect([a.fresh, b.fresh].filter(Boolean)).toHaveLength(1);
   });

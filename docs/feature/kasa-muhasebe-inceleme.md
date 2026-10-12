@@ -23,7 +23,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 13 | Hediye siparişin değeri aktarıma 0 € gidiyor | Düşük | Yapıldı |
 | 14 | Revolut'a giden iade anahtarı kırpılıyor | Düşük | Yapıldı |
 | 15 | Para ekranının yöntem dökümü siparişin son yönteminden okunuyor | Düşük | Yapıldı |
-| 16 | İşlenirken süreci kapanan bildirim bir daha işlenmiyor | Düşük | Konuşulacak |
+| 16 | İşlenirken süreci kapanan bildirim bir daha işlenmiyor | Düşük | Yapıldı |
 
 **İnceleme dışı not:** şirket kârı dönemin para hareketlerini tek istekte okuyor (`money.service.ts:364`); yerel okuma tavanı
 1000 satır (`supabase/config.toml:18`), tavanı aşan dönemde toplam eksik çıkar. Sunucunun tavanı ölçülmedi.
@@ -352,11 +352,14 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 16. İşlenirken süreci kapanan bildirim bir daha işlenmiyor
 
-**Durum:** Konuşulacak · **Ağırlık:** düşük
+**Durum:** Yapıldı (12.10) · **Ağırlık:** düşük
 
 - **Mevcut durum:** Bildirim işlenmeye başlarken kaydedilir; hata olursa hata yazılır ve tekrar gelen bildirim yeniden işlenir
   (KALAN 18.3 düzeltmesi). Süreç işlerken kapanırsa kayıt "işleniyor" hâlinde kalır.
 - **Problem:** Revolut'un tekrar gönderimleri "zaten işleniyor" sayılıp atlanır; aktarım ya da panelden yapılan iade sessizce
   kaybolur. Dağıtım anında sunucunun yeniden başlaması yeter.
 - **Olması gereken:** Belli bir süreden uzun "işleniyor" kalan bildirim yeniden alınabilir.
+- **Çözüm (12.10, B):** Olay kaydı işleyicinin kirasını taşır (`claimed_until`, 5 dk) ve her sahiplenmede yenilenir; karar veritabanında
+  tek ifadededir (`claim_webhook_event`). Kirası dolan "işleniyor" olayı Revolut'un 10 dakika sonraki tekrarı yeniden alır; aynı anda
+  gelen iki tekrardan yalnız biri alır. Aktarım raporu işi ve Meta, Sendcloud bildirimleri de aynı kapıdan geçer.
 - **Kanıt:** `packages/database/src/services/webhook-event.service.ts:29`.

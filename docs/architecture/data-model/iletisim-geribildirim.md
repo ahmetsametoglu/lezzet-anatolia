@@ -144,7 +144,7 @@ Müşteriye GİTMEYEN satır (15.29 · kullanıcı kararı 10.09): operatör soh
 
 ## WebhookEvent (dış olay kaydı)
 
-Ödeme, mesajlaşma ve kargo webhook'ları için tekrar-işleme kilidi (idempotency): işlenmiş ya da hâlâ işlenen olay ikinci kez gelirse no-op; düşmüş olayın tekrarı yeniden alınır (bkz. `STACK.md §13`).
+Ödeme, mesajlaşma ve kargo webhook'ları için tekrar-işleme kilidi (idempotency): işlenmiş ya da kirası süren olay ikinci kez gelirse no-op; düşmüş ya da kirası dolmuş olayın tekrarı yeniden alınır (bkz. `STACK.md §13`).
 
 <!-- alanlar:webhook_event -->
 | Kolon | Tip | Null | Varsayılan |
@@ -156,6 +156,7 @@ Müşteriye GİTMEYEN satır (15.29 · kullanıcı kararı 10.09): operatör soh
 | `payload` | jsonb | • |  |
 | `processed_at` | timestamptz | • |  |
 | `error` | text | • |  |
+| `claimed_until` | timestamptz | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 
@@ -164,6 +165,9 @@ Müşteriye GİTMEYEN satır (15.29 · kullanıcı kararı 10.09): operatör soh
 - **`provider`** — revolut / meta / sendcloud
 - **`event_id`** — **unique** (provider ile birlikte). *(Doküman 26.08'e kadar bu kolonu `provider_event_id` diye anlatıyordu; migration'daki ad `event_id`.)*
 - **`payload`** — ham gövde (hata ayıklama)
+- **`claimed_until`** — işleyicinin kirası, her sahiplenmede yenilenir (`claim_webhook_event`). İşlerken kapanan süreç satırı ne damgalar
+  ne hata yazar; kirası dolan olayı tekrar gelen bildirim yeniden alır. Kira 5 dakikadır, Revolut'un 10 dakikalık yeniden gönderim
+  aralığından kısa.
 
 ## Notification (bildirim kaydı)
 
