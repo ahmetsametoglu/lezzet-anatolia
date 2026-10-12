@@ -20,7 +20,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 10 | Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor | Düşük | Yapıldı |
 | 11 | Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor | Düşük | Yapıldı |
 | 12 | İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor | Düşük | Yapıldı |
-| 13 | Hediye siparişin değeri aktarıma 0 € gidiyor | Düşük | Konuşulacak |
+| 13 | Hediye siparişin değeri aktarıma 0 € gidiyor | Düşük | Yapıldı |
 | 14 | Revolut'a giden iade anahtarı kırpılıyor | Düşük | Yapıldı |
 | 15 | Para ekranının yöntem dökümü siparişin son yönteminden okunuyor | Düşük | Konuşulacak |
 | 16 | İşlenirken süreci kapanan bildirim bir daha işlenmiyor | Düşük | Konuşulacak |
@@ -313,11 +313,14 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 13. Hediye siparişin değeri aktarıma 0 € gidiyor
 
-**Durum:** Konuşulacak · **Ağırlık:** düşük
+**Durum:** Yapıldı (12.10) · **Ağırlık:** düşük
 
 - **Mevcut durum:** Hediye siparişin kalemleri 0 € fiyatla yazılır; aktarımın hediye satırı bu sıfır fiyatlı kalemleri toplar.
 - **Problem:** Muhasebeciye "N satış, TTC 0" gider; ikramın değeri yoktur ve hediye gideri işlenemez (karar 11).
 - **Olması gereken:** Aktarım hediyenin maliyetini, bilgi için liste fiyatını taşır.
+- **Çözüm (12.10):** Aktarımın özeti hediyelerin sayısını, mal maliyetini (ikram gideri) ve bilgi için liste fiyatıyla KDV dahil
+  değerini taşır; bir hediyenin maliyeti ya da liste fiyatı yoksa toplam "bilinmiyor" yazılır. CSV'nin "HARİÇ" satırı ve
+  Raporlar'daki not bunları gösterir.
 - **Kanıt:** `packages/application/src/order/checkout-draft.ts:260-263` · `packages/domain-core/src/accounting/export.ts:176-187` ·
   `apps/web/lib/accounting/export.ts:78`.
 

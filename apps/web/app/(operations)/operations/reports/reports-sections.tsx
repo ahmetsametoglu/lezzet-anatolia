@@ -289,12 +289,14 @@ export function ExportPanel({
 
       {error ? <p className="font-ops-body text-ops-xs text-ops-red">{error}</p> : null}
 
-      {/* Hediye siparişin dışlanması sayı ve tutarla yazılır; yoksa dönem cirosu ile export toplamı arasındaki fark açıklanamaz kalır. */}
+      {/* Hediyenin dışlanması sessiz kalmaz: sayısı, maliyeti ve liste değeri yazılır. */}
       {view.excludedGiftCount > 0 ? (
         <p className="rounded-ops-card bg-ops-surface-sunken px-4 py-3 font-ops-body text-ops-xs text-ops-muted">
           {NOTES.giftExcluded}{' '}
           <span className="font-ops-mono text-ops-ink">
-            Hariç: {num(view.excludedGiftCount)} satış · {money(view.excludedGiftGrossCents)}
+            Hariç: {num(view.excludedGiftCount)} satış · maliyet{' '}
+            {view.excludedGiftCostCents === null ? 'bilinmiyor' : money(view.excludedGiftCostCents)} · liste{' '}
+            {view.excludedGiftListCents === null ? 'bilinmiyor' : money(view.excludedGiftListCents)}
           </span>
         </p>
       ) : null}

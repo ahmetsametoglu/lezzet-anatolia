@@ -58,6 +58,9 @@ interface SaleInput {
   vatRate?: number;
   shippingFeeCents?: number;
   isGiftOrder?: boolean;
+  /** Hediyede kalem sıfır fiyatlıdır, liste fiyatı pazarlık izinde durur. */
+  listUnitPriceCents?: number;
+  cogsAmountCents?: number;
   status?: 'completed' | 'delivered';
   invoiceNo?: string;
 }
@@ -79,11 +82,22 @@ async function makeSale(g: SaleInput) {
       shippingFeeCents: g.shippingFeeCents,
       isGiftOrder: g.isGiftOrder,
     },
-    [{ variantId, qty, fulfilledQty: qty, unitPriceCents, vatRate: g.vatRate ?? 5.5 }],
+    [
+      {
+        variantId,
+        qty,
+        fulfilledQty: qty,
+        unitPriceCents,
+        vatRate: g.vatRate ?? 5.5,
+        ...(g.listUnitPriceCents === undefined ? {} : { listUnitPriceCents: g.listUnitPriceCents, priceSetBy: customerId }),
+      },
+    ],
   );
 
   const status = g.status ?? 'completed';
   await orders.update({ id: order.id, status, referenceNo: `LA-EX-${stamp}-${counter}`, invoiceNo: g.invoiceNo ?? null });
+  // Durum değişince maliyet partilerden yeniden hesaplanır; testin verdiği maliyet ondan sonra yazılır.
+  if (g.cogsAmountCents !== undefined) await orders.update({ id: order.id, cogsAmountCents: g.cogsAmountCents });
   await db.from('order_status_log').insert({
     order_id: order.id,
     from_status: 'draft',
@@ -129,15 +143,13 @@ describe('dönem ve satış tarihi', () => {
 });
 
 describe('hediye sipariş export dışıdır ama farkı görünür', () => {
-  it('dosyada satırı yok, özette sayısı ve tutarı var', async () => {
+  it('dosyada satırı yok; özette sayısı, maliyeti ve liste fiyatıyla değeri var', async () => {
     await makeSale({ daysAgo: 190, unitPriceCents: 2110 });
-    const gift = await makeSale({ daysAgo: 188, unitPriceCents: 4220, isGiftOrder: true });
+    const gift = await makeSale({ daysAgo: 188, unitPriceCents: 0, listUnitPriceCents: 4220, cogsAmountCents: 1800, isGiftOrder: true });
 
     const { rows, summary } = await buildExport(PERIOD);
     expect(rows.map((r) => r.orderId)).not.toContain(gift.id);
-    expect(summary.orderCount).toBe(1);
-    expect(summary.excludedGiftCount).toBe(1);
-    expect(summary.excludedGiftGross).toBe(42.2);
+    expect(summary).toMatchObject({ orderCount: 1, excludedGiftCount: 1, excludedGiftCost: 18, excludedGiftListValue: 42.2 });
   });
 });
 

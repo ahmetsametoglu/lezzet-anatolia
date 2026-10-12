@@ -1,5 +1,5 @@
 import { fromCents, toCents } from '@lezzet/helper';
-import type { Business, Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
+import type { Business, Channel, Country, OrderItem, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
 import { chargedShippingParts } from '../delivery/shipping-fee';
 import { chargedQtyOf, fulfilledLineAmountCents, fulfilledLineOf } from '../payment/payment-status';
 import type { AccountingLine } from './line';
@@ -59,12 +59,12 @@ export interface AccountingExportSummary {
   discountAmount: number;
   /** Oran bazında toplam — KDV beyanının doğrudan girdisi. */
   byVatRate: ExportVatLine[];
-  /**
-   * Export DIŞINDA bırakılan hediye siparişler. **Sayı ve tutar olarak görünür**: sessiz dışlama,
-   * dönem cirosu ile export toplamı arasındaki farkı açıklanamaz bırakırdı (DOMAIN §9).
-   */
+  /** Aktarıma satış olarak girmeyen hediye siparişler (DOMAIN §9); sessiz kalmasınlar diye sayıları ve değerleri özettedir. */
   excludedGiftCount: number;
-  excludedGiftGross: number;
+  /** Hediyelerin mal maliyeti, muhasebecinin ikram gideri; bir hediyenin maliyeti bilinmiyorsa `null`. */
+  excludedGiftCost: number | null;
+  /** Hediyelerin liste fiyatıyla KDV dahil değeri, yalnız bilgi için; bir kalemin liste fiyatı yoksa `null`. */
+  excludedGiftListValue: number | null;
 }
 
 export interface AccountingExport {
@@ -127,9 +127,9 @@ function sumOf<T>(rows: readonly T[], field: keyof T): number {
 export type SaleVatBasis = Pick<OrderSale, 'pricesIncludeVat' | 'vatTreatment' | 'shippingFeeCents'>;
 
 /**
- * Satışın oran bazında KDV kırılımı; aktarım satırının da kâr raporunun da tek zemini. Ücretlenen kalem ve kargo payı kasa fişindeki
- * tanımla aynıdır; dönüşüm oran başına bir kez uygulanır (`vatByRate`), çünkü kalem kalem çevirmek kuruş artığı biriktirirdi.
- * Hazırlık kesinleşmemişse (`settled` yanlış) kalemler borçla aynı kuralla sipariş edilen adetten okunur.
+ * Satışın oran bazında KDV kırılımı, aktarım satırının da kâr raporunun da tek zemini: ücretlenen kalem ve kargo payı kasa fişindeki
+ * tanımla aynıdır, dönüşüm oran başına bir kez uygulanır, çünkü kalem kalem çevirmek kuruş artığı biriktirirdi. Hazırlık
+ * kesinleşmemişse (`settled` yanlış) kalemler borçla aynı kuralla sipariş edilen adetten okunur.
  */
 export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[], settled = true): ExportVatLine[] {
   const charged = items
@@ -159,26 +159,31 @@ export function saleNetCents(sale: SaleVatBasis, items: readonly AccountingLine[
   return vatLinesOf(sale, items, settled).reduce((sum, line) => sum + toCents(line.net), 0);
 }
 
+/** Aktarımın kalemi; liste fiyatı hediyenin değeri için okunur. */
+export type ExportLine = AccountingLine & Pick<OrderItem, 'listUnitPriceCents'>;
+
 /**
  * Dönemin aktarımı: girdi döneme süzülmüş satışlardır, burada yalnız hediye siparişler ayrılır ve toplamlar çıkar. Özet
  * satırlardan türetilir, çünkü ayrı hesaplanan iki toplam bir gün ayrışır ve hangisinin doğru olduğu bilinemezdi.
  */
 export function buildAccountingExport(
   period: { from: string; to: string },
-  sales: ReadonlyArray<{ sale: OrderSale; items: readonly AccountingLine[] }>,
+  sales: ReadonlyArray<{ sale: OrderSale; items: readonly ExportLine[] }>,
 ): AccountingExport {
   const rows: AccountingExportRow[] = [];
   let excludedGiftCount = 0;
-  let excludedGiftGrossCents = 0;
+  let giftCostCents: number | null = 0;
+  let giftListCents: number | null = 0;
 
   for (const { sale, items } of sales) {
-    const exportRow = buildExportRow(sale, items);
     if (exportEligibility(sale).included) {
-      rows.push(exportRow);
+      rows.push(buildExportRow(sale, items));
       continue;
     }
     excludedGiftCount += 1;
-    excludedGiftGrossCents += toCents(exportRow.gross);
+    giftCostCents = giftCostCents === null || sale.cogsAmountCents === null ? null : giftCostCents + sale.cogsAmountCents;
+    const listCents = giftListValueCents(sale, items);
+    giftListCents = giftListCents === null || listCents === null ? null : giftListCents + listCents;
   }
 
   const byRate = new Map<number, { gross: number; net: number; vat: number }>();
@@ -206,8 +211,19 @@ export function buildAccountingExport(
         .sort(([a], [b]) => a - b)
         .map(([vatRate, t]) => ({ vatRate, gross: fromCents(t.gross), net: fromCents(t.net), vat: fromCents(t.vat) })),
       excludedGiftCount,
-      excludedGiftGross: fromCents(excludedGiftGrossCents),
+      excludedGiftCost: giftCostCents === null ? null : fromCents(giftCostCents),
+      excludedGiftListValue: giftListCents === null ? null : fromCents(giftListCents),
     },
     rows,
   };
+}
+
+/** Hediyenin liste fiyatıyla KDV dahil değeri: kalem sıfır fiyatla yazılır, liste fiyatı pazarlık izinde durur. */
+function giftListValueCents(sale: SaleVatBasis, items: readonly ExportLine[]): number | null {
+  const goods = [];
+  for (const item of items) {
+    if (item.listUnitPriceCents === null) return null;
+    goods.push({ vatRate: item.vatRate, amountCents: item.listUnitPriceCents * item.fulfilledQty });
+  }
+  return vatByRate(goods, [], sale.pricesIncludeVat, isZeroRated(sale.vatTreatment)).reduce((sum, line) => sum + line.grossCents, 0);
 }

@@ -87,7 +87,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       netCents: toCents(exportData.summary.net),
       vatCents: toCents(exportData.summary.vat),
       excludedGiftCount: exportData.summary.excludedGiftCount,
-      excludedGiftGrossCents: toCents(exportData.summary.excludedGiftGross),
+      excludedGiftCostCents: exportData.summary.excludedGiftCost === null ? null : toCents(exportData.summary.excludedGiftCost),
+      excludedGiftListCents: exportData.summary.excludedGiftListValue === null ? null : toCents(exportData.summary.excludedGiftListValue),
       byVatRate: exportData.summary.byVatRate.map((line) => ({
         rate: line.vatRate,
         netCents: toCents(line.net),

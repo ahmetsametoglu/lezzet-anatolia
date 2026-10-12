@@ -49,7 +49,7 @@ export const NOTES = {
   emptyPeriod: 'Bu dönemde kapanmış satış yok. Rapor, sipariş teslim edilip kapandıkça dolar.',
   /** Tasarım §2 — hediye siparişin dışlanması sessiz olmamalı. */
   giftExcluded:
-    'Hediye (ikram) siparişler dışarı giden veriden düşülür — iç raporlarda tam sayılır. Fark burada yazılı ki dönem cirosu ile export toplamı arasındaki boşluk açıklanamaz kalmasın.',
+    'Hediye (ikram) siparişler satış olarak aktarılmaz, iç raporlarda tam sayılır. Maliyeti muhasebecinin ikram gideridir; liste fiyatı yalnız bilgi içindir.',
   allInvoicesMatched: 'Fatura numarası bekleyen satış yok.',
   /** Tasarım §6 — bu ekranın ne OLMADIĞI. */
   notOfficial:

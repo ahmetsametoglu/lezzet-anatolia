@@ -2,13 +2,8 @@ import type { Channel } from '@lezzet/types';
 import type { PnlRowKey } from './reports-labels';
 import type { ReportsUrlState } from './reports-url';
 
-// Raporlar ekranının GÖRÜNÜM MODELİ.
-//
-// ── HER TUTAR CENT ──────────────────────────────────────────────────────────
-// Kâr ve export kapıları **euro** döndürüyor (`domain-core/accounting` sınırında `fromCents`
-// uygulanmış), ekranın biçimlendiricisi ise cent bekliyor (`money`, STACK §8). Çeviri TEK yerde,
-// okuma katmanında yapılıyor (`reports-read`); görünüm modeline euro sızarsa aynı sayı bir blokta
-// yüz kat büyük yazılır ve kimse fark etmez.
+// Raporlar ekranının görünüm modeli; her tutar cent'tir. Kâr ve aktarım kapıları euro döndürür, çeviri okuma katmanında bir kez
+// yapılır, çünkü görünüme sızan euro aynı sayıyı bir blokta yüz kat büyük yazardı.
 
 export interface MetricView {
   label: string;
@@ -66,11 +61,12 @@ export interface ExportView {
   grossCents: number;
   netCents: number;
   vatCents: number;
-  /** Dışarı giden veriden düşen hediye siparişler — SESSİZ değil, sayı ve tutarla. */
+  /** Satış olarak aktarılmayan hediye siparişler; maliyet ve liste değeri bilinmiyorsa `null`. */
   excludedGiftCount: number;
-  excludedGiftGrossCents: number;
+  excludedGiftCostCents: number | null;
+  excludedGiftListCents: number | null;
   byVatRate: { rate: number; netCents: number; vatCents: number }[];
-  /** Hareket dökümünün (12.15) dönemi: kaç hareket, kaçı izahsız — dosyaya girmeden görünsün. */
+  /** Hareket dökümünün dönemi: kaç hareket, kaçı izahsız — dosyaya girmeden görünsün. */
   movementCount: number;
   unexplainedMovementCount: number;
 }
@@ -83,12 +79,7 @@ export interface ReportsData {
   channels: ChannelCard[];
   export: ExportView;
   invoiceQueue: InvoiceQueueRow[];
-  /**
-   * Maliyeti kesinleşmemiş sipariş sayısı ve cirosu — hesaba KATILMADI.
-   *
-   * Sıfır sayılsaydı kâr olduğundan büyük görünürdü (CLAUDE.md §1: ölçülemeyen değer sıfır
-   * değildir). Ekran bunu ayrı yazıyor, kârın içine karıştırmıyor.
-   */
+  /** Maliyeti kesinleşmemiş siparişlerin sayısı ve cirosu; kâra katılmaz ve ayrı yazılır, sıfır sayılsaydı kâr büyük görünürdü. */
   unpricedCount: number;
   unpricedRevenueCents: number;
   /** Dönemde hiç kapanmış satış var mı — boş hâlin ayrımı. */

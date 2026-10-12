@@ -65,9 +65,12 @@ const BASE_SALE: OrderSale = {
   createdAt: '2026-03-12T09:00:00.000Z',
 };
 
-type Line = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'goodwillQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'>;
+type Line = Pick<
+  OrderItem,
+  'qty' | 'fulfilledQty' | 'goodwillQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate' | 'listUnitPriceCents'
+>;
 const line = (over: Partial<Line> = {}): Line => ({
-  qty: 1, fulfilledQty: 1, goodwillQty: 0, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...over,
+  qty: 1, fulfilledQty: 1, goodwillQty: 0, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, listUnitPriceCents: null, ...over,
 });
 
 const sale = (over: Partial<OrderSale> = {}): OrderSale => ({ ...BASE_SALE, ...over });
@@ -210,19 +213,25 @@ describe('hediye sipariş export dışıdır ama görünür', () => {
     expect(exportEligibility({ isGiftOrder: false })).toEqual({ included: true });
   });
 
-  it('hediye satır dosyaya girmez, özet onu SAYI ve TUTAR olarak gösterir', () => {
+  it('hediye satır dosyaya girmez; özet sayısını, maliyetini ve liste fiyatıyla değerini taşır', () => {
+    const gift = (id: string, cogsAmountCents: number | null) => ({
+      sale: sale({ id, isGiftOrder: true, cogsAmountCents }),
+      items: [line({ unitPriceCents: 0, listUnitPriceCents: 2110, qty: 2, fulfilledQty: 2 })],
+    });
     const { rows, summary } = buildAccountingExport({ from: '2026-03-01', to: '2026-03-31' }, [
       { sale: sale({ id: BASE_SALE.id }), items: [line({ unitPriceCents: 2110 })] },
-      { sale: sale({ id: '33333333-3333-3333-3333-333333333333', isGiftOrder: true }), items: [line({ unitPriceCents: 4220 })] },
+      gift('33333333-3333-3333-3333-333333333333', 1800),
     ]);
 
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.orderId).toBe(BASE_SALE.id);
-    expect(summary.orderCount).toBe(1);
-    expect(summary.gross).toBe(21.1);
-    // Dışlanan tutar açıkça duruyor: dönem cirosu ile export toplamı arasındaki fark açıklanabilir.
-    expect(summary.excludedGiftCount).toBe(1);
-    expect(summary.excludedGiftGross).toBe(42.2);
+    expect(rows.map((row) => row.orderId)).toEqual([BASE_SALE.id]);
+    expect(summary).toMatchObject({ orderCount: 1, gross: 21.1, excludedGiftCount: 1, excludedGiftCost: 18, excludedGiftListValue: 42.2 });
+
+    // Maliyeti bilinmeyen hediye toplamı bilinmez yapar; sıfır sayılsaydı ikram gideri eksik görünürdü.
+    const unknown = buildAccountingExport({ from: '2026-03-01', to: '2026-03-31' }, [
+      gift('33333333-3333-3333-3333-333333333333', 1800),
+      gift('66666666-6666-6666-6666-666666666666', null),
+    ]);
+    expect(unknown.summary).toMatchObject({ excludedGiftCount: 2, excludedGiftCost: null, excludedGiftListValue: 84.4 });
   });
 });
 

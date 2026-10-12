@@ -448,7 +448,8 @@ Patron bazen bir arkadaşına siparişi hediye eder. Hediye sipariş **ödemesiz
 - **Fiyat sıfırdır:** her kalem sıfır fiyatla yazılır, liste fiyatı pazarlık izinde kalır (hediyenin değeri görünür); kargo ücreti alınmaz.
 - **Operasyon tam normal:** stok düşer, hazırlanır, teslim edilir; kapıda tahsilat istenmez.
 - **Kapanış ödeme beklemez:** teslim edilince kapanır.
-- **İç muhasebe:** ciro sıfırdır, mal maliyeti siparişin kârında gider olarak görünür; muhasebe aktarımına girmez.
+- **İç muhasebe:** ciro sıfırdır, mal maliyeti siparişin kârında gider olarak görünür; muhasebe aktarımına satış olarak girmez,
+  aktarımın özeti hediyelerin mal maliyetini (ikram gideri) ve bilgi için liste fiyatıyla değerini taşır.
 
 ---
 

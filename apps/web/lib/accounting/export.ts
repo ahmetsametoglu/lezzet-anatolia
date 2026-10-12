@@ -73,9 +73,12 @@ export function toExportCsv(data: AccountingExport): string {
     '',
     `TOPLAM;${summary.orderCount} satış;HT ${summary.net};KDV ${summary.vat};TTC ${summary.gross}`,
     ...summary.byVatRate.map((line) => `KDV %${line.vatRate};;HT ${line.net};KDV ${line.vat};TTC ${line.gross}`),
-    // Hediye siparişler dosyada YOK ama farkı açıklayan satır burada: sessiz dışlama, dönem cirosu
-    // ile export toplamı arasındaki boşluğu açıklanamaz bırakırdı.
-    ...(summary.excludedGiftCount > 0 ? [`HARİÇ (patron ikramı);${summary.excludedGiftCount} satış;;;TTC ${summary.excludedGiftGross}`] : []),
+    // Hediye satış olarak dosyada yok; maliyeti muhasebecinin ikram gideridir, liste fiyatı yalnız bilgi içindir.
+    ...(summary.excludedGiftCount > 0
+      ? [
+          `HARİÇ (patron ikramı);${summary.excludedGiftCount} satış;maliyet ${summary.excludedGiftCost ?? 'bilinmiyor'};;liste TTC ${summary.excludedGiftListValue ?? 'bilinmiyor'}`,
+        ]
+      : []),
   ].join('\n');
 
   return `${body}${summaryLines}\n`;
