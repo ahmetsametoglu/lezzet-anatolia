@@ -138,8 +138,8 @@ export function useSale(place: SalePlace) {
   */
   const [pending, setPending] = useState<PendingSale | null>(null);
   /*
-    Nakit ve kartta satış para alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır ve değişmez. "Tamamla" önce kesin tutarı
-    okur, onay çekmecesi onu söyler; satış personel parayı aldığını onaylayınca o tutarla gider.
+    Kartla satış, ödeme alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır ve değişmez. "Tamamla" önce kesin tutarı okur,
+    onay çekmecesi onu söyler; satış personel kart ödemesinin alındığını onaylayınca o tutarla gider.
   */
   const [confirming, setConfirming] = useState<{ totalCents: number } | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -460,14 +460,14 @@ export function useSale(place: SalePlace) {
     })();
   }, [confirming, customer, email, lines, payment, pending, place, reload, sending, setNotice]);
 
-  /** "Tamamla": vadeli satış ve sonucu bilinmeyen satışın yeniden gönderimi doğrudan gider; nakit ve kartta önce kesin tutar okunur. */
+  /** "Tamamla": nakit, vadeli ve sonucu bilinmeyen satışın yeniden gönderimi doğrudan gider; kartta önce kesin tutar okunur. */
   const requestSale = useCallback(() => {
     if (sending || quoting) return;
-    if (pending !== null || payment === 'credit') {
+    if (pending !== null || payment !== 'card') {
       submit();
       return;
     }
-    if (lines.length === 0 || payment === null) return;
+    if (lines.length === 0) return;
     setQuoting(true);
     setNotice(null);
     void (async () => {

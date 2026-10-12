@@ -206,14 +206,12 @@ export function SaleCartScreen() {
         ) : null}
       </LinearGradient>
 
-      {/* Nakit ve kart para alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır; çekmece kesin tutarı ve bedeli söyler. */}
+      {/* Kart, ödemesi alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır; çekmece kesin tutarı ve bedeli söyler. */}
       <OperationsConfirmSheet
         visible={sale.confirming !== null}
-        title={fillCopy(sale.payment === 'card' ? t.confirm.cardTitle : t.confirm.cashTitle, {
-          total: money(sale.confirming?.totalCents ?? 0),
-        })}
-        message={sale.payment === 'card' ? t.confirm.cardBody : t.confirm.cashBody}
-        confirmLabel={sale.payment === 'card' ? t.confirm.cardConfirm : t.confirm.cashConfirm}
+        title={fillCopy(t.confirm.title, { total: money(sale.confirming?.totalCents ?? 0) })}
+        message={t.confirm.body}
+        confirmLabel={t.confirm.confirm}
         cancelLabel={t.confirm.cancel}
         tone="olive"
         busy={sale.sending}

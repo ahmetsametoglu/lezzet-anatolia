@@ -113,8 +113,8 @@ type SaleRefusal = Extract<
 export type OnSiteSaleQuote = { status: 'ok'; totalCents: number } | SaleRefusal;
 
 /**
- * Satışın yazmadan kesin tutarı: personel nakdi ya da kartı bu tutarla alır ve satış ancak para alındıktan sonra yazılır, çünkü kasa
- * fişi yazıldığı anda kapanır ve değişmez. Tutar satışın kullandığı fiyatlamanın kendisidir.
+ * Satışın yazmadan kesin tutarı: personel kartı bu tutarla çeker ve satış ancak ödeme alındıktan sonra yazılır, çünkü kasa fişi
+ * yazıldığı anda kapanır ve değişmez. Tutar satışın kullandığı fiyatlamanın kendisidir.
  */
 export async function quoteOnSiteSale(db: Db, input: OnSiteSaleQuoteInput): Promise<OnSiteSaleQuote> {
   const invalid = invalidRequestOf(input);

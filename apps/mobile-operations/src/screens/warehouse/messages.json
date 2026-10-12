@@ -1259,6 +1259,12 @@
       "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
       "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
       "cardNote": "Kartı Revolut Business uygulamasında Tap to Pay ile çekin: {amount}. Ödeme onaylanınca teslimi burada yazın.",
+      "cardConfirm": {
+        "title": "Kartla {amount} çekin",
+        "body": "Tutarı Revolut Business uygulamasında Tap to Pay ile çekin. Teslim yazılınca geri alınamaz: kart ödemesinin başarıyla tamamlandığından emin olun.",
+        "confirm": "Kart ödemesi alındı",
+        "cancel": "Vazgeç"
+      },
       "blocked": "Tahsilat YAZILAMIYOR: bu deponun bu yöntem için hesabı ayarlanmamış. Para alınırsa defterde görünmez — önce ayarı düzeltin.",
       "method": {
         "cash": "nakit",

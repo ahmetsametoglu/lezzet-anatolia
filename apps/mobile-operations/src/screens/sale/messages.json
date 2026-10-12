@@ -109,12 +109,9 @@
     "creditNote": "Vadeli satış: tutar müşterinin açık bakiyesine eklendi, kapıda para alınmadı."
   },
   "confirm": {
-    "cardTitle": "Kartla {total} çekin",
-    "cardBody": "Tutarı Revolut Business uygulamasında Tap to Pay ile çekin. Satış yazılınca geri alınamaz: kart ödemesinin başarıyla tamamlandığından emin olun.",
-    "cardConfirm": "Kart ödemesi alındı",
-    "cashTitle": "{total} nakit alın",
-    "cashBody": "Satış yazılınca geri alınamaz: parayı aldığınızdan emin olun.",
-    "cashConfirm": "Nakit alındı",
+    "title": "Kartla {total} çekin",
+    "body": "Tutarı Revolut Business uygulamasında Tap to Pay ile çekin. Satış yazılınca geri alınamaz: kart ödemesinin başarıyla tamamlandığından emin olun.",
+    "confirm": "Kart ödemesi alındı",
     "cancel": "Vazgeç"
   },
   "addClosed": "Sepete ekleme kapalı",

@@ -6,6 +6,7 @@ import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
+import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy as t } from '../copy';
 import { StepNote, type DeliveryState } from './delivery-step';
 
@@ -58,6 +59,21 @@ export function DeliveryOutcome({ delivery }: DeliveryOutcomeProps) {
           </>
         ) : null}
       </View>
+
+      {/* Kart Revolut'un uygulamasında çekilir; teslim, kurye ödemenin alındığını onaylayınca yazılır. */}
+      <OperationsConfirmSheet
+        visible={delivery.cardConfirmOpen && !delivery.finished}
+        title={fillCopy(t.delivery.collection.cardConfirm.title, { amount: `${delivery.amountText} €` })}
+        message={t.delivery.collection.cardConfirm.body}
+        confirmLabel={t.delivery.collection.cardConfirm.confirm}
+        cancelLabel={t.delivery.collection.cardConfirm.cancel}
+        tone="olive"
+        onConfirm={delivery.confirmCard}
+        onCancel={delivery.cancelCard}
+        busy={delivery.sending}
+        busyLabel={t.delivery.cta.sending}
+        testID="courier-card-sheet"
+      />
 
       {/* Bedel başlığın altında, düğmelerden önce yazılır ki okunmadan basılmasın. */}
       <OperationsConfirmSheet

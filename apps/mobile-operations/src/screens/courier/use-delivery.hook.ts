@@ -131,6 +131,10 @@ interface UseDeliveryResult {
   finished: boolean;
   deliver: () => void;
   confirmOutcome: () => void;
+  /** Kartla tahsilatın onay çekmecesi; teslim "Kart ödemesi alındı" denince yazılır. */
+  cardConfirmOpen: boolean;
+  confirmCard: () => void;
+  cancelCard: () => void;
 }
 
 /** Kapının ret dallarını ekranın diline çevirir — hiçbiri YUTULMAZ, hepsi bir cümleye çıkar. */
@@ -193,6 +197,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [noteError, setNoteError] = useState<string | null>(null);
 
   const [sending, setSending] = useState(false);
+  const [cardConfirmOpen, setCardConfirmOpen] = useState(false);
   /* Sonuç toast'ta: sayfanın altındaki satıra kurye kutu okuturken bakmıyor ve reddin sebebini görmüyordu. */
   const setNotice = useCallback((notice: DeliveryNotice | null) => {
     if (notice === null) return;
@@ -338,16 +343,16 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const partialPayment = dueCents !== null && amountCents !== null && amountCents < dueCents;
   const cashLimitWarning = dueCents !== null && method === 'cash' && (amountCents ?? 0) > CASH_LIMIT_CENTS;
 
+  const collecting = dueCents !== null && amountCents !== null && amountCents > 0 && doorCollection[method];
   /**
    * Gönderilecek tahsilat gövdesi. Borç yoksa `null` (kapıda para konuşulmaz); yöntemin hesabı yoksa da `null` ve o hâlde
    * `collectionBlocked` teslim kapısını kapatır, yani "para yazılmadan teslim" gönderilmez.
    */
   const buildCollection = useCallback((): DoorCollectionInputContract | null => {
-    if (dueCents === null || amountCents === null || amountCents <= 0) return null;
-    if (!doorCollection[method]) return null;
+    if (!collecting || amountCents === null) return null;
     collectionKey.current ??= newRequestKey('col');
     return { method, amountCents, idempotencyKey: collectionKey.current };
-  }, [amountCents, doorCollection, dueCents, method]);
+  }, [amountCents, collecting, method]);
 
   /**
    * Tahsilat yazılamaz: borç var ama seçilen yöntemin hesabı yok.
@@ -393,7 +398,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
             ? fillCopy(t.delivery.cta.deliverWithAmount, { amount: money(amountCents) })
             : t.delivery.cta.deliverNoCollection;
 
-  const deliver = useCallback(() => {
+  const submitDelivery = useCallback(() => {
     if (!gateOpen || sending) return;
     setSending(true);
     setNotice(null);
@@ -410,6 +415,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
         ...(doorCodeAsked ? { doorCode: doorCodeSkipped || doorCodeLocked ? null : doorCode } : {}),
       });
       setSending(false);
+      setCardConfirmOpen(false);
 
       if (result.error !== null) {
         setNotice({ tone: 'error', text: wireErrorText(result.error) });
@@ -444,6 +450,13 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       setFinished(true);
     })();
   }, [adjustments, buildCollection, doorCode, doorCodeAsked, doorCodeLocked, doorCodeSkipped, gateOpen, orderId, scannedBoxCodes, sending]);
+
+  /** Kartla tahsilatta teslim, kurye kart ödemesinin alındığını onaylayınca yazılır, çünkü tahsilat yazıldığı anda kasaya gider. */
+  const deliver = useCallback(() => {
+    if (!gateOpen || sending) return;
+    if (collecting && method === 'card') setCardConfirmOpen(true);
+    else submitDelivery();
+  }, [collecting, gateOpen, method, sending, submitDelivery]);
 
   const confirmOutcome = useCallback(() => {
     if (outcome === null || sending) return;
@@ -563,5 +576,10 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     finished,
     deliver,
     confirmOutcome,
+    cardConfirmOpen,
+    confirmCard: submitDelivery,
+    cancelCard: () => {
+      if (!sending) setCardConfirmOpen(false);
+    },
   };
 }

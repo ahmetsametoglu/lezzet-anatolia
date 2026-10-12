@@ -72,3 +72,34 @@ it('okutma düğmesi yalnız seçili siparişin okutulmamış kutusu varken çiz
   await waitFor(() => expect(screen.queryByTestId('warehouse-pickup-scan')).toBeNull());
   expect(screen.getByTestId('warehouse-pickup-deliver')).not.toBeDisabled();
 });
+
+it('kartla tahsilatta teslim, onay çekmecesinde "Kart ödemesi alındı" denmeden yazılmaz; vazgeçilirse istek gitmez', async () => {
+  const borclu: PickupQueueOrderContract = { ...SIPARIS, amountDueCents: 1250, paymentStatus: 'pending' };
+  fetchMock.mockImplementation((_url, init) =>
+    Promise.resolve(
+      init?.method === 'POST'
+        ? ok({ status: 'ok', collectedCents: 1250, amountDueCents: 0, paymentStatus: 'paid', cashLimitExceeded: false })
+        : ok({ ...KUYRUK, orders: [borclu] }),
+    ),
+  );
+  const teslimler = () => fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST');
+  await render(<PickupScreen />);
+  await waitFor(() => expect(screen.getByTestId(`warehouse-pickup-order-${borclu.orderId}`)).toBeOnTheScreen());
+  await fireEvent.press(screen.getByTestId(`warehouse-pickup-order-${borclu.orderId}`));
+  await okut('KT-26-GA1');
+  await okut('KT-26-GA2');
+  await fireEvent.press(screen.getByTestId('warehouse-pickup-method-card'));
+
+  await fireEvent.press(screen.getByTestId('warehouse-pickup-deliver'));
+  expect(screen.getByTestId('warehouse-pickup-card-sheet-confirm')).toBeOnTheScreen();
+  expect(teslimler()).toHaveLength(0);
+
+  await fireEvent.press(screen.getByTestId('warehouse-pickup-card-sheet-cancel'));
+  expect(screen.queryByTestId('warehouse-pickup-card-sheet-confirm')).toBeNull();
+  expect(teslimler()).toHaveLength(0);
+
+  await fireEvent.press(screen.getByTestId('warehouse-pickup-deliver'));
+  await fireEvent.press(screen.getByTestId('warehouse-pickup-card-sheet-confirm'));
+  await waitFor(() => expect(teslimler()).toHaveLength(1));
+  expect(JSON.parse(String(teslimler()[0]![1]?.body)).collection).toMatchObject({ method: 'card', amountCents: 1250 });
+});

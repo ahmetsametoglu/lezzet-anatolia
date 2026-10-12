@@ -525,6 +525,29 @@ describe('teslimat · tahsilat', () => {
     });
   });
 
+  it('kartla tahsilatta teslim, onay çekmecesinde "Kart ödemesi alındı" denmeden YAZILMAZ; vazgeçilirse istek gitmez', async () => {
+    await renderScannedStop(
+      { payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } },
+      { doorCollection: DOOR_COLLECTION_OPEN },
+      { deliver: { ok: okDelivery({ collectedCents: 4200 }) } },
+    );
+    await fireEvent.press(screen.getByTestId('courier-method-card'));
+
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+    expect(screen.getByTestId('courier-card-sheet-confirm')).toBeOnTheScreen();
+    expect(screen.getByText(/Kartla 42,00/)).toBeOnTheScreen();
+    expect(deliverCalls()).toBe(0);
+
+    await fireEvent.press(screen.getByTestId('courier-card-sheet-cancel'));
+    expect(screen.queryByTestId('courier-card-sheet-confirm')).toBeNull();
+    expect(deliverCalls()).toBe(0);
+
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+    await fireEvent.press(screen.getByTestId('courier-card-sheet-confirm'));
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody().collection).toMatchObject({ method: 'card', amountCents: 4200 });
+  });
+
   it('borç varken tutar BOŞSA teslim yine gider ama düğme "tahsilat yazılmaz" der', async () => {
     await renderScannedStop(
       { payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: null } },
