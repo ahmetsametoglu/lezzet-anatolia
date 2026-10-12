@@ -2,7 +2,7 @@
 
 import { serviceDb, VariantBarcodeService } from '@lezzet/database';
 import type { VariantBarcode } from '@lezzet/types';
-import { requireStaff } from '@/lib/guard';
+import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 
 /**
@@ -18,7 +18,7 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 
 export async function listVariantBarcodesAction(variantIds: string[]): Promise<ActionResult<VariantBarcode[]>> {
   try {
-    await requireStaff();
+    await requireAdmin();
     if (variantIds.length === 0) return { data: [], error: null };
     return { data: await new VariantBarcodeService(serviceDb()).listByVariants(variantIds), error: null };
   } catch (error) {
@@ -34,7 +34,7 @@ export async function listVariantBarcodesAction(variantIds: string[]): Promise<A
  */
 export async function deleteVariantBarcodeAction(barcodeId: string): Promise<ActionResult<true>> {
   try {
-    await requireStaff();
+    await requireAdmin();
     await new VariantBarcodeService(serviceDb()).delete(barcodeId);
     return { data: true, error: null };
   } catch (error) {

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { CategoryImageService, CategoryService, serviceDb } from '@lezzet/database';
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFields, CATEGORY_GALLERY_MAX, type CategoryImage, type ImageCropFields } from '@lezzet/types';
-import { requireStaff } from '@/lib/guard';
+import { requireAdmin } from '@/lib/guard';
 import { readImageDimensions, readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from './paths';
@@ -33,7 +33,7 @@ const toPhotoView = (row: CategoryImage): GalleryPhotoView => ({
 /** Bir kategorinin havuzu, rotasyonun döngü sırasında + okuma URL'leri. */
 export async function listCategoryPhotosAction(categoryId: string): Promise<ActionResult<GalleryPhotoView[]>> {
   try {
-    await requireStaff();
+    await requireAdmin();
     const rows = await new CategoryImageService(serviceDb()).listByCategory(categoryId);
     return { data: rows.map(toPhotoView), error: null };
   } catch (err) {
@@ -44,7 +44,7 @@ export async function listCategoryPhotosAction(categoryId: string): Promise<Acti
 /** Havuza fotoğraf ekler (sona). Üst sınır aşılırsa reddedilir — sessizce yutulmaz. */
 export async function uploadCategoryPhotoAction(categoryId: string, form: FormData): Promise<ActionResult<GalleryPhotoView>> {
   try {
-    await requireStaff();
+    await requireAdmin();
     const file = readImageUpload(form);
     const r2 = getR2();
     if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
@@ -75,7 +75,7 @@ export async function uploadCategoryPhotoAction(categoryId: string, form: FormDa
 /** Havuzdaki fotoğrafı siler — satırla BİRLİKTE depodaki nesneyi de (yetim dosya kalmasın). */
 export async function deleteCategoryPhotoAction(photoId: string): Promise<ActionResult> {
   try {
-    await requireStaff();
+    await requireAdmin();
     const svc = new CategoryImageService(serviceDb());
     const row = await svc.getById(photoId);
     if (!row) throw new Error('Fotoğraf bulunamadı.');
@@ -91,7 +91,7 @@ export async function deleteCategoryPhotoAction(photoId: string): Promise<Action
 /** Havuzdaki fotoğrafı kapak yapar — eski kapak onun yerine havuza geçer (takas, servis tarafında). */
 export async function makeCategoryCoverAction(categoryId: string, photoId: string): Promise<ActionResult> {
   try {
-    await requireStaff();
+    await requireAdmin();
     await new CategoryService(serviceDb()).makeCover(categoryId, photoId);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
@@ -103,7 +103,7 @@ export async function makeCategoryCoverAction(categoryId: string, photoId: strin
 /** Sürükle-bırak sonrası havuz sırası — kartın gün gün hangi kareye geçeceğini bu sıra belirler. */
 export async function reorderCategoryPhotosAction(orderedIds: string[]): Promise<ActionResult> {
   try {
-    await requireStaff();
+    await requireAdmin();
     await new CategoryImageService(serviceDb()).reorder(orderedIds);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
@@ -115,7 +115,7 @@ export async function reorderCategoryPhotosAction(orderedIds: string[]): Promise
 /** Havuz fotoğrafının odak/zoom künyesi. Dosya değişmediği için sürüm damgasına dokunulmaz. */
 export async function setCategoryPhotoCropAction(photoId: string, crop: ImageCropFields): Promise<ActionResult> {
   try {
-    await requireStaff();
+    await requireAdmin();
     await new CategoryImageService(serviceDb()).setCrop(photoId, pickCropFields(crop));
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
