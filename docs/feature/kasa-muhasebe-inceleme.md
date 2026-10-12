@@ -292,8 +292,8 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
   komisyonu canlıda ölçülecek (`kasa-muhasebe.md` §6).
 - **Çözüm (12.10, B):** Kartla ya da online ödenmiş siparişin komisyonu kayıtlı değilse kârı hesaplanmaz, sipariş raporda
   "fiyatlanmamış" durur ve sipariş sayfası sebebini yazar; komisyon yazılınca kâr hesaplanır. Nakitte ve havalede komisyon 0'dır.
-  Kapıda kart ödemesi Revolut'a bağlı olmadığı için (Tap to Pay açık iş) komisyonu kendiliğinden gelmez; bu siparişler o bağ
-  kurulana kadar fiyatlanmamış kalır.
+  Kapıda kart ödemesi Revolut kaydından eşleştirilene kadar (`kasa-muhasebe.md` §9) komisyonu gelmez; bu siparişler o zamana
+  kadar fiyatlanmamış kalır.
 - **Kanıt:** `packages/domain-core/src/accounting/profit.ts:98-106` · `packages/application/src/courier/delivery.ts:149-161`.
 
 ## 12. İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor

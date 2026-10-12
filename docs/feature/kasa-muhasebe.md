@@ -70,7 +70,7 @@
 | 14 | **Kapıda kart parası nakit kasadan ayrı hesaba yazılır** (02.10) | Kurye, gel-al tezgâhı ve kapı önü satış kartla alınan parayı kapıda kart hesabına (`door_card_account_id`, kart cihazının hesabı), nakdi kapı çekmecesine (`door_cash_account_id`) yazar; hesabı istemci değil sunucu yöntemden seçer. Çekmece sayımı yalnız nakdi sayar. Yöntemin hesabı ayarlı değilse o yöntemle tahsilat kapalıdır ve teslim yazılmaz. |
 | 15 | **Banka hesapları işe göre ayrılmaz** (04.10) | Revolut ve Crédit Mutuel şirketin hesaplarıdır; ikisi de Pennylane'e bağlı ve kurulum kartında eşlenir. Ödemenin işi hesaptan değil, bağlandığı belgeden ya da siparişten gelir ([`iki-is.md`](iki-is.md) 11. karar). Nakit Crédit Mutuel'e yatırılır: bizde "Kasa → Crédit Mutuel" transferi yazılır, Crédit Mutuel'e gelen satır bu transferin öteki yakası olarak eşleşir. |
 | 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. Kategorinin adı ayardır (iş başına: `pennylane_category_lezzet` · `pennylane_category_qualite`, varsayılanı işin adı, boşsa kategori yazılmaz; QUALITE'nin belgesi `iki-is.md` ile eklendi); Pennylane'de adla bulunur, yoksa "Activité" grubunda açılır. Faturanın öteki eksenlerdeki kategorisi korunur, Pennylane'de elle değiştirilen kategori ezilmez. |
-| 17 | **Kapıda kart Revolut Tap to Pay on iPhone ile alınır** (06.10) | Ödemeyi kuryenin uygulaması başlatır, ayrı cihazda tutar yazılmaz. Kurye iPhone taşır (XS ve üstü, iOS 16.4+); Android'de bu yol yok. |
+| 17 | **Kapıda kart, Revolut Business uygulamasındaki Tap to Pay on iPhone ile alınır** (12.10; 06.10'daki "ödemeyi bizim uygulama başlatır" kararının yerine) | Kart alan personel şirket iPhone'unda Revolut Business uygulamasıyla çeker, bizde yöntemi "kart" seçer; ödeme siparişe Revolut'un kaydından eşleştirilerek bağlanır (§9). Revolut geliştirici onayı, Apple izni ya da yerel iOS modülü gerekmez. Developer Portal'daki SDK başvurusu (06.10'dan beri incelemede) bekletilir; SDK yalnız otomasyon getirir: tutarın siparişten gitmesi ve ödemenin anında bağlanması. |
 | 18 | **Kasa yazımı ödemenin hemen arkasından, kimseyi bekletmeden** (06.10) | Ödeme kaydı ve kasa kuyruğu satırı aynı işlemde yazılır; işlem biter bitmez o siparişin satışı Hiboutik'te açılıp kapanır, müşteri ve kurye beklemez. Yazılamazsa satır bekler, dakikalık iş ilk fırsatta yazar (yeniden deneme tavanı 5 dk). Bekleme süresince ödemenin kaydını bizim yazılım tutar: B2C tahsilat hareketinin tutarı, yöntemi, hesabı ve siparişi değişmez, hareket silinmez, düzeltme ters harekettir (SSS 22, BOFiP §90). Satırı işleyen onu kilitler; satış Hiboutik'e iki kez yazılmaz. Kasa ve Revolut Merchant sabit hesaplardır: migration açar, pasifleşmez; kapı nakdi Kasa'ya, kapıda kart ve online ödeme Revolut Merchant'a yazılır. Ödemenin yazılacağı hesap yoksa ödeme başlamaz. Ödemeden önce Hiboutik'te taslak satış açılmaz: açık satış mali kayıt değildir (silinir, Z'ye girmez) ve yalnız beklemeyi uzatır. |
 | 19 | **Kasa ve muhasebede canlıya geçiş günü yok; eşleme yeter** (07.10) | Tarih ayarı yalnız bir kez kullanılacak bir tetikti, testte de kasayı ve muhasebeyi kapalı tutuyordu. Bağlantıyı backend'deki anahtarlar kurar. Tesis kurulum kartında kasa mağazasına eşlendiği an kuyrukta bekleyen satışı ve çekmecenin önceki hareketleri kasaya yazılır; satış hiçbir tarihe göre atlanmaz, gün sonu eşleme gününden başlar. Banka hesabının hareketleri Pennylane'deki hesaba eşlendiği günden okunur, öncesi Excel'le girilir; eşleme başka Pennylane hesabına taşınınca ilk gün korunur. Alış belgesi girildiği güne bakılmadan yüklenir; Pennylane'de aynı tedarikçide aynı numara varsa belge bekler. |
 | 20 | **Transferin banka ucu kendiliğinden bağlanır** (07.10) | Kasadan yatırmayı operatör o gün transfer olarak yazar, kart ödemeleri aktarımını Revolut'un bildirimi yazar; transfer iki hesabı hemen etkiler, bankadaki ucu yolda olan paradır. Pennylane'den (ya da dosyadan) gelen banka satırı, yönü ve tutarı birebir, günü 7 gün içinde tutan ve birbirinin tek adayı olan bekleyen transfere kendiliğinden bağlanır; banka parayı bir kez sayar. Hangisi önce gelirse gelsin bağlanır: satır gelince de transfer yazılınca da bakılır. Aday yoksa ya da birden fazlaysa satır öneri olarak bekler, tahmin yapılmaz. Öteki eşleştirmeler öneri + elle onay kalır. |
@@ -120,7 +120,7 @@
 | 0 | **Erişim ve ölçüm.** Hesaplar: Hiboutik demo modunda (API için Premium, ikincil kaynak), Pennylane test ortamı ve API anahtarı (API Essentiel planda ve üstünde), Revolut deneme hesabı (asıl hesaptan bağımsız, anında). §6'daki soruların ölçümü; çıktı ölçüm tablosu ve tasarım kararları. | kök `.env` (değişken adları kullanıcıdan) | Hesapları kullanıcı açar |
 | 1 | **Hiboutik kasa.** Tasarım §7: sipariş başına durum farkı, kasa aynası, ürün ve mağaza eşlemesi, kasa hareketleri, günlük mutabakat, gün kapanışı. | domain-core `register/`; migration (kasa tabloları, tetikleyici, hareketin ödeme yöntemi); Hiboutik uyarlaması; backend cron'ları | Faz 0 Hiboutik ölçümü (tamam) |
 | 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; belge yükleme (Lezzet'in bütün alış belgeleri; PDF, JPEG ya da PNG); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama (e-fatura Pennylane'e gelince); banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. Tasarım §8. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü (tamam; e-fatura okuma canlıda) |
-| 3 | **Revolut.** Çevrim içi ödeme (Merchant API: sipariş, kart alanı, Apple / Google Pay, webhook, iade) — Stripe söküldü, kart ödemesi web'de ve native'de Revolut'ta; web'de "Öde" Revolut'un ödeme sayfasına götürür (Google Pay orada; Apple Pay alan adı kaydı yalnız canlıda); açık: Revolut panelinde işletme adı, logo ve renk; kapıda kart (Terminal'e tutar gönderme ya da elle onay + sonradan doğrulama); defter düzeni (brüt tahsilat · komisyon · Merchant'tan ana hesaba aktarma). | `order/revolut.ts`; web ve mobil ödeme ekranları; `payment-webhook.ts` | Faz 0 Revolut ölçümü; canlı için asıl hesap |
+| 3 | **Revolut.** Çevrim içi ödeme (Merchant API: sipariş, kart alanı, Apple / Google Pay, webhook, iade) — Stripe söküldü, kart ödemesi web'de ve native'de Revolut'ta; web'de "Öde" Revolut'un ödeme sayfasına götürür (Google Pay orada; Apple Pay alan adı kaydı yalnız canlıda); açık: Revolut panelinde işletme adı, logo ve renk; kapıda kart (Revolut Business uygulamasında Tap to Pay ve Revolut kaydından eşleştirme, §9); defter düzeni (brüt tahsilat · komisyon · Merchant'tan ana hesaba aktarma). | `order/revolut.ts`; web ve mobil ödeme ekranları; `payment-webhook.ts` | Faz 0 Revolut ölçümü; canlı için asıl hesap |
 | 4 | **2027.** B2B e-faturası (10. karar): şirketin e-fatura platformu muhasebecininki olduğu için faturanın hangi platformdan gideceği ve siparişten faturaya bağlantı gerekip gerekmediği. B2C e-reporting: Hiboutik'in Z verisi Pennylane'e gidiyor; idareye hangi platformdan iletileceği bakılacak. | — | Son tarih 01.09.2027 |
 
 - **Sıra 1 → 2 → 3.** Hiboutik, sağlayıcıdan bağımsız tahsilat kapısına oturduğu için Revolut'tan önce
@@ -272,7 +272,7 @@ kopyası `.test-results/revolut/ham/api_merchant.yaml`, depoda değil). Site bot
 | Merchant → ana hesap | Para Merchant hesabına (Business'ın alt hesabı) yaklaşık 24 saatte yerleşir. `POST /api/payouts` bakiyenin **tamamını** Business hesabına aktarır (tutar seçilemez); `PAYOUT_*` olayları ve `payout_statement_report` aktarımın hangi işlemlerden oluştuğunu verir. | Aktarım transferi `PAYOUT_COMPLETED` olayından yazılır. |
 | Web ödeme | `@revolut/checkout`: gömülü kart alanı (`createCardField`), açılır kart penceresi, Revolut Pay, Apple Pay / Google Pay düğmesi, ya da Revolut'un barındırdığı ödeme sayfası (`redirect_url`). Kart kabulünün canlıda sağlıklı çalışması için ad, e-posta ve **fatura adresi** verilmeli. Apple Pay için alan adı kaydı (`/.well-known/apple-developer-merchantid-domain-association` + `POST /api/apple-pay/domains/register`); Google Pay ek adım istemez. | Barındırılan ödeme sayfası (`checkout_url` + `redirect_url` + `line_items`): tasarımın "Kart ile güvenli ödeme sayfasında" kararı. Satır toplamı tutarı vermezse satırlar gönderilmez. |
 | Native | React Native için `@revolut/revolut-merchant-card-form` + `@revolut/revolut-payments-core`: siparişin `token`ıyla açılan hazır kart formu (3D Secure dahil). | `payment-sheet.ts` bu formu açar; Android kart formu en az API 28 (Android 9) ister, uygulamanın tabanı buna çekildi; müşteri native uygulaması ilk etapta yayında değil. |
-| Kapıda kart | **Revolut Reader artık satılmıyor.** Tap to Pay SDK yalnız iPhone'da (XS ve üstü, iOS 16.4+), **deneme ortamını desteklemiyor**: deneme yalnız canlıda gerçek ödemeyle (ilk kurulumda 1 birimlik deneme ödemesi). Önkoşullar: Revolut Developer Portal'da uygulama + `tap_to_pay_sdk` kapsamı ve canlı onayı; işletmeden OAuth (PKCE) izni, arka uçta jeton saklama ve yenileme, cihaza kısa ömürlü jeton; Apple'dan Tap to Pay hakkı (`com.apple.developer.proximity-reader.payment.acceptance`); SDK yerel iOS (CocoaPods). `performPayment` tutar, para birimi ve isteğe bağlı açıklama alır; sonuç olarak yalnız başarı/hata ve makbuz adresi döner, Revolut sipariş kimliği dönmez. Terminal'e sunucudan ödeme gönderme: sipariş `channel: pos` ve fiziksel `location_id` ile açılır, Terminal aynı konumda "Pay at Counter" kipinde olmalı. | 17. karar. SDK siparişi kendi açtığı için bizim siparişle bağ açıklamadan kurulur: açıklamaya sipariş numarası yazılır, webhook'taki sipariş okunup eşlenir; açıklamanın siparişte hangi alana düştüğü canlı denemede ölçülecek. Operasyon uygulaması Expo olduğu için SDK'yı saran yerel modül gerekir. |
+| Kapıda kart | **Revolut Reader artık satılmıyor.** Tap to Pay SDK yalnız iPhone'da (XS ve üstü, iOS 16.4+), **deneme ortamını desteklemiyor**: deneme yalnız canlıda gerçek ödemeyle (ilk kurulumda 1 birimlik deneme ödemesi). Önkoşullar: Revolut Developer Portal'da uygulama + `tap_to_pay_sdk` kapsamı ve canlı onayı; işletmeden OAuth (PKCE) izni, arka uçta jeton saklama ve yenileme, cihaza kısa ömürlü jeton; Apple'dan Tap to Pay hakkı (`com.apple.developer.proximity-reader.payment.acceptance`); SDK yerel iOS (CocoaPods). `performPayment` tutar, para birimi ve isteğe bağlı açıklama alır; sonuç olarak yalnız başarı/hata ve makbuz adresi döner, Revolut sipariş kimliği dönmez. Terminal'e sunucudan ödeme gönderme: sipariş `channel: pos` ve fiziksel `location_id` ile açılır, Terminal aynı konumda "Pay at Counter" kipinde olmalı. | SDK yolu bekletiliyor (17. karar, 12.10). Apple'ın Tap to Pay izni yalnız şirket düzeyindeki Apple Developer hesabına ve hesap sahibine veriliyor; bizim hesap şahsi (D-U-N-S ve hesap dönüşümü gerekir). Kapıda kart Revolut Business uygulamasıyla alınır (§9). |
 | Deneme ortamı | Ayrı Sandbox Business hesabı (kayıt anında onaylanır, e-posta/SMS yok), ayrı anahtarlar, taban adres `sandbox-merchant.revolut.com`; yalnız test kartları (başarılı: 4929420573595709 Visa, 5281438801804148 Mastercard; ret senaryoları için ayrı kartlar). Apple Pay deneme ortamında yok. | Ölçüm turu buradan. |
 
 **Revolut — deneme hesabında ölçüldü (06.10).** Betikler `.test-results/revolut/a1…a6-*.mjs`, çıktılar `olcum/`.
@@ -291,8 +291,7 @@ kopyası `.test-results/revolut/ham/api_merchant.yaml`, depoda değil). Site bot
 
 **Revolut — açık kalan:**
 - Aktarımın Merchant hesabından ana hesaba kendiliğinden olup olmadığı, yerleşme raporu ve iadede komisyon: canlıda.
-- Tap to Pay (canlıda): SDK'nın açtığı siparişte `description`ın nereye düştüğü ve webhook'tan sipariş numarasına ulaşılıp
-  ulaşılamadığı; ödeme komisyonu.
+- Kapıda kart (canlıda, ilk ödemede): §9'daki ölçüm listesi.
 - Android'de Google Pay, itiraz (dispute) akışı.
 
 ## 7. Faz 1 tasarımı — Hiboutik kasa (01.10)
@@ -566,7 +565,7 @@ gösterir.
    ayrılan belge "Pennylane'de farklı"dır.
 6. **Hareket gelmiyor uyarısı.** Günde bir kez bakılır. Eşlenmiş hesabın Pennylane'den gelen son hareketi
    `pennylane_quiet_days` günden (varsayılan 4) eskiyse muhasebeye ve yönetime bildirim gider; bankanın
-   Pennylane bağlantısı yenilenir (§9, 1. risk).
+   Pennylane bağlantısı yenilenir (§10, 1. risk).
 7. **Açık kalanın okunması.** Faturalarımızın Pennylane'deki açık kalanı yazımdan sonra ve Pennylane'in fatura değişiklik
    akışından (`/changelogs/supplier_invoices`) okunur, çünkü toptan operasyonunun ya da muhasebecinin Pennylane'de yaptığı
    eşleşme bizim yazımımızdan geçmez. Akış şirketin bütün faturalarını getirir, yalnız bizimkiler okunur; akışın kapsamadığı
@@ -664,7 +663,52 @@ olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği; Pennylane
 ve sıklığı; alış faturasını Pennylane dosyasından mı kendi e-fatura platformundan mı kaydedeceği, çünkü aynı fatura
 ikisinde de durur; belge dosyalarını isteyip istemediği.
 
-## 9. Riskler
+## 9. Kapıda kart — Revolut Business uygulamasında Tap to Pay (12.10)
+
+**Neden bu yol:** Tap to Pay on iPhone Fransa'da Revolut Business uygulamasında hazırdır (Apple'ın ülke listesinde Fransa'da
+Revolut; Revolut'un Fransa sayfası). Kart almak için geliştirici onayı, Apple izni ya da yerel modül gerekmez; SDK (§6) bunun
+üstüne yalnız tutarın siparişten gitmesini ve ödemenin anında bağlanmasını ekler. Yüz yüze ücret yerli ve Avrupa tüketici
+kartında %0,8 + 0,02 €, Tap to Pay için ayrıca 0,08 €; çevrim içi ödeme %1 + 0,20 €. Tap to Pay Android'de yok; şirket iPhone'u
+kullanılır (XS ve üstü, iOS 16.4+).
+
+**Akış:**
+1. Kart alan personel (kurye, gel-al tezgâhı, kapı önü ve araç satışı) bizim uygulamada çekilecek tutarı görür ve "kart"ı seçer.
+2. Şirket iPhone'unda Revolut Business › Merchant › New › Tap to Pay on iPhone'da aynı tutarı yazar; müşteri kartını ya da
+   telefonunu dokundurur. İlk kullanımda cihazda Apple hesabıyla Tap to Pay koşulları onaylanır.
+3. Bizim uygulamada tahsilatı onaylar; tahsilat bugünkü gibi kapıda kart hesabına (Revolut Merchant) yazılır ve kasaya gider.
+4. Eşleştirme işi Revolut'un yüz yüze ödemesini bu tahsilatla eşler ve tahsilata Revolut'un sipariş kimliğini yazar. Böylece
+   aktarım raporu komisyonu siparişe yazar, siparişin kârı hesaplanır, rapor satırı "açıklanamayan" sayılmaz.
+5. Eşleşmeyen iki durum yönetime bildirilir: Revolut'ta olup bizde karşılığı olmayan ödeme (kart yazılmamış) ve bizde kart diye
+   yazılıp Revolut'ta olmayan tahsilat (para çekilmemiş).
+
+**Hazırlık (kullanıcı):**
+- Canlı Merchant hesabı yüz yüze ödemeye açık; canlı Merchant API anahtarı kök `.env`'e yazılır (değer paylaşılmaz).
+- Revolut Business'ta "Kapı tahsilatı" özel rolü: yalnız Merchant yetkisi, para hesaplarına erişim kapalı.
+- Kart alacak her personel bu rolle ekip üyesi olarak davet edilir.
+- Şirket iPhone'larına Revolut Business uygulaması kurulur.
+- Revolut ↔ Pennylane bağlantısında yalnız banka akışı açık kalır (8. karar); uygulamanın satışı Pennylane'e satış olarak gitmez.
+
+**İlk canlı ödemede ölçülecek** (1 €'luk ödeme ve iadesi):
+- Ödemenin göründüğü yer: sipariş listesi (`GET /api/orders`), ödeme raporu (`payments_report`: `order_channel`,
+  `payment_initiated_by`, `terminal_hardware_id`), aktarım raporu; `ORDER_COMPLETED` bildirimi gelip gelmediği.
+- Ödemeyi kimin aldığının hangi alanda durduğu ve personelle eşlemeye yetip yetmediği.
+- Uygulamada ödemeye not girilip girilemediği; girilebiliyorsa sipariş numarası yazılır.
+- Yüz yüze siparişin API'den iade edilip edilemediği (`POST /api/orders/{id}/refund`); edilebiliyorsa kapı kartı iadesi de
+  sağlayıcıdan yapılır.
+- Komisyon satırı.
+
+**Bizde yapılacak:**
+1. Eşleştirme kuralı (domain-core): tutar birebir, zaman penceresi ve ödemeyi alan kişi; tek aday bağlanır, birden çok aday
+   elle eşlenir, adayı olmayan bildirilir. Pencere ve alanlar ölçümden sonra kesinleşir.
+2. Eşleştirme işi (backend): yüz yüze ödemeleri Revolut'tan okur, eşler, tahsilata kimliği yazar, eşleşmeyeni bildirir.
+3. Kurye, gel-al ve kapı önü satış ekranlarında kart seçilince çekilecek tutar ve kısa yönlendirme.
+4. Operasyonda eşleşmeyen ödemeler listesi ve elle eşleme.
+5. Sefer kapanışında kart toplamı Revolut'taki eşleşmiş ödemelerden gelir, kurye elle yazmaz (ölçüm olumluysa).
+6. Runbook: Revolut rolü, ekip daveti ve iPhone kurulumu.
+
+**Değişmeyen:** kasa yazımı (satış Hiboutik'e bugünkü gibi "kart" yöntemiyle), kapıda kart hesabı, çevrim içi ödeme.
+
+## 10. Riskler
 
 Operatörün Hiboutik ve Pennylane'de yapmaması gerekenler `docs/runbook/muhasebe-duzeni.md`'de.
 
@@ -684,7 +728,7 @@ Operatörün Hiboutik ve Pennylane'de yapmaması gerekenler `docs/runbook/muhase
 6. **Kasa sıfırlanması.** Hiboutik'te ürünler silinirse (demo sıfırlama) bizdeki ürün eşlemesi
    (`register_product`) olmayan ürünleri anar ve her yazım düşer; sıfırlamadan sonra eşleme silinmeli.
 
-## 10. Kaynaklar
+## 11. Kaynaklar
 
 Resmî:
 - [BOFiP BOI-TVA-DECLA-30-10-30 (25.03.2026)](https://bofip.impots.gouv.fr/bofip/10691-PGP.html/identifiant=BOI-TVA-DECLA-30-10-30-20260325)
@@ -727,6 +771,8 @@ Revolut:
 - [Tap to Pay](https://developer.revolut.com/docs/guides/merchant/accept-payments/in-person-payments/tap-to-pay/introduction) · [Terminal'e ödeme gönderme](https://developer.revolut.com/docs/guides/merchant/accept-payments/in-person-payments/terminal/push-payments)
 - [Deneme ortamı](https://developer.revolut.com/docs/guides/merchant/test-and-go-live/set-up-sandbox) · [Test kartları](https://developer.revolut.com/docs/guides/merchant/test-and-go-live/testing/test-cards) · [Canlıya geçiş listesi](https://developer.revolut.com/docs/guides/merchant/test-and-go-live/testing/implementation-checklists)
 - [Terminal'e sunucudan ödeme gönderme](https://developer.revolut.com/updates/2025/12/01/push-payments-to-terminal)
+- [Tap to Pay on iPhone — Revolut Business, Fransa](https://www.revolut.com/en-FR/business/tap-to-pay-on-iphone/) · [Fransa ödeme alma ücretleri](https://www.revolut.com/en-FR/business/accept-payments-pricing/) · [Ekibe Merchant erişimi](https://help.revolut.com/help/merchant-accounts/setting-up-a-merchant-account/how-can-i-allow-my-team-member-to-access-the-merchant-tab-in-revolut-business/business/)
+- Apple: [Tap to Pay ülkeleri ve sağlayıcıları](https://developer.apple.com/tap-to-pay/regions/) · [Tap to Pay izni](https://developer.apple.com/documentation/proximityreader/setting-up-the-entitlement-for-tap-to-pay-on-iphone)
 - [Pennylane entegrasyonu](https://www.revolut.com/fr-FR/business/integrations/pennylane-integration/)
 - [Ödeme işleme sözleşmesi (Merchant hesabı)](https://www.revolut.com/en-FR/legal/business-acquiring)
 
