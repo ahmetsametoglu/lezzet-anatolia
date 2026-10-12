@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { PRODUCTS_COLUMN_TRACKS } from '../../products-columns';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
@@ -8,30 +9,26 @@ import { withCells, Table, type Column } from '@/components/operation/ui/table';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { money, percent } from '@/components/operation/ui/format';
-import { PRODUCT_STATUS_LABELS, resolveLocalizedText, type ProductVariant } from '@lezzet/types';
+import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import { DeclarationMarks } from './declaration-marks';
 import { ProductPreview } from './product-preview';
 import { StatusBadge } from './status-badge';
-import type {
-  ProductPriceSummary,
-  ProductStatus,
-  ProductStockSummary,
-  ProductView,
-  ProductsViewProps,
-  StatusFilter,
+import { useRowDetail } from './use-row-detail.hook';
+import { VariantBreakdown } from './variant-breakdown';
+import {
+  sizeLabel,
+  type ProductPriceSummary,
+  type ProductStatus,
+  type ProductStockSummary,
+  type ProductView,
+  type ProductsViewProps,
+  type StatusFilter,
 } from '../../products-types';
 
 // Ürünler sekmesi (masaüstü): liste + seçili önizleme paneli (1.95fr / 1fr). Süzgeçler
 // (arama · kategori · durum · beyan eksik) İŞLEVSEL — hepsi listeyi gerçekten daraltır.
 
 const STATUS_ORDER: ProductStatus[] = ['active', 'passive', 'candidate'];
-
-/** Boyun ekrandaki adı: etiketi varsa o, yoksa net miktarı — tek boylu üründe etiket bilerek boştur. */
-function sizeLabel(variant: ProductVariant): string {
-  const label = resolveLocalizedText(variant.label);
-  if (label) return label;
-  return variant.netQuantity != null && variant.netUnit ? `${variant.netQuantity} ${variant.netUnit}` : '—';
-}
 
 /** Okunmamış değer "—"dır: sıfır stok ile okunmamış stok aynı şey değildir (CLAUDE §1). */
 function Unknown() {
@@ -111,6 +108,10 @@ const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TR
   decl: (r) => <DeclarationMarks product={r} />,
   ship: (r) => <ShipCell product={r} />,
   status: (r) => <StatusBadge status={r.status} />,
+  // Açma düğmesi hücrenin KENDİSİNDE durur ve tıklaması satıra sızmaz: satır tıklaması seçimdir
+  // (önizleme panelini değiştirir), çift tıklaması düzenlemedir. Üçüncü anlam ayrı bir hedefe
+  // bağlanmak zorunda, yoksa operatör kırılımı açmak isterken seçimi değiştirirdi.
+  expand: () => null,
 });
 
 // "+ durum" — süzgeç çipi. Davranış 05.08'de KİTE taşındı (`ui/filter-chip`): burada elle
@@ -150,6 +151,35 @@ export function ProductsTab(props: ProductsViewProps) {
     products.find((p) => p.id === selectedId) ?? (data.pinned?.id === selectedId ? data.pinned : null) ?? null;
   const missingCount = data.counts.incomplete;
 
+  // Boy kırılımı AÇIKKEN okunur (`use-row-detail`): barkod, depo dağılımı, en yakın parti ve kanal
+  // fiyatları tek turda gelir. Açma hücresi burada kuruluyor çünkü durumu bu bileşen tutuyor.
+  const { openId, toggle, invalidate, state: detailState } = useRowDetail();
+  const columns = useMemo<Column<ProductView>[]>(
+    () =>
+      COLUMNS.map((column) =>
+        column.key === 'expand'
+          ? {
+              ...column,
+              cell: (row: ProductView) => (
+                <button
+                  type="button"
+                  aria-label={openId === row.id ? 'Boyları kapat' : 'Boyları aç'}
+                  aria-expanded={openId === row.id}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggle(row.id);
+                  }}
+                  className="cursor-pointer rounded-md px-1 py-0.5 font-ops-display text-ops-sm text-ops-muted hover:bg-ops-surface-sunken hover:text-ops-ink"
+                >
+                  {openId === row.id ? '⌃' : '⌄'}
+                </button>
+              ),
+            }
+          : column,
+      ),
+    [openId, toggle],
+  );
+
   return (
     <>
       {/* Süzgeç çipleri (İşlevsel) */}
@@ -181,7 +211,8 @@ export function ProductsTab(props: ProductsViewProps) {
         <div className="flex min-h-0 flex-col border-r border-ops-line">
           <Table
             busy={props.navPending}
-            columns={COLUMNS}
+            columns={columns}
+            renderSubRow={(r) => (r.id === openId ? <VariantBreakdown product={r} state={detailState} onRetry={() => invalidate(r.id)} /> : null)}
             rows={products}
             rowKey={(r) => r.id}
             onRowClick={(r) => onSelect(r.id)}

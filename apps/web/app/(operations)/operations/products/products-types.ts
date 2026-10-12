@@ -3,6 +3,7 @@
 // yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
 // yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
 import type {
+  BarcodeKind,
   Category,
   Collection,
   KeysetCursor,
@@ -11,6 +12,9 @@ import type {
   ProductStatus,
   ProductVariant,
 } from '@lezzet/types';
+import type { BatchView } from '@lezzet/application';
+import type { StockWarehouseSplit } from '@/lib/stock/level-rows';
+import { resolveLocalizedText } from '@lezzet/types';
 import { slugify } from '@lezzet/helper';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import type { ImageFrameSources } from '@lezzet/application';
@@ -50,6 +54,27 @@ export interface ProductPriceSummary {
   autoPrice: boolean;
 }
 
+/**
+ * AÇILAN SATIRIN boy ayrıntısı — yalnız listeye gelmeyen alanlar. Boy adı, SKU, net miktar,
+ * porsiyon ve ambalaj ölçüsü burada YOK: onlar `ProductView.variants` ile zaten gelmiştir ve
+ * kırılım açılır açılmaz dolu çizilir. Buradakiler ise sunucudan tek turda istenir.
+ */
+export interface VariantRowDetail {
+  variantId: string;
+  /** Dış dünyanın kodları (EAN/GTIN); boş dizi "eşleme yok" demektir. */
+  barcodes: Array<{ code: string; kind: BarcodeKind }>;
+  /** Malı olan depolar — stok ekranının kırılımıyla aynı şekil. */
+  warehouses: StockWarehouseSplit[];
+  availableQty: number;
+  /** En yakın son tarihli parti; cümlesini ekran kurar (`expiryLine`), sunucu biçimlendirme yapmaz. */
+  nearest: BatchView | null;
+  b2cCents: number | null;
+  b2bCents: number | null;
+  /** Satır içi fiyat düzenlemesinde marjı CANLI hesaplamak için; `null` = maliyet bilinmiyor. */
+  costCents: number | null;
+  vatRate: number;
+}
+
 /** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */
 export type ProductView = Product & {
   imageUrl: string | null; // R2 public okuma URL'i, `?v=` sürüm damgalı (yoksa placeholder) — ÖZGÜN dosya, düzenleme formu bununla
@@ -87,6 +112,16 @@ import type { BundleView } from '@/components/operation/form/bundle-form/types';
 export type { BundleView } from '@/components/operation/form/bundle-form/types';
 
 // ── Saf türevler (client-güvenli) — Product'tan hesaplanır, taşınmaz ──
+/**
+ * Boyun ekrandaki adı: etiketi varsa o, yoksa net miktarı. Tek boylu üründe etiket bilerek BOŞTUR
+ * (müşteri seçici görmez), ama operasyon listesi o boyu da bir adla anmak zorunda.
+ */
+export function sizeLabel(variant: ProductVariant): string {
+  const label = resolveLocalizedText(variant.label);
+  if (label) return label;
+  return variant.netQuantity != null && variant.netUnit ? `${variant.netQuantity} ${variant.netUnit}` : '—';
+}
+
 /** Adı DOLU olan içerik dilleri — "diller" göstergesi. */
 export function filledContentLangs(name: LocalizedText): Locale[] {
   return LOCALES.filter((l) => name[l]?.trim());

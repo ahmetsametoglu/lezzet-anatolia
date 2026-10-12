@@ -30,4 +30,6 @@ export const PRODUCTS_COLUMN_TRACKS: ColumnTrack[] = [
   { key: 'decl', header: 'Beyan', width: '126px', align: 'center' },
   { key: 'ship', header: 'Sevk', width: '116px' },
   { key: 'status', header: 'Durum', width: '94px', align: 'right' },
+  // Boy kırılımını açan düğmenin sütunu; başlığı yok, çünkü başlık bir şey söylemezdi.
+  { key: 'expand', header: '', width: '28px', align: 'center' },
 ];

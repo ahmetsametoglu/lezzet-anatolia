@@ -36,7 +36,7 @@ function split(warehouseId: string, availableQty: number): StockLevelRow['wareho
 }
 
 function priceRow(over: Partial<PriceRow> & Pick<PriceRow, 'productId' | 'variantId'>): PriceRow {
-  const cell = { amountCents: null, customerId: null, validFrom: null } as PriceRow['b2c'];
+  const cell = { amountCents: null, validFrom: null } as PriceRow['b2c'];
   return {
     productName: 'Ürün',
     variantLabel: '1 kg',
@@ -85,9 +85,9 @@ describe('summarizeStock', () => {
 describe('summarizePrices', () => {
   it('ürünün İLK AKTİF boyunu gösterir, pasif boy satırın fiyatını belirlemez', () => {
     const summary = summarizePrices([
-      priceRow({ productId: 'p1', variantId: 'v1', variantActive: false, b2c: { amountCents: 999, customerId: null, validFrom: null } }),
-      priceRow({ productId: 'p1', variantId: 'v2', variantActive: true, b2c: { amountCents: 3490, customerId: null, validFrom: null } }),
-      priceRow({ productId: 'p1', variantId: 'v3', variantActive: true, b2c: { amountCents: 1890, customerId: null, validFrom: null } }),
+      priceRow({ productId: 'p1', variantId: 'v1', variantActive: false, b2c: { amountCents: 999, validFrom: null } }),
+      priceRow({ productId: 'p1', variantId: 'v2', variantActive: true, b2c: { amountCents: 3490, validFrom: null } }),
+      priceRow({ productId: 'p1', variantId: 'v3', variantActive: true, b2c: { amountCents: 1890, validFrom: null } }),
     ]);
 
     expect(summary.get('p1')?.b2cCents).toBe(3490);
@@ -95,8 +95,8 @@ describe('summarizePrices', () => {
 
   it('hiç aktif boy yoksa ilk satıra düşer — satır fiyatsız kalmaz', () => {
     const summary = summarizePrices([
-      priceRow({ productId: 'p2', variantId: 'v1', variantActive: false, b2c: { amountCents: 1200, customerId: null, validFrom: null } }),
-      priceRow({ productId: 'p2', variantId: 'v2', variantActive: false, b2c: { amountCents: 800, customerId: null, validFrom: null } }),
+      priceRow({ productId: 'p2', variantId: 'v1', variantActive: false, b2c: { amountCents: 1200, validFrom: null } }),
+      priceRow({ productId: 'p2', variantId: 'v2', variantActive: false, b2c: { amountCents: 800, validFrom: null } }),
     ]);
 
     expect(summary.get('p2')?.b2cCents).toBe(1200);
