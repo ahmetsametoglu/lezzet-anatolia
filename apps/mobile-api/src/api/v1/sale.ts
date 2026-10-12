@@ -14,6 +14,7 @@ import {
   getProductDetail,
   listRecentDoorSales,
   pricingViewerFor,
+  quoteOnSiteSale,
   sellOnSite,
   toWireCampaign,
   vehicleWarehouseOf,
@@ -24,6 +25,8 @@ import {
 import { canNegotiatePrice, customerBusinessOf } from '@lezzet/domain-core';
 import {
   DEFAULT_PAGE_SIZE,
+  OnSiteSaleQuoteRequestSchema,
+  OnSiteSaleQuoteResponseSchema,
   OnSiteSaleRequestSchema,
   OnSiteSaleResponseSchema,
   PreferredLanguageEnum,
@@ -135,16 +138,56 @@ sale.use('*', salePlaceGuard);
 sale.use('*', saleBuyerGuard);
 
 /**
+ * Pazarlık yönetici yetkisidir (DOMAIN §5): kurye ya da depocu olan yönetici yazar. Yönetici olmayanın fiyat alanı ekranda kilitli;
+ * elle kurulan istek satışta da kesin tutarda da düşer.
+ */
+function negotiationForbidden(c: Context<SaleEnv>, lines: readonly { negotiatedUnitPriceCents?: number }[]): boolean {
+  return lines.some((line) => line.negotiatedUnitPriceCents !== undefined) && !canNegotiatePrice(c.get('staff').roles);
+}
+
+/**
+ * Kesin tutar: satışın fiyatlaması, yazım yok. Retler satışınkilerle aynı gövdeyle döner; yazılmadığı için tekrar kimliği yoktur.
+ */
+sale.post('/on-site/quote', async (c) => {
+  const parsed = OnSiteSaleQuoteRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+  if (negotiationForbidden(c, parsed.data.lines)) return fail(c, 'forbidden', 403);
+
+  const outcome = await quoteOnSiteSale(serviceDb(), {
+    warehouseId: c.get('warehouseId'),
+    customerId: c.get('saleBuyer')?.id ?? ANONYMOUS_BUYER_ID,
+    lines: parsed.data.lines,
+    paymentMethod: parsed.data.paymentMethod,
+    onAccount: parsed.data.onAccount,
+  });
+  if (outcome.status === 'payment_not_allowed') return fail(c, 'payment_not_allowed', 400);
+  if (
+    outcome.status === 'ok' ||
+    outcome.status === 'insufficient_here' ||
+    outcome.status === 'blocked_lines' ||
+    outcome.status === 'no_payment_account' ||
+    outcome.status === 'credit_not_allowed'
+  ) {
+    const body: z.input<typeof OnSiteSaleQuoteResponseSchema> = outcome;
+    return ok(c, OnSiteSaleQuoteResponseSchema.parse(body));
+  }
+  // Kalanlar (`empty`, `warehouse_not_found`, `business_mismatch`) şemada ve guard'larda elenir; ulaşırsa izi kalır.
+  captureError(new Error(`yerinde satış kesin tutarı okunmadı: ${outcome.status}`), {
+    source: SOURCES.mobileApiHttp,
+    context: { route: 'sale/on-site/quote', warehouseId: c.get('warehouseId'), staffId: c.get('staff').id, outcome },
+  });
+  const body: z.input<typeof OnSiteSaleQuoteResponseSchema> = { status: 'failed' };
+  return ok(c, OnSiteSaleQuoteResponseSchema.parse(body));
+});
+
+/**
  * Satış tek çağrıda kapanır ve kapının kararı ne olursa olsun 200 döner; `sale_failed` ayrıntısızdır, çünkü sebepleri personelin
  * yapabileceği bir şeye çevrilemez. Yetersiz stok ayrı ve ayrıntılıdır, karşılığı adedi düşürmektir.
  */
 sale.post('/on-site', async (c) => {
   const parsed = OnSiteSaleRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
-  // Pazarlık yönetici yetkisidir (DOMAIN §5): kurye ya da depocu olan yönetici yazar. Yönetici olmayanın fiyat alanı ekranda kilitli;
-  // elle kurulan istek burada düşer ve satış yazılmaz.
-  const negotiated = parsed.data.lines.some((line) => line.negotiatedUnitPriceCents !== undefined);
-  if (negotiated && !canNegotiatePrice(c.get('staff').roles)) return fail(c, 'forbidden', 403);
+  if (negotiationForbidden(c, parsed.data.lines)) return fail(c, 'forbidden', 403);
 
   const outcome = await sellOnSite(serviceDb(), {
     warehouseId: c.get('warehouseId'),

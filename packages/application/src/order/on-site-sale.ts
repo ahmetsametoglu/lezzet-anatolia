@@ -89,90 +89,53 @@ export type OnSiteSaleOutcome =
   /** Kapanış adımının reddi olduğu gibi taşınır — mal yok, yarış, kural reddi. */
   | { status: 'sale_failed'; outcome: Exclude<QuickSaleOutcome, { status: 'ok' }> };
 
+/** Kesin tutarın girdisi: satışın kendisi, yazımı yapan personel ve tekrar kimliği olmadan. */
+export type OnSiteSaleQuoteInput = Pick<
+  OnSiteSaleInput,
+  'warehouseId' | 'customerId' | 'lines' | 'paymentMethod' | 'paymentAccountId' | 'locale' | 'onAccount'
+>;
+
+type SaleRefusal = Extract<
+  OnSiteSaleOutcome,
+  {
+    status:
+      | 'empty'
+      | 'payment_not_allowed'
+      | 'warehouse_not_found'
+      | 'blocked_lines'
+      | 'insufficient_here'
+      | 'no_payment_account'
+      | 'business_mismatch'
+      | 'credit_not_allowed';
+  }
+>;
+
+export type OnSiteSaleQuote = { status: 'ok'; totalCents: number } | SaleRefusal;
+
+/**
+ * Satışın yazmadan kesin tutarı: personel nakdi ya da kartı bu tutarla alır ve satış ancak para alındıktan sonra yazılır, çünkü kasa
+ * fişi yazıldığı anda kapanır ve değişmez. Tutar satışın kullandığı fiyatlamanın kendisidir.
+ */
+export async function quoteOnSiteSale(db: Db, input: OnSiteSaleQuoteInput): Promise<OnSiteSaleQuote> {
+  const invalid = invalidRequestOf(input);
+  if (invalid) return invalid;
+  const priced = await priceOnSiteSale(db, input);
+  return priced.status === 'priced' ? { status: 'ok', totalCents: priced.totalCents } : priced;
+}
+
 export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSiteSaleOutcome> {
-  if (input.lines.length === 0) return { status: 'empty' };
-  const onAccount = input.onAccount === true;
-  const named = input.customerId !== ANONYMOUS_BUYER_ID;
-  // Vadeli satış adı belli müşterinin açık bakiyesine yazılır ve yöntemi havaledir; anonim alıcının bakiyesi yoktur.
-  if (onAccount && (!named || input.paymentMethod !== 'bank_transfer')) return { status: 'payment_not_allowed' };
+  const invalid = invalidRequestOf(input);
+  if (invalid) return invalid;
 
   if (input.idempotencyKey) {
     const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
     if (already && already.status !== 'cancelled') return repeatedSale(db, already, input);
   }
 
-  const warehouse = await new WarehouseService(db).getById(input.warehouseId);
-  if (!warehouse) return { status: 'warehouse_not_found' };
-
-  const buyer = named ? await new UserProfileService(db).getById(input.customerId) : null;
-  if (named && !buyer) throw new Error(`yerinde satış: müşteri bulunamadı (${input.customerId})`);
-  // Siparişi yazan her kapıda müşterinin işi deponun işiyle tutar; anonim alıcı muaftır.
-  if (buyer && customerBusinessOf(buyer) !== warehouse.business) return { status: 'business_mismatch' };
-
-  // Hesap taslaktan önce denetlenir: reddedilen satış kapanmayacak bir taslak sipariş bırakmasın. Vadelide kapıda para alınmaz.
-  const paymentAccountId = onAccount ? null : (input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod)));
-  if (!onAccount && !paymentAccountId) return { status: 'no_payment_account' };
-
-  const locale: PreferredLanguage = input.locale ?? 'tr';
-  const overrides = new Map(
-    input.lines
-      .filter((line) => line.negotiatedUnitPriceCents !== undefined)
-      .map((line) => [line.variantId, line.negotiatedUnitPriceCents!] as const),
-  );
-
-  /*
-    Sepet okuması yerin DEPOSUNU alıyor ve bu tam da istediğimiz süzgeç: depo bazlı
-    `available_stock` aracı AYNEN gösteriyor (depo-üstü toplam göstermiyor — `available_stock_total`
-    araçları dışlıyor). Yani kuryenin arabasındaki mal burada görünür, ayrılmış mal görünmez.
-  */
-  const view = await getCartView(
-    db,
-    locale,
-    input.lines.map((line) => ({ kind: 'variant' as const, variantId: line.variantId, qty: line.qty, stockId: null })),
-    { customerId: input.customerId, priceOverrides: overrides, warehouseId: input.warehouseId, business: warehouse.business },
-  );
-
-  const blocked = view.lines.filter((line) => line.unitPriceCents === null).map((line) => line.name);
-  if (blocked.length > 0) return { status: 'blocked_lines', lines: blocked };
-
-  /*
-    Depo bazlı stok kontrolü yazımdan önce: yalnız `quickSale`de kalsaydı reddedilen satış geriye hiç kapanmayacak bir taslak sipariş
-    bırakırdı; son söz yine RPC'nindir, çünkü kontrol ile yazım arasında raf değişebilir. Ret `createCheckoutDraft`inkiyle aynı biçimdedir:
-    adet sessizce düşürülmez, personel müşteriye kalanı söyleyebilsin diye kalan sayı döner.
-  */
-  const overCap = view.lines.filter((line) => line.availableHere !== null && line.availableHere < line.qty);
-  if (overCap.length > 0) {
-    return {
-      status: 'insufficient_here',
-      lines: overCap.map((line) => ({ name: line.name, available: line.availableHere ?? 0 })),
-    };
-  }
-
-  /*
-    Süzgeç bugün yalnız tipi daraltır, çünkü bu kapı yalnız varyant kalemi alır; paket satırı kabul edilirse pazarlığın pakete
-    uygulanmadığı hesaba katılmalı (DOMAIN §13). İndirim payları satırla birlikte süzülür, çünkü `discountSharesOf` konum dizisi döner ve
-    yalnız satırı süzmek kalan kaleme başkasının indirimini yazardı.
-  */
-  const shares = discountSharesOf(view.discount);
-  const kept = view.lines
-    .map((line, index) => ({ line, share: shares[index] ?? 0 }))
-    .filter((row): row is { line: typeof row.line & { variantId: string }; share: number } => row.line.variantId !== undefined);
-
-  const terms =
-    buyer === null
-      ? null
-      : await namedSaleTerms(db, {
-          buyer,
-          warehouse,
-          basketCents: view.totalCents,
-          subtotalCents: view.subtotalCents,
-          lines: kept.map(({ line }) => line),
-          shares: kept.map(({ share }) => share),
-        });
-  if (onAccount && terms && !terms.payment.creditAvailable) {
-    return { status: 'credit_not_allowed', reason: terms.payment.creditBlockedReason ?? 'not_enabled' };
-  }
-  const totalCents = terms?.payment.orderTotalCents ?? view.totalCents;
+  const priced = await priceOnSiteSale(db, input);
+  if (priced.status !== 'priced') return priced;
+  const { warehouse, buyer, view, kept, terms, totalCents, paymentAccountId, locale } = priced;
+  const onAccount = input.onAccount === true;
 
   const items: CreateOrderItemInput[] = kept.map(({ line, share }) => ({
     variantId: line.variantId,
@@ -243,6 +206,97 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     referenceNo: outcome.referenceNo,
     paymentRecorded: outcome.paymentRecorded,
   };
+}
+
+/** Veri okumadan reddedilen istek: kalemsiz sepet ve vadeli satışın yanlış birleşimi. */
+function invalidRequestOf(input: OnSiteSaleQuoteInput): Extract<SaleRefusal, { status: 'empty' | 'payment_not_allowed' }> | null {
+  if (input.lines.length === 0) return { status: 'empty' };
+  // Vadeli satış adı belli müşterinin açık bakiyesine yazılır ve yöntemi havaledir; anonim alıcının bakiyesi yoktur.
+  if (input.onAccount === true && (input.customerId === ANONYMOUS_BUYER_ID || input.paymentMethod !== 'bank_transfer')) {
+    return { status: 'payment_not_allowed' };
+  }
+  return null;
+}
+
+/** Yazımdan önceki bütün denetimler ve fiyat; satış ve kesin tutar aynı sonucu buradan okur. */
+async function priceOnSiteSale(db: Db, input: OnSiteSaleQuoteInput) {
+  const onAccount = input.onAccount === true;
+  const named = input.customerId !== ANONYMOUS_BUYER_ID;
+
+  const warehouse = await new WarehouseService(db).getById(input.warehouseId);
+  if (!warehouse) return { status: 'warehouse_not_found' } as const;
+
+  const buyer = named ? await new UserProfileService(db).getById(input.customerId) : null;
+  if (named && !buyer) throw new Error(`yerinde satış: müşteri bulunamadı (${input.customerId})`);
+  // Siparişi yazan her kapıda müşterinin işi deponun işiyle tutar; anonim alıcı muaftır.
+  if (buyer && customerBusinessOf(buyer) !== warehouse.business) return { status: 'business_mismatch' } as const;
+
+  // Hesap taslaktan önce denetlenir: reddedilen satış kapanmayacak bir taslak sipariş bırakmasın. Vadelide kapıda para alınmaz.
+  const paymentAccountId = onAccount ? null : (input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod)));
+  if (!onAccount && !paymentAccountId) return { status: 'no_payment_account' } as const;
+
+  const locale: PreferredLanguage = input.locale ?? 'tr';
+  const overrides = new Map(
+    input.lines
+      .filter((line) => line.negotiatedUnitPriceCents !== undefined)
+      .map((line) => [line.variantId, line.negotiatedUnitPriceCents!] as const),
+  );
+
+  /*
+    Sepet okuması yerin DEPOSUNU alıyor ve bu tam da istediğimiz süzgeç: depo bazlı
+    `available_stock` aracı AYNEN gösteriyor (depo-üstü toplam göstermiyor — `available_stock_total`
+    araçları dışlıyor). Yani kuryenin arabasındaki mal burada görünür, ayrılmış mal görünmez.
+  */
+  const view = await getCartView(
+    db,
+    locale,
+    input.lines.map((line) => ({ kind: 'variant' as const, variantId: line.variantId, qty: line.qty, stockId: null })),
+    { customerId: input.customerId, priceOverrides: overrides, warehouseId: input.warehouseId, business: warehouse.business },
+  );
+
+  const blocked = view.lines.filter((line) => line.unitPriceCents === null).map((line) => line.name);
+  if (blocked.length > 0) return { status: 'blocked_lines', lines: blocked } as const;
+
+  /*
+    Depo bazlı stok kontrolü yazımdan önce: yalnız `quickSale`de kalsaydı reddedilen satış geriye hiç kapanmayacak bir taslak sipariş
+    bırakırdı; son söz yine RPC'nindir, çünkü kontrol ile yazım arasında raf değişebilir. Ret `createCheckoutDraft`inkiyle aynı biçimdedir:
+    adet sessizce düşürülmez, personel müşteriye kalanı söyleyebilsin diye kalan sayı döner.
+  */
+  const overCap = view.lines.filter((line) => line.availableHere !== null && line.availableHere < line.qty);
+  if (overCap.length > 0) {
+    return {
+      status: 'insufficient_here',
+      lines: overCap.map((line) => ({ name: line.name, available: line.availableHere ?? 0 })),
+    } as const;
+  }
+
+  /*
+    Süzgeç bugün yalnız tipi daraltır, çünkü bu kapı yalnız varyant kalemi alır; paket satırı kabul edilirse pazarlığın pakete
+    uygulanmadığı hesaba katılmalı (DOMAIN §13). İndirim payları satırla birlikte süzülür, çünkü `discountSharesOf` konum dizisi döner ve
+    yalnız satırı süzmek kalan kaleme başkasının indirimini yazardı.
+  */
+  const shares = discountSharesOf(view.discount);
+  const kept = view.lines
+    .map((line, index) => ({ line, share: shares[index] ?? 0 }))
+    .filter((row): row is { line: typeof row.line & { variantId: string }; share: number } => row.line.variantId !== undefined);
+
+  const terms =
+    buyer === null
+      ? null
+      : await namedSaleTerms(db, {
+          buyer,
+          warehouse,
+          basketCents: view.totalCents,
+          subtotalCents: view.subtotalCents,
+          lines: kept.map(({ line }) => line),
+          shares: kept.map(({ share }) => share),
+        });
+  if (onAccount && terms && !terms.payment.creditAvailable) {
+    return { status: 'credit_not_allowed', reason: terms.payment.creditBlockedReason ?? 'not_enabled' } as const;
+  }
+  const totalCents = terms?.payment.orderTotalCents ?? view.totalCents;
+
+  return { status: 'priced', warehouse, buyer, view, kept, terms, totalCents, paymentAccountId, locale } as const;
 }
 
 /**

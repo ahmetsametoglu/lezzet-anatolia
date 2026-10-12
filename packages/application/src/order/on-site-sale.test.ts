@@ -4,7 +4,7 @@ import {
   ProductService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeOrdersBy, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
-import { ANONYMOUS_BUYER_ID, sellOnSite } from './on-site-sale';
+import { ANONYMOUS_BUYER_ID, quoteOnSiteSale, sellOnSite } from './on-site-sale';
 
 /**
  * Yerinde satış tek adımda kapanır (`draft → completed`: mal düşer, referans doğar, para yazılır); pazarlık izi liste fiyatıyla
@@ -215,10 +215,8 @@ describe('yerinde satış', () => {
   });
 
   it('ANONİM ALICI müşteri değildir — listede, sayaçta ve segmentte GÖRÜNMEZ', async () => {
-    /* Bu dosyanın ikinci asıl iddiası. Sipariş sahipsiz olamıyor ama kimlik de sorulmuyor; sabit
-       satır `roles = {system}` taşıyor ve müşteri okumalarının hepsi `roles @> {customer}` ile
-       süzülüyor (`CUSTOMERS_ONLY`). Yani anonim alıcıya bir GEÇMİŞ oluşmuyor — kullanıcı kararı
-       26.08: "aynı müşteri alıyor gibi görünmemeli". */
+    /* Sipariş sahipsiz olamaz ama alıcıya kimlik sorulmaz; sabit satır `roles = {system}` taşır ve müşteri okumalarının hepsi
+       `roles @> {customer}` ile süzülür (`CUSTOMERS_ONLY`). Anonim alıcıya bu yüzden geçmiş oluşmaz, aynı müşteri alıyor gibi görünmez. */
     const anonim = await new UserProfileService(db).getById(ANONYMOUS_BUYER_ID);
     expect(anonim?.roles).toEqual(['system']);
 
@@ -337,6 +335,26 @@ describe('adı belli müşteriye satış', () => {
     });
     const movements = await new MoneyMovementService(db).listByOrder(result.orderId);
     expect(movements.filter((m) => m.type === 'order_payment')).toHaveLength(0);
+  });
+
+  it('KESİN TUTAR hiçbir şey yazmaz ve satışın yazacağı KDV dahil toplamdır — sepetin vergisiz ara toplamı değil', async () => {
+    const sayOrders = async () => (await db.from('order').select('id').eq('customer_id', vadeliId)).data?.length ?? 0;
+    const once = await sayOrders();
+
+    const quote = await quoteOnSiteSale(db, {
+      warehouseId: facilityId,
+      customerId: vadeliId,
+      paymentMethod: 'cash',
+      paymentAccountId: cashAccount,
+      lines: [{ variantId, qty: 2 }],
+    });
+    expect(await sayOrders()).toBe(once);
+
+    const result = await sale({ customerId: vadeliId });
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.totalCents).toBeGreaterThan(2 * B2B);
+    expect(quote).toEqual({ status: 'ok', totalCents: result.totalCents });
   });
 
   it('peşin B2B satış tahsilatı yazar ve siparişi B2B kanalına yazar; kasa B2B nakdini kanaldan tanır', async () => {

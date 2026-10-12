@@ -26,7 +26,10 @@ export const OnSiteSaleLineSchema = z.object({
 export const OnSiteSaleRequestSchema = z.object({
   lines: z.array(OnSiteSaleLineSchema).min(1),
   paymentMethod: PaymentMethodEnum,
-  /** Tahsil edilen tutar (**cent**). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
+  /**
+   * Tahsil edilen tutar (**cent**): personelin aldığını onayladığı para, ki kesin tutar ile yazım arasında fiyat değişse de defter alınanı
+   * yazsın. Verilmezse siparişin toplamı tahsil edilmiş sayılır.
+   */
   collectedAmountCents: z.number().int().nonnegative().optional(),
   /** Cevabı kaybolan satış aynı sepetle yeniden gönderilince aynı kimlikle gelir; sunucu ikinci satış açmaz. */
   idempotencyKey: z.string().min(1).max(64).nullish(),
@@ -37,6 +40,23 @@ export const OnSiteSaleRequestSchema = z.object({
   onAccount: z.boolean().optional(),
 });
 export type OnSiteSaleRequest = z.infer<typeof OnSiteSaleRequestSchema>;
+
+/** Vadeli satış açılamadı — sipariş HİÇ yazılmadı; sebep vade freninin kendisidir. */
+const CreditNotAllowedSchema = z.object({
+  status: z.literal('credit_not_allowed'),
+  reason: z.enum(['not_enabled', 'overdue', 'limit_exceeded']),
+});
+/** Seçilen yöntemin kapı hesabı ayarlı değil — sipariş HİÇ yazılmadı; personel başka yöntemle satabilir. */
+const NoPaymentAccountSchema = z.object({ status: z.literal('no_payment_account') });
+/** Bu depoda o kadar yok — sipariş HİÇ yazılmadı, kalan sayı söylenir. */
+const InsufficientHereSchema = z.object({
+  status: z.literal('insufficient_here'),
+  lines: z.array(z.object({ name: z.string(), available: z.number().int() })),
+});
+/** Satışa kapalı satır — elle fiyat yazmak kapanmış ürünü diriltmez. */
+const BlockedLinesSchema = z.object({ status: z.literal('blocked_lines'), lines: z.array(z.string()) });
+/** Kapı reddetti (yarış, kural). Ayrıntı sunucuda loglanır; ekran tek cümle söyler. */
+const SaleFailedSchema = z.object({ status: z.literal('failed') });
 
 /**
  * Cevap, kapının kararı ne olursa olsun HTTP 200'dür: durum kodu isteğin kapıya ulaşıp ulaşmadığını, gövde satışın olup olmadığını
@@ -54,21 +74,29 @@ export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
      */
     paymentRecorded: z.boolean(),
   }),
-  /** Vadeli satış açılamadı — sipariş HİÇ yazılmadı; sebep vade freninin kendisidir. */
-  z.object({ status: z.literal('credit_not_allowed'), reason: z.enum(['not_enabled', 'overdue', 'limit_exceeded']) }),
-  /** Seçilen yöntemin kapı hesabı ayarlı değil — sipariş HİÇ yazılmadı; personel başka yöntemle satabilir. */
-  z.object({ status: z.literal('no_payment_account') }),
-  /** Bu depoda o kadar yok — sipariş HİÇ yazılmadı, kalan sayı söylenir. */
-  z.object({
-    status: z.literal('insufficient_here'),
-    lines: z.array(z.object({ name: z.string(), available: z.number().int() })),
-  }),
-  /** Satışa kapalı satır — elle fiyat yazmak kapanmış ürünü diriltmez. */
-  z.object({ status: z.literal('blocked_lines'), lines: z.array(z.string()) }),
-  /** Kapanış adımı reddetti (yarış, kural). Ayrıntı sunucuda loglanır; ekran tek cümle söyler. */
-  z.object({ status: z.literal('failed') }),
+  CreditNotAllowedSchema,
+  NoPaymentAccountSchema,
+  InsufficientHereSchema,
+  BlockedLinesSchema,
+  SaleFailedSchema,
 ]);
 export type OnSiteSaleResponse = z.infer<typeof OnSiteSaleResponseSchema>;
+
+/**
+ * Kesin tutar (`POST /sale/on-site/quote`): satışla aynı sepet, yazım yok. Personel nakdi ya da kartı bu tutarla alır ve satış
+ * ancak para alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır; retler satışınkilerle aynıdır.
+ */
+export const OnSiteSaleQuoteRequestSchema = OnSiteSaleRequestSchema.pick({ lines: true, paymentMethod: true, onAccount: true });
+export type OnSiteSaleQuoteRequest = z.infer<typeof OnSiteSaleQuoteRequestSchema>;
+
+export const OnSiteSaleQuoteResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), totalCents: z.number().int() }),
+  CreditNotAllowedSchema,
+  NoPaymentAccountSchema,
+  InsufficientHereSchema,
+  BlockedLinesSchema,
+  SaleFailedSchema,
+]);
 
 /* ────────────────────────────────────────────────────────────────────────────
    SATIŞ KATALOĞU — vitrinin okuması, satışın ihtiyacıyla

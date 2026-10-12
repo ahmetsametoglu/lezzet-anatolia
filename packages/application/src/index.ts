@@ -352,7 +352,7 @@ export { quickSale } from './order/quick-sale';
 export type { QuickSaleInput, QuickSaleOutcome } from './order/quick-sale';
 
 // Yerinde satış: fiyat, KDV, indirim ve pazarlık sepet okumasından gelir, ikinci bir sipariş kuralı yazılmaz.
-export { sellOnSite, listRecentDoorSales, ANONYMOUS_BUYER_ID } from './order/on-site-sale';
+export { quoteOnSiteSale, sellOnSite, listRecentDoorSales, ANONYMOUS_BUYER_ID } from './order/on-site-sale';
 export type { DoorSaleRecord, OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome } from './order/on-site-sale';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { boxLabelPayload, declareOrderShort, printersFor, registerPrinter, markBoxPrinted, openBox, sealBox, unsealBox } from './warehouse/boxes';
