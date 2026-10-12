@@ -1,10 +1,10 @@
 # Ülke pazarı — Strasbourg'dan Almanya'ya satış, ülkeye özel fiyat ve KDV
 
-> **Statü: KARAR ALINDI (12.10.2026), uygulama başlıyor.** Özelliğin tek kaydı bu dosya: yasal zemin, kararlar, hedef model,
-> yol haritası ve açık işler burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Muhasebe zemini
+> **Statü: UYGULANDI (12.10.2026); Oppo'da yerel sunucuyla denendi, açık işler §7.** Özelliğin tek kaydı bu dosya: yasal zemin,
+> kararlar, model ve açık işler burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir. İş yöneticinin altında iki ajanla
-> yürür: **[A]** model ve arka uç, **[B]** tasarım ve ekranlar, **[Y]** yönetici (karar, inceleme, belge, commit, cihaz denemesi).
-> Bu, `CLAUDE.md`'deki alt ajan yasağına kullanıcının bu özellik için açık istisnasıdır (kasa-muhasebe 13. kararın emsali).
+> yürüdü: **[A]** model ve arka uç, **[B]** tasarım ve ekranlar, **[Y]** yönetici (karar, inceleme, belge, commit, cihaz denemesi).
+> Bu, `CLAUDE.md`'deki alt ajan yasağına kullanıcının bu özellik için açık istisnasıydı (kasa-muhasebe 13. kararın emsali).
 
 ## 1. Yasal zemin
 
@@ -36,19 +36,15 @@
 listesine uygulanır; eşik uyarıları %80 ve %95; sistem dışı AB uzaktan satış tutarı için açılış ayarı (bu yıl ve önceki yıl,
 varsayılan 0); gel-al ve yerinde satışta ülke deponun ülkesidir (mal Fransa'da el değiştirir).
 
-## 3. Bugünkü durum (ölçüldü, 12.10)
+## 3. Kodda nerede
 
-| Konu | Bugün | Yer |
-|---|---|---|
-| Depo ülkesi | Tek kolon üç iş görüyor: malın yeri, kargo yapılan ülke, taşıyıcıya gönderen | `warehouse-resolve.ts` `findShippingWarehouse`; `shipping/quote.ts` ve `dispatch.ts` `senderOf` (iki kopya) |
-| Ülke başına kargo deposu | Deponun kendi ülkesine bağlı tekil indeks | `0031_warehouse.sql` `warehouse_single_online` |
-| Almanya'ya sipariş | Açılamıyor: gerçek veride tek kargo deposu Strasbourg (FR), rota bölgesi yalnız FR | `checkout-draft.ts` `no_shipping_warehouse`; `scripts/seed-real/data.ts` |
-| Fiyat | Varyant × kanal × isteğe bağlı müşteri × geçerlilik; ülke yok | `0005_catalog_product.sql` `price` |
-| KDV oranı | Ürün başına tek oran (FR; formda 5,5 / 20); sipariş kalemi uygulanan oranı saklıyor | `product.vat_rate`; `order_item.vat_rate` |
-| KDV kararı | Kanal, varış ülkesi ve vergi numarasından; malın çıktığı ülkeye bakmıyor | `tax/vat-treatment.ts` |
-| Eşik | `countsTowardOssThreshold` hesaplanıyor, okuyan yok | `vat-treatment.ts`; `DOMAIN.md` §5 "izler ve uyarır" diyor |
-| Kasa | Kalem oranı kasaya yazılıyor; kasada tanımsız oranda kargo ürünü açılamıyor | `register/hiboutik/client.ts` `taxIdOf`, kalem `vat` |
-| Native sepet | Ülkesiz okuyordu (KALAN K.27); mobile-api `country` parametresini alıyor | `apps/mobile-api/src/api/v1/cart-view.ts`, `catalog.ts` |
+| Konu | Yer |
+|---|---|
+| Depo ve kargo | `warehouse_ship_country` (`0031_warehouse.sql`); `findShippingWarehouse` (`domain-core/delivery/warehouse-resolve.ts`); gönderen `senderOf` (`application/shipping/sender.ts`) |
+| Fiyat | `price.country` (`0005_catalog_product.sql`); `resolvePrice` (`domain-core/pricing/resolve-price.ts`); fiyat ülkesi `priceCountryOf` (`pricing/price-country.ts`); otomatik fiyat `autoPriceCents` ve hizalama `repriceAllAuto` |
+| KDV | `product_vat_rate` (`0005_catalog_product.sql`); karar `resolveVatTreatment` (`domain-core/tax/vat-treatment.ts`); uygulanan oran ve satılabilirlik `applicableVatRate`, `sellableIn` (`tax/vat-rate.ts`) |
+| Eşik ve OSS | Hesap `distanceSaleThreshold` (`domain-core/tax/distance-sale-threshold.ts`); okuma `readDistanceSaleThreshold`, günlük iş `watchDistanceSaleThreshold`, özet `readOssSummary` (`application/accounting/`); ayarlar `eu_distance_sales_*` (`0013_settings.sql`) |
+| Ekranlar | Operasyon: Depolar, Ürünler kırılımı ve ürün formu, Fiyatlar › Kanallar, Ayarlar › Para, Pano, Raporlar › Muhasebe export. Müşteri: web (masaüstü, mobil web) ve native, "satışta değil" hâli ve ret cümleleri |
 
 ## 4. Hedef model
 
@@ -106,12 +102,17 @@ yerle birlikte gönderir.
 
 ## 7. Açık ve ölçülecek
 
-- Hiboutik: kalemde %7 ve %19'un vergi tanımı olmadan kabul edilip edilmediği, vergi oranının API'den açılıp açılamadığı (demo hesap).
-- Sendcloud: Kehl çıkışlı teklif (ücretsiz); Almanya çıkışlı etiket ücretliyse önce kullanıcıya sorulur.
-- Revolut ödeme sayfasının satırları kalem oranını taşıyor mu.
-- AB içi işletme satışının fatura ibaresi bugün "Autoliquidation"; BOFiP mal tesliminde "Exonération TVA, art. 262 ter-I du CGI"
-  ya da eşdeğerini istiyor. Dosya (`domain-core/accounting/export.ts`) Faz 4 satış faturası şeridinde açık; düzeltme o commit'ten
-  sonra, kullanıcı onayıyla.
+- **Almanya çıkışlı etiket ölçülmedi.** Teklif Kehl çıkışlı geliyor (DPD ev teslimi 5,77 € net; DPD yalnız Kehl çıkışında var);
+  ilk gerçek gönderide etiketin göndereninin teslim noktası olduğuna bakılır. Etiket ücretli olduğu için önce kullanıcıya sorulur.
+- **Paket satırı sepette "satışta değil" demiyor:** Almanya'da satılmayan ürünü içeren paket ödemede reddediliyor, sepette önceden
+  söylenmiyor. Paket canlı açılışta yok.
+- **Vitrinde fiyata göre sıralama genel fiyatla:** `variant_effective_price` (`0032_product_listing.sql`) ülke satırını okumuyor;
+  Almanya fiyatı genel fiyattan ayrılan ürün Almanca vitrinde fiyat sırasında yanlış yerde durabilir.
+- **Hiboutik demo hesabında ölçüm artığı:** "Olcum DE 19" vergisi (#6) ve boş açık satış (#19); API silmiyor (403 ve 405), panelden
+  silinir.
+- Revolut ödeme sayfasının satırları kalem oranını taşıyor mu (ölçülmedi).
+- AB içi işletme satışının fatura ibaresi bugün "Autoliquidation" (`domain-core/accounting/export.ts`); BOFiP mal tesliminde
+  "Exonération TVA, art. 262 ter-I du CGI" ya da eşdeğerini istiyor. Düzeltme kullanıcı onayıyla.
 
 ## 8. Kaynaklar
 

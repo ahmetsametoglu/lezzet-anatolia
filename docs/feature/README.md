@@ -32,7 +32,7 @@ dosya özelliğin tek kaydı olur: kararlar, yol haritası ve açık işler orad
   satış faturasının Pennylane'de kesilmesi ve havalenin faturalara bağlanması: **kararlar alındı 11.10**, Faz 0–1 tamamlandı.
   Ana iskelete dokunmayan altı fazlı yol haritası (dokunuş seviyesiyle), yasal zemin, açık sorular.
 - `ulke-pazari.md` — Strasbourg'dan Almanya'ya satış: deponun kargo yaptığı ülkeler ve teslim noktası, ülkeye özel fiyat (tüketici
-  ve işletme), ülke başına KDV oranı, uzaktan satış eşiği ve OSS: **kararlar alındı 12.10**, iki ajanla uygulanıyor.
+  ve işletme), ülke başına KDV oranı, uzaktan satış eşiği ve OSS: **uygulandı 12.10**, Oppo'da yerel sunucuyla denendi; açık işler dosyada.
 - `degerlendirme.md` — alım sonrası değerlendirme akışı ve ürün sayfasındaki yorumlar: **kararlar alındı 12.10**, ikisi de
   tamamlandı. Ürün başına oy ve yorum, 2 kelimelik alt sınır, yazımda verilen puan, başlıkta puan ve tüm yorumlar ekranı; yol
   haritası (yapay zekâ ile otomatik onay, anlamsız metin ve küfür süzgeci).
