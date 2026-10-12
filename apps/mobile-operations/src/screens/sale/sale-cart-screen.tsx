@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
@@ -20,11 +21,8 @@ import { useWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { useSaleContext } from './sale-context';
 
 /*
-  SATIŞ SEPETİ — `/sale/cart` (kullanıcı kararı 26.08: liste ile sepet AYRI yüzeyler).
-
-  Katalog "ne satıyorum" sorusudur, burası "parayı nasıl yazıyorum": kalemlerin son kontrolü,
-  tahsilat türünün BİLİNÇLİ seçimi (varsayılan yok — hook künyesi) ve tek CTA. Sonuç bildirimi
-  de burada yaşar: satışı yazan göz, cevabı aynı yerde okur. Durum katalogla ORTAK (`SaleProvider`).
+  Satış sepeti (`/sale/cart`): kalemlerin son kontrolü, tahsilat türünün bilinçli seçimi (varsayılan yok) ve tek CTA. Durum katalogla
+  ortaktır (`SaleProvider`); sonucu bilinmeyen satış varken sepet kilitlidir, yalnız aynı satış tamamlanır ya da vazgeçilir.
 */
 
 const t = saleCopy;
@@ -36,11 +34,11 @@ export function SaleCartScreen() {
   /* Kilit katalogla AYNI sinyalden (`sale-screen.tsx` künyesi): burada kapanan şey satışın
      kendisidir — kesin toplam ve stok hareketi sunucudan gelir, kapıda çevrimdışı satış yazılmaz. */
   const { offline } = useWarehouseStatus();
+  const locked = sale.unresolved;
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  /* SATIŞ YAZILINCA FİŞE GEÇİLİR (v3:22). `replace` çünkü sepet artık YOK: satış kapandığında
-     kalemler sıfırlandı ve geriye basan personel boş bir sepete düşerdi. Geçiş bir etkiyle
-     yapılıyor, `submit`in içinden değil — yazma kararı hook'un, yönlendirme ekranın işidir ve
-     hook rota bilmez. */
+  /* Satış yazılınca fişe `replace` ile geçilir, çünkü sepet sıfırlandı ve geriye basan boş sepete düşerdi; yönlendirme ekranın işi
+     olduğu için etkidedir, hook rota bilmez. */
   useEffect(() => {
     if (receipt !== null) router.replace('/sale/receipt');
   }, [receipt, router]);
@@ -93,13 +91,14 @@ export function SaleCartScreen() {
                 </View>
                 <PressableSurface
                   onPress={() => sale.removeLine(line.variantId)}
+                  disabled={locked}
                   feedback="scale"
                   compact
-                  style={styles.cartRemove}
+                  style={[styles.cartRemove, locked && styles.cartRemoveLocked]}
                   accessibilityLabel={fillCopy(t.cart.remove, { name: line.name })}
                   testID={`sale-cart-remove-${line.variantId}`}
                 >
-                  <Text style={styles.cartRemoveMark}>{t.cart.removeMark}</Text>
+                  <Text style={[styles.cartRemoveMark, locked && styles.cartRemoveMarkLocked]}>{t.cart.removeMark}</Text>
                 </PressableSurface>
               </View>
             ))}
@@ -110,20 +109,27 @@ export function SaleCartScreen() {
 
             <View style={styles.section}>
               <Text style={styles.heading}>{t.payment.heading}</Text>
-              <View style={styles.chipRow}>
-                <OperationsChoiceChip
-                  label={t.payment.cash}
-                  selected={sale.payment === 'cash'}
-                  onPress={() => sale.setPayment('cash')}
-                  testID="sale-payment-cash"
-                />
-                <OperationsChoiceChip
-                  label={t.payment.card}
-                  selected={sale.payment === 'card'}
-                  onPress={() => sale.setPayment('card')}
-                  testID="sale-payment-card"
-                />
-              </View>
+              {/* Kilitliyken seçim değiştirilemez; seçilmiş tür düz metindir, çalışmayan bir düğme gibi görünmesin. */}
+              {locked ? (
+                <Text style={styles.cartName} testID="sale-payment-locked">
+                  {sale.payment === 'card' ? t.payment.card : t.payment.cash}
+                </Text>
+              ) : (
+                <View style={styles.chipRow}>
+                  <OperationsChoiceChip
+                    label={t.payment.cash}
+                    selected={sale.payment === 'cash'}
+                    onPress={() => sale.setPayment('cash')}
+                    testID="sale-payment-cash"
+                  />
+                  <OperationsChoiceChip
+                    label={t.payment.card}
+                    selected={sale.payment === 'card'}
+                    onPress={() => sale.setPayment('card')}
+                    testID="sale-payment-card"
+                  />
+                </View>
+              )}
             </View>
           </>
         )}
@@ -136,9 +142,12 @@ export function SaleCartScreen() {
             {t.offline.sellHint}
           </Text>
         ) : null}
-        {/* Satışın OLUMSUZ cevabı TOAST'ta (kullanıcı kararı 01.09): düğmenin üstündeki cümle
-            bir sonraki eyleme kadar asılı kalıyordu. Üstteki çevrimdışı satırı ise bir sonuç
-            değil, kapalı düğmenin SEBEBİ — o yerinde kalır. */}
+        {locked && !sale.sending ? (
+          <Text style={[styles.notice, styles.notice_warn]} testID="sale-unresolved-hint">
+            {t.unresolved.hint}
+          </Text>
+        ) : null}
+        {/* Olumsuz cevap toast'tadır; buradaki satırlar sonuç değil, düğmenin hâlinin sebebidir ve yerinde kalır. */}
         <PressableSurface
           onPress={sale.submit}
           disabled={!cta.enabled}
@@ -149,7 +158,33 @@ export function SaleCartScreen() {
         >
           <Text style={styles.ctaLabel}>{cta.label}</Text>
         </PressableSurface>
+        {locked && !sale.sending ? (
+          <View style={styles.discardRow}>
+            <TextAction
+              label={t.unresolved.discard}
+              onPress={() => setConfirmDiscard(true)}
+              align="center"
+              compactEdges="up"
+              testID="sale-unresolved-discard"
+            />
+          </View>
+        ) : null}
       </LinearGradient>
+
+      <OperationsConfirmSheet
+        visible={confirmDiscard}
+        title={t.unresolved.discardTitle}
+        message={t.unresolved.discardBody}
+        confirmLabel={t.unresolved.discardConfirm}
+        cancelLabel={t.unresolved.discardCancel}
+        tone="error"
+        onConfirm={() => {
+          sale.discardPending();
+          setConfirmDiscard(false);
+        }}
+        onCancel={() => setConfirmDiscard(false)}
+        testID="sale-unresolved-discard-sheet"
+      />
     </View>
   );
 }
@@ -220,6 +255,9 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.control,
     color: operationsTheme.colors.error,
   },
+  // Kapalı hâl CTA'nın kapalı dolgusuyla aynı aileden: bekleyen satış varken kalem çıkarılamaz.
+  cartRemoveLocked: { backgroundColor: operationsTheme.colors['disabled-fill'] },
+  cartRemoveMarkLocked: { color: operationsTheme.colors.muted },
   cartTotal: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text['card-title-sm'],
@@ -258,6 +296,7 @@ const styles = StyleSheet.create({
     boxShadow: operationsTheme.shadow['hard-on-ink'],
   },
   ctaIdle: { backgroundColor: operationsTheme.colors['disabled-fill'] },
+  discardRow: { alignItems: 'center', paddingTop: operationsTheme.space.lg },
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,

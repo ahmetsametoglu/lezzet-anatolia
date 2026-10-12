@@ -66,6 +66,7 @@ export function SaleScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const draftReady =
     !offline &&
+    !sale.unresolved &&
     draftSelection !== null &&
     sale.draft !== null &&
     sale.draft.qty > 0 &&
@@ -339,7 +340,7 @@ export function SaleScreen() {
             )}
 
             <PrimaryButton
-              label={offline ? t.offline.addCta : t.drawer.confirm}
+              label={offline || sale.unresolved ? t.addClosed : t.drawer.confirm}
               onPress={sale.confirmDraft}
               disabled={!draftReady}
               elevation="flat"
@@ -350,6 +351,10 @@ export function SaleScreen() {
             {offline ? (
               <Text style={styles.warnText} testID="sale-drawer-offline">
                 {t.offline.addHint}
+              </Text>
+            ) : sale.unresolved ? (
+              <Text style={styles.warnText} testID="sale-drawer-unresolved">
+                {t.unresolved.addHint}
               </Text>
             ) : null}
           </View>

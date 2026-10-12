@@ -2,36 +2,8 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform, Settings } from 'react-native';
 
 /*
-  CİHAZ DEPOSU — `lezzet.*` anahtar ailesinin TEK sahibi ve SecureStore'a açılan tek kapı.
-
-  NİYE VAR (ölçülmüş arıza, 09.08 · fiziksel iPhone): uygulama silinip yeniden kurulduğunda
-  onboarding hiç açılmadı ve kullanıcı giriş yapmadığı hâlde GİRİŞLİ göründü. Sebep Apple'ın
-  kasıtlı davranışı: SecureStore iOS'ta Keychain'e yazar ve Keychain kayıtları uygulama
-  SİLİNİNCE SİLİNMEZ. Android'de karşılık (Keystore + uygulama verisi) uygulamayla birlikte
-  gittiği için orada hiç görülmüyordu.
-
-  İki bedeli vardı: (1) ÜRÜN — uygulamayı silen kişi çıkış yapmış olmayı bekler; telefonu
-  devreden biri farkında olmadan oturumunu bırakır, bu bir güvenlik konusudur. (2) GELİŞTİRME —
-  iOS'ta "temiz kurulum" testi temiz değildi, ilk açılış akışı denenemiyordu.
-
-  ÇÖZÜM — İLK AÇILIŞ İŞARETİ: uygulama silinince GERÇEKTEN silinen bir yere bir işaret yazılır.
-  O yer iOS'ta NSUserDefaults'tur ve React Native'in `Settings` modülü onun karşılığıdır
-  (ÖLÇÜLDÜ: `react-native/Libraries/Settings/Settings.ios.js` → `RCTSettingsManager`; çekirdekte
-  var, YENİ BAĞIMLILIK GEREKTİRMEZ — AsyncStorage da `expo-sqlite` de bu pakette kurulu değil ve
-  tek bir bayrak için native modül eklemek gereksiz olurdu). Açılışta:
-    - işaret VARSA  → normal akış, hiçbir şeye dokunulmaz,
-    - işaret YOKSA  → bu kurulum ilk kez açılıyor; Keychain'de kalan `lezzet.*` kayıtları ÖNCEKİ
-                      kurulumdandır, silinir ve işaret yazılır.
-
-  YALNIZ iOS: Android'de `Settings` bir uyarı-döndüren yedeğe düşer (`SettingsFallback`, üstelik
-  `console.warn` basar) ve orada temizlenecek artık da yoktur — kapı o platformda hiç iş yapmadan
-  döner. "Zararsızca çalışmak" budur; ölçemediği bir yerde iş yapmaya kalkan kapı, her açılışta
-  kullanıcıyı çıkışa atardı ki bu, düzeltmeye çalıştığı arızadan beterdir.
-
-  KAPI HER OKUMANIN ÖNÜNDE: temizliğin "önce" koşması sıralama şansına bırakılmaz — bu dosyadaki
-  `deviceStore` her get/set/remove'dan ÖNCE kapıyı bekler (tek uçuşlu söz). Kök layout ayrıca
-  ağacı çizmeden önce aynı kapıyı bekler (`app/_layout.tsx`); ikisi aynı sözü paylaşır, iş iki
-  kez yapılmaz.
+  Cihaz deposu: `lezzet.*` anahtar ailesinin tek sahibi ve SecureStore'a açılan tek kapı. iOS Keychain kaydı uygulama silinince
+  silinmediği için ilk açılışta (NSUserDefaults'taki işaret yoksa) önceki kurulumun anahtarları her okumadan önce silinir.
 */
 
 /**
@@ -46,20 +18,9 @@ export const DEVICE_STORE_KEYS = {
   onboarding: 'lezzet.onboarding',
   /** Yazı boyutu tercihi. */
   fontScale: 'lezzet.fontScale',
-  /**
-   * **Bu cihaz hangi yazıcıyı kullanıyor** (07.12 · kullanıcı kararı 29.08) — iş başına kimlik
-   * (`{ box, shipping }`). Envanter SUNUCUDA (`warehouse_printer`), seçim burada: aynı depodaki
-   * iki telefon iki ayrı yazıcıya basabilir (biri rampada, biri masada).
-   */
+  /** Bu cihazın iş başına yazıcısı (`{ box, shipping }`); envanter sunucuda, seçim cihazda, çünkü aynı depodaki iki telefon ayrı yazıcıya basabilir. */
   printerChoice: 'lezzet.printer.choice',
-  /**
-   * **Bu cihaz hangi DEPODA çalışıyor** (30.08) — çok depolu personelin kapsam seçimi.
-   *
-   * Kapsam SUNUCUDA (`user_profiles.warehouse_ids`), seçim burada: aynı kapsama sahip iki kişi
-   * (ya da aynı kişinin iki telefonu) farklı tesiste olabilir ve sunucuda tutulan tek bir
-   * "son seçilen depo", sabahleyin Kehl'e giden depocuyu Strasbourg'un kuyruğuna düşürürdü.
-   * Yazıcı seçimiyle aynı ayrım (`printerChoice`): envanter sunucunun, tercih cihazın.
-   */
+  /** Bu cihazın çalıştığı depo (çok depolu personelin seçimi); kapsam sunucuda, seçim cihazda, çünkü aynı kapsamdaki iki kişi farklı tesiste olabilir. */
   warehouseChoice: 'lezzet.warehouse.choice',
   /**
    * Uygulamanın dili — kullanıcının AÇIK seçimi (kayıt yoksa seçim de yok, cihaz dili geçerli).
@@ -77,11 +38,12 @@ export const DEVICE_STORE_KEYS = {
   /** Posta kodunun ÇÖZÜLMÜŞ yer adı — vitrin başlığı cevabı beklerken çıplak kod yazmasın diye. */
   placeName: 'lezzet.place.name',
   /**
-   * Sunucuya KAYITLI push jetonu (14.14) — çıkışta silinebilsin diye saklanır: jeton kalırsa
-   * önceki hesabın bildirimi sonraki oturum sahibine düşer (sunucu tarafındaki devir son emniyet,
-   * ilk emniyet çıkışın kendisi). Tek okuyanı/yazanı `lib/push`.
+   * Sunucuya kayıtlı push jetonu; çıkışta silinebilsin diye saklanır, yoksa önceki hesabın bildirimi sonraki oturum sahibine düşerdi.
+   * Tek okuyanı ve yazanı `lib/push`.
    */
   pushToken: 'lezzet.push.token',
+  /** Cevabı gelmemiş yerinde satış (kimlik ve sepet); operasyon uygulaması aynı satışı aynı kimlikle yeniden göndermek için okur. */
+  pendingSale: 'lezzet.sale.pending',
 } as const;
 
 /**
@@ -111,11 +73,7 @@ function readInstallMarker(): MarkerState {
   try {
     return Settings.get(INSTALL_MARKER_KEY) === INSTALL_MARKER_VALUE ? 'present' : 'absent';
   } catch {
-    /* Okuma düşerse (native modül yok — testte ölçüldü, ya da beklenmedik bir platform hâli)
-       HİÇBİR ŞEY YAPILMAZ: ölçülemeyen değer "kayıt yok" sayılsaydı kapı her açılışta kullanıcıyı
-       çıkışa atardı. Sessiz değil, kararlı: dönen `unmeasured` çağıranın davranışını değiştirir
-       (aşağıda erken çıkış) — yutulan bir hata değil, ölçülemedi bilgisidir. Kayıt düşülemiyor;
-       mobilde log altyapısı yok (01-teknoloji §9), altyapı gelince bağlanacak yerlerden biri burası. */
+    /* Okunamayan işaret "yok" sayılsaydı kapı her açılışta kullanıcıyı çıkışa atardı; `unmeasured` çağıranı erken çıkarır. */
     return 'unmeasured';
   }
 }
@@ -149,7 +107,7 @@ async function wipeDeviceStore(): Promise<boolean> {
 }
 
 async function runFreshInstallGuard(): Promise<void> {
-  // Arıza iOS'a özgü (Keychain kalıcılığı); Android'de artık kalmaz, `Settings` de yok.
+  // Yalnız iOS: Keychain kalıcıdır; Android'de kayıt uygulamayla gider ve `Settings` yoktur.
   if (Platform.OS !== 'ios') return;
 
   const marker = readInstallMarker();

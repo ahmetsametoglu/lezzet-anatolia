@@ -11,7 +11,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 1 | Araç satışı ana deponun kasa gününü kilitliyor | Yüksek | Yapıldı |
 | 2 | Onaylı işletme müşterisinden KDV alınmıyor | Yüksek | Yapıldı |
 | 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Yapıldı |
-| 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
+| 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Yapıldı |
 | 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
 | 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Yapıldı |
 | 7 | Şirket kârında kart komisyonu iki kez düşülüyor | Orta | Yapıldı |
@@ -99,7 +99,7 @@ dahil ücret), genel toplam (KDV dahil).
 
 ## 4. Yerinde satış bağlantı koparsa iki kez yazılabiliyor
 
-**Durum:** Önlem alındı (07.10) · **Ağırlık:** orta
+**Durum:** Yapıldı (12.10) · **Ağırlık:** orta
 
 - **Mevcut durum (önlemden önce):** Kapı ve araç satışı isteği kimlik taşımıyordu; sunucu her isteği yeni satış sayıyordu.
   Cevap telefona ulaşmazsa ekran "Bağlantı yok — satış yazılmadı" diyor, sepeti koruyor ve hat gelince aynı sepetle yeniden
@@ -109,12 +109,17 @@ dahil ücret), genel toplam (KDV dahil).
 - **Olasılık:** Üç şart birlikte gerekir: istek sunucuya ulaşır, sunucu satışı yazarken telefonun bağlantısı kopar, kurye hat
   gelince yeniden basar. Araçta sinyal kaybı olağan olduğu için seyrek ama zor bir senaryo değil; ekranın "satış yazılmadı"
   cümlesi kuryeyi yeniden basmaya yönlendiriyordu. Sunucunun satışı yazma süresi, yani aralığın uzunluğu ölçülmedi.
-- **Önlem:** Telefon her satış için bir kimlik üretir; aynı sepet yeniden gönderildikçe aynı kimlik gider, sepet ya da tahsilat
-  türü değişince yeni kimlik doğar. Sunucu aynı kimliği ikinci kez görünce yazılmış satışı döner, yarıda kalmışsa aynı satışı
-  tamamlar; ikinci satış açılmaz. Ekran cümlesi: "Bağlantı koptu. Hat gelince aynı sepetle yeniden tamamlayın; satış iki kez
-  yazılmaz."
+- **Önlem:** Telefon her satış için bir kimlik üretir ve aynı satış yeniden gönderildikçe aynı kimlik gider. Sunucu aynı kimliği
+  ikinci kez görünce yazılmış satışı döner, yarıda kalmışsa aynı satışı tamamlar; ikinci satış açılmaz. Ekran cümlesi: "Bağlantı
+  koptu. Hat gelince aynı sepetle yeniden tamamlayın; satış iki kez yazılmaz."
+- **Kalan açık (11.10, iOS simülatöründe ölçüldü):** kimlik yalnız telefonun belleğindeydi. Cevap gelmeden uygulama kapanınca ya da
+  kurye sepeti baştan kurunca yeni kimlik doğdu ve satış iki kez yazıldı (LA-26-TXDWYA, LA-26-T6MCDX). Sunucu aynı kimlikle gelen
+  farklı sepete ilk satışı döndürür (ölçüldü 12.10): sepet değişirse ya değişiklik sessizce yazılmaz ya da yeni kimlikle ikinci satış olur.
+- **Karar (12.10):** sonucu bilinmeyen satış kimliği ve sepetiyle telefonda saklanır, kesin cevap gelince silinir. Cevap gelene kadar
+  sepet kilitlidir: aynı satış aynı kimlikle tamamlanır ya da uyarıyla vazgeçilir. Uygulama yeniden açılınca kayıt yalnız aynı hesap,
+  yer ve günde kilitli sepetle döner; başka zamanda gönderilmez, "Son satışlar'a bakın" uyarısı çıkar.
 - **Kanıt:** `packages/types/src/contracts/sale-api.schema.ts` (`idempotencyKey`) · `packages/application/src/order/on-site-sale.ts`
-  (`sellOnSite`) · `apps/mobile-operations/src/screens/sale/use-sale.hook.ts` (`saleKey`).
+  (`sellOnSite`) · `apps/mobile-operations/src/screens/sale/pending-sale.ts` · `use-sale.hook.ts` (`pending`).
 
 ## 5. Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor
 

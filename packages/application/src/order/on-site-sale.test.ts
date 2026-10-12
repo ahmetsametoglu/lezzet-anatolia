@@ -174,6 +174,21 @@ describe('yerinde satış', () => {
     expect((await stocks.listByVariant(facilityId, variantId)).reduce((s, b) => s + b.physicalQty, 0)).toBe(8);
   });
 
+  it('aynı kimlikle FARKLI sepet ya da başka yer gelirse ilk satış aynen döner; yeni sepet yazılmaz', async () => {
+    const key = `sale-test-${stamp}-farkli`;
+
+    const first = await sale({ idempotencyKey: key });
+    const otherCart = await sale({ idempotencyKey: key, lines: [{ variantId, qty: 5 }] });
+    const otherPlace = await sale({ idempotencyKey: key, warehouseId: vehicleId });
+
+    expect(first.status).toBe('ok');
+    expect(otherCart).toEqual(first);
+    expect(otherPlace).toEqual(first);
+    expect((await db.from('order').select('id').eq('idempotency_key', key)).data).toHaveLength(1);
+    expect((await stocks.listByVariant(facilityId, variantId)).reduce((s, b) => s + b.physicalQty, 0)).toBe(8);
+    expect((await stocks.listByVariant(vehicleId, variantId)).reduce((s, b) => s + b.physicalQty, 0)).toBe(5);
+  });
+
   it('kapanıştan önce düşen satış aynı kimlikle gelince AYNI taslak kapanır — yeni sipariş açılmaz', async () => {
     const key = `sale-test-${stamp}-taslak`;
     const { order: draft } = await orders.create(

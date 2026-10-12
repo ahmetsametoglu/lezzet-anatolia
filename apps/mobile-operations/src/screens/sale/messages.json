@@ -97,11 +97,21 @@
     "again": "Yeni satış",
     "leave": "Depoya dön"
   },
+  "addClosed": "Sepete ekleme kapalı",
   "offline": {
-    "addCta": "Sepete ekleme kapalı",
     "addHint": "Fiyat ve kalan stok canlı okunur — çevrimdışı sepet yanlış fiyata satış demektir.",
     "sellCta": "Satış yazma kapalı",
     "sellHint": "Kesin toplam ve stok hareketi sunucudan gelir — kapıda çevrimdışı satış yazılmaz."
+  },
+  "unresolved": {
+    "hint": "Son satışın sonucu gelmedi. \"Satışı tamamla\" aynı satışı yeniden gönderir; satış iki kez yazılmaz.",
+    "addHint": "Önce son satışı sonuçlandırın: sepette tamamlayın ya da vazgeçin.",
+    "discard": "Bu satıştan vazgeç",
+    "discardTitle": "Satıştan vazgeçilsin mi?",
+    "discardBody": "Satış sunucuya ulaştıysa kayıt kalır; vazgeçmeden önce Son satışlar'a bakın.",
+    "discardConfirm": "Vazgeç",
+    "discardCancel": "Geri",
+    "stale": "Önceki bir satışın sonucu bilinmiyor; Son satışlar'a bakın."
   },
   "footnote": "Anonim satış — müşteri kaydı istenmez. Ödeme alınınca hareket anında stoktan iner. Pazarlık fiyatı meşrudur, sapan satır işaretli kalır.",
   "recentLink": "Son satışlar ›",

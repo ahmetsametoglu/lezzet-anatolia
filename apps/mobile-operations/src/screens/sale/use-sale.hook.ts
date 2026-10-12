@@ -9,7 +9,10 @@ import { trackWarehouse } from '@/screens/warehouse/warehouse-status';
 import { toastError, toastWarning } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { centsToAmountText, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
+import { useOperationsIdentity } from '@/screens/operations/sections-context';
+import { chosenWarehouseId } from '@/lib/operations/warehouse-choice';
 import { saleCopy } from './copy';
+import { clearPendingSale, isRestorable, readPendingSale, savePendingSale, type PendingSale } from './pending-sale';
 
 /*
   Yerinde satış: fiyat, KDV, indirim, FEFO ve stok reddi sunucudadır; ekrandaki ara toplam ve kalan adet yalnız göstergedir, kesin kapı
@@ -118,12 +121,12 @@ export function useSale(place: SalePlace) {
   */
   const [payment, setPayment] = useState<'cash' | 'card' | null>(null);
   const [sending, setSending] = useState(false);
-  /* Cevabı kaybolan satış aynı sepetle yeniden gönderildikçe aynı kimliği taşır ve sunucu ikinci satış açmaz. Sepet ya da tahsilat
-     türü değişince başka bir satıştır, kimlik düşer. */
-  const saleKey = useRef<string | null>(null);
-  useEffect(() => {
-    saleKey.current = null;
-  }, [lines, payment]);
+  /*
+    Sonucu bilinmeyen satış: gönderilen kimlik ve sepet kesin cevap gelene kadar cihazda ve burada durur, sepet kilitlidir. Sunucu aynı
+    kimlikle gelen farklı sepete ilk satışı döndürür; kilit olmasa değişen sepet ya sessizce yazılmaz ya da yeni kimlikle ikinci satış olurdu.
+  */
+  const [pending, setPending] = useState<PendingSale | null>(null);
+  const { email } = useOperationsIdentity();
   /* Sonuç toast'ta: başarılı satışın kendi ekranı (fiş) olduğu için bu kanaldan yalnız olumsuz cevaplar geçer (yetersiz stok, kapanmayan
      satış, hat). */
   const setNotice = useCallback((notice: SaleNotice | null) => {
@@ -131,6 +134,26 @@ export function useSale(place: SalePlace) {
     if (notice.tone === 'warn') toastWarning(notice.text);
     else toastError(notice.text);
   }, []);
+
+  /* Yeniden açılışta bekleyen satış kilitli sepetle döner; başka hesapta, yerde ya da günde gönderilmez, uyarılır ve silinir. */
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const stored = await readPendingSale();
+      if (!alive || stored === null) return;
+      if (!isRestorable(stored, { account: email, place, warehouseId: saleWarehouseOf(place), now: new Date() })) {
+        await clearPendingSale();
+        toastWarning(t.unresolved.stale);
+        return;
+      }
+      setPending(stored);
+      setLines(stored.lines);
+      setPayment(stored.payment);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [email, place]);
   const seqRef = useRef(0);
 
   /*
@@ -278,6 +301,7 @@ export function useSale(place: SalePlace) {
 
   /** Çekmece onayı — aynı boy zaten sepetteyse adetler TOPLANIR, ikinci satır açılmaz. */
   const confirmDraft = useCallback(() => {
+    if (pending !== null) return;
     setDraft((current) => {
       if (current === null) return current;
       const selection = selectionOf(current);
@@ -309,11 +333,21 @@ export function useSale(place: SalePlace) {
       setNotice(null);
       return null; // çekmece kapanır
     });
-  }, [setNotice]);
+  }, [pending, setNotice]);
 
-  const removeLine = useCallback((variantId: string) => {
-    setLines((prev) => prev.filter((line) => line.variantId !== variantId));
-  }, []);
+  const removeLine = useCallback(
+    (variantId: string) => {
+      if (pending === null) setLines((prev) => prev.filter((line) => line.variantId !== variantId));
+    },
+    [pending],
+  );
+
+  const choosePayment = useCallback(
+    (method: 'cash' | 'card') => {
+      if (pending === null) setPayment(method);
+    },
+    [pending],
+  );
 
   /** Gösterge toplam (üst künye) — kesin toplam sunucudan. */
   const indicativeTotalCents = lines.reduce(
@@ -322,30 +356,50 @@ export function useSale(place: SalePlace) {
   );
 
   const submit = useCallback(() => {
-    if (lines.length === 0 || payment === null || sending) return;
+    if (sending) return;
+    const sale: PendingSale | null =
+      pending ??
+      (lines.length === 0 || payment === null
+        ? null
+        : {
+            key: newRequestKey('sale'),
+            account: email,
+            place,
+            warehouseId: saleWarehouseOf(place),
+            createdAt: new Date().toISOString(),
+            payment,
+            // CDN türevleri saklanmaz: kayıt küçük kalsın, görsel tek adresten çizilir.
+            lines: lines.map((line) => ({ ...line, image: { ...line.image, frames: null } })),
+          });
+    if (sale === null) return;
     setSending(true);
     setNotice(null);
-    const idempotencyKey = (saleKey.current ??= newRequestKey('sale'));
+    setPending(sale);
 
     void (async () => {
+      // Kayıt istekten önce yazılır: istek gidip cevap gelmeden uygulama kapanırsa geri yüklenecek olan budur.
+      await savePendingSale(sale);
       const result = await trackWarehouse(
         sellOnSite({
-          lines: lines.map((line) => ({
+          lines: sale.lines.map((line) => ({
             variantId: line.variantId,
             qty: line.qty,
             ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
           })),
-          paymentMethod: payment,
-          idempotencyKey,
+          paymentMethod: sale.payment,
+          idempotencyKey: sale.key,
         }, place),
       );
       setSending(false);
 
+      // Cevap yoksa sonuç bilinmiyor: kayıt ve kilit kalır, aynı kimlikle yeniden denenir ya da vazgeçilir.
       if (result.error !== null) {
         setNotice({ tone: 'error', text: result.error === 'network_error' ? t.result.network : t.result.failed });
         return;
       }
 
+      await clearPendingSale();
+      setPending(null);
       const outcome = result.data;
       if (outcome.status === 'ok') {
         setLines([]); // satış kapandı; sepet sıfırdan başlar
@@ -355,7 +409,7 @@ export function useSale(place: SalePlace) {
         setReceipt({
           totalCents: outcome.totalCents,
           referenceNo: outcome.referenceNo,
-          method: payment,
+          method: sale.payment,
           at: new Date().toISOString(),
           paymentRecorded: outcome.paymentRecorded,
         });
@@ -365,7 +419,15 @@ export function useSale(place: SalePlace) {
       // Reddin üçünde de sepet KORUNUR: personel adedi düşürüp ya da kalemi çıkarıp yeniden dener.
       setNotice(noticeOfRefusal(outcome));
     })();
-  }, [lines, payment, reload, sending, setNotice]);
+  }, [email, lines, payment, pending, place, reload, sending, setNotice]);
+
+  /** Vazgeç: bekleyen kayıt ve sepet silinir; satış sunucuya ulaştıysa kayıt orada kalır, onay çekmecesi bunu söyler. */
+  const discardPending = useCallback(() => {
+    void clearPendingSale();
+    setPending(null);
+    setLines([]);
+    setPayment(null);
+  }, []);
 
   /* Fişi KAPATMAK ekranın işi değil, akışın işi: "Yeni satış" dendiğinde iz silinir, yoksa aynı
      fiş bir sonraki satışın sepetinde de asılı kalırdı. */
@@ -394,15 +456,22 @@ export function useSale(place: SalePlace) {
     removeLine,
     indicativeTotalCents,
     payment,
-    setPayment,
+    setPayment: choosePayment,
     sending,
     submit,
+    unresolved: pending !== null,
+    discardPending,
     receipt,
     clearReceipt,
   };
 }
 
 type SaleOutcome = Extract<Awaited<ReturnType<typeof sellOnSite>>, { error: null }>['data'];
+
+/** Tesis satışının deposu cihazın seçimidir; araçta depoyu sunucu seferden çözer. */
+function saleWarehouseOf(place: SalePlace): string | null {
+  return place === 'van' ? null : chosenWarehouseId();
+}
 
 /** Yalnız ret cevaplarının cümlesi: başarılı satışın kendi ekranı (fiş) vardır. */
 function noticeOfRefusal(outcome: Exclude<SaleOutcome, { status: 'ok' }>): SaleNotice {

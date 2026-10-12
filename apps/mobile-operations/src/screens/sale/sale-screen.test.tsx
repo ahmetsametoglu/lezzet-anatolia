@@ -13,11 +13,26 @@ import { OperationsSessionProvider } from '@/screens/operations/sections-context
 import { resetWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { chooseWarehouse, resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
 import type { OperationsSection } from '@/lib/operations/sections';
+import { DEVICE_STORE_KEYS } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   Yerinde satışın para iddiaları: pazarlık fiyatı yalnız dokunulan kalemle gider, değişmeyen kalemin fiyatını sunucu çözer;
   `insufficient_here` cevabı sepeti bozmaz, personel adedi düşürüp yeniden dener. Ağ fetch düzeyinde sahte, URL'e göre dallanır.
 */
+
+/* Cihaz deposu bellek içinde: bekleyen satış kaydı gerçek okuma/yazma yolundan geçer, yalnız SecureStore sahtedir. */
+const mockStore = new Map<string, string>();
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: (key: string) => Promise.resolve(mockStore.get(key) ?? null),
+  setItemAsync: (key: string, value: string) => {
+    mockStore.set(key, value);
+    return Promise.resolve();
+  },
+  deleteItemAsync: (key: string) => {
+    mockStore.delete(key);
+    return Promise.resolve();
+  },
+}));
 
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
@@ -191,6 +206,28 @@ async function addSimit() {
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
 }
 
+/** Cihazda bekleyen satış kaydı — varsayılan oturumun hesabı ve tesis yeri; gün ve kimlik testten gelir. */
+function bekleyenSatis(over: { key: string; createdAt: string }) {
+  return {
+    account: 'depo@example.test',
+    place: 'facility',
+    warehouseId: null,
+    payment: 'cash',
+    lines: [
+      {
+        variantId: TEK_VARYANT,
+        name: 'Simit',
+        qty: 1,
+        listPriceCents: 450,
+        negotiatedCents: null,
+        availableHere: 4,
+        image: { url: null, crop: { x: 50, y: 50, zoom: 100 }, frames: null },
+      },
+    ],
+    ...over,
+  };
+}
+
 /** Tahsilat türünün varsayılanı yok; satışa giden her test onu bilinçli seçer. */
 async function pickCash() {
   await fireEvent.press(screen.getByTestId('sale-payment-cash'));
@@ -211,6 +248,7 @@ beforeEach(() => {
   resetWarehouseChoice();
   // Toast MODÜL düzeyinde: sayacı düşmezse mesaj sonraki teste sızar, süreç de kapanmaz.
   resetToast();
+  mockStore.clear();
 });
 
 it('kart kalan adedi yazıyor — personel satmayı denemeden okuyor', async () => {
@@ -654,7 +692,7 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     expect(postBody().idempotencyKey).not.toBe(ilk);
   });
 
-  it('bağlantı koptuktan sonra sepet değişirse yeni kimlik doğar — değişen sepet eski satışın cevabını almaz', async () => {
+  it('bağlantı koptuktan sonra sepet kilitlenir; vazgeçilince yeni satış yeni kimlikle gider', async () => {
     withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 900, referenceNo: 'SP-26-0011', paymentRecorded: true });
     const hat = fetchMock.getMockImplementation()!;
     await renderSale();
@@ -663,16 +701,60 @@ describe('çevrimdışı kilidi (v3:20)', () => {
 
     losePostAnswer(hat);
     await fireEvent.press(screen.getByTestId('sale-cta'));
-    await waitFor(() => expect(screen.getByTestId('sale-offline-hint')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('sale-unresolved-hint')).toBeTruthy());
     const ilk = postBody().idempotencyKey;
+    // Uygulama kapanırsa geri yüklenecek kayıt cihazda, gönderilen kimlikle durur.
+    expect(JSON.parse(mockStore.get(DEVICE_STORE_KEYS.pendingSale) ?? '{}')).toMatchObject({ key: ilk, payment: 'cash' });
 
     fetchMock.mockImplementation(hat);
     await act(async () => resetWarehouseStatus());
+    // Sunucu aynı kimlikle gelen farklı sepete ilk satışı döndürür; bu yüzden sonucu bilinmeyen sepet değiştirilemez.
+    await fireEvent.press(screen.getByTestId(`sale-product-${TEK_ID}`));
+    await waitFor(() => expect(screen.getByTestId('sale-drawer-unresolved')).toBeTruthy());
+    expect(screen.getByTestId('sale-drawer-confirm')).toBeDisabled();
+    expect(screen.getByTestId(`sale-cart-remove-${TEK_VARYANT}`)).toBeDisabled();
+    expect(screen.getByTestId('sale-payment-locked')).toHaveTextContent('Nakit');
+
+    await fireEvent.press(screen.getByTestId('sale-unresolved-discard'));
+    await fireEvent.press(screen.getByTestId('sale-unresolved-discard-sheet-confirm'));
+    await waitFor(() => expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull());
+    expect(mockStore.has(DEVICE_STORE_KEYS.pendingSale)).toBe(false);
+
     await addSimit();
+    await pickCash();
     await fireEvent.press(screen.getByTestId('sale-cta'));
     await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
-    expect(postBody().lines).toEqual([{ variantId: TEK_VARYANT, qty: 2 }]);
     expect(postBody().idempotencyKey).not.toBe(ilk);
+  });
+
+  it('cihazda bekleyen satış ekran açılınca kilitli sepetle döner ve AYNI kimlikle tamamlanır', async () => {
+    withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: 'SP-26-0012', paymentRecorded: true });
+    mockStore.set(DEVICE_STORE_KEYS.pendingSale, JSON.stringify(bekleyenSatis({ key: 'sale-bugun', createdAt: new Date().toISOString() })));
+
+    await renderSale();
+
+    await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
+    expect(screen.getByTestId('sale-unresolved-hint')).toBeTruthy();
+    expect(screen.getByTestId('sale-payment-locked')).toHaveTextContent('Nakit');
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
+    expect(postBody()).toMatchObject({ idempotencyKey: 'sale-bugun', lines: [{ variantId: TEK_VARYANT, qty: 1 }], paymentMethod: 'cash' });
+    expect(mockStore.has(DEVICE_STORE_KEYS.pendingSale)).toBe(false);
+  });
+
+  it('başka günde kalan bekleyen satış geri yüklenmez ve gönderilmez; bir kez uyarılır, kayıt silinir', async () => {
+    withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: 'SP-26-0013', paymentRecorded: true });
+    mockStore.set(
+      DEVICE_STORE_KEYS.pendingSale,
+      JSON.stringify(bekleyenSatis({ key: 'sale-dun', createdAt: new Date(Date.now() - 86_400_000).toISOString() })),
+    );
+
+    await renderSale();
+
+    await waitFor(() => expect(screen.getByText(/Önceki bir satışın sonucu bilinmiyor/)).toBeTruthy());
+    expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull();
+    expect(mockStore.has(DEVICE_STORE_KEYS.pendingSale)).toBe(false);
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(false);
   });
 });
 
