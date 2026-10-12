@@ -5,65 +5,14 @@ import { type Db, type VaryantRef } from './shared';
 import type { Depolar } from './warehouse';
 
 /*
-  ── DENEME SİPARİŞLERİ (kullanıcı kararı 02.09) ─────────────────────────────────────────────────
-
-  **Bu blok 01.09'un "besleme HİÇ sipariş yazmaz" kararını DARALTIYOR ve gerekçesi yaşandı.**
-
-  O kararın konusu bir ZİNCİRDİ: sipariş beslemenin en çok türeten kaydıydı ve peşinden rezervasyon,
-  kutu, gönderi, sefer, kapanış, geri bildirim, puan, tahsilat geliyordu — kullanıcının cümlesi
-  *"sipariş yoksa o siparişle alakalı sonraki tüm kayıtların da olmaması lazım"*dı. Zincir kalktı ve
-  KALKMIŞ durumda: aşağıdaki siparişler `confirmed`te durur, hiçbir şey türetmez.
-
-  Kalkmasının bedeli hemen görüldü: her `db:refresh`ten sonra kurye akışını denemek için önce
-  müşteri yüzeyinden sipariş vermek gerekiyordu. Kullanıcı bunun yerine *"sipariş oluşturmayı sen
-  yap… doğrudan besleme üzerinden"* dedi.
-
-  ── NEDEN TAM OLARAK BU HÂL: `confirmed` ─────────────────────────────────────
-  Kullanıcının kendi çizdiği akış: *"Siparişler önce depo kısmında toplamaya, toplama bittikten
-  sonra kurye tarafına düşsün."* `confirmed` o akışın BAŞLANGICIDIR — toplama kuyruğunda görünür,
-  kutusu yoktur, kuryesi yoktur. Bir adım ötesini (`ready`, kutulu) yazmak denenecek adımı atlamak
-  olurdu; bir adım berisi (`draft`) ödeme bekleyen bir taslaktır ve kuyruğa hiç düşmez.
-
-  ── MÜŞTERİLERİN AUTH HESABI YOK, ve bu bilinçli ────────────────────────────
-  Kullanıcı bu e-postalarla KENDİ giriş yapıyor. `0002` tetikleyicisi girişte e-postayla EŞLEŞTİRİR
-  (`lower(email) = lower(new.email) and auth_user_id is null`), yani buradaki profil hazır hesap
-  değil bir BEKLEYEN kayıttır: giriş anında aynı kişiye bağlanır ve siparişler o hesabın altında
-  görünür. Hesabı burada açsaydık OTP akışı atlanır, denenmek istenen yol hiç koşmazdı.
-
-  ── ADRESLER GERÇEK, KOORDİNATLAR ÖLÇÜLDÜ (kullanıcı kararı 02.09) ──────────
-  *"Adresler gerçek olsun. Koordinatları gerçek olsun."* Hepsi **BAN**'dan (Base Adresse Nationale,
-  `api-adresse.data.gouv.fr`) tek tek çekildi ve buraya SABİTLENDİ; dokuzunun dokuzu da
-  `type: housenumber` ve skoru 0,96+ — yani kapı numarası düzeyinde çözülmüş gerçek adresler.
-
-  **Çekim BİR KEZ, yazım anında yapıldı; besleme ağa ÇIKMAZ** (`seed/delivery.ts` künyesinin aynı
-  kuralı: *"'ağa çıkma' ilkesinin doğru sonucu koordinat yazmamak değil, bir kez çekip
-  sabitlemek"*). Uydurma bir kapı koordinatı gerçek bir ölçüm gibi okunur ve rota sıralaması onun
-  üstünde yanlış bir doğru üretirdi.
-
-  ── HEPSİ TEK ROTADA, ÇÜNKÜ SINANAN ŞEY SIRALAMA ────────────────────────────
-  *"Bir rota hesaplaması yapabilecek kadar fazla durak olsun ve bu posta kodları da aynı rota
-  içerisinde olsun."* Dokuz adresin dokuzu da Güney Hattının kendi kodlarında: 67600 Sélestat ·
-  68000 Colmar · 68100 Mulhouse. Şehirler arası mesafe 30-40 km, şehir içi adresler ise birbirine
-  birkaç yüz metre — sıralama motoru (11.9) ancak böyle bir yayılımda gerçekten sınanır: kaba sıra
-  şehirlerden, ince sıra sokaklardan gelir.
-
-  ── FİYAT KATALOGDAN GELİR, UYDURULMAZ ──────────────────────────────────────
-  Kullanıcı *"ürün adedi fazla olsun, fiyat da fazla olsun ki testimiz rahat olsun"* dedi. Sayıyı
-  büyütmenin iki yolu vardı: fiyatı elle yazmak ya da GERÇEK kalemleri sepete koymak. İkincisi
-  seçildi — kalem fiyatı `PriceService.findApplicableMap` ile katalogdan okunuyor (vitrinin okuduğu
-  aynı kapı), adet 1-4 arasında. Elle yazılan bir fiyat, katalog değiştiği gün sessizce yalan olur.
-
-  **Kapıda nakit tutarında bir SINIR YOK** (kullanıcının sorusu): sistemde kapıda ödeme için bir üst
-  limit ayarı bulunmuyor — arandı, yok. Önceki turun 20-26 €'su bilinçli bir eşik değil, uydurma bir
-  formülün sonucuydu.
+  Deneme siparişleri `confirmed`te durur ve hiçbir kayıt türetmez, çünkü toplama ve kurye akışı `db:refresh`ten sonra bu hâlden denenir.
+  Müşterilerin auth hesabı yoktur (girişte `0002` e-postayla eşleştirir), adres koordinatları BAN'dan bir kez çekilip sabitlenmiştir ve
+  kalem fiyatı katalogdan okunur.
 */
 
 /**
- * Denemenin müşterileri ve adresleri — **hepsi BAN'dan ölçüldü** (02.09, `type: housenumber`).
- *
- * Beş kişi, dokuz adres: üç kişinin İKİ adresi var (ev + dükkân/ofis) ve ikisine de sipariş çıkıyor.
- * Kullanıcının cümlesi: *"Bir kişinin birden fazla siparişi de olabilir."* Aynı hesabın iki ayrı
- * kapıya düşmesi, kurye ekranında "aynı müşteri ama başka durak" hâlini de doğuruyor.
+ * Denemenin müşterileri ve adresleri (BAN, `type: housenumber`). Üç kişinin iki adresi var ve ikisine de sipariş çıkar, ki kurye
+ * ekranında "aynı müşteri, başka durak" hâli doğsun.
  */
 const DENEME_MUSTERILERI = [
   {
@@ -111,11 +60,8 @@ const DENEME_MUSTERILERI = [
 const ROTA_ADI = 'Güney Hattı — Mulhouse';
 
 /**
- * Rotanın BUGÜNDEN İTİBAREN ilk koşu günü (`YYYY-MM-DD`).
- *
- * Bugün koşuyorsa bugün: kullanıcı `db:refresh`ten hemen sonra akışı deneyebilmeli. Koşmuyorsa
- * sonraki gün aranır — en fazla bir hafta, çünkü haftanın günleri yedi tanedir ve bulunamaması
- * bölgenin gününün hiç olmadığı anlamına gelir (veri hatası, sessiz geçilmez).
+ * Rotanın bugünden itibaren ilk koşu günü (`YYYY-MM-DD`); en fazla bir hafta aranır ve bulunamaması bölgenin gününün olmadığı demektir
+ * (veri hatası, sessiz geçilmez).
  */
 function ilkKosuGunu(weekdays: readonly number[]): string {
   const bugun = new Date();
@@ -212,7 +158,8 @@ export async function seedTestOrders(db: Db, varyantlar: VaryantRef[], depolar: 
       kalemImleci += kalemSayisi;
       const toplam = kalemler.reduce((sum, kalem) => sum + kalem.unitPriceCents * kalem.qty, 0);
 
-      const vergi = resolveVatTreatment({ channel: 'b2c', deliveryCountry: 'FR' });
+      const vergi = resolveVatTreatment({ channel: 'b2c', originCountry: 'FR', deliveryCountry: 'FR', destinationTaxation: null });
+      if (!vergi.ok) throw new Error(`KDV kararı verilemedi: ${vergi.reason}`);
       const { order, items } = await orders.create(
         {
           customerId: profil.id,
@@ -226,9 +173,8 @@ export async function seedTestOrders(db: Db, varyantlar: VaryantRef[], depolar: 
           deliveryDate: teslimGunu,
           locale: 'fr',
           addressId: adres.id,
-          /* KOPYA TAM OLMALI (21.08'in dersi): checkout adresin tamamını yayıyor ve eksik kopya
-             sessizce yalancı ekran üretiyor — alıcı adı boş kalırsa sipariş detayı "hesap sahibine
-             düşüldü" der, koordinat boş kalırsa rota sıralaması posta kodu MERKEZİNE düşer. */
+          /* Kopya tam olmalı: alıcı adı boş kalırsa sipariş detayı hesap sahibine düşer, koordinat boş kalırsa rota sıralaması posta
+             kodu merkezine düşer. */
           addressSnapshot: {
             label: adres.label,
             recipient: adres.recipient,
@@ -251,10 +197,7 @@ export async function seedTestOrders(db: Db, varyantlar: VaryantRef[], depolar: 
           paymentMethod: 'cash',
           isGiftOrder: false,
           shippingFeeCents: 0,
-          /* ALAN ADI `orderedTotalCents` (ölçüldü 02.09): ilk yazımda `totalCents` denmişti, şema o
-             adı tanımıyor ve sessizce düşürdü — sipariş `ordered_total = 0` ile doğdu. Sıfır tutarlı
-             sipariş ekranda "0,00 €" yazar ve bu, CLAUDE §0'ın 05.08'de kayda geçen tuzağının
-             aynısı: belirti bir veri hatasını değil, olmayan bir ürün sorununu düşündürür. */
+          /* Alan adı `orderedTotalCents`: şema tanımadığı adı sessizce düşürür ve sipariş sıfır tutarla doğardı. */
           orderedTotalCents: toplam,
         },
         kalemler,
@@ -265,12 +208,7 @@ export async function seedTestOrders(db: Db, varyantlar: VaryantRef[], depolar: 
       for (const item of items) {
         await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depolar.str, qty: item.qty });
       }
-      /*
-        GEÇİŞ UYGULAMA KAPISINDAN (ölçüldü 02.09): ilk yazımda `OrderService.transition` doğrudan
-        çağrılıyordu ve siparişler REFERANSSIZ doğdu (`reference_no: null`) — depo ve kurye ekranları
-        siparişi "—" diye gösterirdi. Referans ilk KALICI durumda üretilir ve o kuralın yeri uygulama
-        kapısıdır (`transitionOrder` → `producesReferenceNo`); servis düz yazım yapar, kuralı bilmez.
-      */
+      // Geçiş uygulama kapısından: referans ilk kalıcı durumda üretilir ve o kural `transitionOrder`dadır, servis düz yazım yapar.
       const gecis = await transitionOrder(db, { orderId: order.id, to: 'confirmed', expectedFrom: 'draft', actorId: profil.id });
       if (gecis.status !== 'ok') throw new Error(`seed: deneme siparişi onaylanamadı (${musteri.email} · ${gecis.status})`);
 

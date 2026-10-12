@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OrderStatus } from '@lezzet/types';
+import type { Country, OrderStatus } from '@lezzet/types';
 import { closureConsequences, openOrderCountOf, toStaffChips, toWarehouseRows } from './warehouses-read';
 import type { WarehouseCardView, ZoneCardView } from './warehouses-types';
 
@@ -20,6 +20,7 @@ const WAREHOUSE = {
   address: null,
   lat: null,
   lng: null,
+  shipsTo: [] as Country[],
   shipsOnline: false,
   pickupEnabled: false,
   isActive: true,
@@ -61,7 +62,7 @@ describe('kurulum eksikliği', () => {
   });
 
   it('kargo çıkışı olan depo bölgesiz de sipariş alır — o dal düşer', () => {
-    const [row] = rowsOf({ shipsOnline: true }, { staff: [staffRow('p1', ['w1'])] });
+    const [row] = rowsOf({ shipsTo: ['FR'], shipsOnline: true }, { staff: [staffRow('p1', ['w1'])] });
     expect(row!.setupGap).toBeNull();
   });
 
@@ -162,7 +163,7 @@ describe('kapatmanın sonuçları', () => {
   });
 
   it('kargo çıkış deposu kapanınca ülkenin bölge dışı satışı durur — en sert dal', () => {
-    const row = { ...rowsOf({ shipsOnline: true })[0]!, shipsOnline: true };
+    const row = rowsOf({ shipsTo: ['FR'], shipsOnline: true })[0]!;
     const result = closureConsequences(card({ row }));
     expect(result.map((c) => c.title)).toContain('Ülkenin kargo çıkış deposu bu');
   });

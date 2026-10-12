@@ -8,12 +8,13 @@ import {
   type Db,
 } from '@lezzet/database';
 import type { CreateOrderItemInput } from '@lezzet/database';
-import { customerBusinessOf, deriveChannel, resolveVatTreatment } from '@lezzet/domain-core';
+import { customerBusinessOf, deriveChannel } from '@lezzet/domain-core';
 import type { Order, PaymentMethod, PreferredLanguage, UserProfile, Warehouse } from '@lezzet/types';
 import { getCartView } from '../cart/read';
 import { discountAmountOf, discountIdOf, discountLabelOf, discountSharesOf, type CartLine } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDoorAccountId } from './door-account';
+import { saleVatOf } from './sale-vat';
 import { quickSale, type QuickSaleOutcome } from './quick-sale';
 import { shippingVatLines } from './shipping-selection';
 
@@ -315,10 +316,13 @@ async function namedSaleTerms(
   },
 ) {
   const channel = deriveChannel({ isCompany: input.buyer.type === 'company' });
-  const vat = resolveVatTreatment({
+  // Mal depoda el değiştirir: çıkış da teslim de deponun ülkesidir, eşik durumu sorulmaz.
+  const vat = saleVatOf({
     channel,
+    originCountry: input.warehouse.countryCode,
     deliveryCountry: input.warehouse.countryCode,
     vatNumberValid: input.buyer.vatNumberValid ?? undefined,
+    destinationTaxation: null,
   });
   const payment = await resolveCheckoutPayment(db, {
     customerId: input.buyer.id,

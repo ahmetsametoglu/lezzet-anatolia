@@ -3,7 +3,7 @@ import {
   decideCartAgainstWarehouse,
   meetsMinBasket,
   minBasketBaseOf,
-  resolveVatTreatment,
+  reverseChargeApplies,
   undeliverableTotalOf,
   vatBaseOf,
   type CartLineInput,
@@ -120,7 +120,7 @@ export async function getCartView(
     shippingOrder?: boolean;
     /**
      * Paket çözümünün kapısı (`CartBundlePort`). Verilmezse paket satırı ENGELLİ durur — sepette
-     * paket taşımayan yüzey (bugün mobil) bu kapıyı hiç geçmez.
+     * paket taşımayan yüzey bu kapıyı hiç geçmez.
      */
     bundles?: CartBundlePort;
   },
@@ -299,7 +299,7 @@ export async function getCartView(
     lines,
     subtotalCents,
     discount,
-    /* Elinin altındaki indirim — inen indirimden AYRI alan: ikisi aynı anda var olabilir
+    /* Elinin altındaki indirim — uygulanan indirimden AYRI alan: ikisi aynı anda var olabilir
        (`cart-types` künyesi). Toplama girmez, yalnız söylenir. */
     reachableDiscount,
     // Sepetin ödenecek hâli — kargo HARİÇ (o adreste belli olur).
@@ -483,6 +483,6 @@ function zeroRatedFor(viewer: PricingViewer, country: string | null | undefined)
   const deliveryCountry = CountryEnum.safeParse(country);
   return (
     deliveryCountry.success &&
-    resolveVatTreatment({ channel: viewer.channel, deliveryCountry: deliveryCountry.data, vatNumberValid: viewer.vatNumberValid }).zeroRated
+    reverseChargeApplies({ channel: viewer.channel, deliveryCountry: deliveryCountry.data, vatNumberValid: viewer.vatNumberValid })
   );
 }

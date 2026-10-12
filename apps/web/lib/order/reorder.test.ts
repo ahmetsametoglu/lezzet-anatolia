@@ -30,7 +30,7 @@ let orderId = '';
 
 beforeAll(async () => {
   routeId = (await createTestWarehouse(db, { label: 'TSR', countryCode: 'DE' })).id;
-  shippingId = (await createTestWarehouse(db, { label: 'TSK', countryCode: 'DE', shipsOnline: true })).id;
+  shippingId = (await createTestWarehouse(db, { label: 'TSK', countryCode: 'DE', shipsTo: ['DE'] })).id;
   scope.shippingWarehouseId = shippingId;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Tekrar sipariş ${stamp}` } })).id;
   const products = new ProductService(db);

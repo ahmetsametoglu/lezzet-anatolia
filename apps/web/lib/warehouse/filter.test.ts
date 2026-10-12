@@ -10,7 +10,7 @@ import type { Warehouse } from '@lezzet/types';
 // DB'ye vurmaz — `warehouseFilterOf` saf bir türetme (birim projesinde koşar).
 
 const warehouse = (id: string, code: string, name: string): Warehouse =>
-  ({ id, code, name, countryCode: 'FR', address: null, shipsOnline: false, isActive: true, sortOrder: 0, createdAt: '' }) as Warehouse;
+  ({ id, code, name, countryCode: 'FR', address: null, isActive: true, sortOrder: 0, createdAt: '' }) as Warehouse;
 
 const STR = warehouse('w-str', 'STR', 'Strasbourg');
 const KEHL = warehouse('w-kehl', 'KEHL', 'Kehl');

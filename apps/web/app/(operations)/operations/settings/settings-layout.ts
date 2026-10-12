@@ -20,6 +20,7 @@ export type SettingSection =
   | 'accounts'
   | 'bankFeed'
   | 'cost'
+  | 'distanceSales'
   | 'pointsEarn'
   | 'pointsRedeem'
   | 'feedback'
@@ -62,6 +63,12 @@ const SECTIONS: Record<SettingSection, Omit<SectionDef, 'key'>> = {
     tab: 'money',
     layout: 'rows',
     hint: 'Kâr hesabının girdileri. Geçmiş siparişlerin sabitlenmiş rakamlarını değiştirmez.',
+  },
+  distanceSales: {
+    label: 'AB uzaktan satış eşiği',
+    tab: 'money',
+    layout: 'rows',
+    hint: "Almanya'daki tüketiciye satışın KDV'si bu eşiğe göre seçilir: eşik aşılınca varış ülkesinin oranı uygulanır.",
   },
   pointsEarn: { label: 'Puan kazanma', tab: 'customer', layout: 'rows' },
   pointsRedeem: { label: 'Kupona çevirme', tab: 'customer', layout: 'rows' },

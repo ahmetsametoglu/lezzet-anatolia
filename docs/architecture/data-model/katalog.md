@@ -212,7 +212,7 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 - **`image_alt`** — kapak alternatif metni (erişilebilirlik + SEO); **boşsa müşteride ürün adına düşer** (kopya tutulmaz)
 - **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
 - **`image_width` · `image_height`** — kaynak dosyanın piksel ölçüsü (05.37; gerekçe: Category satırı)
-- **`vat_rate`** — ürün bazında KDV (5.5 / 20)
+- **`vat_rate`** — ürün bazında KDV (5.5 / 20), satıcının ülkesinin (FR) oranı; öteki ülkelerin oranı `product_vat_rate`'te
 - **`date_type`** — son tarih tipi — güvenlik/kalite (varsayılan `DDM`)
 - **`shelf_life_days`** — toplam raf ömrü (gün); kalan % hesabı için
 - **`shippable`** — kargoyla gönderilebilir mi — **varsayılan `false`** (kullanıcı kararı 08.08: unutulan alanın bedeli "satılamadı" olmalı, "bozuk gitti" değil). **Soğuk zinciri ARTIK O ANLATMIYOR** → `storage_type`
@@ -395,6 +395,7 @@ Tükenmiş bir boyu bekleyen müşterinin bıraktığı kayıt. `ZoneNotice`in �
 | `id` | uuid |  | `gen_random_uuid()` |
 | `variant_id` | uuid |  |  |
 | `channel` | channel |  |  |
+| `country` | country_code | • |  |
 | `customer_id` | uuid | • |  |
 | `amount` | numeric(10, 2) |  |  |
 | `currency` | currency |  | `'EUR'` |
@@ -409,8 +410,24 @@ Tükenmiş bir boyu bekleyen müşterinin bıraktığı kayıt. `ZoneNotice`in �
 - **`customer_id`** — doluysa müşteriye özel fiyat
 - **`amount`** — **KANAL TABANINDA**: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — bkz. `DOMAIN.md §5`. Uygulama tarafındaki adı `amountCents` ve birimi **cent**tir; dönüşümü `PriceService.moneyFields` yapar (`STACK §8`)
 - **`valid_from`** — tarihli geçerlilik; "geçmiş ve en yeni" kazanır, gelecek tarihli satır zammı önceden hazırlar
+- **`country`** — boşsa her ülkede, doluysa o ülkenin geçersiz kılması (`docs/feature/ulke-pazari.md`); ülke satırı genel satırı tarihine bakılmaksızın ezer. Müşteri satırında boştur (`price_customer_no_country`): anlaşma müşterinindir
 
 `customer_id` tek kimlik tablosunu (`user_profiles`) işaret eder — "müşteri rolüyle davranan profil".
+
+## ProductVatRate (ürünün öteki ülkelerdeki KDV oranı)
+
+<!-- alanlar:product_vat_rate -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `product_id` | uuid |  |  |
+| `country` | country_code |  |  |
+| `vat_rate` | numeric(4, 2) |  |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`vat_rate`** — o ülkenin oranı; Fransa satırı yazılmaz (`product_vat_rate_country_check`), çünkü satıcının oranı `product.vat_rate`'tir. Oran ülkeden ülkeye farklı sınıflandığı için türetilmez (lokum FR %20, DE %7)
+- Almanya'daki tüketiciye satış bu satır olmadan yapılmaz (`sellableIn`); işletme satışında aranmaz, çünkü orada Alman oranı uygulanmaz
 
 ## VariantBarcode (ürün barkodu)
 

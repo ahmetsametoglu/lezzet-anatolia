@@ -85,6 +85,14 @@ insert into public.settings (key, value, description) values
   ('pickup_wait_days',             '7',      'Gel-al siparişinin hazır bekleyebileceği süre (gün); dolunca ofis listesine düşer, iptal kararı ofisin.'),
   -- Banka hareketi Pennylane'e gecikmeli gelir; hafta sonuyla birlikte dört günlük sessizlik bağlantının düştüğünü gösterir.
   ('pennylane_quiet_days',         '4',      'Eşlenen banka hesabına Pennylane''den bu kadar gün hareket gelmezse muhasebe ve yönetim uyarılır.'),
+  -- AB'ye uzaktan satış eşiği (docs/feature/ulke-pazari.md): toplam bu yıl ya da önceki yıl eşiği aşınca varış ülkesinin KDV'si
+  -- uygulanır. Açılış tutarları sistem dışı satışlardır ve yıla bağlıdır, yoksa yıl dönünce önceki yılın tutarı bu yıla yazılırdı.
+  ('eu_distance_sales_threshold_cents',        '1000000', 'AB''ye uzaktan satış eşiği (cent, KDV hariç). Bu yıl ya da önceki yıl aşılınca varış ülkesinin KDV''si uygulanır.'),
+  ('eu_distance_sales_first_warning_percent',  '80',      'Eşiğin bu yüzdesine varılınca yönetim ve muhasebe ilk kez uyarılır.'),
+  ('eu_distance_sales_second_warning_percent', '95',      'Eşiğin bu yüzdesine varılınca yönetim ve muhasebe ikinci kez uyarılır.'),
+  ('eu_distance_sales_opening_year',           '2026',    'Açılış tutarlarının yılı: sistem dışı tutar bu yılın, önceki yıl tutarı bir önceki yılın toplamına girer.'),
+  ('eu_distance_sales_opening_cents',          '0',       'Açılış yılında sistem dışında yapılan AB uzaktan satışlarının toplamı (cent, KDV hariç).'),
+  ('eu_distance_sales_opening_previous_cents', '0',       'Açılış yılından önceki yılın AB uzaktan satışlarının toplamı (cent, KDV hariç).'),
   -- Pennylane şirketi toptan operasyonuyla ortak; Lezzet'in gideri Pennylane'de bu kategoriyle ayrılır.
   ('pennylane_category_lezzet',    '"Lezzet"', 'Lezzet''in Pennylane''e yüklenen her faturasına konan analitik kategori; boşsa kategori konmaz.'),
   ('pennylane_category_qualite',   '"QUALITE"', 'QUALITE''nin Pennylane''e yüklenen her faturasına konan analitik kategori; boşsa kategori konmaz.');

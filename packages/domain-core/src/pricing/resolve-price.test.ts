@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { isValidPriceRule, priceIn, resolvePrice, type ResolvePriceInput } from './resolve-price';
+import { isValidPriceRule, priceIn, resolvePrice, type ChannelPrice, type ResolvePriceInput } from './resolve-price';
 import { vatBaseOf } from './vat-base';
 
 // DOMAIN §5'teki her dal. Fiyatlar cent; b2c satırları TTC, b2b satırları HT (kanal tabanı).
-const LIST = [
-  { channel: 'b2c' as const, amountCents: 1690 }, // 16,90 € TTC
-  { channel: 'b2b' as const, amountCents: 1200 }, // 12,00 € HT
+const LIST: ChannelPrice[] = [
+  { channel: 'b2c', amountCents: 1690, country: null }, // 16,90 € TTC
+  { channel: 'b2b', amountCents: 1200, country: null }, // 12,00 € HT
 ];
 
 function input(over: Partial<ResolvePriceInput> = {}): ResolvePriceInput {
-  return { channel: 'b2c', b2bApproved: true, channelPrices: LIST, ...over };
+  return { channel: 'b2c', b2bApproved: true, channelPrices: LIST, country: null, ...over };
 }
 
 describe('resolvePrice — kanal ve onay', () => {
@@ -29,7 +29,7 @@ describe('resolvePrice — kanal ve onay', () => {
   });
 
   it('kanalda fiyat yoksa satışa kapalıdır', () => {
-    const r = resolvePrice(input({ channel: 'b2b', channelPrices: [{ channel: 'b2c', amountCents: 1690 }] }));
+    const r = resolvePrice(input({ channel: 'b2b', channelPrices: [{ channel: 'b2c', amountCents: 1690, country: null }] }));
     expect(r).toEqual({ sellable: false, reason: 'no_price_in_channel' });
   });
 });
@@ -144,6 +144,65 @@ describe('resolvePrice — müşterinin genel fiyat kuralı', () => {
     const offer = { unitPriceCents: 900, remainingQty: 2, stockId: 'b1' };
     const r = resolvePrice(input({ channel: 'b2b', customerRule: { basis: 'list', percent: 10 }, offer }));
     expect(r).toMatchObject({ unitPriceCents: 900, source: 'offer', strikeCents: 1080 });
+  });
+});
+
+/**
+ * Ülke fiyatı (docs/feature/ulke-pazari.md 2. karar): ülkenin satırı genel satırın yerine geçer, yoksa genel satır geçerlidir; grup
+ * yüzdesi ve müşteri kuralı seçilen listeden hesaplanır, müşteriye özel fiyat ülkeden bağımsızdır.
+ */
+describe('resolvePrice — ülke fiyatı', () => {
+  const ULKELI: ChannelPrice[] = [
+    ...LIST,
+    { channel: 'b2c', amountCents: 1890, country: 'DE' },
+    { channel: 'b2b', amountCents: 1350, country: 'DE' },
+  ];
+  const almanya = (over: Partial<ResolvePriceInput> = {}) => input({ channelPrices: ULKELI, country: 'DE', ...over });
+
+  it('ülke satırı genel satırı ezer — tüketici ve işletme listesinde', () => {
+    expect(resolvePrice(almanya())).toMatchObject({ unitPriceCents: 1890, source: 'channel' });
+    expect(resolvePrice(almanya({ channel: 'b2b' }))).toMatchObject({ unitPriceCents: 1350, source: 'channel' });
+  });
+
+  it('ülke satırı yoksa genel satır geçerlidir — ülkesiz ürün satıştan düşmez', () => {
+    expect(resolvePrice(input({ country: 'DE' }))).toMatchObject({ unitPriceCents: 1690, source: 'channel' });
+  });
+
+  it('ülkesiz okuma ülke satırını görmez — genel fiyat okunur', () => {
+    expect(resolvePrice(input({ channelPrices: ULKELI, country: null }))).toMatchObject({ unitPriceCents: 1690 });
+  });
+
+  it('başka ülkenin satırı bu ülkede geçmez', () => {
+    expect(resolvePrice(input({ channelPrices: ULKELI, country: 'FR' }))).toMatchObject({ unitPriceCents: 1690 });
+  });
+
+  it('yalnız ülke satırı olan ürün ülkesiz okumada satışa kapalıdır', () => {
+    const yalnizUlke: ChannelPrice[] = [{ channel: 'b2c', amountCents: 1890, country: 'DE' }];
+    expect(resolvePrice(input({ channelPrices: yalnizUlke }))).toEqual({ sellable: false, reason: 'no_price_in_channel' });
+  });
+
+  it('grup yüzdesi ülkenin işletme listesine uygulanır', () => {
+    expect(resolvePrice(almanya({ channel: 'b2b', groupPercentOff: 10 }))).toMatchObject({ unitPriceCents: 1215, source: 'group' });
+  });
+
+  it('liste tabanlı müşteri kuralı ülkenin listesinden düşer', () => {
+    expect(resolvePrice(almanya({ customerRule: { basis: 'list', percent: 10 } }))).toMatchObject({
+      unitPriceCents: 1701,
+      source: 'customer_rule',
+      strikeCents: 1890,
+    });
+  });
+
+  it('müşteriye özel fiyat ülkeden bağımsız kazanır', () => {
+    expect(resolvePrice(almanya({ customerPriceCents: 1500 }))).toMatchObject({
+      unitPriceCents: 1500,
+      source: 'customer',
+      strikeCents: 1890,
+    });
+  });
+
+  it('onaysız şirket ülkenin tüketici listesine düşer', () => {
+    expect(resolvePrice(almanya({ channel: 'b2b', b2bApproved: false }))).toMatchObject({ unitPriceCents: 1890, effectiveChannel: 'b2c' });
   });
 });
 

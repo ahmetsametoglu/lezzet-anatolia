@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   activeCountries,
   deliveryChannelOf,
+  findShippingWarehouse,
   resolvePlaceByPostalCode,
   resolveWarehouseForPostalCode,
   type PostalCodeMatch,
@@ -14,8 +15,8 @@ import {
  * çok depoda siparişi yanlış şehre düşürürdü.
  */
 
-const STR: WarehouseCandidate = { id: 'w-str', code: 'STR', countryCode: 'FR', shipsOnline: true, isActive: true, business: 'lezzet' };
-const KEHL: WarehouseCandidate = { id: 'w-kehl', code: 'KEHL', countryCode: 'DE', shipsOnline: false, isActive: true, business: 'lezzet' };
+const STR: WarehouseCandidate = { id: 'w-str', code: 'STR', countryCode: 'FR', shipsTo: ['FR'], isActive: true, business: 'lezzet' };
+const KEHL: WarehouseCandidate = { id: 'w-kehl', code: 'KEHL', countryCode: 'DE', shipsTo: [], isActive: true, business: 'lezzet' };
 
 const zone = (over: Partial<ZoneWithWarehouse> = {}): ZoneWithWarehouse => ({
   id: 'z-1',
@@ -76,7 +77,7 @@ describe('posta kodu → bölge → depo', () => {
       id: 'w-alt',
       code: 'ALT',
       countryCode: 'FR',
-      shipsOnline: true,
+      shipsTo: ['FR'],
       isActive: true,
       business: 'lezzet',
     };
@@ -99,9 +100,47 @@ describe('belirsizlik sessizce çözülmez', () => {
   });
 
   it('kargo deposu tanımlı değilse bu BİZİM eksiğimizdir, "bölge dışısınız" değil', () => {
-    const kargosuz = { ...STR, shipsOnline: false };
+    const kargosuz = { ...STR, shipsTo: [] };
     const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '75001' }, [zone()], [kargosuz], 'lezzet');
     expect(sonuc).toEqual({ kind: 'unresolved', reason: 'no_shipping_warehouse' });
+  });
+});
+
+/**
+ * Depo bulunduğu ülkeyi değil kargo yaptığı ülkeleri taşır: Almanya paketi Strasbourg'da hazırlanır, bu yüzden Kehl adresi Fransa'daki
+ * depoya düşer.
+ */
+describe('kargo deposu gönderim ülkesinden seçilir', () => {
+  const IKI_ULKE: WarehouseCandidate = { ...STR, shipsTo: ['FR', 'DE'] };
+  const kehlAdresi = { country: 'DE' as const, postalCode: '77694' };
+
+  it('iki ülkeye kargo yapan depo Almanya adresine de çözülür', () => {
+    expect(resolveWarehouseForPostalCode(kehlAdresi, [zone()], [IKI_ULKE, KEHL], 'lezzet')).toEqual({
+      kind: 'shipping',
+      warehouseId: 'w-str',
+    });
+    expect(findShippingWarehouse('DE', [IKI_ULKE, KEHL], 'lezzet')?.id).toBe('w-str');
+  });
+
+  it('depo bulunduğu ülkeye kargo yapmıyorsa o ülkenin adresi kargo deposu bulamaz', () => {
+    const yalnizAlmanya: WarehouseCandidate = { ...STR, shipsTo: ['DE'] };
+    expect(resolveWarehouseForPostalCode({ country: 'FR', postalCode: '75001' }, [zone()], [yalnizAlmanya], 'lezzet')).toEqual({
+      kind: 'unresolved',
+      reason: 'no_shipping_warehouse',
+    });
+  });
+
+  it('pasif deponun gönderim ülkesi kargo vaat etmez ve hizmet ülkesi sayılmaz', () => {
+    const kapali: WarehouseCandidate = { ...IKI_ULKE, isActive: false };
+    expect(findShippingWarehouse('DE', [kapali], 'lezzet')).toBeNull();
+    expect(activeCountries([], [kapali, KEHL])).toEqual(['DE']);
+    expect(activeCountries([], [kapali])).toEqual([]);
+  });
+
+  it('gönderim ülkesi hizmet ülkesidir — Almanya kodu tanınır ve kargoya çözülür', () => {
+    expect(activeCountries([zone()], [IKI_ULKE])).toEqual(['DE', 'FR']);
+    const sonuc = resolvePlaceByPostalCode('10115', [{ country: 'DE', places: ['Berlin'] }], [zone()], [IKI_ULKE], 'lezzet');
+    expect(sonuc).toEqual({ kind: 'shipping', country: 'DE', places: ['Berlin'], placeName: 'Berlin', warehouseId: 'w-str' });
   });
 });
 
@@ -255,7 +294,7 @@ describe('kendi bölgemiz dış referanstan ÜSTÜNDÜR', () => {
 });
 
 describe('çözüm müşterinin işi içindedir', () => {
-  const QLT: WarehouseCandidate = { id: 'w-qlt', code: 'QLT', countryCode: 'FR', shipsOnline: false, isActive: true, business: 'qualite' };
+  const QLT: WarehouseCandidate = { id: 'w-qlt', code: 'QLT', countryCode: 'FR', shipsTo: [], isActive: true, business: 'qualite' };
   const lezzetBolge = zone();
   const qualiteBolge = zone({ id: 'z-q', warehouseId: QLT.id, weekdays: [3] });
   const yer = { country: 'FR' as const, postalCode: '67000' };

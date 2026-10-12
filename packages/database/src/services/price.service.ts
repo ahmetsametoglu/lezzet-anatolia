@@ -11,16 +11,8 @@ import {
 import { BaseDbService } from '../core/base.service';
 
 /**
- * Fiyat CRUD + okuma (05.4). Fiyat varyant seviyesindedir; aynı tablo kanal listesini
- * (customerId boş) ve müşteriye özel fiyatı (customerId dolu) taşır.
- *
- * **Bu servis KARAR VERMEZ, satır getirir.** "Bu müşteri bu varyantı kaça alır" kararı saf
- * motordadır (`domain-core/pricing.resolvePrice`) — `database` katmanı `domain-core`'a bağlanmaz
- * (STACK §4). Çağıran katman satırları buradan alır, kararı motora sorar. Çağıran sayısı arttığında
- * (vitrin + WhatsApp + admin) bu birleştirme tek bir orkestrasyon noktasına taşınır.
- *
- * Tarihli geçerlilik: aynı (varyant, kanal, müşteri) için birden çok satır olabilir; **geçmiş ve
- * en yeni** kazanır. Gelecek tarihli satır, fiyat değişimini önceden hazırlamak içindir.
+ * Fiyat okuma ve yazma; satır getirir, "bu müşteri bu varyantı kaça alır" kararı saf motordadır (`resolvePrice`, STACK §4). Tarihli
+ * geçerlilikte geçmiş ve en yeni satır kazanır; kanal okumaları yalnız genel satırı (ülkesiz) okur, ülke satırı motora ayrıca verilir.
  */
 export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate> {
   /** `price.amount` euro `numeric`; app tarafı cent (STACK §8) — dönüşüm taban sınıfta. */
@@ -36,14 +28,14 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
   }
 
   /**
-   * Kanalın geçerli liste fiyatı (müşteriye özel olmayan satır). Yoksa `null` → ürün o kanalda
+   * Kanalın geçerli genel liste fiyatı (müşteriye ve ülkeye özel olmayan satır). Yoksa `null` → ürün o kanalda
    * satışa kapalıdır (DOMAIN §5).
    */
   async findChannelPrice(variantId: string, channel: Channel, at: Date = new Date()): Promise<Price | null> {
     const rows = await this.getAll(
       { variantId, channel },
       {
-        isNullFields: ['customer_id'],
+        isNullFields: ['customer_id', 'country'],
         rangeFilters: [{ field: 'valid_from', operator: 'lte', value: at.toISOString() }],
         orderBy: 'validFrom',
         orderDirection: 'desc',
@@ -72,11 +64,7 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
     return rows[0] ?? null;
   }
 
-  /**
-   * Fiyat çözümünün ihtiyaç duyduğu satırları TEK turda getirir: kanal listesi + (varsa) müşteriye
-   * özel fiyat. Çağıran bunları `resolvePrice`'a verir. İki ayrı sorgu yerine tek yol olması,
-   * vitrin listelerinde N+1'i önler.
-   */
+  /** Fiyat çözümünün satırları tek turda: kanal listesi ve varsa müşteriye özel fiyat; çağıran bunları `resolvePrice`'a verir. */
   async findApplicable(
     variantId: string,
     channel: Channel,
@@ -91,12 +79,8 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
   }
 
   /**
-   * `findApplicable`'ın TOPLU hâli — vitrin listeleri için (08.10). 30 ürünlük katalog sayfası
-   * varyant başına ayrı sorgu atamaz; iki sorguyla (kanal + müşteriye özel) tüm liste çözülür.
-   *
-   * Her varyant için EN YENİ geçerli satır kazanır: sorgu `valid_from` azalan sıralıdır, bir
-   * varyantın ilk görülen satırı alınır. Tekil karşılığındaki `limit: 1` burada kullanılamaz —
-   * sınır tüm sonuca uygulanır, varyant başına değil.
+   * `findApplicable`'ın toplu hâli: varyant başına sorgu yerine iki sorgu (kanal ve müşteriye özel). Her varyantın en yeni geçerli
+   * satırı kazanır; `limit` varyant başına değil tüm sonuca uygulandığı için azalan sıradaki ilk satır alınır.
    */
   async findApplicableMap(
     variantIds: string[],
@@ -111,7 +95,7 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
     const [channelRows, customerRows] = await Promise.all([
       this.getAll(
         { variantId: variantIds, channel },
-        { isNullFields: ['customer_id'], rangeFilters: validUntilNow, orderBy: 'validFrom', orderDirection: 'desc' },
+        { isNullFields: ['customer_id', 'country'], rangeFilters: validUntilNow, orderBy: 'validFrom', orderDirection: 'desc' },
       ),
       customerId
         ? this.getAll(
@@ -149,28 +133,16 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
   }
 
   /**
-   * Müşteriye özel fiyatı KALDIRIR — o üçlünün (varyant, kanal, müşteri) TÜM satırlarını siler.
-   *
-   * Neden geçmişi de siliyoruz: özel fiyat bir ANLAŞMADIR, yayınlanmış bir liste değil. Anlaşma
-   * bitince "eskiden şu fiyattan alıyordu" kaydının tutulacağı yer sipariştir — orada fiyat zaten
-   * satır bazında sabitlenmiş durumda. Tek satır silmek ise daha kötüsü olurdu: altındaki eski özel
-   * fiyat yeniden yürürlüğe girer ve müşteri, kaldırıldığını sandığınız indirimi almaya devam ederdi.
+   * Müşteriye özel fiyatı kaldırır: (varyant, kanal, müşteri) üçlüsünün tüm satırlarını siler. Tek satır silinseydi altındaki eski
+   * özel fiyat yeniden yürürlüğe girerdi; anlaşmanın izi siparişin kalemindedir.
    */
   async removeCustomerPrice(variantId: string, channel: Channel, customerId: string): Promise<void> {
     await this.deleteWhere({ variantId, channel, customerId });
   }
 
   /**
-   * ŞU AN geçerli müşteriye özel fiyatların tamamı (09.5 yönetim listesi) — (varyant, kanal,
-   * müşteri) üçlüsü başına en yeni satır.
-   *
-   * Tekilleştirme ŞART: `setPrice` her değişiklikte yeni satır yazar, tablo geçmişi taşır. Ham
-   * liste "aynı müşteriye aynı varyanttan üç özel fiyat" gösterirdi — üçü de doğru, ama ikisi
-   * geçmiş. Ekranın sorusu "bugün kim kaça alıyor".
-   *
-   * Sayfalanmaz: bu küme veriyle değil, **admin'in eliyle** büyür (her satır ayrı bir pazarlık) —
-   * doğal tavanı vardır (CLAUDE.md §1). Tavan aşınırsa (yüzlerce özel fiyat) burası keyset'e döner
-   * ve ekrana müşteri süzgeci gerekir.
+   * Şu an geçerli müşteriye özel fiyatlar, (varyant, kanal, müşteri) başına en yeni satır; tablo geçmiş taşıdığı için tekilleştirilir.
+   * Sayfalanmaz, çünkü küme veriyle değil yöneticinin pazarlıklarıyla büyür (CLAUDE.md §1).
    */
   async listCustomerPricesNow(at: Date = new Date()): Promise<Price[]> {
     const rows = await this.getAll(

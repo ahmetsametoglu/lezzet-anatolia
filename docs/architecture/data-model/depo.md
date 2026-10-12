@@ -22,7 +22,6 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | `address` | jsonb | • |  |
 | `lat` | numeric(9, 6) | • |  |
 | `lng` | numeric(9, 6) | • |  |
-| `ships_online` | boolean |  | `false` |
 | `pickup_enabled` | boolean |  | `false` |
 | `is_active` | boolean |  | `true` |
 | `sort_order` | int |  | `0` |
@@ -38,7 +37,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 - **`kind`** — `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil DÖRT KURALIN süzgeci — üçü veride, dördüncüsü seçicilerde (aşağıda)
 - **`country_code`** — **fiziksel tesis nerede.** Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır ötesi olabilir (ADR-002), depo olamaz. ⚠ KDV'nin bağlı olduğu alan (`DOMAIN §5/§17`)
 - **`business`** — deponun işi (`docs/feature/iki-is.md`); parti, mal kabul ve sipariş işini buradan okur, etiketsiz depo Lezzet'tir. Depo kullanılmaya başlayınca (parti, hareket, sipariş, rezervasyon, mal kabul, transfer ya da sefer) değişmez (`warehouse_business_guard`, kural `warehouse_in_use`), çünkü kopya alan tutulmaz ve geçmiş öteki işe kayardı. Aracın işi evinin işidir: tesisin işi değişince araç izler, araca ayrı iş yazılamaz
-- **`ships_online`** — kargo çıkış deposu; yalnız Lezzet deposunda olur, QUALITE kargo göndermez (`warehouse_qualite_never_ships`) — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
+- **Kargo rolü** — kolon değil: kargo deposu en az bir gönderim ülkesi (`warehouse_ship_country`, aşağıda) olan Lezzet tesisidir — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
 - **`is_active`** — depo **kapatılır, silinmez**: geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorunda (FK'ler `restrict`)
 - **`sort_order`** — operatörün seçici sırası
 - **`home_warehouse_id`** (02.09) — **aracın evi olan tesis**; yalnız `kind='vehicle'` satırında dolu
@@ -61,11 +60,11 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
   söyler; varsayılan bir merkez uydurmaz. (Geri düşüş olarak deponun posta kodu merkezi okunabilir —
   `warehousePoint`, ama o da bulunamazsa cevap "bilinmiyor"dur.)
 
-**Ülke başına EN FAZLA bir aktif kargo deposu** — kural kayıt kapısında değil veritabanında: `unique (country_code) where ships_online and is_active`. Anahtarın ülke olması K9'un "ileride ülke başına bir" hedefini bugünden karşılar; DE deposu açıldığında kendi kargo deposunu alır, kod değişmez.
+**Bir ülkeye EN FAZLA bir aktif kargo deposu gönderir** — kural kayıt kapısında değil veritabanında: `warehouse_ship_country` üzerinde `unique (country) where warehouse_active`. Anahtar deponun fiziksel ülkesi değil gönderim ülkesidir: Strasbourg hem Fransa'ya hem Almanya'ya gönderir (`docs/feature/ulke-pazari.md`).
 
 **Varsayılan depo kavramı YOKTUR** (C2) — bu yüzden şemada bir `is_default` bayrağı da yoktur. Depo daima açık bir kaynaktan gelir: adresin posta kodu (uzaktan sipariş) ya da personelin o anki deposu (yerinde satış: depo kapısı ya da kuryenin aracı).
 
-**Araç deposu — türün DÖRT sonucu; ilk üçü VERİDE** (26.08, `DOMAIN §17`): *(a)* **araca bölge bağlanamaz** — `delivery_zone_warehouse_is_facility` tetikleyicisi; "posta kodu → bölge → depo" zincirinin sonu bir adres olmak zorunda, yoksa müşteri siparişi hareket hâlindeki bir yere yazılır ve hiçbir ekran fark etmez. *(b)* **araç kargo deposu olamaz** — `warehouse_vehicle_never_ships` kısıtı (taşıyıcı bir adrese gelir); aynı tabloda durabildiği için tetikleyiciye gerek yok. *(c)* **araç `available_stock_total`a girmez** — katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz; tedarik önerisi içinse o mal zaten tesisten çıkmış, akşam dönecektir (sayılsaydı ikinci kez sayılırdı). Depo bazlı `available_stock` aracı **aynen gösterir**: kurye arabasında ne olduğunu görmek zorunda — ayrım bu yüzden toplamda, kaynakta değil.
+**Araç deposu — türün DÖRT sonucu; ilk üçü VERİDE** (26.08, `DOMAIN §17`): *(a)* **araca bölge bağlanamaz** — `delivery_zone_warehouse_is_facility` tetikleyicisi; "posta kodu → bölge → depo" zincirinin sonu bir adres olmak zorunda, yoksa müşteri siparişi hareket hâlindeki bir yere yazılır ve hiçbir ekran fark etmez. *(b)* **araç kargo deposu olamaz** — gönderim ülkesi satırını yalnız tesis alır (`warehouse_ship_country_guard`; taşıyıcı bir adrese gelir). *(c)* **araç `available_stock_total`a girmez** — katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz; tedarik önerisi içinse o mal zaten tesisten çıkmış, akşam dönecektir (sayılsaydı ikinci kez sayılırdı). Depo bazlı `available_stock` aracı **aynen gösterir**: kurye arabasında ne olduğunu görmek zorunda — ayrım bu yüzden toplamda, kaynakta değil.
 
 **DÖRDÜNCÜ SONUÇ — araç YAZMA hedefi değildir, ve bu tek başına veriye sığmaz** (02.09, kullanıcı bildirimi: *"araç bir depo olarak birçok yere geliyor, engellenmesi gerekiyor"*). Üstteki üç kural veritabanında duruyor ve **çalışıyor** — ama hiçbiri ekranın aracı SEÇENEK olarak göstermesini engellemiyordu. Ölçüm: mal kabul depo listesi, satın alma hedef deposu, hazırlığın tesis şeridi, asistanın kabul dilekçesi ve rota formunun "Çıkış deposu" seçicisi VAN-1'i sunuyordu. Rota formunda zarar somut: operatör aracı seçebiliyor, kaydederken `delivery_zone_warehouse_is_facility` reddediyor — yani kural tuttu ama operatöre *sebebi ancak kaydetmeye basınca görünen* bir ret olarak göründü. Kapının kendi kuralı bunu zaten yasaklıyor: *"kapsam dışı depo hiçbir seçicide ve süzgeçte seçenek olarak var olmamalı — görüp de seçememek değil, hiç görmemek"*.
 
@@ -84,6 +83,27 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 **Taramanın çıkardığı sessiz hata:** `activeCountries` (yer çözümü motoru) *"hizmet verdiğimiz ülkeler"* kümesini aktif depoların ülkesinden türetiyor ve araçları da sayıyordu. Bugün etkisizdi (hepsi FR) ama DE plakalı bir araç eklendiği gün vitrin, o ülkede deposu olmadan *"Almanya'ya gönderiyoruz"* derdi — hareket hâlindeki bir yer bir ülkeye hizmet sözü veremez. Motorun iki seçim yolu da (bölgenin deposu · kargo deposu) zaten tesise çıktığı için girdiyi tesise indirmek sonucu değiştirmedi, yalnız bu üçüncü kullanımı düzeltti.
 
 `vehicle` TABLOSU AYRI YAŞAR (0045) ve bu duplication değil: orası aracın **soğuk zincirini ölçer** (ölçüm noktası kimliği), burası **içindeki malı sayar**. 0031'in künyesi *"araç bir depoya mı, bir güne mi, bir kuryeye mi bağlanır"* sorusunu açık bırakmıştı; cevap **hiçbirine — araç bir YERDİR.**
+
+---
+
+## WarehouseShipCountry (deponun kargo yaptığı ülke) — `0031`
+
+<!-- alanlar:warehouse_ship_country -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `warehouse_id` | uuid |  |  |
+| `country` | country_code |  |  |
+| `handover` | jsonb | • |  |
+| `warehouse_active` | boolean |  | `true` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`country`** — deponun kargo yaptığı ülke; deponun fiziksel ülkesinden (`warehouse.country_code`) ayrıdır. Bir ülkeye en çok bir aktif depo gönderir (`warehouse_ship_country_single_active`)
+- **`handover`** — o ülkenin paketinin taşıyıcıya verildiği adres (`{line1, postalCode, city}`, ülkesi satırın ülkesidir); boşsa deponun adresi. Almanya paketi Strasbourg'da hazırlanıp Almanya'da taşıyıcıya verilir, tarife yurt içi Almanya
+- **`warehouse_active`** — deponun aktifliğinin kopyası, yalnız tekil indeks kısmi olabilsin diye; `(warehouse_id, warehouse_active) → warehouse(id, is_active) on update cascade` iki değeri hep eşit tutar, yazan vermez
+- Satırı yalnız Lezzet'in tesisi alır (`warehouse_ship_country_guard`); gönderim ülkesi olan depo araca ya da QUALITE'ye dönemez (`warehouse_ship_country_owner`). Kapanan depo satırını korur ama önünü kesmez; ülke başkasına geçtiyse yeniden açılamaz
 
 ---
 
@@ -390,7 +410,8 @@ Kodu teslim bölgesine düşmeyen müşterinin bıraktığı haber kaydı. `Post
 
 | Kural | Nasıl zorlanır |
 | --- | --- |
-| Ülke başına tek aktif kargo deposu | kısmi unique indeks |
+| Bir ülkeye tek aktif kargo deposu | kısmi unique indeks (`warehouse_ship_country_single_active`) |
+| Gönderim ülkesini yalnız Lezzet tesisi alır | tetikleyici, iki yönlü (`warehouse_ship_country_guard`, `warehouse_ship_country_owner`) |
 | Bir posta kodu tek bölgede | bağ tablosunun birincil anahtarı |
 | Siparişin partileri siparişin deposundan | ertelenmiş kısıt tetikleyicisi — **üç yönlü**: parti eklenince, siparişin deposu değişince, partinin deposu değişince |
 | Rezervasyonun deposu = siparişin deposu | ertelenmiş kısıt, iki yönlü (rezervasyon ve sipariş tarafı) |

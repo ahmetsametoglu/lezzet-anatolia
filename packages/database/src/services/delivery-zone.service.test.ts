@@ -85,8 +85,15 @@ describe('işe göre bölge', () => {
     await expect(warehouses.update({ id: cakisan.id, business: 'qualite' })).rejects.toThrow(/delivery_zone_postal_code_pkey/);
   });
 
-  it('QUALITE deposu kargo çıkış deposu olamaz', async () => {
+  it('QUALITE deposu gönderim ülkesi alamaz', async () => {
     const qualite = await depo('qualite', 'DE');
-    await expect(warehouses.update({ id: qualite.id, shipsOnline: true })).rejects.toThrow(/warehouse_qualite_never_ships/);
+    await expect(warehouses.setShipsTo(qualite.id, ['DE'])).rejects.toThrow(/QUALITE deposu gönderim ülkesi alamaz/);
+  });
+
+  it("gönderim ülkesi olan depo QUALITE'ye geçemez", async () => {
+    // Pasif depo: satırı ülkenin tek aktif kargo deposu kuralına girmez, paylaşılan veritabanında başka testin önünü kesmez.
+    const kapali = await createTestWarehouse(db, { isActive: false, shipsTo: ['DE'] });
+    created.push(kapali.id);
+    await expect(warehouses.update({ id: kapali.id, business: 'qualite' })).rejects.toThrow(/QUALITE deposu olamaz/);
   });
 });

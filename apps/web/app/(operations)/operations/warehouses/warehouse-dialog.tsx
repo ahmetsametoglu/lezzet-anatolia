@@ -75,7 +75,7 @@ export function WarehouseDialog({
 
   // Rolü BUGÜN taşıyan depo (kendisi hariç). Kural veritabanında; buradaki okuma yalnız cümle kurmak
   // için — kayıt yine de kısıta çarpar ve action onu okunur bir hataya çevirir.
-  const holder = shippingTakenBy.find((w) => w.countryCode === country && w.id !== editing?.id) ?? null;
+  const holder = shippingTakenBy.find((w) => w.shipsTo.includes(country) && w.id !== editing?.id) ?? null;
   const firstInCountry = !countriesWithWarehouse.includes(country) && editing?.countryCode !== country;
 
   const onSubmit = form.handleSubmit(async (values) => {

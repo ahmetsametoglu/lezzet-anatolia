@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const ChannelEnum = z.enum(['b2b', 'b2c']);
 export type Channel = z.infer<typeof ChannelEnum>;
 
-/** Para birimi. Tek pazar (FR/DE) → tek değer; çoklu döviz Faz 1'de yok. */
+/** Para birimi. Tek pazar (FR/DE) → tek değer. */
 export const CurrencyEnum = z.enum(['EUR']);
 export type Currency = z.infer<typeof CurrencyEnum>;
 
@@ -87,13 +87,19 @@ export type CustomerOrderStatus = z.infer<typeof CustomerOrderStatusEnum>;
 export const OrderSourceEnum = z.enum(['web', 'whatsapp', 'messenger', 'instagram', 'door', 'manual']);
 export type OrderSource = z.infer<typeof OrderSourceEnum>;
 
-/** KDV işleme tipi — siparişe yazılır, muhasebe export'u bunu okur (DOMAIN §5). */
-export const VatTreatmentEnum = z.enum(['domestic', 'intra_eu_b2b_reverse_charge']);
+/**
+ * KDV işleme tipi — siparişe yazılır, muhasebe export'u bunu okur (DOMAIN §5). AB'deki tüketiciye uzaktan satış eşik altında
+ * satıcının oranıyla (`intra_eu_distance_origin`), eşik aşılınca varış ülkesinin oranıyla (`intra_eu_distance_oss`) yazılır.
+ */
+export const VatTreatmentEnum = z.enum(['domestic', 'intra_eu_b2b_reverse_charge', 'intra_eu_distance_origin', 'intra_eu_distance_oss']);
 export type VatTreatment = z.infer<typeof VatTreatmentEnum>;
 
-/** Teslimat ülkesi — DE B2C için OSS eşiği izlemi (DOMAIN §5). */
+/** Ülke — teslimatın, deponun, fiyatın ve KDV oranının ülkesi. */
 export const CountryEnum = z.enum(['FR', 'DE']);
 export type Country = z.infer<typeof CountryEnum>;
+
+/** Satıcının ülkesi: ürünün kendi KDV oranı bu ülkenindir ve satış yalnız buradaki depodan çıkar (yerel satış desteklenmiyor). */
+export const SELLER_COUNTRY = 'FR' as const satisfies Country;
 
 /**
  * Ülkenin OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: sözlük enum'un

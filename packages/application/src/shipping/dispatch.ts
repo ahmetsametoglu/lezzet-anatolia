@@ -12,6 +12,7 @@ import type { ParcelSpec } from '@lezzet/sendcloud';
 import type { Order, OrderBox, ServicePointSnapshot, ShippingBox } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RecipientAddress, SenderAddress, ShippingRateProvider } from './port';
+import { senderOf } from './sender';
 
 /**
  * Sevkin ortak zemini: duyuru ve depocunun teklifi aynı ön koşulları ve aynı kolileri (mühürlü kutulardan) kullanır, yoksa listede
@@ -46,20 +47,6 @@ export const MAX_PARCELS = 15;
 function textOf(snapshot: Record<string, unknown> | null, key: string): string | undefined {
   const raw = snapshot?.[key];
   return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
-}
-
-/** Deponun serbest `address` alanı → gönderici. Posta kodu ZORUNLU: tarife çıkıştan hesaplanıyor. */
-function senderOf(w: { countryCode: string; address: Record<string, unknown> | null; name: string }): SenderAddress | null {
-  const a = w.address ?? {};
-  const postalCode = typeof a.postalCode === 'string' ? a.postalCode : null;
-  if (!postalCode) return null;
-  return {
-    countryCode: w.countryCode,
-    postalCode,
-    city: typeof a.city === 'string' ? a.city : undefined,
-    name: w.name,
-    addressLine1: typeof a.line1 === 'string' ? a.line1 : undefined,
-  };
 }
 
 /**

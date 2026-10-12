@@ -97,7 +97,8 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     const birim = fiyatlar.get(varyant.id)!.channelPrice!.amountCents;
     const adet = 2;
 
-    const vergi = resolveVatTreatment({ channel: 'b2c', deliveryCountry: 'FR' });
+    const vergi = resolveVatTreatment({ channel: 'b2c', originCountry: 'FR', deliveryCountry: 'FR', destinationTaxation: null });
+    if (!vergi.ok) throw new Error(`KDV kararı verilemedi: ${vergi.reason}`);
     const { order } = await orders.create(
       {
         customerId: musteri.id,

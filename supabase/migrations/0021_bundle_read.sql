@@ -1,21 +1,8 @@
--- Paket listesi okuma fonksiyonu (05.5 · STACK §13 "okumada RPC eşiği").
---
--- NEDEN RPC: üç koşul birlikte sağlanıyor.
---   (1) Veri beş tablodan birleşiyor: bundle · bundle_item · product_variant · product · price · stock.
---   (2) İşi sunucuda yapmak TOPLAM maliyeti düşürüyor: liste satırının ihtiyacı birkaç SAYI, oysa
---       uygulama tarafında hesaplamak için katalogun tamamının fiyatlarını ve tüm parti satırlarını
---       taşımak gerekiyordu (ölçüldü: 75 KB havuz+fiyat+parti → ~4 KB satır özeti).
---   (3) Fark bariz ve ÖLÇÜLDÜ; "belki daha hızlıdır" değil.
--- PostgREST'in gömülü `select`'i bunu ifade edemiyor: varyant başına ağırlıklı ortalama alış fiyatı
--- ve kalem başına KDV'siz gelir, sorgu kurucusunun dili dışında.
---
--- FONKSİYON İŞ KURALI TAŞIMAZ (STACK §13): yalnız toplar. "Mutabakat tuttu mu", "marj hedefin altında
--- mı", "paket satılabilir mi" kararlarının hiçbiri burada YOK — ham toplamlar döner, kararı motor
--- (`domain-core`) verir. Buraya bir eşik yazmak, kuralı iki yere bölmek olurdu.
+-- Paket listesi okuma fonksiyonu: veri beş tablodan birleşir ve varyant başına ağırlıklı alış ortalaması ile kalem başına KDV'siz
+-- gelir PostgREST'in gömülü seçimiyle ifade edilemez; fonksiyon iş kuralı taşımaz, ham toplamları döner ve kararı motor verir.
 
--- MALİYET GİZLİDİR: bu fonksiyon alış fiyatı ve marj girdisi döndürüyor, yani müşteri yüzeyine ASLA
--- açılmamalı. Postgres fonksiyonlara `execute`'u varsayılan olarak PUBLIC'e verir — o yüzden önce
--- geri alınıyor, sonra yalnız servis rolüne veriliyor.
+-- Maliyet gizlidir: fonksiyon alış fiyatı ve marj girdisi döndürür, bu yüzden `execute` PUBLIC'ten geri alınıp yalnız servis
+-- rolüne verilir.
 create or replace function public.bundle_list_rows()
 returns table (
   id uuid,
@@ -28,16 +15,14 @@ returns table (
   image_zoom smallint,
   image_alt jsonb,
   image_updated_at timestamptz,
-  image_width smallint,                          -- kaynak ölçüsü (05.37) — açık kolon listesi, unutulursa Zod'da patlar (aşağıdaki not)
+  image_width smallint,                          -- kaynak ölçüsü — açık kolon listesi, unutulursa Zod'da patlar (aşağıdaki not)
   image_height smallint,
   total_price numeric,
   serves int,
   is_active boolean,
   sort_order int,
-  -- **Vitrin işareti** (05.18). Kolon listesi AÇIK yazıldığı için buraya da eklenmek ZORUNDA:
-  -- `BundleListRow` şeması `BundleSchema`'dan türüyor, yani alan eklenip burası unutulduğunda
-  -- okuma Zod'da patlıyor — ve hata kendi konusuyla ilgisiz bir yerde görünüyor (bugün ölçüldü:
-  -- `order_sale` görünümünde aynı tuzak, 22 test kırmızıydı).
+  -- Vitrin işareti: kolon listesi açık yazıldığı için alan buraya da eklenmeli, yoksa `BundleSchema`'dan türeyen `BundleListRow`
+  -- okuması Zod'da konusuyla ilgisiz bir yerde patlar.
   is_featured boolean,
   created_at timestamptz,
   -- ── Kalemlerden türeyen özet ──
@@ -64,11 +49,11 @@ as $$
     group by s.variant_id
   ),
   unit_price as (
-    -- Varyantın GÜNCEL b2c liste fiyatı: kanal satırlarının en yeni geçerlisi (müşteriye özel satır
-    -- burada yok — paket yalnız b2c'dedir ve pazarlıklı fiyat pakete girmez).
+    -- Varyantın GÜNCEL b2c genel liste fiyatı: müşteriye ve ülkeye özel satır yok, çünkü paket yalnız b2c'dedir, pazarlıklı fiyat
+    -- pakete girmez ve ülke fiyatı servis okumasında seçilir.
     select distinct on (p.variant_id) p.variant_id, p.amount
     from public.price p
-    where p.channel = 'b2c' and p.customer_id is null and p.valid_from <= now()
+    where p.channel = 'b2c' and p.customer_id is null and p.country is null and p.valid_from <= now()
     order by p.variant_id, p.valid_from desc
   ),
   agg as (

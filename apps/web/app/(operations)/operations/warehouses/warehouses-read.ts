@@ -1,18 +1,19 @@
 import { needsExpiryAttention, upcomingDeliveryDates } from '@lezzet/domain-core';
-import type {
-  OrderStatus,
-  DeliveryZoneWithCodes,
-  UserProfile,
-  UserRole,
-  Warehouse,
-  WarehouseTransfer,
+import {
+  WarehouseAddressSchema,
+  type OrderStatus,
+  type DeliveryZoneWithCodes,
+  type UserProfile,
+  type UserRole,
+  type Warehouse,
+  type WarehouseTransfer,
+  type WarehouseWithShipping,
 } from '@lezzet/types';
 import { roleText } from '@/components/operation/ui/ops-nav';
 import { totalRiskCents } from '@/lib/stock/batch-labels';
 import type { BatchView } from '@/lib/stock/batch-types';
 import { setupGapOf } from '@/lib/warehouse/setup-gap';
 import {
-  WarehouseAddressSchema,
   type ClosureConsequence,
   type ScorecardView,
   type StaffChipView,
@@ -37,7 +38,7 @@ function parseAddress(raw: Warehouse['address']): WarehouseAddressView {
 
 interface WarehouseRowsInput {
   /** TÜM depolar — kapalılar dahil. Kapalı tesis listeden düşmez, geçmiş onu bilmek zorunda. */
-  warehouses: readonly Warehouse[];
+  warehouses: readonly WarehouseWithShipping[];
   zones: readonly DeliveryZoneWithCodes[];
   /** Operasyon rolü taşıyan profiller — kapsam eşlemesi burada yapılır. */
   staff: readonly UserProfile[];
@@ -72,6 +73,7 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers, 
       // Deponun noktası, rotanın çıpası; `null` girilmemiş demektir ve satır yine tam okunur.
       lat: w.lat,
       lng: w.lng,
+      shipsTo: w.shipsTo,
       shipsOnline: w.shipsOnline,
       pickupEnabled: w.pickupEnabled,
       isActive: w.isActive,

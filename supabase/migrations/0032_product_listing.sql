@@ -12,10 +12,10 @@ drop view if exists public.variant_effective_price;
 
 create view public.variant_effective_price with (security_invoker = true) as
 with list_price as (
-  -- "Geçmiş ve en yeni kazanır" (0005); müşteriye özel satırlar hariç, her kanal kendi satırını getirir.
+  -- "Geçmiş ve en yeni kazanır" (0005); müşteriye ve ülkeye özel satırlar hariç, her kanal kendi genel satırını getirir.
   select distinct on (p.variant_id, p.channel) p.variant_id, p.channel, p.amount
     from public.price p
-   where p.customer_id is null and p.valid_from <= now()
+   where p.customer_id is null and p.country is null and p.valid_from <= now()
    order by p.variant_id, p.channel, p.valid_from desc
 ),
 best_offer as (

@@ -1,35 +1,14 @@
-import type { Channel, Country, VatTreatment } from '@lezzet/types';
+import { SELLER_COUNTRY, type Channel, type Country, type VatTreatment } from '@lezzet/types';
 
 /**
- * KDV işleme tipi (03.10) — müşterinin ödediği tutarı değiştirdiği için checkout'ta doğru
- * uygulanır; beyan/OSS muhasebenindir (DOMAIN §5).
- *
- * Üç dal:
- * - **FR (her kanal)** → yurt içi Fransız KDV'si.
- * - **DE + B2B + geçerli vergi no** → **reverse charge**: %0 KDV, müşteri kendi ülkesinde beyan
- *   eder; faturaya "Autoliquidation" ibaresi girer. Vergi no VIES ile doğrulanmış olmalıdır —
- *   *doğrulanmamış* numara bu dalı AÇMAZ (yanlış %0 uygulamak bizim riskimizdir).
- * - **DE + B2C** → şimdilik Fransız KDV'si. AB kuralı: Almanya'ya tüketici satışı yıllık 10.000 €
- *   eşiğini aşınca Alman KDV'si + OSS gerekir; eşik aşılana kadar fiyatı etkilemez. Sistem DE B2C
- *   ciroyu izler ve eşiğe yaklaşınca uyarır (izleme 13-analitik'te).
+ * KDV işleme tipi — müşterinin ödediği tutarı ve uygulanan oranı belirlediği için sipariş anında verilir; beyan/OSS muhasebenindir
+ * (DOMAIN §5, docs/feature/ulke-pazari.md). Satış yalnız satıcının ülkesindeki depodan çıkar: başka ülkedeki depodan satış o ülkede
+ * yerel satıştır ve desteklenmez.
  */
 
 /**
- * **Siparişe YAZILMIŞ işlemeden KDV'siz mi** — `resolveVatTreatment`in `zeroRated`ının kalıcı hâli.
- *
- * Motor sipariş açılırken kararı verip `order.vat_treatment` kolonuna yazıyor; sonradan okuyan
- * her yüzey (muhasebe dışa aktarımı, kârlılık, sipariş detayı) aynı soruyu KOLONDAN sormak
- * zorunda — girdiler (ülke, kanal, vergi no doğrulaması) o an değişmiş olabilir, sipariş anındaki
- * karar ise değişmez.
- *
- * ── NEDEN AYRI BİR FONKSİYON (denetim 26.08) ─────────────────────────────────
- * Bu karşılaştırma depoda ÜÇ yerde elle yazılıydı (`accounting/export` iki kez, `lib/accounting/profit`)
- * ve dördüncü okuyan onu hiç sormamıştı: operasyon sipariş detayı "İçindeki KDV" satırını kendi
- * hesaplıyor, `zeroRated` dalını atlıyordu. Sonucu, KDV'si yasal olarak SIFIR olan bir reverse
- * charge siparişinde ekranda duran hayalet bir vergi tutarıydı.
- *
- * Elle yazılan bir karşılaştırma "unutulabilir" bir karşılaştırmadır; sorulacak bir fonksiyon
- * unutulduğunda en azından aranabilir olur.
+ * **Siparişe YAZILMIŞ işlemeden KDV'siz mi** — `resolveVatTreatment`in `zeroRated`ının kalıcı hâli. Sonradan okuyan her yüzey
+ * (dışa aktarım, kârlılık, sipariş detayı) soruyu kolondan sorar, çünkü kararın girdileri sonradan değişebilir.
  */
 export function isZeroRated(treatment: VatTreatment): boolean {
   return treatment === 'intra_eu_b2b_reverse_charge';
@@ -37,39 +16,57 @@ export function isZeroRated(treatment: VatTreatment): boolean {
 
 export interface VatTreatmentInput {
   channel: Channel;
+  /** Malın çıktığı deponun fiziksel ülkesi. */
+  originCountry: Country;
   /** Teslimat ülkesi — kimlik değil, malın gittiği yer belirler. */
   deliveryCountry: Country;
   /** Müşterinin AB vergi numarası VIES ile doğrulanmış mı (`Customer.vat_number_valid`). */
   vatNumberValid?: boolean;
+  /**
+   * Eşik durumu (`distanceSaleThreshold`): `true` varış ülkesinin, `false` satıcının oranı, `null` bilinmiyor. Yalnız AB'deki
+   * tüketiciye satışta okunur; öteki satışlar `null` geçebilir.
+   */
+  destinationTaxation: boolean | null;
 }
 
-export interface VatDecision {
-  treatment: VatTreatment;
-  /** Reverse charge'da %0 uygulanır; aksi halde ürünün kendi oranı geçerlidir. */
-  zeroRated: boolean;
-  /** Faturaya basılacak yasal ibare (yalnız reverse charge'da). */
-  invoiceNote: 'Autoliquidation' | null;
-  /** DE B2C: OSS eşiği izlemine bu sipariş dahil edilmeli mi. */
-  countsTowardOssThreshold: boolean;
-}
-
-export function resolveVatTreatment({ channel, deliveryCountry, vatNumberValid }: VatTreatmentInput): VatDecision {
-  const reverseCharge = deliveryCountry === 'DE' && channel === 'b2b' && vatNumberValid === true;
-
-  if (reverseCharge) {
-    return {
-      treatment: 'intra_eu_b2b_reverse_charge',
-      zeroRated: true,
-      invoiceNote: 'Autoliquidation',
-      countsTowardOssThreshold: false,
+export type VatDecision =
+  | {
+      ok: true;
+      treatment: VatTreatment;
+      /** Oranın okunacağı ülke (`applicableVatRate`); ters yüklemede `null`, oran sıfırdır. */
+      rateCountry: Country | null;
+      zeroRated: boolean;
+      /** Faturaya basılacak yasal ibare (yalnız ters yüklemede). */
+      invoiceNote: 'Autoliquidation' | null;
+    }
+  | {
+      ok: false;
+      /** `origin_not_seller`: depo satıcının ülkesinde değil; `threshold_unknown`: tüketiciye AB satışında eşik durumu verilmedi. */
+      reason: 'origin_not_seller' | 'threshold_unknown';
     };
-  }
 
-  return {
-    treatment: 'domestic',
-    zeroRated: false,
-    invoiceNote: null,
-    // Yalnız DE'ye giden tüketici satışı eşiği besler; DE B2B (doğrulanmamış no dahil) beslemez.
-    countsTowardOssThreshold: deliveryCountry === 'DE' && channel === 'b2c',
-  };
+/**
+ * Ters yükleme: AB içi işletme satışı ve VIES'te doğrulanmış numara; doğrulanmamış numara %0 açmaz, çünkü yanlış %0'ın bedelini biz
+ * öderiz. Çıkış her zaman satıcının ülkesi olduğu için yalnız varış ülkesine bakar; ödeme ve sepet ekranı oranı sormadan bunu sorar.
+ */
+export function reverseChargeApplies(input: Pick<VatTreatmentInput, 'channel' | 'deliveryCountry' | 'vatNumberValid'>): boolean {
+  return input.deliveryCountry !== SELLER_COUNTRY && input.channel === 'b2b' && input.vatNumberValid === true;
+}
+
+export function resolveVatTreatment(input: VatTreatmentInput): VatDecision {
+  if (input.originCountry !== SELLER_COUNTRY) return { ok: false, reason: 'origin_not_seller' };
+  if (input.deliveryCountry === SELLER_COUNTRY) return taxed('domestic', SELLER_COUNTRY);
+  if (reverseChargeApplies(input)) {
+    return { ok: true, treatment: 'intra_eu_b2b_reverse_charge', rateCountry: null, zeroRated: true, invoiceNote: 'Autoliquidation' };
+  }
+  // Numarası doğrulanmamış işletme satıcının KDV'sini öder ve eşiğe girmez: eşik yalnız tüketiciye uzaktan satışındır.
+  if (input.channel === 'b2b') return taxed('domestic', SELLER_COUNTRY);
+  if (input.destinationTaxation === null) return { ok: false, reason: 'threshold_unknown' };
+  return input.destinationTaxation
+    ? taxed('intra_eu_distance_oss', input.deliveryCountry)
+    : taxed('intra_eu_distance_origin', SELLER_COUNTRY);
+}
+
+function taxed(treatment: VatTreatment, rateCountry: Country): VatDecision {
+  return { ok: true, treatment, rateCountry, zeroRated: false, invoiceNote: null };
 }

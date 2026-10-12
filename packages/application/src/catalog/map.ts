@@ -218,9 +218,10 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
   const resolved = resolvePrice({
     channel: ctx.viewer.channel,
     b2bApproved: ctx.viewer.b2bApproved,
-    // Liste, okunduğu kanalın satırıdır — `viewer.channel` zaten daraltılmış hâl (onaysız şirket
-    // B2C'dir), yani motorun kendi daraltması bu listeyle çelişmez.
-    channelPrices: listCents != null ? [{ channel: ctx.viewer.channel, amountCents: listCents }] : [],
+    // Liste, okunduğu kanalın genel satırıdır — `viewer.channel` zaten daraltılmış hâl (onaysız şirket B2C'dir), yani motorun kendi
+    // daraltması bu listeyle çelişmez; fiyat okuması ülke satırını getirmediği için ülke genel fiyattır.
+    channelPrices: listCents != null ? [{ channel: ctx.viewer.channel, amountCents: listCents, country: null }] : [],
+    country: null,
     customerPriceCents: customerCents,
     customerRule: ctx.viewer.customerRule ?? null,
     costCents: ctx.costs.get(variant.id) ?? null,

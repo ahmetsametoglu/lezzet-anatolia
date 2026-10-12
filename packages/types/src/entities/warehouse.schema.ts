@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
-import { BusinessEnum, CountryEnum, TransferStatusEnum, WarehouseKindEnum } from '../primitives/enums.schema';
+import { BusinessEnum, CountryEnum, TransferStatusEnum, WarehouseKindEnum, type Country } from '../primitives/enums.schema';
+import { AddressSchema } from './address.schema';
 
 // Depo ağı şemaları (DOMAIN §17, data-model/depo.md). Depo müşteriye gösterilmez: müşteri posta kodunu girer, depo içeride çözülür.
 
@@ -37,8 +38,6 @@ export const WarehouseSchema = z.object({
    */
   lat: dbNumericNullable,
   lng: dbNumericNullable,
-  /** Kargo çıkış deposu. Ülke başına en fazla bir aktif tane — kural veritabanında (0042). */
-  shipsOnline: z.boolean(),
   /** Gel-al noktası: izinli müşteri hazır siparişini buradan alır; yalnız tesiste açılabilir (kısıt veride). */
   pickupEnabled: z.boolean(),
   isActive: z.boolean(),
@@ -50,7 +49,7 @@ export type Warehouse = z.infer<typeof WarehouseSchema>;
 export const WarehouseInsertSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
-  /** Verilmezse `facility` — bugüne kadarki her satır bir tesistir, araç İSTİSNADIR. */
+  /** Verilmezse `facility`: araç istisnadır. */
   kind: WarehouseKindEnum.optional(),
   /** Aracın evi; tesiste verilmez (veride de kısıt var — `warehouse_home_only_vehicle`). */
   homeWarehouseId: z.string().uuid().nullish(),
@@ -62,7 +61,6 @@ export const WarehouseInsertSchema = z.object({
   address: z.record(z.unknown()).nullish(),
   lat: z.number().nullish(),
   lng: z.number().nullish(),
-  shipsOnline: z.boolean().optional(),
   pickupEnabled: z.boolean().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
@@ -71,6 +69,40 @@ export type WarehouseInsert = z.infer<typeof WarehouseInsertSchema>;
 
 export const WarehouseUpdateSchema = WarehouseSchema.partial().required({ id: true });
 export type WarehouseUpdate = z.infer<typeof WarehouseUpdateSchema>;
+
+/**
+ * Depo adresinin şekli; `address` serbest jsonb olduğu için okuyan bunu doğrular. Ülke yok: deponun ülkesi künyede, teslim
+ * noktasınınki gönderim ülkesi satırındadır.
+ */
+export const WarehouseAddressSchema = AddressSchema.pick({ line1: true, postalCode: true, city: true });
+export type WarehouseAddress = z.infer<typeof WarehouseAddressSchema>;
+
+// ── Gönderim ülkesi ─────────────────────────────────────────────────────────
+// Depo yalnız fiziksel ülkesini tutar; kargo yaptığı ülkeler bu satırlardadır. Satırı yalnız Lezzet'in tesisi alır ve bir ülkeye en
+// çok bir aktif depo kargo yapar (kurallar veritabanında).
+
+export const WarehouseShipCountrySchema = z.object({
+  warehouseId: z.string().uuid(),
+  country: CountryEnum,
+  /** O ülkenin paketinin taşıyıcıya verildiği adres; ülkesi satırın ülkesidir. `null` = deponun adresi. */
+  handover: WarehouseAddressSchema.nullable(),
+  createdAt: z.string(),
+});
+export type WarehouseShipCountry = z.infer<typeof WarehouseShipCountrySchema>;
+
+export const WarehouseShipCountryInsertSchema = WarehouseShipCountrySchema.omit({ createdAt: true }).extend({
+  handover: WarehouseAddressSchema.nullish(),
+});
+export type WarehouseShipCountryInsert = z.infer<typeof WarehouseShipCountryInsertSchema>;
+
+/** Depo satırı gönderim ülkeleriyle tek turda okunur (gömülü seçim). */
+export const WarehouseWithShipCountriesSchema = WarehouseSchema.extend({
+  shipCountries: z.array(WarehouseShipCountrySchema.pick({ country: true })),
+});
+export type WarehouseWithShipCountries = z.infer<typeof WarehouseWithShipCountriesSchema>;
+
+/** Depo okumasının görünümü: `shipsOnline` gönderim ülkelerinden türer, ayrı bir doğruluk değildir. */
+export type WarehouseWithShipping = Warehouse & { shipsTo: Country[]; shipsOnline: boolean };
 
 
 // ── Depo bazlı asgari stok eşiği ────────────────────────────────────────────
@@ -127,9 +159,9 @@ export const WarehouseTransferLineSchema = z.object({
   transferId: z.string().uuid(),
   sourceStockId: z.string().uuid(),
   qty: z.number().int(),
-  /** Kabulde hedefte doğan YENİ parti (T4: parti kimliği korunur, birleşmez). */
+  /** Kabulde hedefte doğan YENİ parti: parti kimliği korunur, birleşmez. */
   targetStockId: z.string().uuid().nullable(),
-  /** null = henüz kabul edilmedi. 0 = "geldi ama kayıp" — ikisi ayrı şeydir (0042). */
+  /** null = henüz kabul edilmedi. 0 = "geldi ama kayıp" — ikisi ayrı şeydir. */
   receivedQty: z.number().int().nullable(),
 });
 export type WarehouseTransferLine = z.infer<typeof WarehouseTransferLineSchema>;

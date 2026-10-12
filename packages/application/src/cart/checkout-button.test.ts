@@ -58,7 +58,7 @@ beforeAll(async () => {
 
   // Kapı kalemi rota deposunda, kargo kalemi yalnız kargo deposunda: sepet iki gruba bölünür.
   routeId = (await createTestWarehouse(db, { label: 'DUGME-ROTA', countryCode: 'DE' })).id;
-  shippingId = (await createTestWarehouse(db, { label: 'DUGME-KARGO', countryCode: 'DE', shipsOnline: true })).id;
+  shippingId = (await createTestWarehouse(db, { label: 'DUGME-KARGO', countryCode: 'DE', shipsTo: ['DE'] })).id;
   const stock = new StockService(db);
   await stock.insert({ warehouseId: routeId, variantId: localVariantId, physicalQty: 10, expiryDate });
   await stock.insert({ warehouseId: shippingId, variantId: shippingVariantId, physicalQty: 10, expiryDate });

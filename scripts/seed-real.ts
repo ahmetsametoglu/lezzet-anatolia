@@ -185,9 +185,9 @@ async function seedWarehouse(db: Db): Promise<{ facilityId: string }> {
     address: { line1: street, postalCode, city, country: countryCode },
     lat: WAREHOUSE.lat,
     lng: WAREHOUSE.lng,
-    shipsOnline: WAREHOUSE.shipsOnline,
     sortOrder: 1,
   });
+  if (WAREHOUSE.shipsOnline) await warehouses.setShipsTo(created.id, [countryCode]);
   return { facilityId: created.id };
 }
 

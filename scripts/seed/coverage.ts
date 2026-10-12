@@ -193,7 +193,7 @@ const KAPSAM: KapsamAlani[] = [
     tablo: 'product',
     kovalar: [
       { ad: 'kapaklı', zorunlu: true, filtre: (q) => q.not('image_key', 'is', null) },
-      // Kapaksız ürün kartının baş-harf yedeği yalnız burada sınanır (kullanıcı bunu ekranda gördü).
+      // Kapaksız ürün kartının baş-harf yedeği yalnız burada sınanır.
       { ad: 'kapaksız', zorunlu: true, filtre: (q) => q.is('image_key', null) },
     ],
   },
@@ -265,7 +265,7 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'paket içi adet bildirilmiş',
         zorunlu: true,
         /**
-         * `pieces_count` ("12'li baklava"): kova kolonun dolduğunu sorar, çünkü adet adın içinde kalınca tek ürün slug'lara bölünüyordu.
+         * `pieces_count` ("12'li baklava"): kova kolonun dolduğunu sorar, çünkü adet adın içinde kalınca tek ürün slug'lara bölünür.
          */
         filtre: (q) => q.not('pieces_count', 'is', null),
       },
@@ -448,15 +448,15 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'aktif', zorunlu: true, filtre: (q) => q.eq('is_active', true) },
       /* Pasif depo (kapsam seçicisi ve "depo kapandı" hâli) zorunlu değildir: beslemede kapalı depo yok; operatör bir depoyu kapattığında dolar. */
       { ad: 'pasif', zorunlu: false, filtre: (q) => q.eq('is_active', false) },
-      { ad: 'kargo çıkışlı', zorunlu: true, filtre: (q) => q.eq('ships_online', true) },
-      { ad: 'yalnız rota', zorunlu: true, filtre: (q) => q.eq('ships_online', false) },
+      { ad: 'kargo çıkışlı', zorunlu: true, sayac: (db) => say(db, 'warehouse_ship_country') },
+      { ad: 'yalnız rota', zorunlu: true, sayac: (db) => iliskisizSay(db, 'warehouse', 'id', 'warehouse_ship_country', 'warehouse_id') },
       // Araç deposu: türün üç kuralı (bölgeye bağlanamaz, kargo çıkışı olamaz, depo-üstü toplamaya girmez) ancak bir araç satırı varsa koşar.
       { ad: 'tesis', zorunlu: true, filtre: (q) => q.eq('kind', 'facility') },
       { ad: 'araç', zorunlu: true, filtre: (q) => q.eq('kind', 'vehicle') },
     ],
   },
   {
-    // ── ÜRÜN BARKODU (Modül 23) ───────────────────────────────────────────────────────────────
+    // ── ÜRÜN BARKODU ──────────────────────────────────────────────────────────────────────────
     // Dört kova dört ayrı davranışı açıyor: paket kodu (çarpan 1) ↔ koli kodu (çarpan kadar öner) ·
     // öğrenilmiş kod (izli — "kim öğretti") ↔ sistem kaydı (izsiz). "Tanınmayan kod" hâli kovasızdır
     // ve bilinçli: onu var eden şey kodsuz KALAN varyantlardır — katalogun tamamına kod yazılsaydı
@@ -484,11 +484,9 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
-    // ── SİPARİŞ KUTUSU (23.6) ─────────────────────────────────────────────────────────────────
-    // Kutu döngüsünün dört hâli, dördü de ayrı bir ekran/kural açıyor: AÇIK kutu = masada
-    // dolduruluyor (yarım iş kaldığı yerden sürer), KAPALI = salt-okunur + etiketi basılacak,
-    // YÜKLENMEMİŞ = 23.8'in yükleme sayacının "kaç kaldı" tarafı, ÇOK KUTULU = absolüt birleşim
-    // (0048 ⚠) ve "tüm kutular binmeden yolda sayılmaz" kuralının tek sınanabildiği hâl.
+    // ── SİPARİŞ KUTUSU ────────────────────────────────────────────────────────────────────────
+    // Kutu döngüsünün dört hâli ayrı ekran ya da kural açar: açık kutu yarım işi, kapalı kutu etiketi, yüklenmemiş kutu yükleme
+    // sayacını, çok kutulu sipariş "tüm kutular binmeden yolda sayılmaz" kuralını sınar.
     baslik: 'Sipariş kutusu',
     tablo: 'order_box',
     siparisGerektirir: true,
@@ -605,16 +603,14 @@ const KAPSAM: KapsamAlani[] = [
         sayac: async (db) => {
           const [{ data: depoSatirlari }, { data: bolgeSatirlari }, { data: stokSatirlari }, { data: varyantSatirlari }, { data: urunSatirlari }] =
             await Promise.all([
-              db.from('warehouse').select('id,ships_online').eq('is_active', true),
+              db.from('warehouse_ship_country').select('warehouse_id').eq('warehouse_active', true),
               db.from('delivery_zone').select('warehouse_id').eq('is_active', true),
               db.from('stock').select('variant_id,warehouse_id').gt('physical_qty', 0),
               db.from('product_variant').select('id,product_id'),
               db.from('product').select('id').eq('shippable', true),
             ]);
 
-          const kargoDepolari = new Set(
-            ((depoSatirlari ?? []) as { id: string; ships_online: boolean }[]).filter((d) => d.ships_online).map((d) => d.id),
-          );
+          const kargoDepolari = new Set(((depoSatirlari ?? []) as { warehouse_id: string }[]).map((d) => d.warehouse_id));
           // Rota deposu ama kargo çıkışı DEĞİL: senaryonun tek ön koşulu bu depoların varlığı.
           const yalnizRotaDepolari = [
             ...new Set(((bolgeSatirlari ?? []) as { warehouse_id: string }[]).map((z) => z.warehouse_id)),
@@ -762,7 +758,7 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'kargo çıkış deposu',
         zorunlu: true,
         // Rota dışı müşterinin TEK yolu. Yoksa çözüm `unresolved` döner ve senaryo yine doğmaz.
-        sayac: (db) => say(db, 'warehouse', (q) => q.eq('ships_online', true).eq('is_active', true)),
+        sayac: (db) => say(db, 'warehouse_ship_country', (q) => q.eq('warehouse_active', true)),
       },
     ],
   },

@@ -29,6 +29,7 @@
 | 4 | **Uçtan uca, testli, tasarım Claude Design'da onayla; bitince Oppo'da çevrim içi deneme; iki ajanla** | Yol haritası §5. |
 | 5 | **Ülke bilinmezken Almanca arayüz Almanya fiyatını gösterir** | Fransızca ve Türkçe arayüz genel fiyatı gösterir; adres seçilince adresin ülkesi geçerlidir. |
 | 6 | **Almanya KDV oranı baştan zorunlu** | Oranı girilmemiş ürün Almanya'daki tüketiciye satılmaz. İşletme satışında Alman oranı kullanılmadığı için orada zorunlu değildir (yönetici yorumu, kullanıcı onayında). |
+| 7 | **Otomatik fiyat tam euro ya da 50 sente yukarı yuvarlanır** | Nakit ödemede küsurattan kaçınmak için. Otomatik fiyatlı üründe Almanya fiyatı da hedef marjdan, Almanya'da uygulanan KDV oranıyla hesaplanır ve aynı kuralla yuvarlanır. Adım ayardır (varsayılan 50 sent); bugünkü 5 sentlik sabit adımın yerine geçer. |
 
 **Varsayılanlar** (parametrik): müşteriye özel fiyat ve near-expiry teklifi ülkeden bağımsız; fiyat grubu yüzdesi ülkenin işletme
 listesine uygulanır; eşik uyarıları %80 ve %95; sistem dışı AB uzaktan satış tutarı için açılış ayarı (bu yıl ve önceki yıl,

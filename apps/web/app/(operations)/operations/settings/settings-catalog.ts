@@ -1,12 +1,4 @@
-import type { z } from 'zod';
-import { BUSINESS_LABELS, BusinessEnum, SYSTEM_ACCOUNT_IDS, SettingScopeEnum, type AccountType } from '@lezzet/types';
-
-/**
- * İstisna açılabilen eksenler; `global` istisna değil, değerin kendisidir. Tip burada durur, çünkü `settings-types` sözlükten tip
- * alıyor ve öteki dosyada kalsaydı iki dosya birbirini import ederdi.
- */
-export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
-export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
+import { BUSINESS_LABELS, BusinessEnum, SYSTEM_ACCOUNT_IDS } from '@lezzet/types';
 import {
   BANK_FEED_QUIET_DAYS_DEFAULT,
   BANK_FEED_QUIET_DAYS_KEY,
@@ -34,56 +26,15 @@ import {
 import { TICKET_HANDLER_LABELS, TRUST_REASON_LABELS, TicketHandlerEnum, TrustReasonEnum } from '@lezzet/types';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
 import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
-import type { SettingSection } from './settings-layout';
+import { DISTANCE_SALE_SETTING_DEFS } from './settings-catalog-distance-sales';
+import type { ExceptionScope, SettingDef } from './settings-def';
+
+export type { ExceptionScope, SettingDef, SettingValue } from './settings-def';
 
 /**
  * Ayar sözlüğü: iç anahtar adı arayüzde görünmediği için operatöre gösterilecek yüz burada durur, anahtarlar sabitlerinden ithal
  * edilir. `fallback` bilinçli bir kopyadır, çünkü değiştirilen satırda fabrika değeri kalmaz; nöbet testi onu migration'a karşı doğrular.
  */
-
-/**
- * Değerin türü, gösterimi ve düzenleme kontrolünü belirler. `channelFlags`in kanal ayrımı değerin içinde yaşar, istisna satırı
- * olarak değil, yoksa aynı soruya iki cevap kapısı açılırdı.
- */
-export type SettingKind = 'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text' | 'account' | 'choice';
-
-/** Ayarın değeri — `jsonb` sütununun ekranda karşılık gelen dar hâli. */
-export type SettingValue = string | number | boolean | Record<string, boolean>;
-
-export interface SettingDef {
-  key: string;
-  /** İnsan dilinde ad — arayüzde görünen tek isim. */
-  label: string;
-  /** "Bu neyi etkiler" — bir cümle. */
-  help: string;
-  /** Ayarın durduğu konu kartı; sekme karttan türer (`settings-layout`). */
-  section: SettingSection;
-  kind: SettingKind;
-  /** Sayısal değerin birimi (`dk`, `gün`, `puan`, `cent`). Para ve yüzde kendi biçimini taşır. */
-  unit?: string;
-  /** `account` türünde seçilebilen hesap türü; başka türdeki hesaba yazılan para yanlış yerde birikir ya da aktarım yazılamaz. */
-  accountType?: AccountType;
-  /** `choice` türünün seçenekleri: değer listeden gelir ki ekran bir enum'u ham kimliğiyle göstermesin. */
-  choices?: readonly { value: string; label: string }[];
-  /** Alt/üst sınır — ham sayı üzerinden (para cent, yüzde tam sayı). */
-  min?: number;
-  max?: number;
-  /** Sınırın SEBEBİ — reddi anlaşılır kılar ("ödeme penceresinin asgarisi"). Sınır varsa yazılır. */
-  limitReason?: string;
-  /** Geniş etkili ayar: düzenleme penceresi bu cümleyi uyarı olarak gösterir. */
-  impact?: string;
-  /** Değer boşken satırda görünen uyarı: boşluğun sistemde neye yol açtığını söyler. */
-  unsetNote?: string;
-  /** Güven puanı ağırlığının yönü; kart ödülleri ve cezaları ayrı sütunda çizer. */
-  polarity?: 'reward' | 'penalty';
-  /** `global` dışında istisna açılabilen eksenler; boşsa yalnız genel değer. Tip ekranın sunabildiği eksenlerden gelir. */
-  exceptionScopes: readonly ExceptionScope[];
-  /**
-   * Fabrika değeri, migration'ın yazdığı satır; kurulumdan kuruluma değişen ayarlarda (banka hesabı gibi) bilerek boştur. Nöbet
-   * testi iki yönlü doğrular: `fallback` verilen anahtar migration'da bulunmalı, verilmeyen bulunmamalı.
-   */
-  fallback?: SettingValue;
-}
 
 const CHANNEL_ONLY = ['channel'] as const;
 const NONE = [] as const;
@@ -194,9 +145,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     fallback: DAY_HOUR_FALLBACK.order_cutoff_time,
   },
   // ── GÜNÜN EŞİK SAATLERİ ─────────────────────────────────────────────────────
-  // Üçü de YALNIZ rota ekseninde: kesim rotanın gerçeğidir, deponun değil. Çok günlü tur geldiğinde
-  // (`docs/feature/cok-gunluk-sefer.md`) kesimin turun ÇIKIŞ gününe bağlanması ancak bu eksenle
-  // ifade edilebilir — depo ekseninde imkânsızdı.
+  // Üçü de YALNIZ rota ekseninde: kesim rotanın gerçeğidir, deponun değil.
   {
     key: 'prep_cutoff_time',
     label: 'Depo hazırlık kapanışı',
@@ -506,9 +455,8 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     min: 0,
     impact: 'Tavan kırpmaz, ödülün TAMAMINI reddeder. Kapsamı dışındaki ödüller etkilenmez.',
     exceptionScopes: NONE,
-    // Yedek MOTORDAN: burada `100` yazılıydı ve tavan 270'e çıkınca ekran motorun uygulamayacağı
-    // bir sayı gösterir olmuştu. `fallback` operatörün gördüğü değerdir — ayrışması, ayarın kendisi
-    // silinmiş bir kurulumda yanlış bilgiyle karar verdirir.
+    // Yedek motordan gelir: `fallback` operatörün gördüğü değerdir ve motorunkinden ayrışırsa ayarı silinmiş kurulumda yanlış
+    // bilgiyle karar verdirir.
     fallback: POINTS_DAILY_CAP_DEFAULT,
   },
   {
@@ -556,8 +504,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     kind: 'money',
     min: 0,
     impact: 'Geçmiş siparişlerin sabitlenmiş rakamlarını DEĞİŞTİRMEZ; yalnız bundan sonraki hesaplara girer.',
-    // `0016` bu ayarı gerekçesiyle sayıyor: "kâr hesabına girer — global kalırsa kâr sessizce
-    // yanlışlaşır". İki depo iki ayrı kurye anlaşması demek; tek sayı ikisini de yanlış anlatır.
+    // İki depo iki ayrı kurye anlaşması demektir; tek sayı kârı ikisinde de sessizce yanlış anlatır.
     exceptionScopes: WITH_WAREHOUSE('zone'),
     fallback: 250,
   },
@@ -568,7 +515,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     section: 'cost',
     kind: 'money',
     min: 0,
-    // `0016`'nın dördüncü adayı. Paket malzemesi depoda alınır ve fiyatı tesise göre değişir.
+    // Paket malzemesi depoda alınır ve fiyatı tesise göre değişir.
     exceptionScopes: WITH_WAREHOUSE(),
     fallback: 120,
   },
@@ -583,6 +530,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     fallback: 0,
   },
 
+  ...DISTANCE_SALE_SETTING_DEFS,
   // ── Geri bildirim ─────────────────────────────────────────────────────────
   {
     key: 'feedback_delay_days',

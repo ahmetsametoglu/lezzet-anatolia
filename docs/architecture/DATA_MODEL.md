@@ -150,7 +150,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `transfer_status`: in_transit, received, cancelled *(depolar arası sevk)*
 - `trust_reason`: order_delivered, referral, neighbor, review, feedback, visit, order_cancelled, delivery_refused, order_returned, delivery_unreachable, payment_uncollected, payment_overdue *(güven defterinin sebebi — ilk altısı ödül, kalanı ceza; ağırlık ayardan)*
 - `user_role`: customer, admin, warehouse, courier, accounting, system *(`system` = kişi değil, sistemin kendi kaydı)*
-- `vat_treatment`: domestic, intra_eu_b2b_reverse_charge *(`intra_eu_b2b_reverse_charge` = autoliquidation)*
+- `vat_treatment`: domestic, intra_eu_b2b_reverse_charge, intra_eu_distance_origin, intra_eu_distance_oss *(`intra_eu_b2b_reverse_charge` = autoliquidation; uzaktan satış eşik altında satıcının, eşik üstünde varış ülkesinin oranıyla — `docs/feature/ulke-pazari.md`)*
 - `warehouse_kind`: facility, vehicle *(araç da bir depodur)*
 
 ---

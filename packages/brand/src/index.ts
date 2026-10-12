@@ -2,6 +2,7 @@
 // yasal metinlerin künye yer tutucularını dolduran `fillBrandFacts` ve WhatsApp bağlantısı. Dil listesi
 // burada DEĞİL — tek kaynak `@lezzet/i18n` (`LOCALES`, `DEFAULT_LOCALE`); renkler ve ikon sözlüğü de
 // değil — `@lezzet/design-tokens` (`./icons`).
+import { SELLER_COUNTRY } from '@lezzet/types';
 import { BRAND_NAME } from './name';
 
 /* Şirket künyesinin parçaları — her bilgi BİR kez yazılır, birleşik biçimler bunlardan türer:
@@ -36,7 +37,7 @@ export const brand = {
     siren: SIREN,
     siret: `${SIREN} ${HEAD_OFFICE_NIC}`,
     vatId: 'FR50907496640',
-    address: { street: '46 rue des Prés', postalCode: '67380', city: 'Lingolsheim', countryCode: 'FR' },
+    address: { street: '46 rue des Prés', postalCode: '67380', city: 'Lingolsheim', countryCode: SELLER_COUNTRY },
   },
 } as const;
 

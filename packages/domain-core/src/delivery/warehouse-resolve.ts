@@ -4,19 +4,11 @@
 */
 
 import { normalizePostalCode, placeLabel } from '@lezzet/address';
-import type { Business, Country } from '@lezzet/types';
+import type { Business, Country, WarehouseWithShipping } from '@lezzet/types';
 import { matchZones, type DeliveryZoneCandidate } from './delivery-days';
 
-export interface WarehouseCandidate {
-  id: string;
-  code: string;
-  countryCode: Country;
-  /** Bölge dışı adresler kargo deposuna düşer. */
-  shipsOnline: boolean;
-  isActive: boolean;
-  /** Deponun işi; bölgenin ve kargonun işi buradan gelir. */
-  business: Business;
-}
+/** Çözümün okuduğu depo alanları; bölge dışı adres, ülkesine kargo yapan depoya (`shipsTo`) düşer. */
+export type WarehouseCandidate = Pick<WarehouseWithShipping, 'id' | 'code' | 'countryCode' | 'shipsTo' | 'isActive' | 'business'>;
 
 export interface ZoneWithWarehouse extends DeliveryZoneCandidate {
   warehouseId: string;
@@ -96,24 +88,29 @@ export function resolveWarehouseForPostalCode(
 }
 
 /**
- * Ülke başına tek kargo deposu var (veritabanında kısmi tekil indeks) ve yalnız Lezzet'indir, çünkü QUALITE kargo göndermez. Ayrı
- * fonksiyon, çünkü vitrin rota içindeki müşteri için de "bu ürün kargoyla gelir mi" diye soruyor.
+ * Bir ülkeye en çok bir aktif Lezzet deposu kargo yapar (veritabanında tekil indeks); ölçüt deponun bulunduğu değil kargo yaptığı
+ * ülkedir, çünkü Almanya paketi Strasbourg'da hazırlanır. Ayrı fonksiyon, çünkü vitrin rota içindeki müşteri için de "bu ürün kargoyla
+ * gelir mi" diye soruyor.
  */
 export function findShippingWarehouse(
   country: Country,
   warehouses: readonly WarehouseCandidate[],
   business: Business,
 ): WarehouseCandidate | null {
-  return warehouses.find((w) => w.isActive && w.shipsOnline && w.countryCode === country && w.business === business) ?? null;
+  return warehouses.find((w) => w.isActive && w.shipsTo.includes(country) && w.business === business) ?? null;
 }
 
-/** Hizmet ülkeleri ayardan değil veriden türer: yeni ülkede depo açıldığında küme kendiliğinden büyür. */
+/** Hizmet ülkeleri ayardan değil veriden türer: yeni ülkede depo açıldığında ya da depo yeni ülkeye kargo yapınca küme büyür. */
 export function activeCountries(
   zones: readonly ZoneWithWarehouse[],
   warehouses: readonly WarehouseCandidate[],
 ): Country[] {
   const countries = new Set<Country>();
-  for (const w of warehouses) if (w.isActive) countries.add(w.countryCode);
+  for (const w of warehouses) {
+    if (!w.isActive) continue;
+    countries.add(w.countryCode);
+    for (const c of w.shipsTo) countries.add(c);
+  }
   for (const z of zones) {
     if (!z.isActive) continue;
     for (const c of z.postalCodes) countries.add(c.country);

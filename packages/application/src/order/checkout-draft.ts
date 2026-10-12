@@ -18,7 +18,6 @@ import {
   deriveChannel,
   meetsMinBasket,
   needsServicePoint,
-  resolveVatTreatment,
   servicePointAccepts,
 } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
@@ -52,6 +51,7 @@ import {
   type CartLine,
 } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
+import { saleVatOf } from './sale-vat';
 import { readDeliveryInputs, resolveDelivery, type DeliveryResolution } from './delivery';
 import { readUnitCosts } from './unit-costs';
 import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot, shippingVatLines } from './shipping-selection';
@@ -213,12 +213,6 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // KDV ülkesi müşterinin kimliğinden değil malın gittiği yerden gelir. Kanal siparişe yazılanla aynı ifadeden türer ki
   // sipariş kendi KDV'siyle çelişmesin.
   const channel = deriveChannel({ isCompany: customer.type === 'company' });
-  // Doğrulanmamış numara %0 açmaz: yanlış %0 uygulamak bizim riskimizdir.
-  const vat = resolveVatTreatment({
-    channel,
-    deliveryCountry,
-    vatNumberValid: customer.vatNumberValid ?? undefined,
-  });
 
   // Depo önce, çünkü sepet o deponun stoğuyla okunur; seçilen adresin kodu seçili yerin kodundan farklıysa adres kazanır. Teslimat
   // iki kez çözülür ama döngü yok: depo yalnız adrese bağlı, sepet yalnız "kargo da kapalı mı" kararını etkiler.
@@ -235,6 +229,11 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   if (input.shippingOrder && !orderWarehouseId) {
     return { status: 'warehouse_unresolved', reason: 'no_shipping_warehouse' };
   }
+  // Karar malın çıktığı deponun ülkesini ister; depo çözülemediyse sipariş aşağıda zaten açılmaz. Eşik durumu sipariş toplamından
+  // okunmadığı sürece AB'deki tüketiciye satış eşik altı sayılır, yani satıcının oranıyla yazılır.
+  const originCountry = (pickupWarehouse ?? deliveryInputs.warehouses.find((w) => w.id === orderWarehouseId))?.countryCode;
+  const vatNumberValid = customer.vatNumberValid ?? undefined;
+  const vat = originCountry ? saleVatOf({ channel, originCountry, deliveryCountry, vatNumberValid, destinationTaxation: false }) : null;
 
   // Sipariş yalnız kendi şeridini alır ve şerit müşterinin gerçek yeriyle okunur, çünkü aşağıdaki okuma kargo siparişinde kargo
   // deposuyla yapılır ve orada her satır `local` görünür. Personel siparişi daraltılmaz, kalemi sessizce düşürmek yerine reddedilir.
@@ -337,7 +336,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     // Adres tutarlılığı yalnız rota siparişinde sorulur: kurye sokağa gider ve kod ile şehir çelişiyorsa hangisinin yanlış olduğunu
     // biz bilemeyiz. Kargoda adresi taşıyıcı doğrular; kural formda değil kapıda, çünkü form atlanabilir.
     deliveryType === 'route' ? placesForPostalCode(db, address.country, address.postalCode) : null,
-    expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null),
+    vat ? expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null) : [],
     // Kargo dışında ücret teklife bağlı değildir; ödeme kapısı teklifi beklemeden sorulur.
     deliveryType === 'shipping' ? null : paymentOf(null),
     // Komşu daveti kişinin kendi kabul kaydından okunur ve ancak sefer belli olunca sorulabilir; eşleşmeme sessizdir.
@@ -438,7 +437,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   }
 
   // Deposuz sipariş yazılamaz; sebep çağırana taşınır, çünkü "bölge dışısınız" ile "kargo deposu tanımlı değil" aynı cümle olamaz.
-  if (!orderWarehouseId) {
+  if (!orderWarehouseId || !vat) {
     return { status: 'warehouse_unresolved', reason: delivery.unresolvedReason ?? 'no_shipping_warehouse' };
   }
 

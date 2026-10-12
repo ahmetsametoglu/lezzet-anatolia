@@ -10,7 +10,7 @@ import {
   meetsMinBasket,
   resolveCheckoutOptions,
   resolveShippingFee,
-  resolveVatTreatment,
+  reverseChargeApplies,
   type ShippingVatPart,
 } from '@lezzet/domain-core';
 import { CountryEnum, type DeliveryType, type PaymentMethod } from '@lezzet/types';
@@ -137,11 +137,11 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
   const deliveryCountry = CountryEnum.safeParse(input.country);
   const zeroRated =
     deliveryCountry.success &&
-    resolveVatTreatment({
+    reverseChargeApplies({
       channel: deriveChannel({ isCompany: customer.type === 'company' }),
       deliveryCountry: deliveryCountry.data,
       vatNumberValid: customer.vatNumberValid ?? undefined,
-    }).zeroRated;
+    });
   const goods = input.lines.map((line, index) => ({
     vatRate: line.vatRate,
     amountCents: line.totalCents - (input.discountShares?.[index] ?? 0),

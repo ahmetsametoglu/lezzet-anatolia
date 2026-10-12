@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import {
-  AddressSchema,
   CountryEnum,
   DAILY_CHECKS_MAX,
   type DeliveryZonePostalCode,
   StorageAreaInsertSchema,
   VehicleInsertSchema,
+  WarehouseAddressSchema,
   WarehouseInsertSchema,
   WarehouseSchema,
   PrinterPurposeEnum,
@@ -13,7 +13,8 @@ import {
   type Country,
   type DeliveryZone,
   type StorageAreaKind,
-  type Warehouse,
+  type WarehouseAddress,
+  type WarehouseWithShipping,
 } from '@lezzet/types';
 import { ShippingBoxInsertSchema, type ShippingBox } from '@lezzet/types';
 import type { MeasureDayState, TemperatureDeviation } from './measure-rules';
@@ -22,10 +23,7 @@ import type { MeasureDayState, TemperatureDeviation } from './measure-rules';
 // sözleşmesi var.
 
 // ── Deponun adresi ──────────────────────────────────────────────────────────
-// `warehouse.address` serbest `jsonb`; şekli müşteri adresinden türer, çünkü üç alanın anlamı aynıdır ve ikinci bir adres
-// sözlüğü "postalCode" ile "zip"i yan yana yaşatırdı. Ülke burada yok: deponun ülkesi künyenin kendi alanıdır ve KDV ona bağlı.
-export const WarehouseAddressSchema = AddressSchema.pick({ line1: true, postalCode: true, city: true });
-export type WarehouseAddress = z.infer<typeof WarehouseAddressSchema>;
+// Şekil `WarehouseAddressSchema`dır (`@lezzet/types`); gönderim ülkesinin teslim noktası da aynı şekli taşır.
 
 /** Ekranın okuduğu hâl — adres çözülmüş, kayıtsızsa `null` (uydurulmaz). */
 export type WarehouseAddressView = WarehouseAddress | null;
@@ -41,6 +39,7 @@ export type WarehouseAddressView = WarehouseAddress | null;
 export const WarehouseFormSchema = WarehouseInsertSchema.pick({ code: true, name: true }).extend({
   business: WarehouseSchema.shape.business,
   countryCode: CountryEnum,
+  /** Deponun kendi ülkesine kargo yapması; kapı bunu gönderim ülkesi satırına çevirir. */
   shipsOnline: z.boolean(),
   /** Gel-al noktası: izinli müşteri hazır siparişini buradan alır; adresi müşteriye görünür. */
   pickupEnabled: z.boolean(),
@@ -94,14 +93,10 @@ export type VehicleFormInput = z.infer<typeof VehicleFormSchema>;
 // ── Görünüm satırları ───────────────────────────────────────────────────────
 
 /**
- * Depo listesinin bir satırı — künye + o tesisin özet sayıları.
- *
- * Künye alanları varlıktan TÜRER (`Warehouse`), elle yeniden yazılmaz: `address` yalnız şekli
- * çözüldüğü için (`jsonb` → `WarehouseAddress`) yeniden tanımlanıyor, `createdAt` ise ekranın
- * sorusu değil.
+ * Depo listesinin bir satırı — künye, gönderim ülkeleri ve o tesisin özet sayıları; künye varlıktan türer, `address` yalnız şekli
+ * çözüldüğü için yeniden tanımlanır. `vehicleId` atılır, çünkü kart araçları deponun ev bağından bulur (`VanLoadRow`).
  */
-/* `vehicleId` atılır, çünkü ekran onu okumuyor: kart araçları deponun ev bağından bulur (`VanLoadRow`). */
-export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt' | 'vehicleId'> & {
+export type WarehouseRowView = Omit<WarehouseWithShipping, 'address' | 'createdAt' | 'vehicleId'> & {
   address: WarehouseAddressView;
   /** Bağlı bölge sayısı + o bölgelerin kod toplamı; pasif bölgeler ayrı sayılır. */
   zoneCount: number;

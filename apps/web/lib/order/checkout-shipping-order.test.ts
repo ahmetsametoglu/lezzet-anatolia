@@ -23,8 +23,8 @@ import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete, test
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
- * Kargo siparişi taslağı: rota içi adresten açılan kargo siparişi rota deposundan değil, malın durduğu kargo deposundan çıkar.
- * Kurulum `DE` üzerinde, çünkü ülke başına tek aktif kargo deposu kuralı FR'de seed'in deposuyla çakışırdı.
+ * Kargo siparişi taslağı: rota içi adresten açılan kargo siparişi rota deposundan değil, malın durduğu kargo deposundan çıkar. Adres
+ * Almanya'da, çünkü Fransa'ya kargo yapan beslemenin deposuyla yarışılmaz; depolar Fransa'dadır, satış yalnız oradan yazılır.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -67,10 +67,9 @@ beforeAll(async () => {
   variantId = variants[0]!.id;
   await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: 4000 });
 
-  // İki DE deposu: biri rota (bölgeye bağlı), biri kargo. Ayrı olmaları testin bütün noktası —
-  // aynı depo olsalardı "hangisinden çıktı" sorusu ölçülemezdi.
-  routeWarehouseId = (await createTestWarehouse(db, { label: 'ROTA', countryCode: 'DE' })).id;
-  shippingWarehouseId = (await createTestWarehouse(db, { label: 'KARGO', countryCode: 'DE', shipsOnline: true })).id;
+  // İki depo: biri rota (sınır ötesi bölgeye bağlı), biri Almanya'ya kargo yapan; aynı depo olsalardı "hangisinden çıktı" ölçülemezdi.
+  routeWarehouseId = (await createTestWarehouse(db, { label: 'ROTA' })).id;
+  shippingWarehouseId = (await createTestWarehouse(db, { label: 'KARGO', shipsTo: ['DE'] })).id;
 
   // Stok YALNIZ kargo deposunda: kargo grubunun gerçek hâli.
   await new StockService(db).insert({
@@ -154,7 +153,10 @@ beforeAll(async () => {
     packedWidthMm: 90,
     packedHeightMm: 60,
   });
-  await new WarehouseService(db).update({ id: shippingWarehouseId, address: { line1: 'Depostraße 1', postalCode: '77694', city: 'Kehl' } });
+  await new WarehouseService(db).update({
+    id: shippingWarehouseId,
+    address: { line1: '1 rue du Dépôt', postalCode: '67100', city: 'Strasbourg' },
+  });
   await new ShippingBoxService(db).insert({
     warehouseId: shippingWarehouseId,
     name: `Seçim kutusu ${stamp}`,
@@ -271,6 +273,8 @@ describe('kargo siparişi taslağı', () => {
     expect(order?.deliveryZoneId).toBeNull();
     // Kargoda gün söz verilmez — tarih taşıyıcıya bağlı.
     expect(order?.deliveryDate).toBeNull();
+    // Fransa'daki depodan Almanya'daki tüketiciye satış uzaktan satıştır; eşik altında satıcının oranı uygulanır.
+    expect(order?.vatTreatment).toBe('intra_eu_distance_origin');
   });
 
   it('KAPIDA ödeme kargo siparişinde hiç listelenmez (K37)', async () => {
@@ -326,7 +330,7 @@ describe('kargo siparişi taslağı', () => {
 
 /**
  * KDV işlemi: sınanan motor değil, motorun sipariş anında çağrıldığı; bu yalnız sepetten doğan gerçek bir siparişin satırında
- * görülür. Kurulum bu dosyada, çünkü reverse charge DE kargo deposu ister ve ülke başına tek depo paralel bir dosyayla çakışırdı.
+ * görülür. Kurulum bu dosyada, çünkü ters yükleme Almanya'ya kargo yapan depo ister ve ülke başına tek depo paralel dosyayla çakışırdı.
  */
 describe('KDV işlemi — sipariş anında çözülür', () => {
   const b2bBase = () => ({

@@ -1,4 +1,4 @@
-import type { Channel, CustomerPriceBasis } from '@lezzet/types';
+import type { Channel, Country, CustomerPriceBasis, Price } from '@lezzet/types';
 import { addVat, removeVat } from '@lezzet/helper';
 import { channelPriceForMargin } from './auto-price';
 import { vatBaseOf, type VatBase } from './vat-base';
@@ -8,11 +8,8 @@ import { vatBaseOf, type VatBase } from './vat-base';
  * kural) yalnız grup ve liste fiyatından düşükse kazanır, near-expiry teklif ondan da düşükse o; onaysız şirket B2C görür.
  */
 
-/** Bir kanalın liste fiyatı (kendi tabanında, cent). */
-export interface ChannelPrice {
-  channel: Channel;
-  amountCents: number;
-}
+/** Bir kanalın liste fiyatı (kendi tabanında, cent); `country` boşsa her ülkede, doluysa yalnız o ülkede geçer. */
+export type ChannelPrice = Pick<Price, 'channel' | 'amountCents' | 'country'>;
 
 /** Açık near-expiry teklif — partiye bağlıdır (DOMAIN §5). */
 export interface ActiveOffer {
@@ -39,8 +36,10 @@ export interface ResolvePriceInput {
   channel: Channel;
   /** Şirket kaydı onaylandı mı. `b2c` müşteride anlamsızdır, `true` geçilebilir. */
   b2bApproved: boolean;
-  /** Varyantın kanal listeleri (her kanal kendi tabanında). */
-  channelPrices: ChannelPrice[];
+  /** Varyantın kanal listeleri (her kanal kendi tabanında); genel satırlar ve ülke satırları birlikte. */
+  channelPrices: readonly ChannelPrice[];
+  /** Fiyatın okunduğu ülke (`priceCountryOf`); `null` yalnız genel satırı okur. */
+  country: Country | null;
   /** Müşteriye özel fiyat satırı — geçerli kanalda tanımlıysa (cent, kanal tabanında). */
   customerPriceCents?: number | null;
   /** Müşterinin genel fiyat kuralı; ürün bazlı özel fiyatla aynı basamaktadır. */
@@ -94,7 +93,7 @@ export function resolvePrice(input: ResolvePriceInput): ResolvedPrice {
   // Onaysız şirket perakendeye düşer — özel fiyat da bu kanalda aranır (aynı gerekçe).
   const effectiveChannel: Channel = channel === 'b2b' && !b2bApproved ? 'b2c' : channel;
 
-  const listPrice = channelPrices.find((p) => p.channel === effectiveChannel)?.amountCents ?? null;
+  const listPrice = channelListCents(channelPrices, effectiveChannel, input.country);
 
   // Kanal fiyatı yoksa ürün satışa kapalıdır: teklif, grup ve müşteri kuralı fiyatın yerine geçer, satış açmaz.
   if (listPrice === null) return { sellable: false, reason: 'no_price_in_channel' };
@@ -123,6 +122,13 @@ export function resolvePrice(input: ResolvePriceInput): ResolvedPrice {
     stockId: offerWins ? offer.stockId : null,
     strikeCents: offerWins ? base.price : base === standard ? null : standard.price,
   };
+}
+
+/** Kanal listesi: ülkenin satırı varsa o, yoksa genel satır; ülke satırı genel satırın yerine geçer, tarihlerine bakılmaz. */
+function channelListCents(prices: readonly ChannelPrice[], channel: Channel, country: Country | null): number | null {
+  const ofChannel = prices.filter((p) => p.channel === channel);
+  const countryRow = country === null ? undefined : ofChannel.find((p) => p.country === country);
+  return (countryRow ?? ofChannel.find((p) => p.country === null))?.amountCents ?? null;
 }
 
 function customerRulePrice(

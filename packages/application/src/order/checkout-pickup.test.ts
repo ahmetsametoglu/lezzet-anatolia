@@ -202,10 +202,11 @@ describe('gel-al sepetin grubuna ve kapının asgari sepetine bağlı değildir'
     { kind: 'variant' as const, variantId: sogukVariantId, qty: 1, stockId: null },
   ];
 
-  // DE'de kurulur, çünkü ülke başına tek aktif kargo deposu kuralı FR'de seed'in deposuyla çakışırdı.
+  // Kargo deposu Almanya'ya kargo yapar, çünkü Fransa'ya kargo yapan beslemenin deposuyla yarışmaz; depolar Fransa'dadır, satış yalnız
+  // satıcının ülkesindeki depodan yazılır.
   beforeAll(async () => {
-    pickupId = (await createTestWarehouse(db, { label: 'GLD', countryCode: 'DE', pickupEnabled: true })).id;
-    shippingId = (await createTestWarehouse(db, { label: 'KRD', countryCode: 'DE', shipsOnline: true })).id;
+    pickupId = (await createTestWarehouse(db, { label: 'GLD', pickupEnabled: true })).id;
+    shippingId = (await createTestWarehouse(db, { label: 'KRD', shipsTo: ['DE'] })).id;
     const products = new ProductService(db);
     const kargo = await products.create({
       name: { tr: `Gel-al kargo ürünü ${stamp}` },

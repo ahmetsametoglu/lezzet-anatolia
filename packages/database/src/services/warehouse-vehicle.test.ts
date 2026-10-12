@@ -8,16 +8,9 @@ import { CategoryService } from './category.service';
 import { createTestWarehouse, purgeTestData, purgeVariantStock } from '../testing';
 
 /**
- * **Araç deposunun üç kuralı** (26.08, kullanıcı kararı · `DOMAIN §17`).
- *
- * Kurye satılan maldan fazlasını yükleyip yolda satabiliyor, o yüzden araç bir DEPO TÜRÜ. Türün
- * kendisi bir etiket değil, üç sorgunun süzgeci — ve üçü de VERİDE zorlanıyor. Bu dosya o üç
- * kuralın gerçekten koştuğunu tutuyor.
- *
- * **Neden test şart:** üçü de sessizce bozulabilecek sınıftan. Görünümden bir `join` düşse, bir
- * tetikleyici migration düzenlenirken kaybolsa hiçbir şey patlamaz — yalnız katalog bir gün
- * araçtaki malı "bizde var" diye vaat eder ya da bir müşteri siparişi hareket hâlindeki bir yere
- * yazılır. Kurallar 26.08'de elle ölçülmüştü; ölçüm bir kerelikti, bu dosya kalıcı.
+ * Araç deposunun üç kuralı veride (DOMAIN §17): araç kargo yapmaz, bölgeye bağlanmaz ve depo-üstü toplama girmez. Üçü de sessizce
+ * bozulabilir: görünümden bir `join` düşse katalog araçtaki malı vaat eder, bir tetikleyici kaybolsa sipariş hareket hâlindeki bir yere
+ * yazılır.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -45,7 +38,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+  // Parti sırasıyla gider: önce hareket defteri, sonra parti.
   await purgeVariantStock(db, [variantId]);
   if (zoneIds.length > 0) await db.from('delivery_zone').delete().in('id', zoneIds);
   await purgeTestData(db, {
@@ -55,35 +48,30 @@ afterAll(async () => {
   });
 });
 
-describe('araç deposu — türün üç kuralı VERİDE (26.08)', () => {
+describe('araç deposu — türün üç kuralı VERİDE', () => {
   it('araç kurulabiliyor ve türünü taşıyor', async () => {
     const arac = await new WarehouseService(db).getById(aracId);
     expect(arac!.kind).toBe('vehicle');
-    // Varsayılan tesis: bugüne kadarki her satır tesistir, araç istisnadır.
+    // Varsayılan tesistir, araç istisnadır.
     expect((await new WarehouseService(db).getById(tesisId))!.kind).toBe('facility');
   });
 
-  /**
-   * Kargo çıkış deposu bir ADRESTİR — taşıyıcı oraya gelir. Kısıt aynı tabloda durabildiği için
-   * tetikleyiciye gerek yok (`warehouse_vehicle_never_ships`).
-   */
-  it('araç KARGO DEPOSU olamaz', async () => {
-    const { error } = await db.from('warehouse').update({ ships_online: true }).eq('id', aracId);
-    expect(error?.code).toBe('23514');
+  /** Kargo çıkışı bir adrestir, taşıyıcı oraya gelir; kural gönderim ülkesi satırının tetikleyicisinde (`warehouse_ship_country_guard`). */
+  it('araç gönderim ülkesi alamaz; tesis alır', async () => {
+    const depolar = new WarehouseService(db);
+    await expect(depolar.setShipsTo(aracId, ['DE'])).rejects.toThrow(/araç ve QUALITE deposu gönderim ülkesi alamaz/);
 
-    // Aynı işlem tesiste engellenmiyor — kısıt türe bakıyor, herkese kapı kapatmıyor.
-    // (Ülke başına tek kargo deposu kuralı ayrı ve o `warehouse_single_online`ın işi; burada
-    // yalnız türün reddedilmediğini görüyoruz, o yüzden hemen geri alınıyor.)
-    const acildi = await db.from('warehouse').update({ ships_online: true }).eq('id', tesisId);
-    if (acildi.error === null) await db.from('warehouse').update({ ships_online: false }).eq('id', tesisId);
-    expect(acildi.error?.code).not.toBe('23514');
+    // Pasif tesis: kural türe bakar, ülke başına tek aktif kargo deposu kuralına takılmadan sınanır.
+    const kapaliTesis = await createTestWarehouse(db, { label: 'KTESIS', isActive: false });
+    try {
+      await depolar.setShipsTo(kapaliTesis.id, ['DE']);
+      expect((await depolar.list({ warehouseIds: [kapaliTesis.id] }))[0]?.shipsTo).toEqual(['DE']);
+    } finally {
+      await purgeTestData(db, { warehouseIds: [kapaliTesis.id] });
+    }
   });
 
-  /**
-   * "Posta kodu → bölge → depo" zincirinin sonu bir adres olmak zorunda: rota oradan çıkar, mal
-   * kabul oraya yapılır. Zincir bir araca çözülseydi müşteri siparişi hareket hâlindeki bir yere
-   * yazılırdı ve hiçbir ekran fark etmezdi — sipariş geçerli görünür, deposu geçerli görünür.
-   */
+  /** Zincirin sonu bir adres olmalı; araca çözülseydi sipariş hareket hâlindeki bir yere yazılır ve hiçbir ekran fark etmezdi. */
   it('bölge ARACA bağlanamaz, tesise bağlanır', async () => {
     const { error } = await db
       .from('delivery_zone')
@@ -101,12 +89,8 @@ describe('araç deposu — türün üç kuralı VERİDE (26.08)', () => {
   });
 
   /**
-   * Katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz — yolda, başkasının
-   * rotasında. Tedarik önerisi için de o mal zaten tesisten çıkmıştır ve akşam döner; sayılsaydı
-   * ikinci kez sayılırdı.
-   *
-   * Depo BAZLI okuma aracı AYNEN gösterir: kuryenin ekranı arabasında ne olduğunu görmek zorunda.
-   * Ayrımın toplamda olması, kaynakta olmaması tam bu yüzden.
+   * Araçtaki mal siteden alınamaz ve akşam tesise döner, bu yüzden depo-üstü toplama girmez. Depo bazlı okuma aracı aynen gösterir,
+   * çünkü kurye arabasında ne olduğunu görmek zorunda.
    */
   it('araç stoğu depo-ÜSTÜ toplama girmez ama depo bazlı okumada GÖRÜNÜR', async () => {
     const toplam = async () => {
@@ -126,8 +110,7 @@ describe('araç deposu — türün üç kuralı VERİDE (26.08)', () => {
     const stocks = new StockService(db);
     const gun = new Date(Date.now() + 120 * 86_400_000).toISOString().slice(0, 10);
 
-    // Önce TESİSE 10: toplam onu sayar — görünümün sağlıklı olduğunun kanıtı da bu
-    // (her zaman 0 dönen bir görünüm "araç sayılmıyor" testini sahte yeşil yapardı).
+    // Önce tesise 10: her zaman 0 dönen bir görünüm "araç sayılmıyor" testini sahte yeşil yapardı.
     await stocks.insert({ warehouseId: tesisId, variantId, physicalQty: 10, expiryDate: gun, purchasePriceCents: 500 });
     expect(await toplam()).toBe(10);
 

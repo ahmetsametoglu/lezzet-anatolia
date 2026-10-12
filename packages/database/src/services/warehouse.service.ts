@@ -2,11 +2,19 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   WarehouseSchema,
   WarehouseInsertSchema,
+  WarehouseShipCountryInsertSchema,
+  WarehouseShipCountrySchema,
   WarehouseUpdateSchema,
+  WarehouseWithShipCountriesSchema,
   type Business,
+  type Country,
   type Warehouse,
   type WarehouseInsert,
+  type WarehouseShipCountry,
+  type WarehouseShipCountryInsert,
   type WarehouseUpdate,
+  type WarehouseWithShipCountries,
+  type WarehouseWithShipping,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
@@ -15,15 +23,18 @@ import { BaseDbService } from '../core/base.service';
  * (`domain-core/warehouse`). Varsayılan depo yoktur, depo daima adresin posta kodundan ya da personelin deposundan gelir.
  */
 export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, WarehouseUpdate> {
+  /** `shipCountries:warehouse_ship_country(...)` (bkz. `BaseDbService.embeds`). */
+  protected override readonly embeds = ['shipCountries'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'warehouse', WarehouseSchema, WarehouseInsertSchema, WarehouseUpdateSchema);
   }
 
   /**
-   * Tüm depolar ya da yalnız aktifler, operatörün sırasıyla; `warehouseIds` personelin kapsamıdır (boş dizi hiçbiri) ve dizi olarak
-   * girer, çünkü `database` motorun `WarehouseScope` tipini bilmez. `kind` süzgeci pratikte `'facility'`dir: araç bir yazma hedefi olamaz.
+   * Tüm depolar ya da yalnız aktifler, operatörün sırasıyla ve gönderim ülkeleriyle; `warehouseIds` personelin kapsamıdır (boş dizi
+   * hiçbiri) ve dizi olarak girer, çünkü `database` motorun `WarehouseScope` tipini bilmez. `kind` süzgeci pratikte `'facility'`dir.
    */
-  list(
+  async list(
     opts: {
       activeOnly?: boolean;
       warehouseIds?: readonly string[];
@@ -37,8 +48,8 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
       /** Bu işin depoları; gel-al teklifi müşterinin işinden okunur. */
       business?: Business;
     } = {},
-  ): Promise<Warehouse[]> {
-    if (opts.warehouseIds?.length === 0) return Promise.resolve([]);
+  ): Promise<WarehouseWithShipping[]> {
+    if (opts.warehouseIds?.length === 0) return [];
     const filters: Record<string, unknown> = {};
     if (opts.activeOnly) filters.isActive = true;
     if (opts.kind) filters.kind = opts.kind;
@@ -47,7 +58,11 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
     if (opts.homeWarehouseId) filters.homeWarehouseId = opts.homeWarehouseId;
     if (opts.vehicleId) filters.vehicleId = opts.vehicleId;
     if (opts.warehouseIds) filters.id = [...opts.warehouseIds];
-    return this.getAll(Object.keys(filters).length > 0 ? filters : undefined, { orderBy: 'sort_order' });
+    const rows = await this.getAllAs(WarehouseWithShipCountriesSchema, Object.keys(filters).length > 0 ? filters : undefined, {
+      select: '*, shipCountries:warehouse_ship_country(country)',
+      orderBy: 'sort_order',
+    });
+    return rows.map(withShipping);
   }
 
   /** Belge önekinin ve ekranın okuduğu kısa kod ('STR'). */
@@ -55,21 +70,10 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
     return this.getOneBy({ code });
   }
 
-  /**
-   * Kargo çıkış deposu; ülke başına en fazla bir aktif tane olduğu için (kısmi unique indeks) tek satır okunur. `null` gerçek bir
-   * arızadır: kargo deposu yoksa bölge dışına satış yapılamaz ve çağıran bunu açıkça söylemeli.
-   */
-  getShippingWarehouse(country: Warehouse['countryCode']): Promise<Warehouse | null> {
-    return this.getOneBy({ countryCode: country, shipsOnline: true, isActive: true });
-  }
-
-  /**
-   * Kargo çıkışı olan ülkeler; bilgi metinlerinin "nereye gönderiyoruz" cümlesi veriden kurulsun diye. `listActiveCountries`ten farkı
-   * araç bölgesini saymamasıdır: küme yalnız kargonun gidebildiği yerlerdir.
-   */
-  async listShippingCountries(): Promise<Warehouse['countryCode'][]> {
-    const rows = await this.getAll({ isActive: true, shipsOnline: true });
-    return [...new Set(rows.map((w) => w.countryCode))].sort();
+  /** Kargo yapılan ülkeler; bilgi metinlerinin "nereye gönderiyoruz" cümlesi veriden kurulsun diye yalnız aktif depolardan. */
+  async listShippingCountries(): Promise<Country[]> {
+    const rows = await this.list({ activeOnly: true });
+    return [...new Set(rows.flatMap((w) => w.shipsTo))].sort();
   }
 
   /**
@@ -83,6 +87,18 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   }
 
   /**
+   * Deponun gönderim ülkelerini verilen kümeye eşitler; kalan satırın teslim noktası korunur. Önce eklenir, sonra silinir, çünkü ülke
+   * çakışmasında reddedilen ekleme deponun eski kümesine dokunmamalı.
+   */
+  async setShipsTo(warehouseId: string, countries: readonly Country[]): Promise<void> {
+    const rows = new WarehouseShipCountryService(this.supabase);
+    const current = (await rows.listForWarehouse(warehouseId)).map((row) => row.country);
+    const next = new Set(countries);
+    await rows.add(warehouseId, [...next].filter((country) => !current.includes(country)));
+    await rows.remove(warehouseId, current.filter((country) => !next.has(country)));
+  }
+
+  /**
    * Sürükle-bırak sıralamasının tek turu (`reorderBy`); bütün depo seçicileri bu sırayı okur ve satır satır yazım aradaki bir okumaya
    * yarı sıralı liste gösterirdi.
    */
@@ -93,5 +109,44 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   /** Kullanılmaya başlamış depolar; işleri değişmez ve kural veritabanındadır (`warehouse_in_use`). */
   async inUseIds(): Promise<Set<string>> {
     return new Set(await this.executeRpc<string[]>('warehouses_in_use', {}));
+  }
+}
+
+/** Gömülü satırlar düz ülke listesine iner; `shipsOnline` yalnız burada türer ki iki doğruluk ayrışmasın. */
+function withShipping({ shipCountries, ...warehouse }: WarehouseWithShipCountries): WarehouseWithShipping {
+  const shipsTo = shipCountries.map((row) => row.country).sort();
+  return { ...warehouse, shipsTo, shipsOnline: shipsTo.length > 0 };
+}
+
+/**
+ * Deponun gönderim ülkesi satırları (`warehouse_ship_country`); anahtar `(depo, ülke)`. Ülke başına tek aktif depo ve yalnız Lezzet
+ * tesisi kuralları veritabanındadır; satırın aktiflik kopyasını tetikleyici yazar.
+ */
+class WarehouseShipCountryService extends BaseDbService<
+  WarehouseShipCountry,
+  WarehouseShipCountryInsert,
+  WarehouseShipCountryInsert
+> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'warehouse_ship_country',
+      WarehouseShipCountrySchema,
+      WarehouseShipCountryInsertSchema,
+      WarehouseShipCountryInsertSchema,
+    );
+  }
+
+  listForWarehouse(warehouseId: string): Promise<WarehouseShipCountry[]> {
+    return this.getAll({ warehouseId }, { orderBy: 'country' });
+  }
+
+  /** Tek ifadeyle yazılır ki ülke çakışmasında hiçbir satır yazılmasın. */
+  async add(warehouseId: string, countries: readonly Country[]): Promise<void> {
+    await this.bulkInsert(countries.map((country) => ({ warehouseId, country })));
+  }
+
+  async remove(warehouseId: string, countries: readonly Country[]): Promise<void> {
+    for (const country of countries) await this.deleteWhere({ warehouseId, country });
   }
 }

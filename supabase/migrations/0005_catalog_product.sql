@@ -59,8 +59,8 @@ create table public.product (
     or allergens is null
   ) stored,
   traces product_allergen[] not null default '{}',   -- çapraz bulaşma; cümle i18n şablonuyla kurulur
-  -- Fransa gıda oranları 5,5 (paketli/donuk) · 10 (hazır tüketim) · 20 (gıda dışı); kısıt yok, oran mali bir karardır
-  -- ve mevzuatla değişir.
+  -- Satıcının ülkesinin (Fransa) oranı: 5,5 (paketli/donuk) · 10 (hazır tüketim) · 20 (gıda dışı); kısıt yok, oran mali bir
+  -- karardır ve mevzuatla değişir. Öteki ülkelerin oranı `product_vat_rate`te.
   vat_rate numeric(4, 2) not null default 5.5,
   date_type product_date_type not null default 'DDM',
   shelf_life_days int,                               -- toplam raf ömrü (gün); kalan % = (parti.dlc − bugün) ÷ bu
@@ -116,6 +116,15 @@ create unique index product_slug_key on public.product (slug);
 create index product_incomplete_idx on public.product (is_incomplete) where is_incomplete;
 create index product_category_idx on public.product (category_id);
 
+-- Ürünün satıcının ülkesi dışındaki KDV oranı. Fransız oranından türetilemez (lokum FR %20, DE %7), bu yüzden ürün başına girilir;
+-- oranı olmayan ürün o ülkenin tüketicisine satılmaz (docs/feature/ulke-pazari.md, 6. karar).
+create table public.product_vat_rate (
+  product_id uuid not null references public.product (id) on delete cascade,
+  country country_code not null check (country <> 'FR'),
+  vat_rate numeric(4, 2) not null check (vat_rate >= 0 and vat_rate < 100),
+  primary key (product_id, country)
+);
+
 -- Porsiyonun TÜRÜ: `item` ayrı ürünler (4'lü simit), `slice` tek gövdenin dilimleri (12 dilimlik cheesecake), `package`
 -- paketlenmiş birimler (çift paket 1,4 kg). Vitrin üçüne aynı kelimeyi yazamaz: "2 adet" ile "2 paket" aynı şeyi satmaz.
 create type portion_kind as enum ('item', 'slice', 'package');
@@ -164,18 +173,9 @@ create table public.product_variant (
 );
 create index product_variant_product_idx on public.product_variant (product_id);
 
-/*
-  SATIŞTAKİ BOYUN NET MİKTARI ZORUNLU (işletmeci kararı 17.09).
-
-  Kural iki tabloya birden bakar (ürünün durumu · boyun miktarı), bu yüzden `check` ile yazılamaz: kısıt tek satırı görür.
-  Öteki yayın kuralları (`product_publish_requires_*`) ürünün kendi kolonlarında durduğu için kısıt olarak yazılabiliyordu;
-  bu, tetikleyiciyle yazılıyor ve aynı adı taşıyor — uygulama kısıt adına göre cümle kuruyor (`CONSTRAINT_MESSAGES`).
-
-  Neden veride: miktar müşteriye satın almadan ÖNCE gösterilmek zorunda (INCO md. 9/1-e, uzaktan satış md. 14) ve birim
-  fiyat ondan çıkar. Yalnız uygulamada kalsaydı ikinci bir yazma yolu (seed, betik, panel dışı) kuralı atlayabilirdi.
-
-  Ölçüt "SATILAN boy": pasif varyant müşteriye görünmez, miktarsız durabilir.
-*/
+-- Satıştaki boyun net miktarı zorunlu, çünkü miktar müşteriye satın almadan önce gösterilir (INCO md. 9/1-e, uzaktan satış md. 14)
+-- ve birim fiyat ondan çıkar. Kural iki tabloya bakar ve `check` tek satırı gördüğü için tetikleyicidir; hata kısıt adını taşır, çünkü
+-- uygulama cümleyi kısıt adından kurar (`CONSTRAINT_MESSAGES`).
 create or replace function public.assert_product_net_quantity() returns trigger
 language plpgsql as $$
 begin
@@ -289,14 +289,16 @@ create index product_collections_order_idx on public.product_collections (collec
 alter table public.bundle enable row level security;
 alter table public.bundle_item enable row level security;
 alter table public.product enable row level security;
+alter table public.product_vat_rate enable row level security;
 alter table public.product_variant enable row level security;
 alter table public.product_collections enable row level security;
 alter table public.product_image enable row level security;
 
 
 -- ═══ FİYAT ═══
--- Fiyat varyant seviyesindedir ve tek tablo üç işi görür: kanal listesi (customer_id boş), müşteriye özel fiyat, tarihli
--- geçerlilik. Çözüm sırası ve KDV tabanı DOMAIN §5, motor `packages/domain-core/src/pricing`; erişim service_role ile.
+-- Fiyat varyant seviyesindedir ve tek tablo dört işi görür: kanal listesi (customer_id boş), ülkenin liste fiyatı (country dolu),
+-- müşteriye özel fiyat, tarihli geçerlilik. Çözüm sırası ve KDV tabanı DOMAIN §5, motor `packages/domain-core/src/pricing`; erişim
+-- service_role ile.
 
 -- Kanal — kim alıyor; sipariş ve müşteri türetimi de bu tipi kullanır.
 create type channel as enum ('b2b', 'b2c');
@@ -321,6 +323,8 @@ create table public.price (
   id uuid primary key default gen_random_uuid(),
   variant_id uuid not null references public.product_variant (id) on delete cascade,
   channel channel not null,
+  -- Boş → her ülkede geçer; dolu → o ülkenin satırı, tarihine bakılmaksızın genel satırın yerine geçer (`resolvePrice`).
+  country country_code,
   -- Dolu → o müşteriye özel fiyat; FK `0011_customer_fields.sql`te eklenir, `customer` tablosu bu dosyadan sonra açılıyor.
   customer_id uuid,
   -- KANAL TABANINDA tutulur: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — DOMAIN §5.
@@ -329,10 +333,12 @@ create table public.price (
   -- Tarihli geçerlilik: aynı (varyant, kanal, müşteri) için birden çok satır olabilir; çözümde
   -- "geçmiş ve en yeni" kazanır. Gelecek tarihli satır fiyat değişimini önceden hazırlar.
   valid_from timestamptz not null default now(),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Müşteriye özel fiyat ülkeden bağımsızdır: pazarlık kişiyle yapılır, hangi ülkeye teslim edilirse edilsin o fiyattır.
+  constraint price_customer_no_country check (customer_id is null or country is null)
 );
 
--- Fiyat çözümünün tek sorgu yolu: varyant + kanal + (müşteri | liste) → en yeni geçerli satır.
-create index price_lookup_idx on public.price (variant_id, channel, customer_id, valid_from desc);
+-- Fiyat çözümünün tek sorgu yolu: varyant + kanal + ülke (ya da genel) + (müşteri | liste) → en yeni geçerli satır.
+create index price_lookup_idx on public.price (variant_id, channel, country, customer_id, valid_from desc);
 
 alter table public.price enable row level security;

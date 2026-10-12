@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { StorageAreaService, TemperatureLogService, VehicleService, WarehousePrinterService, WarehouseService, serviceDb, ShippingBoxService } from '@lezzet/database';
 import { geocoder } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
-import type { Country } from '@lezzet/types';
+import type { Country, Warehouse } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
 import type { ActionResult } from '@/lib/error';
@@ -20,9 +20,9 @@ import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema, Warehous
 
 /** İnsan diline çevrilmiş kısıt ihlalleri. Ad → cümle; adı bilinmeyen hata olduğu gibi geçer. */
 const CONSTRAINT_MESSAGE: Record<string, string> = {
-  warehouse_single_online: 'Bu ülkede kargo çıkış deposu rolünü zaten başka bir depo taşıyor — ülke başına en fazla bir tane olabilir. Önce o depodan kaldırın.',
+  warehouse_ship_country_single_active:
+    'Bu ülkeye kargoyu zaten başka bir aktif depo yapıyor — ülke başına en fazla bir tane olabilir. Önce o depodan kaldırın.',
   warehouse_code_key: 'Bu kod başka bir depoda kullanılıyor. Kod belge önekidir; iki tesis aynı öneki taşıyamaz.',
-  warehouse_qualite_never_ships: 'QUALITE kargo göndermez; kargo çıkış deposu yalnız Lezzet deposu olabilir.',
   delivery_zone_postal_code_pkey:
     'Bu deponun bölgelerindeki posta kodlarından biri seçilen işin başka bir bölgesinde tanımlı. Önce o kodları bölgeden çıkarın.',
   storage_area_name_uq: 'Bu tesiste aynı adda bir alan zaten var — iki "Dolap 1", hangi dolabın ölçüldüğü sorusunu cevapsız bırakır.',
@@ -45,13 +45,16 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
   try {
     await requireAdmin();
     const parsed = WarehouseFormSchema.extend({ id: z.string().uuid().optional() }).parse(input);
-    const { id, address, lat: latText, lng: lngText, ...fields } = parsed;
+    const { id, address, lat: latText, lng: lngText, shipsOnline, ...fields } = parsed;
 
     const svc = new WarehouseService(serviceDb());
     const point = await resolveWarehousePoint({ latText, lngText, address, country: fields.countryCode });
 
     if (id) {
+      // Kapanan anahtarın satırları künyeden önce kalkar, çünkü gönderim ülkesi olan depo QUALITE'ye geçemez.
+      if (!shipsOnline) await svc.setShipsTo(id, []);
       const row = await svc.update({ id, ...fields, address, ...point });
+      if (shipsOnline) await keepShipping(svc, row);
       revalidatePath(WAREHOUSES_PATH);
       return { data: { id: row.id, code: row.code }, error: null };
     }
@@ -65,11 +68,18 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
       ...point,
       sortOrder: existing.reduce((max, w) => Math.max(max, w.sortOrder), 0) + 1,
     });
+    if (shipsOnline) await keepShipping(svc, row);
     revalidatePath(WAREHOUSES_PATH);
     return { data: { id: row.id, code: row.code }, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };
   }
+}
+
+/** Formun kargo anahtarı açıkken kargo yapmayan depo kendi ülkesine kargo yapar; yazılmış gönderim ülkeleri olduğu gibi korunur. */
+async function keepShipping(svc: WarehouseService, row: Pick<Warehouse, 'id' | 'countryCode'>): Promise<void> {
+  const current = (await svc.list({ warehouseIds: [row.id] }))[0]?.shipsTo ?? [];
+  if (current.length === 0) await svc.setShipsTo(row.id, [row.countryCode]);
 }
 
 /**
@@ -118,9 +128,8 @@ export async function setWarehouseActiveAction(input: { id: string; isActive: bo
     if (!input.isActive && input.confirmCode?.trim().toLocaleUpperCase('tr') !== row.code) {
       return { data: null, error: 'Kapatmayı onaylamak için deponun kodunu yazın.' };
     }
-    // Kargo çıkış rolü kapanan depoda BIRAKILMAZ: kısmi unique indeks yalnız aktif satırlara
-    // baktığı için kayıt geçerdi, ama o ülkede "kargo deposu var" diye okunan bir satır kalırdı.
-    await svc.update(input.isActive ? { id: row.id, isActive: true } : { id: row.id, isActive: false, shipsOnline: false });
+    // Gönderim ülkeleri kapanan depoda kalır ve kimsenin önünü kesmez; ülke başkasındaysa yeniden açılış veritabanında reddedilir.
+    await svc.update({ id: row.id, isActive: input.isActive });
     revalidatePath(WAREHOUSES_PATH);
     return { data: null, error: null };
   } catch (error) {

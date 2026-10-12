@@ -347,22 +347,34 @@ describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
 
 describe('depo kaydı — kurallar veritabanında', () => {
   /**
-   * Test kendi kargo deposunu kurar ve toplar: seed'in `STR` satırına yaslanmak, satır yokken düşen testin geride aktif bir kargo
-   * deposu bırakıp sonraki seed'i bozması demekti. Ülke `DE`, çünkü FR'deki gerçek kargo deposuyla yarışmaz.
+   * Testler kendi kargo depolarını kurar ve toplar; ülke `DE`, çünkü Fransa'ya kargo yapan beslemenin deposuyla yarışmaz. Depolar
+   * Fransa'dadır: kargo yapılan ülke deponun bulunduğu ülkeden bağımsızdır.
    */
-  it('ülke başına ikinci aktif kargo deposu açılamaz, başka ülkede serbesttir', async () => {
-    const ilk = await createTestWarehouse(db, { label: 'SHIP', countryCode: 'DE', shipsOnline: true });
+  it('bir ülkeye ikinci aktif depo kargo yapamaz; reddedilen ekleme deponun kümesine dokunmaz', async () => {
+    const ilk = await createTestWarehouse(db, { label: 'SHIP', shipsTo: ['DE'] });
+    const ikinci = await createTestWarehouse(db, { label: 'SHIP2' });
     try {
-      await expect(
-        createTestWarehouse(db, { label: 'SHIP2', countryCode: 'DE', shipsOnline: true }),
-      ).rejects.toThrow();
-
-      // Aynı anda BAŞKA ülkede kargo deposu açılabilmeli — kısıt ülke başına.
-      const baskaUlke = await createTestWarehouse(db, { label: 'SHIPFR', countryCode: 'FR', shipsOnline: false });
-      expect(baskaUlke.id).toBeTruthy();
-      await purgeTestData(db, { warehouseIds: [baskaUlke.id] });
+      await expect(warehouses.setShipsTo(ikinci.id, ['DE'])).rejects.toThrow(/warehouse_ship_country_single_active/);
+      const okunan = new Map((await warehouses.list({ warehouseIds: [ilk.id, ikinci.id] })).map((w) => [w.id, w]));
+      expect(okunan.get(ilk.id)).toMatchObject({ shipsTo: ['DE'], shipsOnline: true });
+      expect(okunan.get(ikinci.id)).toMatchObject({ shipsTo: [], shipsOnline: false });
     } finally {
-      await purgeTestData(db, { warehouseIds: [ilk.id] });
+      await purgeTestData(db, { warehouseIds: [ilk.id, ikinci.id] });
+    }
+  });
+
+  it('pasif deponun satırı başka deponun önünü kesmez; pasif depo ülke doluyken geri açılamaz', async () => {
+    const eski = await createTestWarehouse(db, { label: 'SHIPOLD', shipsTo: ['DE'] });
+    const yeni = await createTestWarehouse(db, { label: 'SHIPNEW' });
+    try {
+      await warehouses.update({ id: eski.id, isActive: false });
+      await warehouses.setShipsTo(yeni.id, ['DE']);
+      expect((await warehouses.list({ warehouseIds: [eski.id] }))[0]?.shipsTo).toEqual(['DE']);
+
+      await expect(warehouses.update({ id: eski.id, isActive: true })).rejects.toThrow(/warehouse_ship_country_single_active/);
+      expect((await warehouses.getById(eski.id))?.isActive).toBe(false);
+    } finally {
+      await purgeTestData(db, { warehouseIds: [eski.id, yeni.id] });
     }
   });
 

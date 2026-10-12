@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
-import { ChannelEnum } from '../primitives/enums.schema';
+import { ChannelEnum, CountryEnum, SELLER_COUNTRY } from '../primitives/enums.schema';
 import { hasAllLocales, LocalizedTextSchema, type LocalizedText } from '../primitives/localized-text.schema';
 import { IMAGE_RENDER_FIELDS, ImageMetaInsertSchema, ImageMetaSchema } from '../primitives/image.schema';
 import { ProductVariantSchema } from './product-variant.schema';
@@ -164,6 +164,7 @@ export const ProductSchema = z.object({
   allergens: z.array(ProductAllergenEnum).nullable(),
   /** Çapraz bulaşma — cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz. */
   traces: z.array(ProductAllergenEnum),
+  /** Satıcının ülkesinin (FR) KDV oranı; öteki ülkelerinki `ProductVatRate` satırlarında. */
   vatRate: dbNumeric,
   /**
    * "Beyan eksik" — üretilmiş kolon; süzgeç ve sayaç aynı gerçeği okusun diye veritabanında hesaplanır.
@@ -229,6 +230,20 @@ export const ProductInsertSchema = z.object({
   familyPosition: z.number().int().optional(),
 }).merge(ImageMetaInsertSchema);
 export type ProductInsert = z.infer<typeof ProductInsertSchema>;
+
+/**
+ * Ürünün satıcının ülkesi dışındaki KDV oranı; `vatRate` satıcının (FR) oranıdır. Oran Fransız oranından türetilemez (lokum FR %20,
+ * DE %7), bu yüzden ürün başına girilir ve oranı olmayan ürün o ülkenin tüketicisine satılmaz (`sellableIn`).
+ */
+export const ProductVatRateSchema = z.object({
+  productId: z.string().uuid(),
+  country: CountryEnum.exclude([SELLER_COUNTRY]),
+  vatRate: dbNumeric,
+});
+export type ProductVatRate = z.infer<typeof ProductVatRateSchema>;
+
+export const ProductVatRateInsertSchema = ProductVatRateSchema.extend({ vatRate: z.number().min(0).lt(100) });
+export type ProductVatRateInsert = z.infer<typeof ProductVatRateInsertSchema>;
 
 /**
  * Ürün ailesi — çeşit ekseninin kendisi.

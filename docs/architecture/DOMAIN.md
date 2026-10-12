@@ -792,7 +792,7 @@ izi ve soğuk zincir kendiliğinden çalışır.
 - **Araç bölgeye BAĞLANAMAZ.** "Posta kodu → bölge → depo" zincirinin sonu bir adres olmak zorunda:
   rota oradan çıkar, mal kabul oraya yapılır. Zincir bir araca çözülseydi müşteri siparişi hareket
   hâlindeki bir yere yazılırdı. Kural veritabanında (tetikleyici).
-- **Araç kargo deposu OLAMAZ** — taşıyıcı bir adrese gelir (kısıt).
+- **Araç kargo deposu OLAMAZ** — taşıyıcı bir adrese gelir (veritabanında, tetikleyici).
 - **Araç depo-üstü toplama girmez.** Katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden
   alınamaz; tedarik önerisi için de o mal zaten tesisten çıkmıştır. Depo bazlı okuma aracı **aynen
   gösterir**: kurye arabasında ne olduğunu görmek zorunda.
@@ -829,10 +829,11 @@ izi ve soğuk zincir kendiliğinden çalışır.
   yönlendirilemez — ücretsiz kapı teslimi varken paralı kargo seçtirmek ikinci bir karar noktası
   açar, karşılığı yoktur. Sepet tamamen yerel-dışı kalemlerden oluşuyorsa salt-kargo siparişi
   kendiliğinden doğar; farklı adrese gönderim de o adresin posta kodundan doğru yola düşer.
-- **Kargo deposu ülke başına en fazla BİRDİR:** `ships_online` işaretli tek aktif depo — tekillik
-  veritabanındadır (kısmi unique indeks; uygulama unutsa da ikincisi yazılamaz). Bugün tek ülke =
-  tek kargo deposu; DE açıldığında kendi kargo deposu olur, kod değişmez. Kargo deposu bölge dışı
-  müşterilere ve rota müşterilerinin kargo dolgusuna hizmet eder.
+- **Bir ülkeye en fazla BİR aktif kargo deposu gönderir:** kargo deposu gönderdiği ülkeleri tutar
+  (`warehouse_ship_country`); bir depo birden çok ülkeye gönderebilir (Strasbourg → Fransa ve Almanya),
+  aynı ülkeye ikinci aktif depo yazılamaz (kısmi unique indeks). Depo yalnız fiziksel ülkesini tutar;
+  ülke satırındaki teslim noktası (`handover`) o ülkenin paketinin taşıyıcıya verildiği adrestir.
+  Kargo deposu bölge dışı müşterilere ve rota müşterilerinin kargo dolgusuna hizmet eder.
 
 ### Katalog ve sepet davranışı
 

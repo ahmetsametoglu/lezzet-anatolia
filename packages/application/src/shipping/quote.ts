@@ -2,7 +2,8 @@ import { planParcels, type ParcelBox, type ParcelItem, type PlannedParcel } from
 import { ProductVariantService, ShippingBoxService, WarehouseService } from '@lezzet/database';
 import type { ParcelSpec, ShippingQuote } from '@lezzet/sendcloud';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { RecipientAddress, SenderAddress, ShippingRateProvider } from './port';
+import type { RecipientAddress, ShippingRateProvider } from './port';
+import { senderOf } from './sender';
 
 /**
  * Kargo teklifinin tek kapısı: sepet, checkout ve sipariş taslağı buradan geçer ki gösterilen fiyatla tahsil edilen ayrışmasın.
@@ -26,22 +27,6 @@ export interface ShippingQuoteInput {
   warehouseId: string;
   to: RecipientAddress;
   items: ReadonlyArray<{ variantId: string; qty: number }>;
-}
-
-/** Deponun `address` alanı serbest jsonb — okunuşu burada tek yerde. */
-function senderOf(warehouse: { countryCode: string; address: Record<string, unknown> | null; name: string }): SenderAddress | null {
-  const address = warehouse.address ?? {};
-  const postalCode = typeof address.postalCode === 'string' ? address.postalCode : null;
-  // Posta kodu ZORUNLU: tarife çıkış noktasına bağlı ve ülke tek başına yetmiyor (aynı ülkede
-  // iki depo farklı fiyat alır). Yokluğu sessizce ülkeye düşürmek yanlış fiyat üretirdi.
-  if (!postalCode) return null;
-  return {
-    countryCode: warehouse.countryCode,
-    postalCode,
-    city: typeof address.city === 'string' ? address.city : undefined,
-    name: warehouse.name,
-    addressLine1: typeof address.line1 === 'string' ? address.line1 : undefined,
-  };
 }
 
 const toSpec = (weightG: number, box: ParcelBox): ParcelSpec => ({

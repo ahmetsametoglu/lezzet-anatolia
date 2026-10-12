@@ -24,8 +24,6 @@ create table public.warehouse (
   -- operatörün haritada onayladığı konumdur; boşsa sıralama motoru varsayılan uydurmaz, `no_start` ile reddeder.
   lat numeric(9, 6),
   lng numeric(9, 6),
-  -- Kargo çıkış deposu: bölge dışı müşteriler ve rota müşterilerinin kargo dolgusu buradan gider.
-  ships_online boolean not null default false,
   -- Gel-al noktası: izinli müşteri hazır siparişini buradan alır. Her tesis otomatik gel-al noktası değildir —
   -- müşteriye adresi gösterilen bir yer operatör kararıdır (DOMAIN §17 "müşteriye depo gösterilmez" kuralının tek istisnası).
   pickup_enabled boolean not null default false,
@@ -35,27 +33,85 @@ create table public.warehouse (
   -- Yalnız araçta dolu ve ev bir tesis olmak zorunda; satır arası kural olduğu için tetikleyicide.
   home_warehouse_id uuid references public.warehouse (id) on delete restrict,
   created_at timestamptz not null default now(),
-  -- Araçtan kargo çıkmaz: kargo çıkış deposu bir adrestir, taşıyıcı oraya gelir. Kısıt aynı
-  -- tabloda durabildiği için tetikleyiciye gerek yok — en ucuz yerde.
-  constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online),
   -- Müşteri hareket hâlindeki bir yere gelemez: gel-al noktası da bir adrestir.
   constraint warehouse_vehicle_never_pickup check (kind = 'facility' or not pickup_enabled),
-  -- QUALITE kargo göndermez (docs/feature/iki-is.md, karar 10); kargo çıkış deposu yalnız Lezzet'in olabilir.
-  constraint warehouse_qualite_never_ships check (business = 'lezzet' or not ships_online),
   -- Ev YALNIZ aracın alanıdır. Tesise ev yazılabilseydi ağaç iki anlama gelirdi.
   constraint warehouse_home_only_vehicle check (kind = 'vehicle' or home_warehouse_id is null),
   -- `postal_code_place_point` / `address_geo_point` ile aynı kural, aynı gerekçe.
-  constraint warehouse_geo_point check ((lat is null) = (lng is null))
+  constraint warehouse_geo_point check ((lat is null) = (lng is null)),
+  -- Gönderim ülkesi satırının bileşik FK'si deponun aktifliğini bu ikiliden okur.
+  constraint warehouse_id_active_key unique (id, is_active)
 );
-
--- Ülke başına en fazla bir aktif kargo deposu; kısmi tekil indeks kuralı uygulama unutsa da tutar.
-create unique index warehouse_single_online on public.warehouse (country_code)
-  where ships_online and is_active;
 
 -- Depo seçici ve liste: operatörün verdiği sıra, eşitlikte kod.
 create index warehouse_active_idx on public.warehouse (is_active, sort_order, code);
 
 alter table public.warehouse enable row level security;
+
+-- ── Gönderim ülkesi ─────────────────────────────────────────────────────────
+-- Depo yalnız fiziksel ülkesini tutar; kargo yaptığı ülkeler burada, çünkü Almanya paketi Strasbourg'da hazırlanıp Almanya'da
+-- taşıyıcıya verilir (docs/feature/ulke-pazari.md). Kargo deposu olmak en az bir satır demektir.
+create table public.warehouse_ship_country (
+  warehouse_id uuid not null,
+  country country_code not null,
+  -- O ülkenin paketinin taşıyıcıya verildiği adres ({line1, postalCode, city}); ülkesi satırın ülkesidir, boşsa deponun adresi.
+  handover jsonb,
+  -- Deponun aktifliğinin kopyası: tekil indeks kısmi olabilsin diye burada; yazan vermez, tetikleyici depodan yazar.
+  warehouse_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  primary key (warehouse_id, country),
+  -- `on update cascade` kopyayı deponun aktifliğine eşit tutar; depo kapanınca ya da açılınca satır da izler.
+  constraint warehouse_ship_country_warehouse_fk foreign key (warehouse_id, warehouse_active)
+    references public.warehouse (id, is_active) on update cascade on delete cascade
+);
+
+-- Bir ülkeye en çok bir aktif depo kargo yapar; pasif deponun satırı indekse girmez ve kimsenin önünü kesmez. Tetikleyici eşzamanlı
+-- iki yazımı ancak açık kilitle görürdü, tekil indeks yarışı kendisi keser ve pasif depo geri açılırken çakışmayı da reddeder.
+create unique index warehouse_ship_country_single_active on public.warehouse_ship_country (country) where warehouse_active;
+
+alter table public.warehouse_ship_country enable row level security;
+
+-- Taşıyıcı bir adrese gelir ve QUALITE kargo göndermez (docs/feature/iki-is.md, karar 10): satırı yalnız Lezzet'in tesisi alır.
+create or replace function public.warehouse_ship_country_guard() returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_warehouse public.warehouse;
+begin
+  select * into v_warehouse from public.warehouse w where w.id = new.warehouse_id;
+  if v_warehouse.kind is distinct from 'facility' or v_warehouse.business is distinct from 'lezzet' then
+    raise exception 'Kargo yalnız Lezzet tesisinden çıkar; araç ve QUALITE deposu gönderim ülkesi alamaz (%)',
+      coalesce(v_warehouse.code, new.warehouse_id::text)
+      using errcode = 'check_violation';
+  end if;
+  new.warehouse_active := v_warehouse.is_active;
+  return new;
+end;
+$$;
+
+create trigger warehouse_ship_country_guard
+  before insert or update on public.warehouse_ship_country
+  for each row execute function public.warehouse_ship_country_guard();
+
+-- Ters yön: gönderim ülkesi olan depo araca ya da QUALITE'ye dönemez, yoksa kural satır yazılırken doğru, sonra yanlış olurdu.
+create or replace function public.warehouse_ship_country_owner() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if (new.kind <> 'facility' or new.business <> 'lezzet')
+     and exists (select 1 from public.warehouse_ship_country c where c.warehouse_id = new.id) then
+    raise exception 'Gönderim ülkesi olan depo araç ya da QUALITE deposu olamaz; önce gönderim ülkelerini kaldırın (%)', new.code
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger warehouse_ship_country_owner
+  before update of kind, business on public.warehouse
+  for each row execute function public.warehouse_ship_country_owner();
 
 -- ── Depo bazlı asgari stok eşiği ─────────────────────────────────────────────
 -- Varyanttaki `min_stock_qty` varsayılandır, burası yalnız istisna yazar; küresel tek eşik çok depoda yanlış cevap verir.
@@ -477,9 +533,8 @@ begin
   if cardinality(new.warehouse_ids) = 0 then
     return new;
   end if;
-  -- Alias AÇIKÇA `t(wid)`: `unnest(...) as id` yazılsaydı alt sorgudaki çıplak `id`, en içteki
-  -- kapsam kazandığı için `w.id`'ye çözülür ve koşul `w.id = w.id` olurdu — her zaman doğru,
-  -- yani kontrol sessizce hiçbir şey yapmaz. (Bu tuzağa bir kez düşüldü, testte yakalandı.)
+  -- Alias AÇIKÇA `t(wid)`: `unnest(...) as id` yazılsaydı alt sorgudaki çıplak `id` `w.id`'ye çözülür ve koşul her zaman
+  -- doğru olurdu, yani kontrol sessizce hiçbir şey yapmazdı.
   select t.wid into v_missing
     from unnest(new.warehouse_ids) as t(wid)
    where not exists (select 1 from public.warehouse w where w.id = t.wid);

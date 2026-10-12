@@ -6,13 +6,8 @@ import { PriceService } from './price.service';
 import { ProductService } from './product.service';
 
 /**
- * Fiyat okuma (05.4) — DB üstünde. Burada YALNIZ satır getirme doğrulanır: `database` paketi
- * `domain-core`'u bilmez (STACK §4), dolayısıyla "hangi fiyat kazanır" kararı bu testin konusu
- * değildir — o karar motorun birim testinde (`domain-core/pricing`), ikisinin birleşimi ise
- * uygulama katmanında (vitrin okuma, 05.9) doğrulanır.
- *
- * Not: müşteriye özel fiyat satırı GERÇEK bir profile bağlıdır — `price.customer_id` FK'li (0013)
- * ve tek kimlik tablosunu (`user_profiles`) işaret eder. Uydurma uuid yazılamaz.
+ * Fiyat okuma, DB üstünde: yalnız satır getirme doğrulanır, "hangi fiyat kazanır" kararı motorun birim testindedir (STACK §4).
+ * Müşteriye özel fiyat gerçek bir profile bağlıdır, çünkü `price.customer_id` FK'lidir.
  */
 const db = serviceDb();
 const prices = new PriceService(db);
@@ -26,7 +21,7 @@ let CUSTOMER_ID: string;
 
 beforeAll(async () => {
   const category = await categories.create({ name: { tr: `Fiyat testi ${Date.now()}` } });
-  // create → { product, variants }: varyantsız üründe varsayılan varyant otomatik açılır (05.3).
+  // Varyantsız üründe varsayılan varyant otomatik açılır.
   const { product, variants } = await products.create({ name: { tr: `Baklava ${Date.now()}` }, categoryId: category.id });
   categoryId = category.id;
   productId = product.id;
@@ -34,8 +29,7 @@ beforeAll(async () => {
   CUSTOMER_ID = (await profiles.insert({ name: `Fiyat müşterisi ${Date.now()}` })).id;
 });
 
-// Test kendi zeminini toplar: aksi hâlde her koşuş yerel veritabanına kalıcı bir ürün bırakır ve
-// operasyon listesinde çöp satır olarak görünür. Varyant ve fiyat satırları ürüne CASCADE bağlı.
+// Test kendi zeminini toplar; varyant ve fiyat satırları ürüne CASCADE bağlı.
 afterAll(async () => {
   await products.delete(productId).catch(() => {});
   await categories.delete(categoryId).catch(() => {});
@@ -75,13 +69,25 @@ describe('PriceService — satır getirme', () => {
 });
 
 /**
- * SINIR TESTİ (02.9 · STACK §8) — para servis sınırında çevriliyor mu.
- *
- * Yukarıdaki testler cent'i yazıp cent'i okuyor; ikisi de aynı yanlış sabitle çarpılsa yine geçerdi.
- * Bu yüzden burada **ham kolon** okunur: uygulama cent yazar, DB euro `numeric` tutar, geri okunan
- * değer yine cent'tir. Zinciri kıran her değişiklik (beyanın düşmesi, kolonun adının kayması) burada
- * patlar — ekranda 0,74 € olarak değil.
+ * Para servis sınırında çevriliyor mu (STACK §8): cent yazıp cent okuyan test aynı yanlış sabitle çarpılsa da geçerdi, bu yüzden ham
+ * kolon okunur.
  */
+/** Ülke satırı genel okumaya karışsaydı Fransa'daki müşteri Almanya fiyatını görürdü; müşteriye özel fiyat ülkeden bağımsızdır. */
+describe('PriceService — ülke satırı', () => {
+  it('daha yeni ülke satırı genel kanal okumasına karışmaz', async () => {
+    await prices.setPrice({ variantId, channel: 'b2c', amountCents: 2290, country: 'DE' });
+
+    expect(await prices.findChannelPrice(variantId, 'b2c')).toMatchObject({ amountCents: 1690, country: null });
+    expect((await prices.findApplicableMap([variantId], 'b2c')).get(variantId)?.channelPrice?.amountCents).toBe(1690);
+  });
+
+  it('müşteriye özel fiyat ülke taşıyamaz', async () => {
+    await expect(
+      prices.setPrice({ variantId, channel: 'b2c', amountCents: 1500, customerId: CUSTOMER_ID, country: 'DE' }),
+    ).rejects.toThrow(/price_customer_no_country/);
+  });
+});
+
 describe('PriceService — euro↔cent sınırı', () => {
   it('cent yazılır, kolon euro tutar, cent okunur (gidiş-dönüş)', async () => {
     const yazilan = 1234; // 12,34 €

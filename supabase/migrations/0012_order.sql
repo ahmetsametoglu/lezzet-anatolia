@@ -22,7 +22,9 @@ create type delivery_type as enum ('route', 'shipping', 'pickup');
 -- Kargo taşıyıcısı: tanımlı küme, çünkü takip bağlantısı URL kalıbından üretilir; `other` yeni taşıyıcı
 -- migration beklemesin diye.
 create type carrier as enum ('colissimo', 'chronopost', 'dhl', 'ups', 'other');
-create type vat_treatment as enum ('domestic', 'intra_eu_b2b_reverse_charge');
+-- AB'deki tüketiciye uzaktan satış eşik altında satıcının oranıyla (`intra_eu_distance_origin`), eşik aşılınca varış ülkesinin
+-- oranıyla (`intra_eu_distance_oss`) yazılır; ayrım OSS beyanının ve eşik toplamının kaynağıdır.
+create type vat_treatment as enum ('domestic', 'intra_eu_b2b_reverse_charge', 'intra_eu_distance_origin', 'intra_eu_distance_oss');
 -- İade edilen kalemde MALA ne oldu (DOMAIN §8). `goodwill` = mal müşteride kaldı.
 create type return_disposition as enum ('restock', 'discard', 'goodwill');
 
