@@ -1,7 +1,7 @@
 # WhatsApp sipariş bildirimleri — mesaj sayısı ve ücret
 
-> **Statü: ÇALIŞMA (12.10.2026).** Karar bekliyor: hangi sipariş şablonları WhatsApp'tan açılsın. Şimdilik yalnız "yolda" ve kapı
-> kodu açılıyor (`teslim-kodu.md`). Bağlı açık iş: KALAN 15.11 (WhatsApp gönderici ve şablonlar).
+> **Statü: ÇALIŞMA (12.10.2026).** Karar bekliyor: hangi sipariş şablonları WhatsApp'tan açılsın. Şimdilik WhatsApp'tan sipariş mesajı
+> gitmiyor; kapı kodu e-postayla gidiyor, çünkü Meta şablon oluşturmayı reddediyor (`teslim-kodu.md` 7. karar). Bağlı açık iş: KALAN 15.11 (WhatsApp gönderici ve şablonlar).
 
 ## 1. Sipariş başına mesaj
 
@@ -11,7 +11,7 @@ Sipariş durum olayları `packages/application/src/order/notify.ts`'ten, Meta'da
 | --- | --- | --- | --- |
 | Hepsi | Sipariş onaylandı | `order_confirmed` (tr/fr/de, onaylı) | Utility |
 | Rota | Yolda | `order_out_for_delivery` (onaylı) | Utility |
-| Rota, kapı kodu | Kod | `delivery_code` (açılacak) | Authentication |
+| Rota, kapı kodu | Kod | `delivery_code` (ertelendi, kod e-postayla) | Authentication |
 | Kargo | Kargoya verildi | `order_shipped` (onaylı) | Utility |
 | Gel-al | Hazır | yok | — |
 | Hepsi | Teslim edildi | `order_delivered` (onaylı) | Utility |

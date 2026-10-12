@@ -1,6 +1,6 @@
 # Teslim kodu — kapıda imza ve fotoğraf yerine kod
 
-> **Statü: YAYINDA; WhatsApp ayağı kapalı, Meta şablon oluşturmayı reddediyor (12.10.2026).** İlk karar 30.08.2026'da yazıldı ("Kapıda kimlik: WhatsApp OTP — imzanın yerine"), gövdesi
+> **Statü: YAYINDA; kod e-postayla gidiyor, WhatsApp ayağı ertelendi (12.10.2026).** İlk karar 30.08.2026'da yazıldı ("Kapıda kimlik: WhatsApp OTP — imzanın yerine"), gövdesi
 > 15.09'daki doküman birleştirmesinde düşmüştü; asıl metin `42b3ccd8` commit'inde. Kararlar 12.10.2026'da kullanıcıyla verildi.
 
 ## 1. Neden
@@ -18,6 +18,8 @@ iddiasını destekler.
 4. **Kapsam:** yalnız kendi aracımızla teslim (rota) ve ayarın açık olduğu kanal; varsayılan B2B. Kargo ve gel-al kod almaz.
 5. **WhatsApp'ta şimdilik yalnız "yolda" ve kod mesajı** açılır; öteki sipariş şablonları mesaj sayısı ve ücret çalışmasından sonra.
 6. Mevcut "yolda" şablonunun metni değiştirilmez (koda gönderme cümlesi eklenmez).
+7. **Kod şimdilik yalnız e-postayla gider.** Meta şablon oluşturmayı reddettiği için 3. ve 5. kararların WhatsApp ayağı ertelendi;
+   kod yolu yerinde durur, gönderen numara (`META_PHONE_NUMBER_ID`) boş kaldıkça devreye girmez.
 
 ## 3. Tasarım
 
@@ -44,8 +46,11 @@ WhatsApp'ta "yolda" mesajının içine konamaz, ardından ayrı mesajla gider.
 
 ## 5. Açık
 
-- `delivery_code` şablonu Meta'da açılıp onaylanana ve sunucuya `META_PHONE_NUMBER_ID` girene kadar kod e-postayla gider; WhatsApp
-  hesabı şablon oluşturmayı hem API'de hem WhatsApp Manager'da reddediyor, iş sosyal şeritte (KALAN K.77).
+- **WhatsApp ayağı (7. karar).** Meta şablon oluşturmayı hem API'de hem WhatsApp Manager'da "Bu WhatsApp Business hesabı, mesaj
+  şablonu oluşturma iznine sahip değil" (kod 10 / 2388185) ile reddediyor; alt kod Meta'nın hata listesinde yok. Jeton, hesap onayı,
+  işletme doğrulaması, `health_status` ve numara temiz ölçüldü, 13 utility şablonun kategorisi değişmemiş. Açmak için: Business
+  Support Home'da hesap kısıtına bakmak, utility şablonla ayırt etmek, Meta desteğine kayıt; sonra §4'teki şablon
+  (`.test-results/meta/sablon-kapi-kodu.mjs`), sunucuya `META_PHONE_NUMBER_ID`, test numarasına tek deneme kullanıcı onayıyla.
 - Mevcut `order_out_for_delivery` şablonunun üçüncü değişkeni "Teslimat aralığı"; sistemde saat aralığı verisi yok
   (`durak-sirasi.md` §"zaman penceresi"), şablon ayrıca olmayan bir varış bildirimini vaat ediyor. Kullanıcı kararı bekliyor.
 - Öteki sipariş şablonlarının WhatsApp'tan açılması ücret çalışmasına bağlı (`whatsapp-bildirimleri.md`); karar kullanıcıda.
