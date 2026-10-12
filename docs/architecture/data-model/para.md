@@ -248,6 +248,7 @@ Teslimde doğar; bilgisi tam olan kuyruğa girer ve Pennylane'de kesilir, eksik 
 | `approved_at` | timestamptz | • |  |
 | `pennylane_invoice_id` | bigint | • |  |
 | `issued_at` | timestamptz | • |  |
+| `sent_at` | timestamptz | • |  |
 | `created_at` | timestamptz |  | `now()` |
 | `updated_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->

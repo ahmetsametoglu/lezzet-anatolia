@@ -32,6 +32,7 @@ import {
   MOVEMENT_TYPE_LABEL,
   PENNYLANE_STATUS_LABEL,
   SALES_INVOICE_GAP_LABEL,
+  SALES_INVOICE_SEND_LABEL,
   SALES_INVOICE_KIND_LABEL,
   type MatchKindView,
 } from './finance-labels';
@@ -112,7 +113,7 @@ function pennylaneLine(status: PennylaneDocumentStatus | null): DocumentRowView[
 
 /** Satış faturalarının girdisi, tek turda okunmuş haritalar: akış belgeye, müşterinin adı ve aranacağı adres müşteriye göre. */
 export interface DocumentSalesContext {
-  invoices: ReadonlyMap<string, Pick<SalesInvoice, 'status' | 'missing'>>;
+  invoices: ReadonlyMap<string, Pick<SalesInvoice, 'status' | 'missing' | 'sentAt'>>;
   customers: ReadonlyMap<string, { name: string; href: string }>;
 }
 
@@ -123,15 +124,23 @@ export const NO_SALES: DocumentSalesContext = { invoices: new Map(), customers: 
  * sözcükler alış belgesininkiyle aynıdır.
  */
 function salesInvoiceLine(
-  invoice: Pick<SalesInvoice, 'status' | 'missing'>,
+  invoice: Pick<SalesInvoice, 'status' | 'missing' | 'sentAt'>,
   queued: Pick<PennylaneQueue, 'attempts' | 'lastError'> | null,
 ): DocumentRowView['pennylane'] {
   if (invoice.status === 'awaiting_approval') {
     const missing = invoice.missing.map((gap) => SALES_INVOICE_GAP_LABEL[gap]);
     return { text: missing.length > 0 ? `onay bekliyor: ${missing.join(', ')} eksik` : 'onay bekliyor: eksiği yok', tone: 'amber' };
   }
-  if (invoice.status === 'issued') return { text: PENNYLANE_STATUS_LABEL.uploaded, tone: 'neutral' };
   const reason = queued ? queueBlockReason(queued.lastError) : null;
+  if (invoice.status === 'issued') {
+    const issued = PENNYLANE_STATUS_LABEL.uploaded;
+    if (invoice.sentAt) return { text: `${issued} · ${SALES_INVOICE_SEND_LABEL.sent}`, tone: 'neutral' };
+    // PDF'in beklenmesi olağandır, dakikalar içinde geçer; öteki sebep e-postayı durdurmuştur.
+    if (reason && reason !== 'pdf_pending') {
+      return { text: `${issued} · ${SALES_INVOICE_SEND_LABEL.failed}: ${pennylaneBlockReasonLabel(reason)}`, tone: 'amber' };
+    }
+    return { text: `${issued} · ${SALES_INVOICE_SEND_LABEL.pending}`, tone: 'neutral' };
+  }
   if (reason) return { text: `${PENNYLANE_STATUS_LABEL.blocked}: ${pennylaneBlockReasonLabel(reason)}`, tone: 'amber' };
   if (queued && queued.attempts > 0) return { text: PENNYLANE_STATUS_LABEL.failing, tone: 'amber' };
   return { text: PENNYLANE_STATUS_LABEL.pending, tone: 'neutral' };

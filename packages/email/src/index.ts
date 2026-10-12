@@ -38,3 +38,4 @@ export {
   marketingSubscribedSubject,
   type MarketingSubscribedEmailProps,
 } from './templates/marketing-subscribed';
+export { SalesInvoiceEmail, salesInvoiceSubject, type SalesInvoiceEmailProps } from './templates/sales-invoice';

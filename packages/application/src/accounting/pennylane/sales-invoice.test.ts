@@ -8,11 +8,13 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
+import type { SendEmailParams } from '@lezzet/email';
 import { openSalesInvoices } from '../sales-invoice';
 import { salesInvoiceGround } from '../sales-invoice.testkit';
 import { PennylaneError } from './errors';
 import { memoryPennylane, stuckDocumentAlerts } from './memory-pennylane.testkit';
 import { processPennylaneQueueRow } from './queue';
+import { writeSalesInvoice } from './sales-invoice';
 
 /*
   Satış faturasının Pennylane'de kesilmesi gerçek tablolar ve bellek içi Pennylane ile sınanır. Kuyruk küresel olduğu için testler
@@ -26,6 +28,7 @@ const invoices = new SalesInvoiceService(db);
 const queue = new PennylaneQueueService(db);
 let ground: Awaited<ReturnType<typeof salesInvoiceGround>>;
 let twin: ReturnType<typeof memoryPennylane>;
+let mails: SendEmailParams[];
 
 beforeAll(async () => {
   ground = await salesInvoiceGround(db);
@@ -33,6 +36,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   twin = memoryPennylane();
+  mails = [];
 });
 
 // İkizin kimlikleri her ikizde aynı sayıdan başlar; önceki testin kestiği fatura kalsaydı Pennylane kimliği tekil kısıta takılırdı.
@@ -45,9 +49,21 @@ afterAll(async () => {
 });
 
 const noFiles = { read: async (key: string) => Promise.reject(new Error(`dosya yok: ${key}`)) };
+const mailer = async (params: SendEmailParams) => {
+  mails.push(params);
+  return { data: { id: `eposta-${mails.length}` }, error: null };
+};
 const run = async (documentId: string) => {
   const row = await queue.findByDocument(documentId);
-  return row ? processPennylaneQueueRow(db, twin.port, row, { now: NOW, files: noFiles }) : 'not_queued';
+  return row ? processPennylaneQueueRow(db, twin.port, row, { now: NOW, files: noFiles, mail: mailer }) : 'not_queued';
+};
+/** Faturayı keser ve gönderir: ilk tur keser ve PDF'i bekler, Pennylane PDF'i üretince ikinci tur e-postayı yollar. */
+const issueAndSend = async (documentId: string) => {
+  const first = await run(documentId);
+  const pennylaneInvoiceId = (await invoices.findByDocument(documentId))?.pennylaneInvoiceId;
+  if (first !== 'blocked' || !pennylaneInvoiceId) return first;
+  twin.makePdfReady(pennylaneInvoiceId);
+  return run(documentId);
 };
 const stuckAlerts = (documentId: string) => stuckDocumentAlerts(db, documentId);
 /** Müşterinin teslim edilmiş satışı ve kuyruğa girmiş faturası. */
@@ -60,11 +76,13 @@ const queuedInvoice = async (customerId: string) => {
 };
 
 describe('satış faturasının Pennylane kesimi', () => {
-  it('fatura müşterisiyle kesilir; numarası belgeye ve siparişe yazılır, müşteriye gönderilir; müşteri ikinci kez açılmaz', async () => {
+  // PDF'siz gönderilseydi müşteri eksiz e-posta alırdı; gönderim anı yazılmasaydı sonraki tur faturayı ikinci kez yollardı.
+  it('fatura müşterisiyle kesilir, numarası belgeye ve siparişe yazılır; e-posta PDF hazır olunca ekiyle bir kez gider', async () => {
     const customer = await ground.company();
     const { order, documentId } = await queuedInvoice(customer.id);
 
-    expect(await run(documentId)).toBe('issued');
+    // Pennylane PDF'i kesimden sonra üretir: fatura kesilir, e-posta bekler ve haber düşmez.
+    expect(await run(documentId)).toBe('blocked');
     expect(twin.customers()).toMatchObject([
       { externalReference: `cus:${customer.id}`, regNo: '732829320', billingAddress: { postalCode: '67000', countryAlpha2: 'FR' } },
     ]);
@@ -77,13 +95,29 @@ describe('satış faturasının Pennylane kesimi', () => {
         specialMention: null,
         lines: [{ label: expect.stringContaining('Baklava'), quantity: 2, unitPrice: '10', vatCode: 'FR_55' }],
         invoiceNumber: 'F-2026-0001',
-        sentTo: [[customer.email]],
       },
     ]);
     expect(await documents.getById(documentId)).toMatchObject({ number: 'F-2026-0001', issuedOn: '2026-10-12', dueOn: '2026-11-09' });
     expect((await new OrderService(db).getById(order.id))?.invoiceNo).toBe('F-2026-0001');
-    expect(await invoices.findByDocument(documentId)).toMatchObject({ status: 'issued' });
+    expect(await invoices.findByDocument(documentId)).toMatchObject({ status: 'issued', sentAt: null });
+    expect(await queue.findByDocument(documentId)).toMatchObject({ lastError: 'blocked:pdf_pending' });
+    expect(await stuckAlerts(documentId)).toEqual([]);
+    expect(mails).toEqual([]);
+
+    twin.makePdfReady(twin.customerInvoices()[0]!.id);
+    expect(await run(documentId)).toBe('sent');
+    expect(mails).toMatchObject([
+      {
+        to: customer.email,
+        subject: 'Votre facture F-2026-0001',
+        attachments: [{ filename: 'Facture-F-2026-0001.pdf', contentType: 'application/pdf' }],
+      },
+    ]);
+    const sent = (await invoices.findByDocument(documentId))!;
+    expect(Date.parse(sent.sentAt ?? '')).toBe(NOW.getTime());
     expect(await queue.findByDocument(documentId)).toBeNull();
+    expect(await writeSalesInvoice(db, twin.port, sent, { now: NOW, mail: mailer })).toEqual({ status: 'skipped' });
+    expect(mails).toHaveLength(1);
 
     // Kesilmiş fatura ikinci kez kesilmez, künyesi değişmez.
     expect(
@@ -92,7 +126,7 @@ describe('satış faturasının Pennylane kesimi', () => {
     expect((await documents.getById(documentId))?.number).toBe('F-2026-0001');
 
     const second = await queuedInvoice(customer.id);
-    expect(await run(second.documentId)).toBe('issued');
+    expect(await issueAndSend(second.documentId)).toBe('sent');
     expect(twin.customers()).toHaveLength(1);
   });
 
@@ -131,7 +165,7 @@ describe('satış faturasının Pennylane kesimi', () => {
     const foreignId = twin.addForeignCustomer({ name: 'OBERJAEGERHOF SARL', regNo: '73282932000074' });
     const { documentId } = await queuedInvoice(customer.id);
 
-    expect(await run(documentId)).toBe('issued');
+    expect(await issueAndSend(documentId)).toBe('sent');
     expect(twin.customers()).toHaveLength(1);
     expect(twin.customers()[0]).toMatchObject({
       id: foreignId,
@@ -159,13 +193,13 @@ describe('satış faturasının Pennylane kesimi', () => {
   it('fatura adresi değişince sonraki fatura kesilmeden önce Pennylane kaydı güncellenir', async () => {
     const customer = await ground.company();
     const first = await queuedInvoice(customer.id);
-    expect(await run(first.documentId)).toBe('issued');
+    expect(await issueAndSend(first.documentId)).toBe('sent');
 
     const addresses = new AddressService(db);
     const billing = (await addresses.listByCustomer(customer.id)).find((address) => address.isBilling)!;
     await addresses.update({ id: billing.id, line1: '3 place Kléber' });
     const second = await queuedInvoice(customer.id);
-    expect(await run(second.documentId)).toBe('issued');
+    expect(await issueAndSend(second.documentId)).toBe('sent');
     expect(twin.customers()).toMatchObject([{ billingAddress: { address: '3 place Kléber' } }]);
   });
 
@@ -177,7 +211,24 @@ describe('satış faturasının Pennylane kesimi', () => {
 
     expect(await run(documentId)).toBe('failed');
     expect(twin.customerInvoices()).toMatchObject([{ status: 'draft' }]);
-    expect(await run(documentId)).toBe('issued');
+    expect(await issueAndSend(documentId)).toBe('sent');
     expect(twin.customerInvoices()).toMatchObject([{ status: 'upcoming', invoiceNumber: 'F-2026-0001' }]);
+  });
+
+  // Anahtarsız gönderici e-postayı atlar; gönderilmiş sayılsaydı fatura müşteriye hiç gitmeden kapanırdı.
+  it('e-posta atlanırsa fatura gönderilmiş sayılmaz, bekler ve muhasebeye haber gider', async () => {
+    const customer = await ground.company();
+    const { documentId } = await queuedInvoice(customer.id);
+    expect(await run(documentId)).toBe('blocked');
+    twin.makePdfReady(twin.customerInvoices()[0]!.id);
+
+    const row = (await queue.findByDocument(documentId))!;
+    const skipped = async () => ({ data: null, error: null });
+    expect(await processPennylaneQueueRow(db, twin.port, row, { now: NOW, files: noFiles, mail: skipped })).toBe('blocked');
+    expect(await invoices.findByDocument(documentId)).toMatchObject({ status: 'issued', sentAt: null });
+    expect(await queue.findByDocument(documentId)).toMatchObject({ lastError: 'blocked:email_unconfigured' });
+    const alerts = await stuckAlerts(documentId);
+    expect(alerts.length).toBeGreaterThan(0);
+    expect(alerts.every((alert) => alert.payload.reason === 'email_unconfigured')).toBe(true);
   });
 });

@@ -63,6 +63,16 @@ export function formatShortDate(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: 'numeric', month: 'long' }).format(new Date(iso));
 }
 
+/**
+ * Faturanın günü, Pennylane PDF'iyle aynı yazımda: Fransızca "12 oct. 2026", Almanca "12.10.2026". Gün UTC'de okunur, çünkü takvim
+ * günüdür ve sunucunun saat dilimi onu bir gün kaydırmamalı.
+ */
+export function formatInvoiceDate(day: string, locale: Locale): string {
+  const options: Intl.DateTimeFormatOptions =
+    locale === 'de' ? { day: '2-digit', month: '2-digit', year: 'numeric' } : { day: 'numeric', month: 'short', year: 'numeric' };
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { ...options, timeZone: 'UTC' }).format(new Date(`${day}T00:00:00Z`));
+}
+
 /** Gün içindeki saat, yazışma damgası ("18:02"). */
 export function formatTime(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: '2-digit', minute: '2-digit' }).format(new Date(iso));

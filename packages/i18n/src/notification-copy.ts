@@ -333,6 +333,9 @@ const PENNYLANE_ENGELI: Record<string, string> = {
   total_mismatch: "Pennylane'in toplamı bizimkinden farklı",
   customer_ambiguous: "Pennylane'de bu firmaya uyan birden çok müşteri var",
   customer_taken: "Pennylane'deki müşteri bizde başka bir müşteriye bağlı",
+  pdf_pending: "Pennylane faturanın PDF'ini henüz üretmedi",
+  no_email: 'müşterinin e-postası yok, fatura gönderilemedi',
+  email_unconfigured: 'e-posta anahtarı tanımlı değil, fatura gönderilemedi',
 };
 
 /** Pennylane engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */

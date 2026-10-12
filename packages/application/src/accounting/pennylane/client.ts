@@ -7,6 +7,7 @@ import {
   PennylaneApiCategoryPageSchema,
   PennylaneApiCategorySchema,
   PennylaneApiChangePageSchema,
+  PennylaneApiCustomerInvoiceFileSchema,
   PennylaneApiCustomerInvoicePageSchema,
   PennylaneApiCustomerInvoiceSchema,
   PennylaneApiCustomerPageSchema,
@@ -286,8 +287,12 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       const body = await write('PUT', `/customer_invoices/${invoiceId}/finalize`, null);
       return customerInvoiceOf(parse(PennylaneApiCustomerInvoiceSchema, body, 'müşteri faturası'));
     },
-    async sendCustomerInvoice({ invoiceId, recipients }) {
-      await write('POST', `/customer_invoices/${invoiceId}/send_by_email`, { json: { recipients } });
+    async customerInvoicePdf(invoiceId) {
+      const file = parse(PennylaneApiCustomerInvoiceFileSchema, await read(`/customer_invoices/${invoiceId}`), 'müşteri faturası');
+      if (!file.filename || !file.public_file_url) return null;
+      const res = await (config.fetchImpl ?? fetch)(file.public_file_url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+      if (!res.ok) throw new PennylaneError(classify(res.status, null));
+      return new Uint8Array(await res.arrayBuffer());
     },
     async listInvoiceTemplates() {
       return readAll('/customer_invoice_templates', PennylaneApiInvoiceTemplatePageSchema, 'fatura şablonları');

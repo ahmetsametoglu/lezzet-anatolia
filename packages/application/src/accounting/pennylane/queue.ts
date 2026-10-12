@@ -7,6 +7,7 @@ import { PENNYLANE_SYNC_JOB } from './bank-feed';
 import { categoryResolver, type CategoryResolver } from './category';
 import { privateDocumentFiles, writeDocument, type DocumentFileReader, type DocumentWriteResult } from './documents';
 import { writeMovementMatches } from './matches';
+import type { SalesInvoiceMailer } from '../sales-invoice-mail';
 import type { PennylanePort } from './port';
 import { writeSalesInvoice, type SalesInvoiceWriteResult } from './sales-invoice';
 
@@ -17,31 +18,37 @@ import { writeSalesInvoice, type SalesInvoiceWriteResult } from './sales-invoice
 
 const BATCH = 20;
 
-export type PennylaneQueueOutcome = 'uploaded' | 'updated' | 'paid' | 'issued' | 'matched' | 'unchanged' | 'skipped' | 'blocked' | 'failed';
+export type PennylaneQueueOutcome = 'uploaded' | 'updated' | 'paid' | 'sent' | 'matched' | 'unchanged' | 'skipped' | 'blocked' | 'failed';
 
 interface QueueContext {
   now: Date;
   files: DocumentFileReader;
   /** İşin kategorisi; tur başına iş başına bir kez çözülür. */
   category?: CategoryResolver;
+  /** Satış faturasının e-postasını gönderen; verilmezse ortak gönderici. */
+  mail?: SalesInvoiceMailer;
 }
+
+/** Kendiliğinden geçen bekleyişler; haber düşürmez. */
+const QUIET_BLOCKS = new Set<string>(['no_file', 'pdf_pending']);
 
 export async function syncPennylaneQueue(
   db: Db,
   pennylane: PennylanePort,
-  opts: { now?: Date; files?: DocumentFileReader } = {},
+  opts: { now?: Date; files?: DocumentFileReader; mail?: SalesInvoiceMailer } = {},
 ): Promise<Record<string, unknown>> {
   const ctx: QueueContext = {
     now: opts.now ?? new Date(),
     files: opts.files ?? privateDocumentFiles,
     category: categoryResolver(db, pennylane),
+    mail: opts.mail,
   };
   const rows = await new PennylaneQueueService(db).listDue(ctx.now.toISOString(), BATCH);
   const counts: Record<PennylaneQueueOutcome, number> = {
     uploaded: 0,
     updated: 0,
     paid: 0,
-    issued: 0,
+    sent: 0,
     matched: 0,
     unchanged: 0,
     skipped: 0,
@@ -67,9 +74,10 @@ export async function processPennylaneQueueRow(
       ? await writeQueuedDocument(db, pennylane, row.documentId, ctx)
       : await writeMovementMatches(db, pennylane, row.movementId!);
     if (result.status === 'blocked') {
-      // Dosyasız belge çoğu zaman dosyası yüklenmek üzere olan belgedir; dosya gelince kuyruğa yeniden düşer, haber gürültü olurdu.
+      // Dosyasız belge çoğu zaman dosyası yüklenmek üzere olan belgedir, PDF'i bekleyen fatura dakikalar içinde gönderilir; ikisinde de
+      // haber gürültü olurdu.
       const { firstTime } = await deferBlocked(queue, row, result.reason, ctx.now);
-      if (firstTime && result.reason !== 'no_file') await alertStuck(db, row, result.reason);
+      if (firstTime && !QUIET_BLOCKS.has(result.reason)) await alertStuck(db, row, result.reason);
       return 'blocked';
     }
     await queue.complete(row.id, row.markedAt);

@@ -22,6 +22,8 @@ export const SalesInvoiceSchema = z.object({
   /** Pennylane'deki müşteri faturası; kesilince dolar. */
   pennylaneInvoiceId: z.number().int().nullable(),
   issuedAt: z.string().nullable(),
+  /** PDF'iyle müşteriye giden e-postanın anı; kesilmiş ama gönderilmemiş fatura sonraki turda yeniden denenir. */
+  sentAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

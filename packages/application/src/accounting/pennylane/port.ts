@@ -82,7 +82,8 @@ export interface PennylanePort {
   createCustomerInvoice(draft: PennylaneCustomerInvoiceDraft): Promise<PennylaneCustomerInvoice>;
   /** Taslağı kesinleştirir ve numarasını verir; kesinleşen fatura düzenlenmez, düzeltmesi alacak notudur. */
   finalizeCustomerInvoice(invoiceId: number): Promise<PennylaneCustomerInvoice>;
-  sendCustomerInvoice(input: { invoiceId: number; recipients: readonly string[] }): Promise<void>;
+  /** Kesilmiş faturanın PDF'i; Pennylane PDF'i kesimden sonra ürettiği için henüz yoksa `null`. */
+  customerInvoicePdf(invoiceId: number): Promise<Uint8Array | null>;
   /** Satış faturası şablonları; işin ayarı faturayı hangisinin basacağını seçer. */
   listInvoiceTemplates(): Promise<PennylaneInvoiceTemplate[]>;
   listCategoryGroups(): Promise<PennylaneCategoryGroup[]>;

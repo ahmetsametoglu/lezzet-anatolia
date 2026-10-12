@@ -613,11 +613,14 @@ create table public.sales_invoice (
   approved_at timestamptz,
   pennylane_invoice_id bigint unique,
   issued_at timestamptz,
+  -- Faturanın PDF'iyle müşteriye giden e-postanın anı; Pennylane PDF'i kesimden sonra ürettiği için gönderim ayrı turdur.
+  sent_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint sales_invoice_missing check (status = 'awaiting_approval' or missing = '{}'),
   constraint sales_invoice_missing_known check (missing <@ array['siren', 'billing_address', 'b2b_approval']),
-  constraint sales_invoice_issued check ((status = 'issued') = (pennylane_invoice_id is not null and issued_at is not null))
+  constraint sales_invoice_issued check ((status = 'issued') = (pennylane_invoice_id is not null and issued_at is not null)),
+  constraint sales_invoice_sent check (sent_at is null or status = 'issued')
 );
 create index sales_invoice_status_idx on public.sales_invoice (status) where status <> 'issued';
 
@@ -727,12 +730,26 @@ begin
 end;
 $$;
 
+-- Faturanın PDF'iyle giden e-postanın anı bir kez yazılır; ikinci yazım `false` döner, böylece fatura iki kez gönderilmiş sayılmaz.
+create or replace function public.sales_invoice_mark_sent(p_document_id uuid, p_sent_at timestamptz) returns boolean
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  update public.sales_invoice set sent_at = p_sent_at, updated_at = now()
+   where document_id = p_document_id and status = 'issued' and sent_at is null;
+  return found;
+end;
+$$;
+
 revoke execute on function public.sales_invoice_open(uuid, business, uuid[], date, date, numeric, jsonb, document_vat_regime, text[])
   from public, anon, authenticated;
 revoke execute on function public.sales_invoice_refresh(uuid, date, numeric, jsonb, document_vat_regime, text[])
   from public, anon, authenticated;
 revoke execute on function public.sales_invoice_approve(uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.sales_invoice_issue(uuid, bigint, text, date, date) from public, anon, authenticated;
+revoke execute on function public.sales_invoice_mark_sent(uuid, timestamptz) from public, anon, authenticated;
 
 -- ── Mal kabulün açık kalanı ──────────────────────────────────────────────────
 -- Faturası girilmemiş kabulün borcu: tutar − bağlı ödemeler. Faturası kabule ya da siparişine girilmişse `has_document`

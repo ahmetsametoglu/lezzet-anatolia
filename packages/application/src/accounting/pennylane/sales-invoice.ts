@@ -29,26 +29,26 @@ import {
   type PennylaneSalesInvoiceBlock,
 } from '@lezzet/domain-core';
 import { parisDateOf } from '@lezzet/helper';
-import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { Address, Business, MoneyDocument, PennylaneCustomerInvoice, SalesInvoice, UserProfile } from '@lezzet/types';
 import { resolveOrderLines } from '../../order/customer-orders';
-import { PENNYLANE_SYNC_JOB } from './bank-feed';
+import { sendSalesInvoiceMail, type SalesInvoiceMailer } from '../sales-invoice-mail';
 import type { PennylanePort } from './port';
 
 /**
  * Satış faturasının Pennylane'de kesilmesi (docs/feature/profesyonel-satis.md, Faz 4): müşteri kaydı bulunur ya da açılır, fatura
- * taslak açılır ve Pennylane'in hesapladığı toplam bizimkiyle aynıysa kesinleşir. Numarası belgeye ve siparişlere yazılır, fatura
- * müşteriye Pennylane'den gider.
+ * taslak açılır ve Pennylane'in hesapladığı toplam bizimkiyle aynıysa kesinleşir. Numarası belgeye ve siparişlere yazılır, PDF'i
+ * bizim e-postamızla müşteriye gider (`sales-invoice-mail.ts`).
  */
 
-export type SalesInvoiceWriteResult = { status: 'issued' | 'skipped' } | { status: 'blocked'; reason: PennylaneSalesInvoiceBlock };
+export type SalesInvoiceWriteResult = { status: 'sent' | 'skipped' } | { status: 'blocked'; reason: PennylaneSalesInvoiceBlock };
 
 export async function writeSalesInvoice(
   db: Db,
   pennylane: PennylanePort,
   invoice: SalesInvoice,
-  ctx: { now: Date },
+  ctx: { now: Date; mail?: SalesInvoiceMailer },
 ): Promise<SalesInvoiceWriteResult> {
+  if (invoice.status === 'issued') return invoice.sentAt ? { status: 'skipped' } : sendIssued(db, pennylane, invoice.documentId, ctx);
   if (invoice.status !== 'queued') return { status: 'skipped' };
   const document = await new MoneyDocumentService(db).getById(invoice.documentId);
   if (!document?.customerId) return { status: 'skipped' };
@@ -58,7 +58,8 @@ export async function writeSalesInvoice(
     new MoneyDocumentOrderService(db).ordersOf([document.id]),
   ]);
   if (!customer) return { status: 'skipped' };
-  const ensured = await ensureCustomer(db, pennylane, customer, addresses.find((address) => address.isBilling) ?? null);
+  const billing = addresses.find((address) => address.isBilling) ?? null;
+  const ensured = await ensureCustomer(db, pennylane, customer, billing);
   if (ensured.status === 'blocked') return ensured;
   const customerId = ensured.id;
 
@@ -67,6 +68,7 @@ export async function writeSalesInvoice(
     const created = await createDraft(db, pennylane, {
       document,
       customer,
+      billing,
       customerId,
       orderIds: ordersOf.get(document.id) ?? [],
       now: ctx.now,
@@ -87,8 +89,35 @@ export async function writeSalesInvoice(
     issuedOn: issued.date,
     dueOn: issued.deadline,
   });
-  await sendToCustomer(pennylane, { invoiceId: issued.id, documentId: document.id, customer });
-  return { status: 'issued' };
+  return sendIssued(db, pennylane, document.id, ctx);
+}
+
+/**
+ * Kesilmiş faturanın PDF'i bizim e-postamızla gider; Pennylane PDF'i kesimden sonra ürettiği için hazır değilse fatura sonraki turu
+ * bekler. Gönderim anı bir kez yazılır, böylece sonraki tur aynı faturayı yeniden göndermez.
+ */
+async function sendIssued(
+  db: Db,
+  pennylane: PennylanePort,
+  documentId: string,
+  ctx: { now: Date; mail?: SalesInvoiceMailer },
+): Promise<SalesInvoiceWriteResult> {
+  const invoices = new SalesInvoiceService(db);
+  const [invoice, document] = await Promise.all([invoices.findByDocument(documentId), new MoneyDocumentService(db).getById(documentId)]);
+  if (!invoice?.pennylaneInvoiceId || invoice.sentAt || !document?.customerId) return { status: 'skipped' };
+  const [customer, addresses] = await Promise.all([
+    new UserProfileService(db).getById(document.customerId),
+    new AddressService(db).listByCustomer(document.customerId),
+  ]);
+  if (!customer) return { status: 'skipped' };
+  if (!customer.email) return { status: 'blocked', reason: 'no_email' };
+  const pdf = await pennylane.customerInvoicePdf(invoice.pennylaneInvoiceId);
+  if (!pdf) return { status: 'blocked', reason: 'pdf_pending' };
+  const billing = addresses.find((address) => address.isBilling) ?? null;
+  const mailed = await sendSalesInvoiceMail(db, { document, customer, billing, pdf, mail: ctx.mail });
+  if (mailed.status !== 'sent') return { status: 'blocked', reason: mailed.status };
+  await invoices.markSent(documentId, ctx.now.toISOString());
+  return { status: 'sent' };
 }
 
 /**
@@ -98,7 +127,14 @@ export async function writeSalesInvoice(
 async function createDraft(
   db: Db,
   pennylane: PennylanePort,
-  input: { document: MoneyDocument; customer: UserProfile; customerId: number; orderIds: readonly string[]; now: Date },
+  input: {
+    document: MoneyDocument;
+    customer: UserProfile;
+    billing: Address | null;
+    customerId: number;
+    orderIds: readonly string[];
+    now: Date;
+  },
 ): Promise<{ status: 'created'; invoice: PennylaneCustomerInvoice } | { status: 'blocked'; reason: PennylaneSalesInvoiceBlock }> {
   const { document, customer } = input;
   const [sales, items] = await Promise.all([
@@ -107,7 +143,7 @@ async function createDraft(
   ]);
   if (sales.length === 0) throw new Error('Satış faturasının satışları okunamadı');
   sales.sort((a, b) => a.saleDate.localeCompare(b.saleDate) || (a.referenceNo ?? '').localeCompare(b.referenceNo ?? ''));
-  const locale = salesInvoiceLocaleOf(customer.preferredLanguage);
+  const locale = salesInvoiceLocaleOf(input.billing?.country ?? customer.country);
   const names = await resolveOrderLines(db, items, locale);
   const prefix = (referenceNo: string | null, label: string) => (sales.length > 1 && referenceNo ? `${referenceNo} · ${label}` : label);
   const lines = pennylaneSalesInvoiceLines(
@@ -137,7 +173,7 @@ async function createDraft(
       date: today,
       deadline: salesInvoiceDueOn({ issuedOn: today, termDays, firstDeliveryOn: sales[0]!.saleDate }),
       templateId: await templateOf(db, document.business),
-      language: customer.preferredLanguage,
+      language: locale,
       vatTreatment: sales[0]!.vatTreatment,
       lines,
     }),
@@ -186,20 +222,4 @@ async function ensureCustomer(
 async function templateOf(db: Db, business: Business): Promise<number | null> {
   const value = await new SettingsService(db).get<unknown>(PENNYLANE_INVOICE_TEMPLATE_KEYS[business], null);
   return typeof value === 'number' && Number.isInteger(value) ? value : null;
-}
-
-/** Kesilen fatura müşteriye gider; gönderilemezse fatura yine kesilmiştir, hata kaydı kalır ve muhasebe faturayı Pennylane'den gönderir. */
-async function sendToCustomer(
-  pennylane: PennylanePort,
-  input: { invoiceId: number; documentId: string; customer: UserProfile },
-): Promise<void> {
-  if (!input.customer.email) {
-    logger.warn({ documentId: input.documentId, customerId: input.customer.id }, 'satış faturası gönderilmedi: müşterinin e-postası yok');
-    return;
-  }
-  try {
-    await pennylane.sendCustomerInvoice({ invoiceId: input.invoiceId, recipients: [input.customer.email] });
-  } catch (err) {
-    await captureError(err, { source: SOURCES.backendCron, context: { job: PENNYLANE_SYNC_JOB, documentId: input.documentId } });
-  }
 }

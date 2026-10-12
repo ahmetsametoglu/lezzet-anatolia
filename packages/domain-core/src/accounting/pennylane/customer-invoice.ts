@@ -12,7 +12,6 @@ import {
   type PennylaneCustomerInvoiceLine,
   type PennylaneCustomerPatch,
   type PennylaneLanguage,
-  type PreferredLanguage,
   type UserProfile,
   type VatTreatment,
 } from '@lezzet/types';
@@ -29,7 +28,16 @@ import { normalizedVat, pennylaneVatCode } from './document';
  */
 
 /** Satış faturasının Pennylane'e yazılamama sebebi; kesilmemiş fatura kuyrukta bekler ve muhasebeye bir kez haber gider. */
-export type PennylaneSalesInvoiceBlock = 'billing_address' | 'vat_code' | 'total_mismatch' | 'customer_ambiguous' | 'customer_taken';
+/** Satış faturasının bekleme sebebi; son üçü kesilmiş faturanın e-postasınındır, `pdf_pending` haber düşürmez. */
+export type PennylaneSalesInvoiceBlock =
+  | 'billing_address'
+  | 'vat_code'
+  | 'total_mismatch'
+  | 'customer_ambiguous'
+  | 'customer_taken'
+  | 'pdf_pending'
+  | 'no_email'
+  | 'email_unconfigured';
 
 /** İşin satış faturası şablonu ayardır (Pennylane şablon kimliği); boşsa fatura Pennylane'in varsayılan şablonuyla kesilir. */
 export const PENNYLANE_INVOICE_TEMPLATE_KEYS: Record<Business, string> = {
@@ -37,11 +45,11 @@ export const PENNYLANE_INVOICE_TEMPLATE_KEYS: Record<Business, string> = {
   lezzet: 'pennylane_invoice_template_lezzet',
 };
 
-/** Faturanın dili; Pennylane Türkçe tanımaz, Türkçe konuşan müşteri faturayı Fransızca alır. */
+/** Faturanın ve e-postasının dili fatura adresinin ülkesinden: Almanya'daki müşteri Almanca, öteki herkes Fransızca alır (karar 22). */
 export type SalesInvoiceLocale = 'fr' | 'de';
 
-export function salesInvoiceLocaleOf(language: PreferredLanguage): SalesInvoiceLocale {
-  return language === 'de' ? 'de' : 'fr';
+export function salesInvoiceLocaleOf(billingCountry: Address['country']): SalesInvoiceLocale {
+  return billingCountry === 'DE' ? 'de' : 'fr';
 }
 
 /** Kargo satırının adı, faturanın dilinde. */
@@ -53,8 +61,8 @@ export const pennylaneCustomerReference = (customerId: string): string => `cus:$
 /** Satış faturasının dış referansı belge kimliğidir; yarıda kalan kesme denemesinin taslağı aramayla bulunur. */
 export const pennylaneSalesInvoiceReference = (documentId: string): string => `sinv:${documentId}`;
 
-export function pennylaneLanguageOf(language: PreferredLanguage): PennylaneLanguage {
-  return salesInvoiceLocaleOf(language) === 'de' ? 'de_DE' : 'fr_FR';
+export function pennylaneLanguageOf(locale: SalesInvoiceLocale): PennylaneLanguage {
+  return locale === 'de' ? 'de_DE' : 'fr_FR';
 }
 
 /** Müşterinin Pennylane'deki kimliği: SIRET'ten ya da FR KDV numarasından SIREN ve KDV numarası. */
@@ -66,7 +74,7 @@ export function pennylaneCustomerIdentity(
 
 /** Şirket müşterisinin Pennylane kaydı: yasal ad, SIREN, KDV numarası ve fatura adresi; Pennylane fatura adresiz müşteri açmaz. */
 export function pennylaneCustomerDraft(
-  customer: Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber' | 'preferredLanguage'>,
+  customer: Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber'>,
   billing: Pick<Address, 'line1' | 'line2' | 'postalCode' | 'city' | 'country'>,
 ): PennylaneCustomerDraft {
   return {
@@ -80,7 +88,7 @@ export function pennylaneCustomerDraft(
       city: billing.city,
       countryAlpha2: billing.country,
     },
-    language: pennylaneLanguageOf(customer.preferredLanguage),
+    language: pennylaneLanguageOf(salesInvoiceLocaleOf(billing.country)),
   };
 }
 
@@ -189,7 +197,7 @@ export function pennylaneSalesInvoiceDraft(input: {
   date: string;
   deadline: string;
   templateId: number | null;
-  language: PreferredLanguage;
+  language: SalesInvoiceLocale;
   vatTreatment: VatTreatment;
   lines: PennylaneCustomerInvoiceLine[];
 }): PennylaneCustomerInvoiceDraft {

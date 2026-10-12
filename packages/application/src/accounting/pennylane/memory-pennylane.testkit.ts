@@ -48,10 +48,10 @@ const customerView = ({ id, name, externalReference, regNo, vatNumber, billingAd
   billingAddress,
 });
 
-/** İkizde kestiğimiz müşteri faturası: taslağı, Pennylane'in verdiği numara ve toplamlar, gönderildiği alıcılar. */
+/** İkizde kestiğimiz müşteri faturası: taslağı, Pennylane'in verdiği numara ve toplamlar; PDF'i test hazır deyince oluşur. */
 export type MemoryCustomerInvoice = PennylaneCustomerInvoiceDraft &
   Omit<PennylaneCustomerInvoice, 'externalReference'> & {
-    sentTo: string[][];
+    pdfReady: boolean;
   };
 
 /** Oran kodunun KDV'si; ters yükleme ve muafiyet kodlarında KDV yoktur. */
@@ -233,7 +233,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
         netCents,
         taxCents,
         status: 'draft',
-        sentTo: [],
+        pdfReady: false,
       };
       customerInvoices.set(id, row);
       return customerInvoiceView(row);
@@ -250,11 +250,11 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       row.status = 'upcoming';
       return customerInvoiceView(row);
     },
-    sendCustomerInvoice: async ({ invoiceId, recipients }) => {
-      failing('sendCustomerInvoice');
+    customerInvoicePdf: async (invoiceId) => {
+      failing('customerInvoicePdf');
       const row = customerInvoices.get(invoiceId);
       if (!row) throw notFound();
-      row.sentTo.push([...recipients]);
+      return row.pdfReady && row.invoiceNumber ? new TextEncoder().encode(`%PDF ${row.invoiceNumber}`) : null;
     },
     listInvoiceTemplates: async () => {
       failing('listInvoiceTemplates');
@@ -380,6 +380,12 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       const id = (nextId += 1);
       bankAccounts.set(id, { id, name, currency: 'EUR' });
       return id;
+    },
+    /** Pennylane PDF'i kesimden sonra üretir; test o anı bununla kurar. */
+    makePdfReady(invoiceId: number): void {
+      const row = customerInvoices.get(invoiceId);
+      if (!row) throw new Error(`bellek içi Pennylane: ${invoiceId} yok`);
+      row.pdfReady = true;
     },
     addInvoiceTemplate(name: string): number {
       const id = (nextId += 1);

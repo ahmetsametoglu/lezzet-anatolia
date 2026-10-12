@@ -41,6 +41,28 @@ export const NotificationTotalSchema = z.object({
 export type NotificationTotal = z.infer<typeof NotificationTotalSchema>;
 
 /**
+ * Satış faturası e-postasının verisi; tutar ve günler biçimlenmiş gelir. Fatura Pennylane'de kesilir, PDF'i ek olarak gider ve
+ * banka bilgisi yalnız o PDF'tedir.
+ */
+export const SalesInvoiceNotificationSchema = z.object({
+  /** Fatura adresi Almanya'daysa `de`, değilse `fr`. */
+  locale: PreferredLanguageEnum.extract(['fr', 'de']),
+  invoiceNumber: z.string(),
+  issuedOn: z.string(),
+  dueOn: z.string(),
+  netTotal: z.string(),
+  vatTotal: z.string(),
+  grandTotal: z.string(),
+  /** Kalanı olmayan fatura: ödeme hapı "ödendi" der ve havale kartı çizilmez. */
+  settled: z.boolean(),
+  /** Faturanın kapsadığı siparişler; ay sonu faturasında birden çok. */
+  orders: z.array(NotificationLineSchema),
+  attachmentName: z.string(),
+  notificationPreferencesUrl: z.string(),
+});
+export type SalesInvoiceNotification = z.infer<typeof SalesInvoiceNotificationSchema>;
+
+/**
  * Sipariş bildiriminin tam verisi. Alanların çoğu opsiyoneldir çünkü üç şablon aynı şekli farklı
  * doldurur: onayda teslimat penceresi vardır takip yoktur, yoldaki kargoda takip vardır pencere
  * yoktur, teslimde özet vardır kalem listesi yoktur.

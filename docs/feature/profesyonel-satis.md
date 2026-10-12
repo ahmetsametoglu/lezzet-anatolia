@@ -33,6 +33,9 @@ uygundur. Sistemde ayrı bir satış rolü yoktur: siparişi personel girer, tes
 | 18 | **Varsayılan fatura modu teslim başına** | Her teslimden sonra bir fatura; ay sonu toplu fatura müşteri başına seçilen bir ayardır. |
 | 19 | **Fatura iki görünümle, tek numara sırasıyla kesilir** | QUALITE ve Lezzet Anatolie için ayrı Pennylane şablonu (logo, ticari ad); numara sırası ortak. Mevzuat tek ve kesintisiz sırayı ister; Pennylane'de numaralandırma şablondan bağımsızdır (§3). |
 | 20 | **Pennylane'de aynı firma SIREN ya da KDV numarasıyla bulunur; kaydı bizden güncellenir** (12.10) | Elle açılmış kayıt ikinci kez açılmaz, satış faturası ona kesilir; uyan birden çok kayıt varsa fatura bekler. Unvan, kimlik ve fatura adresi bizden yazılır; e-postalar muhasebenindir. |
+| 21 | **Satış faturası müşteriye bizim e-postamızla gider; Pennylane'in e-postası kullanılmaz** (12.10) | PDF Pennylane'de, Pennylane şablonuyla (logo, ticari ad, IBAN, yasal ibareler) üretilir ve e-postanın ekinde gider; e-posta sipariş e-postalarının iskeletindedir (`07-kesif/Kesif - Satis Faturasi Epostasi.dc.html`). Pennylane'in e-postasıyla gönderilen fatura sonradan onaylı platformdan iletilemez ve Pennylane'in e-posta şablonu yalnız Fransızca ve İngilizce açılır. |
+| 22 | **Faturanın dili fatura adresinin ülkesinden: Almanya ise Almanca, değilse Fransızca** (12.10) | Pennylane PDF'in sabit etiketlerini faturanın diline çevirir, şablonun serbest metni şablonun dilinde kalır; e-posta da aynı dilde gider. |
+| 23 | **Fransız müşterinin e-faturası platformdan gider** (12.10) | E-fatura gönderimi Pennylane'de açılınca fatura onaylı platform ağıyla (`send_to_pa`) iletilir; PDF, Factur-X olarak e-faturanın görünen yüzüdür. Alman müşteri e-fatura kapsamı dışındadır, PDF e-postayla gitmeye devam eder. |
 
 ## 2. Saha akışları
 
@@ -171,12 +174,16 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   toplar. Tutar ve KDV kırılımı dökümün hesabından, teslim edilen adetten çıkar; siparişin tahsil edilmiş parası faturaya bağlanır.
   Bilgisi eksik fatura (SIREN, fatura adresi, B2B onayı; Alman şirket SIREN yerine geçerli KDV numarasıyla tanınır) onay bekler ve
   her turda müşteri kaydından yeniden hesaplanır.
-- **Kesim (tamamlandı, Pennylane'de ölçülmedi):** kuyruğa giren fatura için müşteri Pennylane'de dış referansla, yoksa aynı SIREN
+- **Kesim (tamamlandı, sandbox'ta ölçüldü 12.10):** kuyruğa giren fatura için müşteri Pennylane'de dış referansla, yoksa aynı SIREN
   ya da KDV numarasıyla bulunur (karar 20), hiçbiri yoksa fatura adresiyle açılır; bağlı kaydın unvanı, kimliği ya da adresi bizden
   ayrıysa fatura kesilmeden önce güncellenir. Fatura taslak açılır: kalem başına KDV hariç birim fiyat, kargo oran payı başına bir satır, çok siparişli faturada satır
   sipariş numarasını taşır, ters yüklemede dökümün ibaresi ("Autoliquidation") basılır. Pennylane'in hesapladığı toplam bizimkiyle
-  aynıysa fatura kesinleşir, numarası belgeye ve siparişlere (`order.invoice_no`) yazılır, fatura müşteriye e-postayla gider.
-  Toplam farklıysa taslak bekler ve muhasebeye bir kez haber gider. Fatura günü kesildiği gündür, vade o günden hesaplanır.
+  aynıysa fatura kesinleşir, numarası belgeye ve siparişlere (`order.invoice_no`) yazılır. Toplam farklıysa taslak bekler ve
+  muhasebeye bir kez haber gider. Fatura günü kesildiği gündür, vade o günden hesaplanır; dil fatura adresinin ülkesindendir
+  (karar 22).
+- **Gönderim (karar 21):** Pennylane PDF'i kesimden sonra üretir; PDF hazır olunca bizim e-postamızla müşterinin e-postasına ekli
+  gider ve gönderim anı faturaya yazılır (`sales_invoice.sent_at`). PDF henüz yoksa fatura kuyrukta sessizce bekler ve sonraki turda
+  gönderilir; müşterinin e-postası yoksa ya da e-posta anahtarı tanımlı değilse bekler ve muhasebeye bir kez haber gider.
 - Vade günü tek kuralla: fatura günü + müşterinin vadesi, ama faturadaki ilk teslimin on günlük diliminin bitiminden 30 günü
   geçmez.
 - **Ekran (tamamlandı, tasarım 5a):** Para'nın "Belgeler" sekmesinin adı "Faturalar" oldu. Satış faturası alış belgeleriyle aynı
@@ -184,11 +191,13 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   Pennylane sırasında, Pennylane'e gitmedi ve sebebi, Pennylane ✓). "Kesilecek faturalar" süzgeci kesilmemiş satış faturalarını
   sayar ve süzer. Eksiği olan satırda "Müşteriyi aç", olmayanda "Onayla" durur; yönetici ve muhasebe onaylar, onay önce müşterinin
   faturalarını yeniden hesaplar. Onaylanmadan geceyi geçiren fatura panonun "Bugün" kümesinde sayılır. Raporlar'daki elle numara
-  kuyruğuna B2B satışı girmez, elle numara da almaz. Tasarımdan tek fark: satırda "müşteriye gönderildi" yazmaz, çünkü gönderimin
-  başarısı kaydedilmiyor.
-- **Kalan:** Pennylane ölçümü (§7); alacak notu (faturadan sonraki iade ya da eksik "Kesilecek faturalar"a taslak olarak düşer,
-  şeması Pennylane'deki açılışı ölçüldükten sonra Faz 5'in şemasıyla gelir); asistanın belge önerisi açıklaması
-  (`packages/application/src/assistant/kind-meta.ts`) hâlâ "Belgeler sekmesi" diyor, dosyanın yorum temizliğiyle düzeltilir.
+  kuyruğuna B2B satışı girmez, elle numara da almaz. Kesilen faturanın satırı e-postanın durumunu da söyler: müşteriye gönderildi,
+  gönderim bekliyor ya da gönderilemedi ve sebebi.
+- **Kalan:** e-fatura (karar 23): sandbox faturasının e-fatura denetimi `schematron_validation_status: invalid` dönüyor, sebebi
+  ölçülüp giderilir, platforma gönderim (`send_to_pa`) Pennylane'de gönderim açılınca kurulur; alacak notu (faturadan sonraki iade ya
+  da eksik "Kesilecek faturalar"a taslak olarak düşer, şeması Pennylane'deki açılışı ölçüldükten sonra Faz 5'in şemasıyla gelir);
+  asistanın belge önerisi açıklaması (`packages/application/src/assistant/kind-meta.ts`) hâlâ "Belgeler sekmesi" diyor, dosyanın
+  yorum temizliğiyle düzeltilir.
 
 **Faz 5 — tahsilat ve cari**
 - Havale kuyruğunda açık satış faturaları aday olur; ipucu fatura numarası ve müşteri adıdır.
@@ -214,12 +223,15 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 
 - Aracı hesabın türü ve iade yolu: B2B iadesi bankadan havaleyle dönmeli (`packages/domain-core/src/payment/refund-method.ts`).
 - API ile kesilen faturanın e-fatura gönderimi: API'de faturayı alıcının platformuna gönderen ayrı uç var
-  (`POST customer_invoices/{id}/send_to_pa`); tetik ve hata dönüşleri Faz 4'te sandbox'ta ölçülür.
-- Müşteri faturası (sandbox): toplamın yuvarlaması (satır başına mı, oran başına mı; bellek içi ikiz satır başına varsayar),
-  cevapların biçimi ve taslağın durum adı, dış referansla arama, kesinleştirmenin fatura gününü değiştirip değiştirmediği, AB içi
-  %20 ters yüklemenin kodu, alacak notunun açılışı.
-- Müşteri kaydı (sandbox): listede ve kayıtta `reg_no`, `vat_number` ve fatura adresinin biçimi, elle açılmış kaydın türü
-  (şirket ya da kişi), güncelleme ucunun yalnız gönderilen alanları değiştirip değiştirmediği.
+  (`POST customer_invoices/{id}/send_to_pa`); tetik ve hata dönüşleri sandbox'ta ölçülür. Sandbox faturasının e-fatura denetimi
+  `invalid` dönüyor (12.10), sebebi ölçülmedi.
+- Alacak notunun Pennylane'de açılışı.
+- Ölçüldü (sandbox, 12.10): Pennylane KDV'yi satır başına yuvarlar ve toplam bizimkiyle tuttu; kesinleşen faturanın durumu
+  `upcoming`, fatura günü kesim günü kaldı; AB içi ters yüklemede `intracom_55` kabul edildi, ibare "Autoliquidation" basıldı;
+  kargo oran payına göre iki satıra bölündü. Müşteri kaydı şirket türünde açılır; `reg_no` SIREN'i, `vat_number` KDV numarasını
+  taşır, boşsa boş dizedir. PDF kesimden sonra üretilir (`filename` o ana kadar boş); Pennylane'in e-postası PDF hazır olmadan 422
+  döner ve yalnız Fransızca ile İngilizce e-posta şablonuyla gönderir; e-postası müşteriden havale açıklamasına `PL<dış
+  referans>ZZ` biçiminde ödeme referansı ister. Faturanın PDF'i herkese açık bağlantıdan indirilir ve Factur-X'tir.
 
 ## 8. Kaynaklar
 

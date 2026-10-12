@@ -31,24 +31,18 @@ const lines = (items: SalesInvoiceItem[], sale: SaleVatBasis = B2B, regime: 'sta
   pennylaneSalesInvoiceLines([{ sale, items, shippingLabel: 'Livraison' }], regime, country);
 
 describe('Pennylane müşteri kaydı', () => {
-  // SIREN ve fatura adresi kayıtta olmazsa fatura alıcıya yönlenmez.
-  it("yasal ad, SIRET'ten SIREN ve fatura adresiyle açılır; Türkçe konuşan müşterinin dili Fransızcadır", () => {
+  // SIREN ve fatura adresi kayıtta olmazsa fatura alıcıya yönlenmez. Dil konuşulan dilden seçilseydi Pennylane'in şablonu olmayan
+  // dilde (Türkçe) fatura istenir, Almanya'daki müşteri Fransızca alırdı.
+  it("yasal ad, SIRET'ten SIREN ve fatura adresiyle açılır; dil adres Almanya'daysa Almanca, değilse Fransızcadır", () => {
     const customer = {
       id: '11111111-1111-4111-8111-111111111111',
       name: 'Ahmet Yılmaz',
       email: 'muhasebe@oberjaegerhof.fr',
       companyInfo: { legalName: 'Restaurant Oberjaegerhof', siret: '73282932000074' },
       vatNumber: null,
-      preferredLanguage: 'tr',
-    } as Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber' | 'preferredLanguage'>;
-    const draft = pennylaneCustomerDraft(customer, {
-      line1: '12 rue du Faubourg de Pierre',
-      line2: null,
-      postalCode: '67000',
-      city: 'Strasbourg',
-      country: 'FR',
-    });
-    expect(draft).toMatchObject({
+    } as Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber'>;
+    const address = { line1: '12 rue du Faubourg de Pierre', line2: null, postalCode: '67000', city: 'Strasbourg', country: 'FR' as const };
+    expect(pennylaneCustomerDraft(customer, address)).toMatchObject({
       name: 'Restaurant Oberjaegerhof',
       externalReference: 'cus:11111111-1111-4111-8111-111111111111',
       regNo: '732829320',
@@ -56,6 +50,7 @@ describe('Pennylane müşteri kaydı', () => {
       billingAddress: { address: '12 rue du Faubourg de Pierre', postalCode: '67000', city: 'Strasbourg', countryAlpha2: 'FR' },
       language: 'fr_FR',
     });
+    expect(pennylaneCustomerDraft(customer, { ...address, postalCode: '77694', city: 'Kehl', country: 'DE' }).language).toBe('de_DE');
   });
 });
 
@@ -90,8 +85,7 @@ describe("Pennylane'de aynı firma", () => {
       email: null,
       companyInfo: { legalName: 'Restaurant Oberjaegerhof', siret: '73282932000074' },
       vatNumber: null,
-      preferredLanguage: 'fr',
-    } as Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber' | 'preferredLanguage'>,
+    } as Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber'>,
     { line1: '12 rue du Faubourg de Pierre', line2: null, postalCode: '67000', city: 'Strasbourg', country: 'FR' },
   );
 

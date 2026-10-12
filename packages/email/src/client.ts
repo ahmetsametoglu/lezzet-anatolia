@@ -7,6 +7,8 @@ export interface SendEmailParams {
   to: string;
   subject: string;
   react: ReactElement;
+  /** Ek dosyalar; satış faturasının PDF'i böyle gider. */
+  attachments?: readonly { filename: string; content: Uint8Array; contentType: string }[];
 }
 
 export interface SendEmailResult {
@@ -56,10 +58,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     return { data: null, error: `e-posta anahtarı okunamadı: ${error instanceof Error ? error.message : String(error)}` };
   }
   if (!client) {
-    // **Alıcı adresi loglanmaz** (denetim A8 · `OBSERVABILITY §5`, `CLAUDE.md §1`): log'a kimlik
-    // yazılır, içerik yazılmaz — e-posta/telefon/adres HAYIR. Burada `to` yazıyordu ve bu satır
-    // yerelde her mail atlandığında bir müşteri adresini kayda düşürüyordu. Teşhis için konu yeter:
-    // hangi mailin atlandığını söyler, kime gideceğini söylemez. Kime gideceği zaten DB'de.
+    // Alıcı adresi loglanmaz (`OBSERVABILITY §5`): log'a kimlik yazılır, içerik yazılmaz. Hangi e-postanın atlandığını konu söyler.
     logger.warn({ context: 'email/send', subject: params.subject }, 'e-posta anahtarı yok → mail atlandı');
     return { data: null, error: null };
   }
@@ -69,6 +68,11 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     to: params.to,
     subject: params.subject,
     react: params.react,
+    attachments: params.attachments?.map((file) => ({
+      filename: file.filename,
+      content: Buffer.from(file.content),
+      contentType: file.contentType,
+    })),
   });
 
   if (result.error) return { data: null, error: result.error.message };

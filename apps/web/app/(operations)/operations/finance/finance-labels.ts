@@ -155,6 +155,9 @@ export const PENNYLANE_STATUS_LABEL = {
 /** Satış faturasının belge türü yerine yazılan adı; alış faturasıyla aynı listede ayrışsın diye. */
 export const SALES_INVOICE_KIND_LABEL = 'Satış faturası';
 
+/** Kesilmiş satış faturasının e-postası: PDF hazır olunca gider, gidemezse sebebi yazılır. */
+export const SALES_INVOICE_SEND_LABEL = { sent: 'müşteriye gönderildi', pending: 'gönderim bekliyor', failed: 'gönderilemedi' } as const;
+
 /** Kesmeyi bekleten eksik, satırın durumunda; Alman şirket SIREN yerine geçerli KDV numarasıyla tanınır. */
 export const SALES_INVOICE_GAP_LABEL: Record<SalesInvoiceGap, string> = {
   siren: 'SIREN ya da KDV numarası',

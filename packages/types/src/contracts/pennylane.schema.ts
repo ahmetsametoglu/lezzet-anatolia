@@ -87,6 +87,9 @@ export const PennylaneApiCustomerInvoiceSchema = z.object({
 export type PennylaneApiCustomerInvoice = z.infer<typeof PennylaneApiCustomerInvoiceSchema>;
 export const PennylaneApiCustomerInvoicePageSchema = pageOf(PennylaneApiCustomerInvoiceSchema);
 
+/** Kesilmiş faturanın PDF'i: dosya adı Pennylane PDF'i ürettiğinde dolar, bağlantı herkese açıktır. */
+export const PennylaneApiCustomerInvoiceFileSchema = z.object({ filename: z.string().nullable(), public_file_url: z.string().nullable() });
+
 /** Liste eşleme sırasını vermiyor: faturalar kimliğe göre azalan sırayla gelir. */
 export const PennylaneApiTransactionMatchPageSchema = pageOf(z.object({ id: z.number().int(), type: z.enum(['supplier', 'customer']) }));
 
