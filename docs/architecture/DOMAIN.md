@@ -23,7 +23,7 @@ Bu dosya sistemin **kalbidir**. İş mantığına dokunan her görevde okunur. "
 | **Fiili stok** | Depoda fiziksel olarak var olan miktar. |
 | **Ayrılmış stok** | Verilmiş ama henüz teslim edilmemiş siparişlere tahsis edilmiş miktar. |
 | **Kullanılabilir stok** | Fiili stok − ayrılmış stok. Yeni siparişin görebileceği miktar. |
-| **Hızlı satış** | Müşterinin depo kapısında ya da kuryenin aracında anında verdiği, tek adımda tamamlanan sipariş; ödeme anında alınır, vadeli satışta tutar müşterinin açık bakiyesine eklenir. |
+| **Hızlı satış** | Müşterinin depo kapısında ya da kuryenin aracında anında verdiği, tek adımda tamamlanan sipariş; ödeme anında alınır: nakit ve kartta kesin tutar yazımdan önce gösterilir ve satış, personel parayı aldığını onaylayınca o tutarla yazılır, çünkü kasa fişi yazıldığı anda kapanır. Vadeli satışta tutar müşterinin açık bakiyesine eklenir. |
 
 ---
 

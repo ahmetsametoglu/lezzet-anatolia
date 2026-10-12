@@ -64,20 +64,21 @@
     "remove": "{name} kalemini çıkar",
     "removeMark": "✕",
     "total": "ara toplam {total} · {basis}",
-    "totalNote": "kesin toplam (indirim · KDV) satış yazılınca sunucudan gelir"
+    "totalNote": "kesin toplam (indirim · KDV) tamamlarken sunucudan gelir"
   },
   "payment": {
     "heading": "TAHSİLAT",
     "cash": "Nakit",
     "card": "Kart",
     "credit": "Vadeli",
-    "cardNote": "Kesin tutar satış yazılınca fişte çıkar; kartı o tutarla Revolut Business uygulamasında Tap to Pay ile çekin."
+    "cardNote": "Tamamla'ya basınca kesin tutar çıkar; kartı o tutarla Revolut Business uygulamasında Tap to Pay ile çekip onaylayın."
   },
   "cta": {
     "idle": "Sepet boş",
     "pickPayment": "Tahsilat türünü seçin",
     "ready": "Satışı tamamla · {total}",
-    "sending": "Yazılıyor…"
+    "sending": "Yazılıyor…",
+    "quoting": "Kesin tutar alınıyor…"
   },
   "result": {
     "paymentMissing": "Satış yazıldı ama tahsilat DEFTERE GEÇMEDİ — parayı elden takip edin, yöneticiye söyleyin.",
@@ -87,6 +88,7 @@
     "blockedIntro": "Satışa kapalı kalem — satış yazılmadı: {lines}",
     "failed": "Satış kapanmadı — bir daha deneyin; sürerse yöneticiye haber verin.",
     "network": "Bağlantı koptu. Hat gelince aynı sepetle yeniden tamamlayın; satış iki kez yazılmaz.",
+    "quoteNetwork": "Bağlantı koptu, kesin tutar okunamadı — satış yazılmadı. Hat gelince yeniden tamamlayın.",
     "creditNotAllowed": {
       "not_enabled": "Bu müşteriye vade açık değil — satış yazılmadı.",
       "overdue": "Müşterinin vadesi geçmiş borcu var — vadeli satış yazılmadı.",
@@ -104,8 +106,16 @@
     "note": "Stok hareketi işlendi. Fiş yazdırma bu sürümde bağlı değil.",
     "again": "Yeni satış",
     "leave": "Depoya dön",
-    "creditNote": "Vadeli satış: tutar müşterinin açık bakiyesine eklendi, kapıda para alınmadı.",
-    "cardNote": "Bu tutarı şimdi Revolut Business uygulamasında Tap to Pay ile çekin."
+    "creditNote": "Vadeli satış: tutar müşterinin açık bakiyesine eklendi, kapıda para alınmadı."
+  },
+  "confirm": {
+    "cardTitle": "Kartla {total} çekin",
+    "cardBody": "Tutarı Revolut Business uygulamasında Tap to Pay ile çekin. Satış yazılınca geri alınamaz: kart ödemesinin başarıyla tamamlandığından emin olun.",
+    "cardConfirm": "Kart ödemesi alındı",
+    "cashTitle": "{total} nakit alın",
+    "cashBody": "Satış yazılınca geri alınamaz: parayı aldığınızdan emin olun.",
+    "cashConfirm": "Nakit alındı",
+    "cancel": "Vazgeç"
   },
   "addClosed": "Sepete ekleme kapalı",
   "offline": {

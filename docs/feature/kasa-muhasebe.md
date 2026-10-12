@@ -702,16 +702,17 @@ Pennylane bağlantısında yalnız banka akışı açık kalır (8. karar); uygu
   birer kez bildirilir.
 - Elle eşleme: Para › Eylemler › Kapıda kart eşleştirme, son 14 gün. Aday tutarı birebir tutan tahsilattır, saat aranmaz; zil
   pencereyi açık getirir.
-- Mobil: kurye tahsilatı, gel-al tezgâhı ve yerinde satışta "kart" seçilince çekilecek tutar ve Tap to Pay yönlendirmesi. Yerinde
-  satışta kesin tutar satış yazılınca fişte çıktığı için kart satıştan sonra çekilir.
+- Mobil: kurye tahsilatı ve gel-al tezgâhında "kart" seçilince çekilecek tutar ve Tap to Pay yönlendirmesi. Yerinde satışta
+  "tamamla" kesin tutarı yazmadan okur; onay çekmecesi tutarı ve geri alınamazlığı söyler, satış ve kasa fişi personel parayı
+  aldığını onaylayınca yazılır (nakitte de).
 
 **Açık:**
 - Ödemeyi alan kişinin alanı eşleştirmeye eklenir (ilk canlı ödemede ölçülürse); pencere ve bekleme ilk haftanın verisiyle
   gözden geçirilir.
 - Sefer kapanışında kart toplamı Revolut'taki eşleşmiş ödemelerden gelir, kurye elle yazmaz (ölçüm olumluysa).
 - Kapı kartı iadesi sağlayıcıdan yapılır (API iadesi ölçüm olumluysa).
-- Yanlış yöntemle yazılan tahsilatın düzeltme yolu yok: yerinde satış karttan önce yazıldığı için kart reddedilse de "kart" kalır;
-  kartla çekilip nakit yazılan ya da hiç yazılmayan tahsilat yalnız bildirilir. Yol kararlaştırılacak.
+- Kartla çekilip nakit yazılan ya da hiç yazılmayan tahsilatın düzeltme ekranı yok, yalnız bildirilir; kasa eşitlemesi yöntem
+  değişikliğini kapanmış satışa fark satırı olarak yazar. İlk haftanın verisiyle karar verilecek.
 
 **Değişmeyen:** kasa yazımı (satış Hiboutik'e bugünkü gibi "kart" yöntemiyle), kapıda kart hesabı, çevrim içi ödeme.
 

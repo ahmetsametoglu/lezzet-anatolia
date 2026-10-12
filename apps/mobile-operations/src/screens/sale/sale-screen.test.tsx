@@ -140,10 +140,11 @@ const BOYLAR = [
   saleVariant({ id: COK_VARYANT_2, netQuantity: 1000, netUnit: 'g', label: '1 kg', priceCents: 1700, availableHere: 2 }),
 ];
 
-/** Ağın senaryosu: katalog + boylar + satış cevabı. Satış cevabı testin kendisi belirler. */
-function withNetwork(saleResult: unknown) {
+/** Ağın senaryosu: katalog + boylar + kesin tutar + satış cevabı. Satışın ve kesin tutarın cevabını testin kendisi belirler. */
+function withNetwork(saleResult: unknown, quoteResult: unknown = { status: 'ok', totalCents: 450 }) {
   fetchMock.mockImplementation((url, init) => {
     const path = String(url);
+    if (init?.method === 'POST' && path.includes('/on-site/quote')) return Promise.resolve(ok(quoteResult));
     if (init?.method === 'POST') return Promise.resolve(ok(saleResult));
     if (path.includes('/variants')) return Promise.resolve(ok({ productId: COK_ID, name: 'Baklava', variants: BOYLAR }));
     if (path.includes('/recent')) return Promise.resolve(ok({ sales: SATISLAR }));
@@ -160,13 +161,26 @@ function withScan(scanResult: unknown, saleResult: unknown = { status: 'ok' }) {
   );
 }
 
+/** Satışı yazan istekler; kesin tutarın okunması yazım değildir ve sayılmaz. */
+function salePosts() {
+  return fetchMock.mock.calls.filter((entry) => entry[1]?.method === 'POST' && !String(entry[0]).includes('/on-site/quote'));
+}
+
 function postBody(): {
   lines: { variantId: string; qty: number; negotiatedUnitPriceCents?: number }[];
   paymentMethod: string;
+  collectedAmountCents?: number;
   idempotencyKey?: string;
 } {
-  const call = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
+  const call = salePosts().at(-1);
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
+}
+
+/** Nakit ve kartta "tamamla" önce kesin tutarı okur; çekmece açılınca personel parayı aldığını onaylar. */
+async function completeSale() {
+  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await waitFor(() => expect(screen.getByTestId('sale-confirm-sheet-confirm')).toBeTruthy());
+  await fireEvent.press(screen.getByTestId('sale-confirm-sheet-confirm'));
 }
 
 /** Satış ekranı pazarlık yetkisini oturumdan okur (yönetici = Yönetim bölümü); varsayılan oturum yönetici olmayan depocudur. */
@@ -288,7 +302,7 @@ it('dokunulmamış fiyat İSTEKTE YOK; satış yazılınca sepet sıfırlanır v
   await addSimit();
   await pickCash();
 
-  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await completeSale();
   await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
 
   const body = postBody();
@@ -315,8 +329,9 @@ it('vadeli satış müşterinin adına, havale yöntemi ve vadeli bayrağıyla g
   await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
 
   expect(postBody()).toMatchObject({ paymentMethod: 'bank_transfer', onAccount: true });
-  const sent = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
-  expect(String(sent?.[0])).toContain(`customerId=${MUSTERI.id}`);
+  // Vadelide kapıda para alınmaz: kesin tutar sorulmadan satış doğrudan gider.
+  expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/on-site/quote'))).toBe(false);
+  expect(String(salePosts().at(-1)?.[0])).toContain(`customerId=${MUSTERI.id}`);
   expect(screen.getByTestId('sale-receipt-credit')).toBeTruthy();
   expect(screen.queryByTestId('sale-receipt-payment-missing')).toBeNull();
 });
@@ -332,8 +347,8 @@ it('pazarlık fiyatı yalnız DEĞİŞTİRİLEN kalemde gider (yönetici)', asyn
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
   await pickCash();
 
-  await fireEvent.press(screen.getByTestId('sale-cta'));
-  await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(true));
+  await completeSale();
+  await waitFor(() => expect(salePosts()).toHaveLength(1));
 
   expect(postBody().lines).toEqual([{ variantId: TEK_VARYANT, qty: 1, negotiatedUnitPriceCents: 400 }]);
 });
@@ -349,14 +364,16 @@ it('yönetici olmayan personel fiyatı değiştiremez — satış liste fiyatıy
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
   await pickCash();
 
-  await fireEvent.press(screen.getByTestId('sale-cta'));
-  await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(true));
+  await completeSale();
+  await waitFor(() => expect(salePosts()).toHaveLength(1));
 
   expect(postBody().lines).toEqual([{ variantId: TEK_VARYANT, qty: 1 }]);
 });
 
 it('yetersiz stok cevabı adı ve kalanıyla görünür — sepet BOZULMAZ', async () => {
-  withNetwork({ status: 'insufficient_here', lines: [{ name: 'Simit', available: 3 }] });
+  // Ret kesin tutarda gelir: para alınmadan, satış hiç gönderilmeden.
+  const yetersiz = { status: 'insufficient_here', lines: [{ name: 'Simit', available: 3 }] };
+  withNetwork(yetersiz, yetersiz);
   await renderSale();
   await addSimit();
   await pickCash();
@@ -381,8 +398,8 @@ it('çok boylu ürün boyunu çekmecede seçer — istek SEÇİLEN boyun kimliğ
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${COK_VARYANT_2}`)).toBeTruthy());
   await pickCash();
 
-  await fireEvent.press(screen.getByTestId('sale-cta'));
-  await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(true));
+  await completeSale();
+  await waitFor(() => expect(salePosts()).toHaveLength(1));
 
   expect(postBody().lines).toEqual([{ variantId: COK_VARYANT_2, qty: 1 }]);
 });
@@ -402,12 +419,38 @@ it('tahsilat türü SEÇİLMEDEN satış yazılamaz — para yazan alanda varsay
 
   // Seçim gelince aynı düğme satışı yazar — ve başarıda seçim SIFIRLANIR (miras yok).
   await pickCash();
-  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await completeSale();
   await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
   expect(postBody().paymentMethod).toBe('cash');
   // Referanssız satışta fiş SUSMAZ, "referanssız" der — boş bir alan bırakmak soru doğururdu.
   expect(screen.getByTestId('sale-receipt-meta')).toHaveTextContent(/Nakit · referanssız/);
   expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // satış kapandı, sepet boşaldı
+});
+
+it('kartla satış para alınmadan YAZILMAZ: kesin tutar onay çekmecesinde, vazgeçilirse satış gitmez, onaylanınca o tutarla yazılır', async () => {
+  // Sepetin tahmini 4,50; kesin tutar sunucudan farklı gelir ve çekmece onu söyler.
+  withNetwork(
+    { status: 'ok', orderId: TEK_ID, totalCents: 512, referenceNo: 'SP-26-0020', paymentRecorded: true },
+    { status: 'ok', totalCents: 512 },
+  );
+  await renderSale();
+  await addSimit();
+  await fireEvent.press(screen.getByTestId('sale-payment-card'));
+
+  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await waitFor(() => expect(screen.getByTestId('sale-confirm-sheet-confirm')).toBeTruthy());
+  expect(screen.getByText(/Kartla 5,12/)).toBeTruthy();
+  expect(salePosts()).toHaveLength(0);
+
+  await fireEvent.press(screen.getByTestId('sale-confirm-sheet-cancel'));
+  await waitFor(() => expect(screen.queryByTestId('sale-confirm-sheet-confirm')).toBeNull());
+  expect(salePosts()).toHaveLength(0);
+  expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy();
+
+  await completeSale();
+  await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
+  expect(salePosts()).toHaveLength(1);
+  expect(postBody()).toMatchObject({ paymentMethod: 'card', collectedAmountCents: 512 });
 });
 
 it('karta dokunmak KART LİSTESİNİ yeniden çizdirmez — çekmece animasyonu listeyle yarışmaz', async () => {
@@ -710,9 +753,11 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     expect(screen.getByTestId('sale-drawer-confirm')).toBeDisabled();
   });
 
-  /** Satış isteği ağa çıkar ama cevap telefona ulaşmaz; öteki istekler geçer. */
+  /** Satış isteği ağa çıkar ama cevap telefona ulaşmaz; kesin tutar dahil öteki istekler geçer. */
   function losePostAnswer(hat: NonNullable<ReturnType<typeof fetchMock.getMockImplementation>>) {
-    fetchMock.mockImplementation((url, init) => (init?.method === 'POST' ? Promise.reject(new Error('network down')) : hat(url, init)));
+    fetchMock.mockImplementation((url, init) =>
+      init?.method === 'POST' && !String(url).includes('/on-site/quote') ? Promise.reject(new Error('network down')) : hat(url, init),
+    );
   }
 
   it('cevabı kaybolan satış aynı sepetle yeniden tamamlanınca AYNI kimliği taşır; sonraki satış yeni kimlikle gider', async () => {
@@ -723,22 +768,23 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     await pickCash();
 
     losePostAnswer(hat);
-    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await completeSale();
     await waitFor(() => expect(screen.getByTestId('sale-offline-hint')).toBeTruthy());
     const ilk = postBody().idempotencyKey;
 
     fetchMock.mockImplementation(hat);
     await act(async () => resetWarehouseStatus());
+    // Para önceki onayda alındı: yeniden gönderim kesin tutarı yeniden sormaz, aynı tutarla gider.
     await fireEvent.press(screen.getByTestId('sale-cta'));
     await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
     expect(ilk).toEqual(expect.any(String));
-    expect(postBody().idempotencyKey).toBe(ilk);
+    expect(postBody()).toMatchObject({ idempotencyKey: ilk, collectedAmountCents: 450 });
 
     // Yazılmış satışın kimliğini taşıyan yeni satış, sunucudan eski satışın cevabını alır ve kendisi yazılmazdı.
     await addSimit();
     await pickCash();
-    await fireEvent.press(screen.getByTestId('sale-cta'));
-    await waitFor(() => expect(fetchMock.mock.calls.filter((entry) => entry[1]?.method === 'POST')).toHaveLength(3));
+    await completeSale();
+    await waitFor(() => expect(salePosts()).toHaveLength(3));
     expect(postBody().idempotencyKey).not.toBe(ilk);
   });
 
@@ -750,11 +796,15 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     await pickCash();
 
     losePostAnswer(hat);
-    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await completeSale();
     await waitFor(() => expect(screen.getByTestId('sale-unresolved-hint')).toBeTruthy());
     const ilk = postBody().idempotencyKey;
-    // Uygulama kapanırsa geri yüklenecek kayıt cihazda, gönderilen kimlikle durur.
-    expect(JSON.parse(mockStore.get(DEVICE_STORE_KEYS.pendingSale) ?? '{}')).toMatchObject({ key: ilk, payment: 'cash' });
+    // Uygulama kapanırsa geri yüklenecek kayıt cihazda, gönderilen kimlik ve onaylanan tutarla durur.
+    expect(JSON.parse(mockStore.get(DEVICE_STORE_KEYS.pendingSale) ?? '{}')).toMatchObject({
+      key: ilk,
+      payment: 'cash',
+      collectedAmountCents: 450,
+    });
 
     fetchMock.mockImplementation(hat);
     await act(async () => resetWarehouseStatus());
@@ -772,7 +822,7 @@ describe('çevrimdışı kilidi (v3:20)', () => {
 
     await addSimit();
     await pickCash();
-    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await completeSale();
     await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
     expect(postBody().idempotencyKey).not.toBe(ilk);
   });
@@ -815,7 +865,7 @@ describe('fiş (v3:22)', () => {
     await addSimit();
     await pickCash();
 
-    await fireEvent.press(screen.getByTestId('sale-cta'));
+    await completeSale();
 
     await waitFor(() => expect(screen.getByTestId('sale-receipt-payment-missing')).toBeTruthy());
     expect(screen.getByTestId('sale-receipt-payment-missing')).toHaveTextContent(/DEFTERE GEÇMEDİ/);

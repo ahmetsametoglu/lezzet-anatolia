@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CatalogImage, SaleCatalogProduct, SalePlace, SaleVariant, StaffCustomerOption } from '@lezzet/types';
 
-import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite, type SaleScope } from '@/lib/api/sale';
+import { fetchSaleCatalog, fetchSaleVariants, quoteOnSiteSale, scanSaleCode, sellOnSite, type SaleScope } from '@/lib/api/sale';
 import { newRequestKey } from '@/lib/request-key';
 /* Çevrimdışı sinyali deponunkiyle aynıdır: yerinde satış da depo kapsamlı bir yazmadır, iki ayrı sinyal bir gün ayrışır ve iki ekran
    aynı hat için farklı şey söylerdi. */
@@ -137,6 +137,12 @@ export function useSale(place: SalePlace) {
     kimlikle gelen farklı sepete ilk satışı döndürür; kilit olmasa değişen sepet ya sessizce yazılmaz ya da yeni kimlikle ikinci satış olurdu.
   */
   const [pending, setPending] = useState<PendingSale | null>(null);
+  /*
+    Nakit ve kartta satış para alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır ve değişmez. "Tamamla" önce kesin tutarı
+    okur, onay çekmecesi onu söyler; satış personel parayı aldığını onaylayınca o tutarla gider.
+  */
+  const [confirming, setConfirming] = useState<{ totalCents: number } | null>(null);
+  const [quoting, setQuoting] = useState(false);
   const { email } = useOperationsIdentity();
   /* Sonuç toast'ta: başarılı satışın kendi ekranı (fiş) olduğu için bu kanaldan yalnız olumsuz cevaplar geçer (yetersiz stok, kapanmayan
      satış, hat). */
@@ -383,6 +389,7 @@ export function useSale(place: SalePlace) {
     0,
   );
 
+  /** Satışı yazar; yeni satışta onaylanan tutar kayda girer, sonucu bilinmeyen satış kayıttaki tutarla aynen yeniden gider. */
   const submit = useCallback(() => {
     if (sending) return;
     const sale: PendingSale | null =
@@ -397,6 +404,7 @@ export function useSale(place: SalePlace) {
             createdAt: new Date().toISOString(),
             payment,
             customer,
+            collectedAmountCents: confirming?.totalCents ?? null,
             // CDN türevleri saklanmaz: kayıt küçük kalsın, görsel tek adresten çizilir.
             lines: lines.map((line) => ({ ...line, image: { ...line.image, frames: null } })),
           });
@@ -411,18 +419,16 @@ export function useSale(place: SalePlace) {
       const result = await trackWarehouse(
         sellOnSite(
           {
-            lines: sale.lines.map((line) => ({
-              variantId: line.variantId,
-              qty: line.qty,
-              ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
-            })),
+            lines: wireLinesOf(sale.lines),
             ...(sale.payment === 'credit' ? { paymentMethod: 'bank_transfer', onAccount: true } : { paymentMethod: sale.payment }),
+            ...(sale.collectedAmountCents == null ? {} : { collectedAmountCents: sale.collectedAmountCents }),
             idempotencyKey: sale.key,
           },
           { place, customerId: sale.customer?.id ?? null },
         ),
       );
       setSending(false);
+      setConfirming(null);
 
       // Cevap yoksa sonuç bilinmiyor: kayıt ve kilit kalır, aynı kimlikle yeniden denenir ya da vazgeçilir.
       if (result.error !== null) {
@@ -452,7 +458,38 @@ export function useSale(place: SalePlace) {
       // Reddin üçünde de sepet KORUNUR: personel adedi düşürüp ya da kalemi çıkarıp yeniden dener.
       setNotice(noticeOfRefusal(outcome));
     })();
-  }, [customer, email, lines, payment, pending, place, reload, sending, setNotice]);
+  }, [confirming, customer, email, lines, payment, pending, place, reload, sending, setNotice]);
+
+  /** "Tamamla": vadeli satış ve sonucu bilinmeyen satışın yeniden gönderimi doğrudan gider; nakit ve kartta önce kesin tutar okunur. */
+  const requestSale = useCallback(() => {
+    if (sending || quoting) return;
+    if (pending !== null || payment === 'credit') {
+      submit();
+      return;
+    }
+    if (lines.length === 0 || payment === null) return;
+    setQuoting(true);
+    setNotice(null);
+    void (async () => {
+      const result = await trackWarehouse(quoteOnSiteSale({ lines: wireLinesOf(lines), paymentMethod: payment }, scope));
+      setQuoting(false);
+      if (result.error !== null) {
+        setNotice({ tone: 'error', text: result.error === 'network_error' ? t.result.quoteNetwork : t.result.failed });
+        return;
+      }
+      if (result.data.status === 'ok') setConfirming({ totalCents: result.data.totalCents });
+      else setNotice(noticeOfRefusal(result.data));
+    })();
+  }, [lines, payment, pending, quoting, scope, sending, setNotice, submit]);
+
+  const confirmSale = useCallback(() => {
+    if (confirming !== null) submit();
+  }, [confirming, submit]);
+
+  /** Yazım sürerken çekmece kapanmaz: cevap gelene kadar sonucu orada okunur. */
+  const cancelConfirm = useCallback(() => {
+    if (!sending) setConfirming(null);
+  }, [sending]);
 
   /** Vazgeç: bekleyen kayıt ve sepet silinir; satış sunucuya ulaştıysa kayıt orada kalır, onay çekmecesi bunu söyler. */
   const discardPending = useCallback(() => {
@@ -493,7 +530,11 @@ export function useSale(place: SalePlace) {
     payment,
     setPayment: choosePayment,
     sending,
-    submit,
+    quoting,
+    requestSale,
+    confirming,
+    confirmSale,
+    cancelConfirm,
     unresolved: pending !== null,
     discardPending,
     receipt,
@@ -502,6 +543,15 @@ export function useSale(place: SalePlace) {
 }
 
 type SaleOutcome = Extract<Awaited<ReturnType<typeof sellOnSite>>, { error: null }>['data'];
+
+/** Sepet → tel kalemi: pazarlıklı fiyat yalnız üstüne yazılan kalemde gider, öteki kalemin fiyatını sunucu çözer. */
+function wireLinesOf(lines: readonly Pick<SaleCartLine, 'variantId' | 'qty' | 'negotiatedCents'>[]) {
+  return lines.map((line) => ({
+    variantId: line.variantId,
+    qty: line.qty,
+    ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
+  }));
+}
 
 /** Tesis satışının deposu cihazın seçimidir; araçta depoyu sunucu seferden çözer. */
 function saleWarehouseOf(place: SalePlace): string | null {

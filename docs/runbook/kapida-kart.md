@@ -27,7 +27,8 @@
 - **Kurye ve gel-al tezgâhı:** bizim uygulamada "kart"ı seç; ekran çekilecek tutarı yazar. Revolut Business'ta aynı tutarı yaz,
   müşteri kartını ya da telefonunu dokundursun. Ödeme onaylanınca bizim uygulamada teslimi kapat. Kart geçmezse "kart"ı bırak,
   başka yöntem seç.
-- **Yerinde satış:** sepette "kart"ı seç ve satışı tamamla; kesin tutar fişte çıkar. Fişteki tutarı Revolut Business'ta çek.
+- **Yerinde satış:** sepette "kart"ı seç ve "Satışı tamamla"ya bas; açılan pencere kesin tutarı söyler. Tutarı Revolut Business'ta
+  çek, ödeme onaylanınca "Kart ödemesi alındı"ya bas; satış ancak o zaman yazılır. Kart geçmezse "Vazgeç", başka yöntem seç.
 - Tutarı Revolut'ta farklı yazma: eşleştirme tutarı birebir arar, farklı tutarlı ödeme hiçbir tahsilata bağlanmaz.
 
 ## Eşleşmeyen ödeme

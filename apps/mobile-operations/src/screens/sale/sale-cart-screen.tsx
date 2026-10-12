@@ -49,12 +49,14 @@ export function SaleCartScreen() {
   const cta = offline
     ? { label: t.offline.sellCta, enabled: false }
     : sale.sending
-    ? { label: t.cta.sending, enabled: false }
-    : sale.lines.length === 0
-      ? { label: t.cta.idle, enabled: false }
-      : sale.payment === null
-        ? { label: t.cta.pickPayment, enabled: false }
-        : { label: fillCopy(t.cta.ready, { total: money(sale.indicativeTotalCents) }), enabled: true };
+      ? { label: t.cta.sending, enabled: false }
+      : sale.quoting
+        ? { label: t.cta.quoting, enabled: false }
+        : sale.lines.length === 0
+          ? { label: t.cta.idle, enabled: false }
+          : sale.payment === null
+            ? { label: t.cta.pickPayment, enabled: false }
+            : { label: fillCopy(t.cta.ready, { total: money(sale.indicativeTotalCents) }), enabled: true };
 
   return (
     <View style={styles.screen} testID="sale-cart-screen">
@@ -145,7 +147,7 @@ export function SaleCartScreen() {
                   ) : null}
                 </View>
               )}
-              {/* Kart satış yazıldıktan sonra çekilir, çünkü kesin tutar sunucudan gelir; fiş o tutarı söyler. */}
+              {/* Kart Revolut'un uygulamasında çekilir; kesin tutarı "tamamla"nın açtığı onay çekmecesi söyler. */}
               {sale.payment === 'card' ? (
                 <Text style={styles.hint} testID="sale-card-note">
                   {t.payment.cardNote}
@@ -182,7 +184,7 @@ export function SaleCartScreen() {
         ) : null}
         {/* Olumsuz cevap toast'tadır; buradaki satırlar sonuç değil, düğmenin hâlinin sebebidir ve yerinde kalır. */}
         <PressableSurface
-          onPress={sale.submit}
+          onPress={sale.requestSale}
           disabled={!cta.enabled}
           feedback="shadow"
           style={[styles.cta, cta.enabled ? styles.ctaReady : styles.ctaIdle]}
@@ -203,6 +205,23 @@ export function SaleCartScreen() {
           </View>
         ) : null}
       </LinearGradient>
+
+      {/* Nakit ve kart para alındıktan sonra yazılır, çünkü kasa fişi yazıldığı anda kapanır; çekmece kesin tutarı ve bedeli söyler. */}
+      <OperationsConfirmSheet
+        visible={sale.confirming !== null}
+        title={fillCopy(sale.payment === 'card' ? t.confirm.cardTitle : t.confirm.cashTitle, {
+          total: money(sale.confirming?.totalCents ?? 0),
+        })}
+        message={sale.payment === 'card' ? t.confirm.cardBody : t.confirm.cashBody}
+        confirmLabel={sale.payment === 'card' ? t.confirm.cardConfirm : t.confirm.cashConfirm}
+        cancelLabel={t.confirm.cancel}
+        tone="olive"
+        busy={sale.sending}
+        busyLabel={t.cta.sending}
+        onConfirm={sale.confirmSale}
+        onCancel={sale.cancelConfirm}
+        testID="sale-confirm-sheet"
+      />
 
       <OperationsConfirmSheet
         visible={confirmDiscard}

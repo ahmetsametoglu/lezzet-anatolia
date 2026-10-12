@@ -31,6 +31,8 @@ const PendingSaleSchema = z.object({
   payment: z.enum(['cash', 'card', 'credit']),
   /** Satışın alıcısı; yeniden gönderim aynı müşteriye gider. Müşterisiz kayıt anonim satıştır. */
   customer: StaffCustomerOptionSchema.nullish(),
+  /** Personelin aldığını onayladığı tutar (**cent**); yeniden gönderim de onu yazar. Vadelide ve eski kayıtta yoktur. */
+  collectedAmountCents: z.number().int().nonnegative().nullish(),
   lines: z.array(PendingSaleLineSchema).min(1),
 });
 export type PendingSale = z.infer<typeof PendingSaleSchema>;

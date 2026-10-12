@@ -1,7 +1,9 @@
 import type { z } from 'zod';
 import {
+  type OnSiteSaleQuoteRequest,
   type OnSiteSaleRequest,
   type SalePlace,
+  OnSiteSaleQuoteResponseSchema,
   OnSiteSaleResponseSchema,
   RecentSalesResponseSchema,
   SaleCatalogPageSchema,
@@ -61,6 +63,14 @@ export function fetchSaleVariants(slug: string, scope: SaleScope): Promise<ApiRe
 /** Kodu karta ve boya çözer; araçta "burada duran mal" kuralı okutmada da geçerlidir (`not_here`). */
 export function scanSaleCode(code: string, scope: SaleScope): Promise<ApiResult<z.infer<typeof SaleScanResponseSchema>>> {
   return saleFetch(`/api/v1/sale/scan${queryString({ locale: 'tr', code })}`, scope, SaleScanResponseSchema);
+}
+
+/** Satışın kesin tutarı, yazım yok: nakit ve kart bu tutarla alınır, satış ondan sonra yazılır. */
+export function quoteOnSiteSale(
+  body: OnSiteSaleQuoteRequest,
+  scope: SaleScope,
+): Promise<ApiResult<z.infer<typeof OnSiteSaleQuoteResponseSchema>>> {
+  return saleFetch('/api/v1/sale/on-site/quote', scope, OnSiteSaleQuoteResponseSchema, { method: 'POST', body });
 }
 
 /** Satış tek çağrıda kapanır; pazarlıklı fiyat yalnız üstüne yazılan kalemde gider, öteki kalemin fiyatını sunucu çözer. */
