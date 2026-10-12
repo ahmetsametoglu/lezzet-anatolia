@@ -94,16 +94,21 @@ export function pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number; b
 
 type InvoiceMatchOutcome =
   | { status: 'ok'; orderId: string; invoiceNo: string }
-  | { status: 'invalid'; reason: 'empty_invoice_no' };
+  | { status: 'invalid'; reason: 'empty_invoice_no' | 'not_found' | 'auto_invoiced' };
 
 /**
  * Resmî fatura numarasını siparişe bağlar; numara burada üretilmez, dış muhasebede doğar (`reference_no ≠ invoice_no`). Boş numara
- * reddedilir, yazılsaydı satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı.
+ * reddedilir, çünkü satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı; B2B siparişi reddedilir, çünkü faturası Pennylane'de
+ * kendiliğinden kesilir ve numarası oradan yazılır.
  */
 export async function matchInvoiceNo(orderId: string, invoiceNo: string): Promise<InvoiceMatchOutcome> {
   const trimmed = invoiceNo.trim();
   if (!trimmed) return { status: 'invalid', reason: 'empty_invoice_no' };
 
-  await new OrderService(serviceDb()).update({ id: orderId, invoiceNo: trimmed });
+  const orders = new OrderService(serviceDb());
+  const order = await orders.getById(orderId);
+  if (!order) return { status: 'invalid', reason: 'not_found' };
+  if (order.channel === 'b2b') return { status: 'invalid', reason: 'auto_invoiced' };
+  await orders.update({ id: orderId, invoiceNo: trimmed });
   return { status: 'ok', orderId, invoiceNo: trimmed };
 }

@@ -34,6 +34,23 @@ import { allocateToDocument } from './document';
 
 export const SALES_INVOICE_OPEN_JOB = 'sales-invoice-open';
 
+/** Onayın sonucu; eksiği kalan fatura onaylanmaz ve eksikleri söylenir. */
+export type SalesInvoiceApproval = { status: 'approved' } | { status: 'missing'; missing: SalesInvoiceGap[] } | { status: 'not_awaiting' };
+
+/**
+ * Onay bekleyen faturayı kuyruğa koyar. Müşterinin bekleyen faturaları önce müşteri kaydından yeniden hesaplanır, çünkü eksik az
+ * önce tamamlanmış olabilir ve işin turunu beklemek gerekmez.
+ */
+export async function approveSalesInvoice(db: Db, input: { documentId: string; actorId: string }): Promise<SalesInvoiceApproval> {
+  const document = await new MoneyDocumentService(db).getById(input.documentId);
+  if (!document?.customerId) return { status: 'not_awaiting' };
+  await refreshAwaitingInvoices(db, [document.customerId]);
+  const invoices = new SalesInvoiceService(db);
+  if (await invoices.approve(input.documentId, input.actorId)) return { status: 'approved' };
+  const invoice = await invoices.findByDocument(input.documentId);
+  return invoice?.status === 'awaiting_approval' ? { status: 'missing', missing: invoice.missing } : { status: 'not_awaiting' };
+}
+
 /** Faturanın hesabı için okunanlar: satışlar, kalemleri, müşteriler, fatura adresi olanlar ve genel vade. */
 interface InvoiceReads {
   sales: Map<string, OrderSale>;

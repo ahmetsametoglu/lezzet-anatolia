@@ -60,10 +60,16 @@ export async function matchInvoiceAction(orderId: string, invoiceNo: string): Pr
     const trimmed = invoiceNo.trim();
     if (!trimmed) return { data: null, error: 'Fatura numarası boş bırakılamaz.' };
 
-    // Kapının tek reddi `empty_invoice_no` ve o zaten yukarıda karşılandı; yine de dal açık
-    // duruyor: bir gün kapıya ikinci bir ret eklenirse burası sessizce "başarılı" demesin.
     const outcome = await matchInvoiceNo(orderId, trimmed);
-    if (outcome.status !== 'ok') return { data: null, error: 'Fatura numarası kaydedilemedi.' };
+    if (outcome.status !== 'ok') {
+      return {
+        data: null,
+        error:
+          outcome.reason === 'auto_invoiced'
+            ? "B2B satışının faturası Pennylane'de kendiliğinden kesilir; numarası oradan yazılır."
+            : 'Fatura numarası kaydedilemedi.',
+      };
+    }
 
     revalidatePath(REPORTS_PATH);
     return { data: { ok: true }, error: null };

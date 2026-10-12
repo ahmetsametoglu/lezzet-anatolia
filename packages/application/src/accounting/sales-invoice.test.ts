@@ -10,7 +10,7 @@ import {
 } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { recordOrderPayment } from '../order/payment';
-import { openSalesInvoices } from './sales-invoice';
+import { approveSalesInvoice, openSalesInvoices } from './sales-invoice';
 import { salesInvoiceGround } from './sales-invoice.testkit';
 
 /*
@@ -97,6 +97,22 @@ describe('satış faturasının açılışı', () => {
     expect(await invoices.approve(documentId, actor.id)).toBe(true);
     expect(await invoices.findByDocument(documentId)).toMatchObject({ status: 'queued', approvedBy: actor.id });
     expect(await new PennylaneQueueService(db).findByDocument(documentId)).not.toBeNull();
+  });
+
+  // Onay işin turunu bekleseydi kaydı az önce tamamlanan müşterinin faturası onaylanamazdı; eksikle onaylansaydı fatura yönlenmezdi.
+  it('onay müşterinin faturasını önce yeniden hesaplar: eksik varken onaylanmaz, adres eklenince hemen kuyruğa girer', async () => {
+    const customer = await ground.company({}, { billing: false });
+    const actor = await new UserProfileService(db).insert({ name: `Muhasebe ${Date.now()}` });
+    ground.created.profileIds.push(actor.id);
+    const order = await ground.sale(customer.id, { soldOn: '2026-10-06' });
+    await open(customer.id);
+    const documentId = (await documentOf(order.id))!;
+
+    expect(await approveSalesInvoice(db, { documentId, actorId: actor.id })).toEqual({ status: 'missing', missing: ['billing_address'] });
+    await ground.billingAddress(customer.id);
+    expect(await approveSalesInvoice(db, { documentId, actorId: actor.id })).toEqual({ status: 'approved' });
+    expect(await invoices.findByDocument(documentId)).toMatchObject({ status: 'queued', missing: [], approvedBy: actor.id });
+    expect(await approveSalesInvoice(db, { documentId, actorId: actor.id })).toEqual({ status: 'not_awaiting' });
   });
 
   // Kasa fişi yazılan satışa fatura da açılsaydı ciro iki kez yazılırdı; sipariş ikinci faturaya girseydi iki kez faturalanırdı.

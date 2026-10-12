@@ -55,12 +55,13 @@ export class OrderSaleService extends BaseDbService<OrderSale, never, never> {
   }
 
   /**
-   * Fatura numarası bekleyen satışlar (`reference_no` ↔ `invoice_no` eşleştirme kuyruğu), en uzun bekleyen başta. Hediye sipariş
-   * kuyruğa girmez, çünkü dış muhasebeye gitmediği için hiç fatura numarası almaz ve kuyruk asla boşalmazdı.
+   * Fatura numarası elle bağlanan satışlar (`reference_no` ↔ `invoice_no` eşleştirme kuyruğu), en uzun bekleyen başta. Hediye sipariş
+   * girmez, çünkü dış muhasebeye gitmez; B2B satışı girmez, çünkü faturası Pennylane'de kendiliğinden kesilir ve elle bağlanan numara
+   * aynı satışı ikinci kez faturalatırdı.
    */
   pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number; business?: Business } = {}): Promise<Page<OrderSale>> {
     return this.getPage(
-      { isGiftOrder: false, business: opts.business },
+      { isGiftOrder: false, channel: 'b2c', business: opts.business },
       {
         orderBy: 'saleDate',
         keysetAfter: opts.cursor,

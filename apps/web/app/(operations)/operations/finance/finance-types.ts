@@ -8,6 +8,7 @@ import type {
   MovementDirection,
   MovementNature,
   MovementTag,
+  SalesInvoice,
 } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { CounterpartyOption, NatureOption, TagOption } from '@/components/operation/form/movement-form/schema';
@@ -152,7 +153,7 @@ export interface LedgerView {
 }
 
 /**
- * Belge satırı: Belgeler sekmesinin satırı ve "Ödemesini yaz" formunun künyesi. `openAmountCents` belgenin alanı değil,
+ * Belge satırı: Faturalar sekmesinin satırı ve "Ödemesini yaz" formunun künyesi. `openAmountCents` belgenin alanı değil,
  * `money_document_balance` görünümünden gelir, çünkü açık kalan saklanmaz, bağlarından türer.
  */
 export type DocumentRowView = Pick<
@@ -173,7 +174,7 @@ export type DocumentRowView = Pick<
   | 'vatRegime'
 > & {
   kindLabel: string;
-  /** Karşı tarafın adı, cari ya da tedarikçi; yoksa `null`. */
+  /** Karşı tarafın adı: cari, tedarikçi ya da satış faturasında müşterinin yasal adı; yoksa `null`. */
   partyName: string | null;
   natureLabel: string | null;
   openAmountCents: number;
@@ -182,6 +183,8 @@ export type DocumentRowView = Pick<
   label: string;
   /** Pennylane durumu, satırın alt satırının sonunda; eşitleme Pennylane'e bağlanamadıysa ya da belge kapsam dışıysa `null`. */
   pennylane: { text: string; tone: OpsTone } | null;
+  /** Satış faturasının akışı ve müşterisinin aranacağı Müşteriler adresi; satış faturası değilse `null`. */
+  salesInvoice: (Pick<SalesInvoice, 'status' | 'missing'> & { customerHref: string }) | null;
 };
 
 export interface DocumentListView {
@@ -252,12 +255,14 @@ export interface FinanceData {
   accounts: AccountView[];
   /** Hesapların toplamı — şeridin "Toplam" kartı. */
   totalCents: number;
-  /** Hareketler sekmesinin ilk sayfası; Belgeler sekmesindeyken `null` — görünmeyen liste okunmaz. */
+  /** Hareketler sekmesinin ilk sayfası; Faturalar sekmesindeyken `null` — görünmeyen liste okunmaz. */
   ledger: LedgerView | null;
-  /** Belgeler sekmesinin ilk sayfası; Hareketler sekmesindeyken `null`. */
+  /** Faturalar sekmesinin ilk sayfası; Hareketler sekmesindeyken `null`. */
   documents: DocumentListView | null;
-  /** Açık belge sayısı — Belgeler sekmesinin rozeti: ödenmemiş fatura bir iştir. */
+  /** Açık belge sayısı — Faturalar sekmesinin rozeti: ödenmemiş fatura bir iştir. */
   openDocumentCount: number;
+  /** Kesilmemiş satış faturası sayısı — "Kesilecek faturalar" süzgecinin sayacı, süzgeçten bağımsız. */
+  toIssueCount: number;
   /** Belge formunun tedarikçi seçeneği: yalnız aktifler, ülkesi ve vadesiyle (rejim ve vade önerisi). */
   supplierOptions: SupplierOption[];
   /** Tür seçenekleri, yalnız aktifler; seçici satırın yönüyle süzsün diye yönü de taşır. */
@@ -341,4 +346,6 @@ export interface FinanceViewProps {
   onClosePay: () => void;
   /** Belge dosyasını yeni sekmede açar — okuma adresi tıklanınca istenir, süresi kısa. */
   onOpenDocumentFile: (document: DocumentRowView) => void;
+  /** Onay bekleyen satış faturasını kuyruğa koyar; ret satırların üstündeki şeride düşer. */
+  onApproveSale: (document: DocumentRowView) => void;
 }

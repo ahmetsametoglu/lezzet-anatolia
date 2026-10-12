@@ -1,4 +1,4 @@
-import { MoneyMovementService, serviceDb } from '@lezzet/database';
+import { MoneyMovementService, SalesInvoiceService, serviceDb } from '@lezzet/database';
 import { listOpenDocuments } from '@lezzet/application';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { guarded, requireFinance } from '@/lib/guard';
@@ -35,13 +35,15 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   const accountViews = toAccountViews(dictionaries.accounts, dictionaries.balances);
   const onDocuments = urlState.tab === 'documents';
 
-  const [ledger, documents, unexplainedCount, openDocuments] = await Promise.all([
+  const [ledger, documents, unexplainedCount, openDocuments, unissued] = await Promise.all([
     onDocuments ? Promise.resolve(null) : readLedgerPage(db, urlState, names),
     onDocuments ? readDocumentsPage(db, urlState, names) : Promise.resolve(null),
     // Sayaç SÜZGEÇTEN BAĞIMSIZ ve hesap-üstü: rozet "toplam ne kadar iş bekliyor" diyor.
     new MoneyMovementService(db).unexplainedCount(),
     // Açık belgeler doğal tavanlı (kapanan düşer) — sekmenin rozeti için tek turda.
     listOpenDocuments(db),
+    // Kesilmemiş satış faturaları da doğal tavanlı (kesilen düşer); süzgeç çipinin sayacı.
+    new SalesInvoiceService(db).listUnissued(),
   ]);
 
   const { natures, tags, counterparties, suppliers } = dictionaries;
@@ -51,6 +53,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     ledger,
     documents,
     openDocumentCount: openDocuments.length,
+    toIssueCount: unissued.length,
     unexplainedCount,
     natureOptions: natures.filter((nature) => nature.isActive).map((nature) => ({ value: nature.slug, label: nature.label, direction: nature.direction })),
     tagOptions: tags.filter((tag) => tag.isActive).map((tag) => ({ value: tag.slug, label: tag.label })),

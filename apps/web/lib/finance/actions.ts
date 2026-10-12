@@ -39,6 +39,7 @@ import {
   addMovementNature,
   addMovementTag,
   allocateToDocument,
+  approveSalesInvoice,
   attachDocumentFile,
   createMoneyDocument,
   documentFileUrl,
@@ -64,6 +65,7 @@ import {
   INVALID_REASON,
   NATURE_REASON,
   RECONCILE_REASON,
+  SALES_INVOICE_GAP_LABEL,
   TAG_REASON,
 } from '@/app/(operations)/operations/finance/finance-labels';
 import { FINANCE_PATH, parseFinanceUrl } from '@/app/(operations)/operations/finance/finance-url';
@@ -348,7 +350,7 @@ export async function loadMoreLedgerAction(search: string, cursor: string): Prom
   }
 }
 
-/** Belgeler sekmesinin sonraki sayfası — aynı sözleşme. */
+/** Faturalar sekmesinin sonraki sayfası — aynı sözleşme. */
 export async function loadMoreDocumentsAction(search: string, cursor: string): Promise<ActionResult<Pick<DocumentListView, 'rows' | 'nextCursor'>>> {
   try {
     await requireFinance();
@@ -371,6 +373,26 @@ export async function ledgerRowsAction(movementId: string): Promise<ActionResult
     await requireFinance();
     const db = serviceDb();
     return { data: await readLedgerRows(db, movementId, namesOf(await readDictionaries(db))), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Onay bekleyen satış faturasını kuyruğa koyar; Pennylane'de en geç bir sonraki eşitlemede kesilir. Eksiği kalan fatura onaylanmaz
+ * ve eksikleri söylenir.
+ */
+export async function approveSalesInvoiceAction(documentId: string): Promise<ActionResult<{ ok: true }>> {
+  try {
+    const staff = await requireFinance();
+    const outcome = await approveSalesInvoice(serviceDb(), { documentId, actorId: staff.profileId });
+    if (outcome.status === 'missing') {
+      const missing = outcome.missing.map((gap) => SALES_INVOICE_GAP_LABEL[gap]).join(', ');
+      return { data: null, error: `Fatura onaylanmadı: müşterinin kaydında ${missing} eksik.` };
+    }
+    if (outcome.status === 'not_awaiting') return { data: null, error: 'Bu fatura onay beklemiyor.' };
+    revalidatePath(FINANCE_PATH);
+    return { data: { ok: true }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

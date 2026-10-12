@@ -7,6 +7,7 @@ import {
   OrderItemService,
   OrderService,
   OrderStatusLogService,
+  SalesInvoiceService,
   SettingsService,
   TicketService,
   UserProfileService,
@@ -19,6 +20,7 @@ import { RegisterDayCheckSchema, type Order, type OrderStatus, type TicketStatus
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { stockLink } from './stock/stock-url';
 import { settingsLink } from './settings/settings-url';
+import { financeUrl, parseFinanceUrl } from './finance/finance-url';
 import { DAY_HOUR_FALLBACK, DAY_HOUR_KEYS, type DayHourKey } from '@/lib/settings/day-hours';
 import { money, num } from '@/components/operation/ui/format';
 import { toOrderRows } from './orders/orders-read';
@@ -37,6 +39,7 @@ import {
   type RouteFlowFact,
   type StopFact,
 } from './dashboard-read';
+import { salesInvoiceFact } from './dashboard-sales-invoice';
 import type { DashboardData, DeliveryRouteView, VanLoadBandView } from './dashboard-types';
 
 type Db = ReturnType<typeof serviceDb>;
@@ -88,22 +91,35 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   const weekday = new Date(`${today}T00:00:00.000Z`).getUTCDay();
   const isoWeekday = weekday === 0 ? 7 : weekday;
 
-  const [times, todayCounts, yesterdayCounts, openCounts, dayPage, revenueRows, termDays, labels, ticketCounts, proposalCount, checkRun] =
-    await Promise.all([
-      readThresholds(settings, zoneRefs),
-      orderSvc.counts({ deliveryFrom: today, deliveryTo: today, warehouseIds }),
-      orderSvc.counts({ deliveryFrom: yesterday, deliveryTo: yesterday, warehouseIds }),
-      // Tahsilat GÜNE bağlı değil: dün teslim edilmiş bir siparişin kapıda kalan borcu da bekleyen
-      // tahsilattır. Bu yüzden tarih süzgeci YOK, ödeme durumu süzgeci var.
-      orderSvc.counts({ paymentStatus: 'pending', warehouseIds }),
-      orderSvc.listPage({ deliveryFrom: today, deliveryTo: today, warehouseIds }, { limit: DAY_ORDER_LIMIT }),
-      new AnalyticsReportService(db).orderRevenue(seriesFrom, today),
-      settings.getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
-      readWarehouseLabels(),
-      new TicketService(db).countByStatus(),
-      new AssistantProposalService(db).countPending(),
-      readRegisterCheck(db),
-    ]);
+  const [
+    times,
+    todayCounts,
+    yesterdayCounts,
+    openCounts,
+    dayPage,
+    revenueRows,
+    termDays,
+    labels,
+    ticketCounts,
+    proposalCount,
+    checkRun,
+    awaitingInvoices,
+  ] = await Promise.all([
+    readThresholds(settings, zoneRefs),
+    orderSvc.counts({ deliveryFrom: today, deliveryTo: today, warehouseIds }),
+    orderSvc.counts({ deliveryFrom: yesterday, deliveryTo: yesterday, warehouseIds }),
+    // Tahsilat GÜNE bağlı değil: dün teslim edilmiş bir siparişin kapıda kalan borcu da bekleyen
+    // tahsilattır. Bu yüzden tarih süzgeci YOK, ödeme durumu süzgeci var.
+    orderSvc.counts({ paymentStatus: 'pending', warehouseIds }),
+    orderSvc.listPage({ deliveryFrom: today, deliveryTo: today, warehouseIds }, { limit: DAY_ORDER_LIMIT }),
+    new AnalyticsReportService(db).orderRevenue(seriesFrom, today),
+    settings.getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
+    readWarehouseLabels(),
+    new TicketService(db).countByStatus(),
+    new AssistantProposalService(db).countPending(),
+    readRegisterCheck(db),
+    new SalesInvoiceService(db).listByStatus('awaiting_approval'),
+  ]);
 
   const dayOrders = dayPage.rows.filter((o) => !OUT_OF_DAY.has(o.status));
 
@@ -133,7 +149,15 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   const flow = buildRouteFlow(routeFlowFacts(dayOrders, { zones, labels, times, isoWeekday }), { nowMinutes });
 
   const registerCheck = registerCheckFact(checkRun, { today, warehouseIds, href: settingsLink({ tab: 'setup' }) });
-  const queue = buildQueue([...queueFacts({ overdue, openTickets: ticketCounts }), ...(registerCheck ? [registerCheck] : [])]);
+  const salesInvoice = salesInvoiceFact(awaitingInvoices, {
+    today,
+    href: financeUrl({ ...parseFinanceUrl({}), tab: 'documents', toIssue: true }),
+  });
+  const queue = buildQueue([
+    ...queueFacts({ overdue, openTickets: ticketCounts }),
+    ...(registerCheck ? [registerCheck] : []),
+    ...(salesInvoice ? [salesInvoice] : []),
+  ]);
   // Süresi dolan gel-al: eşik ayardan, sayı kapıdan (`countOverduePickups`) — kapsam personelin depolarıdır.
   const overduePickups = await countOverduePickups(db, {
     warehouseIds,

@@ -12,7 +12,7 @@ import { GroupHeading, ROW_EDGE } from './list-parts';
 import { DocumentActionsCell, type DocumentRowActions } from './row-actions';
 
 /*
-  Belgeler sekmesi: açık ve kapanmış bütün belgeler aylara göre gruplu, çünkü fatura, kira, telefon aylık gelir ve günlere bölünse
+  Faturalar sekmesi: açık ve kapanmış bütün belgeler aylara göre gruplu, çünkü fatura, kira, telefon aylık gelir ve günlere bölünse
   neredeyse her belge kendi başlığını alırdı. Kapanmış belge de listede durur; "şu faturayı hangi havale kapattı" ancak orada okunur.
 */
 
@@ -69,7 +69,7 @@ export function DocumentList({ rows, note, tagLabels, actions, hasMore, loadingM
         <span className="text-right">Ödeme</span>
         <span className="text-right">Tutar</span>
       </div>
-      <ul aria-label="Belgeler" className="min-h-0 flex-1 overflow-y-auto">
+      <ul aria-label="Faturalar" className="min-h-0 flex-1 overflow-y-auto">
         {groupConsecutive(rows, (document) => document.issuedOn.slice(0, 7)).map((group) => {
           const month = monthYear(`${group.key}-01`);
           return (

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   addTagAction,
   applyMatchAction,
+  approveSalesInvoiceAction,
   documentFileUrlAction,
   documentRowAction,
   ledgerRowsAction,
@@ -167,6 +168,20 @@ export function FinanceClient({ data, urlState, writableAccounts, initialDialog 
     window.open(file.url, '_blank', 'noopener');
   };
 
+  /** Satış faturasının onayı: satır kilitlenir, ret şeride düşer; kabulde sayfa ve eklenmiş satır tazelenir. */
+  const onApproveSale = async (document: DocumentRowView) => {
+    setRowError(null);
+    setBusyId(document.id);
+    const { error } = await approveSalesInvoiceAction(document.id);
+    setBusyId(null);
+    if (error) {
+      setRowError(error);
+      return;
+    }
+    startNav(() => router.refresh());
+    void refreshDocument(document.id);
+  };
+
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
@@ -219,6 +234,7 @@ export function FinanceClient({ data, urlState, writableAccounts, initialDialog 
     onPayDocument: setPayingDocument,
     onClosePay: () => setPayingDocument(null),
     onOpenDocumentFile: (document) => void onOpenDocumentFile(document),
+    onApproveSale: (document) => void onApproveSale(document),
   };
 
   return <FinanceDesktop {...view} />;

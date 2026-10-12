@@ -422,7 +422,7 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 - Resmî fatura numarası dış yazılımda üretilir; sistem bir **referans numarası** verir, sonradan gerçek fatura numarasıyla eşleştirilir.
   B2B satışın faturası Pennylane'de sistemden kesilir: teslim edilen miktardan bizde açılır, Pennylane'in toplamı bizimkiyle aynıysa
   kesinleşir ve numarası siparişe yazılır; bilgisi eksik fatura onay bekler. Kasanın yazmadığı satış (kanal `b2b`) faturalanır, hediye
-  sipariş faturalanmaz (`docs/feature/profesyonel-satis.md`, Faz 4).
+  sipariş faturalanmaz; B2B satışı elle numara eşleştirmesine girmez (`docs/feature/profesyonel-satis.md`, Faz 4).
 - Banka hareketleri Pennylane'den okunur (eşlenmemiş hesapta Excel ile alınır), sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil). İstisna kendi hesaplarımız arasındaki transferdir: banka satırı, yönü ve tutarı birebir, günü 7 gün içinde tutan tek bekleyen transfere (kasadan yatırma, kart ödemeleri aktarımı) kendiliğinden bağlanır. Eşlenen hesabın hareketleri eşlendiği günden okunur; o günden sonrası için Excel yüklenmez, çünkü iki kaynak aynı satırı iki kez yazardı; aynı sebeple Excel satırı o güne ya da sonrasına düşen hesap eşlenmez.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) bizde girilir ve Pennylane'e bizden yüklenir; belge değişince Pennylane güncellenir. Belge dosyası PDF, JPEG ya da PNG'dir, çünkü Pennylane başka türü almıyor. Belge Pennylane'de işinin analitik kategorisini taşır ("Lezzet" ya da "QUALITE"), çünkü Pennylane iki işin ortak defteridir.
 

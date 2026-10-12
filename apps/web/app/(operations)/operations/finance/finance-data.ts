@@ -11,7 +11,9 @@ import {
   OrderService,
   PennylaneDocumentService,
   PennylaneQueueService,
+  SalesInvoiceService,
   SupplierService,
+  UserProfileService,
 } from '@lezzet/database';
 import { PENNYLANE_SYNC_JOB, pennylaneConnectionOf } from '@lezzet/application';
 import {
@@ -20,6 +22,7 @@ import {
   type AccountBalance,
   type Counterparty,
   type KeysetCursor,
+  type MoneyDocument,
   type MovementNature,
   type MovementTag,
   type Supplier,
@@ -27,6 +30,7 @@ import {
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { EMPTY_MATCH_QUEUE, suggestionsForMovements } from '@/lib/bank/reconcile';
 import { businessOfFilter } from '@/lib/business-filter';
+import { customersUrl } from '../customers/customers-url';
 import { NOTES } from './finance-labels';
 import {
   documentHead,
@@ -34,7 +38,9 @@ import {
   toMatchRows,
   toMatchTargets,
   toMovementRows,
+  NO_SALES,
   type DocumentPennylaneContext,
+  type DocumentSalesContext,
   type MovementReadContext,
 } from './finance-read';
 import type { AccountLedgerRow } from '@lezzet/types';
@@ -192,19 +198,51 @@ async function pennylaneOf(db: SupabaseClient, documentIds: readonly string[]): 
   };
 }
 
+/**
+ * Satış faturalarının girdisi tek turda: akışları ve müşterileri. Müşteri sözlük değildir, çünkü küme sınırsız büyür; yalnız sayfadaki
+ * belgelerin müşterisi okunur, adı yasal addır.
+ */
+async function salesOf(
+  db: SupabaseClient,
+  documents: ReadonlyArray<Pick<MoneyDocument, 'id' | 'customerId'>>,
+): Promise<DocumentSalesContext> {
+  const sold = documents.flatMap((doc) => (doc.customerId ? [{ id: doc.id, customerId: doc.customerId }] : []));
+  if (sold.length === 0) return NO_SALES;
+  const [invoices, customers] = await Promise.all([
+    new SalesInvoiceService(db).listByDocuments(sold.map((doc) => doc.id)),
+    new UserProfileService(db).listByIds([...new Set(sold.map((doc) => doc.customerId))]),
+  ]);
+  return {
+    invoices: new Map(invoices.map((invoice) => [invoice.documentId, invoice] as const)),
+    customers: new Map(
+      customers.map((customer) => {
+        const q = customer.email ?? customer.phone ?? customer.name;
+        return [
+          customer.id,
+          { name: customer.companyInfo?.legalName || customer.name, href: customersUrl({ q, type: 'all', scope: 'all', mc: 'any' }) },
+        ] as const;
+      }),
+    ),
+  };
+}
+
 /** Tek belgenin satırı; bağ yazımından sonra tazelenir. */
 export async function readDocumentRow(db: SupabaseClient, documentId: string, names: FinanceNames): Promise<DocumentRowView | null> {
   const service = new MoneyDocumentService(db);
   const document = await service.getById(documentId);
   if (!document) return null;
-  const [balances, pennylane] = await Promise.all([service.balances([document.id]), pennylaneOf(db, [document.id])]);
+  const [balances, pennylane, sales] = await Promise.all([
+    service.balances([document.id]),
+    pennylaneOf(db, [document.id]),
+    salesOf(db, [document]),
+  ]);
   const balance = balances.get(document.id);
-  return balance ? (toDocumentRows([{ ...document, balance }], names, pennylane)[0] ?? null) : null;
+  return balance ? (toDocumentRows([{ ...document, balance }], names, pennylane, sales)[0] ?? null) : null;
 }
 
 /**
- * Belgeler sekmesinin bir sayfası. Hesap süzgeci belgeye uygulanmaz, çünkü belge bir hesabın değil bir borcun kaydıdır; "yalnız açık"
- * kümesi doğal tavanlı olduğu için tek turda, imleçsiz okunur.
+ * Faturalar sekmesinin bir sayfası. Hesap süzgeci belgeye uygulanmaz, çünkü belge bir hesabın değil bir borcun kaydıdır; "yalnız açık"
+ * ve "kesilecek faturalar" kümeleri doğal tavanlı olduğu için tek turda, imleçsiz okunur.
  */
 export async function readDocumentsPage(
   db: SupabaseClient,
@@ -213,20 +251,33 @@ export async function readDocumentsPage(
   cursor?: KeysetCursor,
 ): Promise<DocumentListView> {
   const service = new MoneyDocumentService(db);
+  const inRange = (day: string) => (!urlState.from || day >= urlState.from) && (!urlState.to || day <= urlState.to);
+  const business = businessOfFilter(urlState.business);
+  if (urlState.toIssue) {
+    const unissued = await new SalesInvoiceService(db).listUnissued();
+    const documents = (await service.listByIds(unissued.map((invoice) => invoice.documentId)))
+      .filter((doc) => inRange(doc.issuedOn) && (!business || doc.business === business))
+      .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
+    const ids = documents.map((doc) => doc.id);
+    const [balances, pennylane, sales] = await Promise.all([service.balances(ids), pennylaneOf(db, ids), salesOf(db, documents)]);
+    const rows = toDocumentRows(
+      documents.flatMap((doc) => {
+        const balance = balances.get(doc.id);
+        return balance ? [{ ...doc, balance }] : [];
+      }),
+      names,
+      pennylane,
+      sales,
+    );
+    return { rows, nextCursor: null, note: rows.length > 0 ? null : NOTES.noInvoicesToIssue };
+  }
   if (urlState.open) {
-    const inRange = (day: string) => (!urlState.from || day >= urlState.from) && (!urlState.to || day <= urlState.to);
-    const business = businessOfFilter(urlState.business);
     const open = (await service.listOpen())
       .filter((doc) => inRange(doc.issuedOn) && (!business || doc.business === business))
       .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
-    const rows = toDocumentRows(
-      open,
-      names,
-      await pennylaneOf(
-        db,
-        open.map((doc) => doc.id),
-      ),
-    );
+    const ids = open.map((doc) => doc.id);
+    const [pennylane, sales] = await Promise.all([pennylaneOf(db, ids), salesOf(db, open)]);
+    const rows = toDocumentRows(open, names, pennylane, sales);
     return { rows, nextCursor: null, note: rows.length > 0 ? null : NOTES.noOpenDocuments };
   }
 
@@ -238,7 +289,7 @@ export async function readDocumentsPage(
     limit: DEFAULT_PAGE_SIZE,
   });
   const ids = page.rows.map((doc) => doc.id);
-  const [balances, pennylane] = await Promise.all([service.balances(ids), pennylaneOf(db, ids)]);
+  const [balances, pennylane, sales] = await Promise.all([service.balances(ids), pennylaneOf(db, ids), salesOf(db, page.rows)]);
   const rows = toDocumentRows(
     page.rows.flatMap((doc) => {
       const balance = balances.get(doc.id);
@@ -246,6 +297,7 @@ export async function readDocumentsPage(
     }),
     names,
     pennylane,
+    sales,
   );
   return {
     rows,

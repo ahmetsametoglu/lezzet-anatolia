@@ -178,6 +178,8 @@ interface FinanceToolbarProps {
   /** İzah edilmemiş hareket sayısı; `null` = sayaç kapısı yok. */
   unexplainedCount: number | null;
   openDocumentCount: number;
+  /** Kesilmemiş satış faturası sayısı; sıfırken süzgeç çipi çizilmez. */
+  toIssueCount: number;
   /** Açık hesap sayısı — kapalı eylem gizlenmez, sebebiyle soluk çizilir. */
   writableAccountCount: number;
   onChange: (next: Partial<FinanceUrlState>) => void;
@@ -188,7 +190,15 @@ interface FinanceToolbarProps {
  * Tek bant: solda sekme, sağda süzgeçler, izah sayacı ve eylemler menüsü. Sayaç kuyruğun kapısıdır, dokununca aynı ölçütle süzülmüş
  * listeye iner; tarih aralığı iki sekmede aynı anlamdadır (değer günü · belge günü).
  */
-export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, writableAccountCount, onChange, onOpenDialog }: FinanceToolbarProps) {
+export function FinanceToolbar({
+  urlState,
+  unexplainedCount,
+  openDocumentCount,
+  toIssueCount,
+  writableAccountCount,
+  onChange,
+  onOpenDialog,
+}: FinanceToolbarProps) {
   const unexplainedActive = urlState.scope === 'unmatched';
 
   return (
@@ -196,7 +206,7 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
       items={[
         { key: 'movements', label: 'Hareketler' },
         // Rozet AÇIK belge sayısı: ödenmemiş fatura bir iştir ("burada senden bir şey bekleniyor").
-        { key: 'documents', label: 'Belgeler', badge: openDocumentCount },
+        { key: 'documents', label: 'Faturalar', badge: openDocumentCount },
       ]}
       active={urlState.tab}
       onSelect={(tab) => onChange({ tab })}
@@ -213,9 +223,17 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
               onChange={(type) => onChange({ type })}
             />
           ) : (
-            <Chip active={urlState.open} onClick={() => onChange({ open: !urlState.open })}>
-              Yalnız açık
-            </Chip>
+            <>
+              <Chip active={urlState.open} onClick={() => onChange({ open: !urlState.open, toIssue: false })}>
+                Yalnız açık
+              </Chip>
+              {/* Kesilmemiş satış faturası bir iştir: onay ya da Pennylane bekler. Sayaç süzgeçten bağımsızdır, sıfırken çip çizilmez. */}
+              {toIssueCount > 0 || urlState.toIssue ? (
+                <Chip active={urlState.toIssue} tone="amber" onClick={() => onChange({ toIssue: !urlState.toIssue, open: false })}>
+                  Kesilecek faturalar · {num(toIssueCount)}
+                </Chip>
+              ) : null}
+            </>
           )}
           <DateRangeFilterChip from={urlState.from} to={urlState.to} placeholder="+ tarih" label="Tarih" onChange={(from, to) => onChange({ from, to })} />
           {/* Sayaç `null` ise HİÇ BASILMAZ — "0 izahsız" yazmak, sayacı olmayan bir ekranda dolu bir

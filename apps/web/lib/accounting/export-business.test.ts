@@ -114,10 +114,9 @@ describe('muhasebe dosyalarının iş süzgeci', () => {
   });
 
   it('fatura kuyruğu seçili işin satışlarını taşır', async () => {
+    // QUALITE'nin satışı B2B olduğu için kuyruğa hiç girmez (faturası Pennylane'de kesilir); süzgeç Lezzet'in satışıyla ölçülür.
     const kuyruk = async (business: Business) => (await pendingInvoices({ business, limit: 200 })).rows.map((sale) => sale.id);
-    const qualite = await kuyruk('qualite');
-    expect(qualite).toContain(satis.qualite);
-    expect(qualite).not.toContain(satis.lezzet);
-    expect(await kuyruk('lezzet')).not.toContain(satis.qualite);
+    expect(await kuyruk('lezzet')).toContain(satis.lezzet);
+    expect(await kuyruk('qualite')).not.toContain(satis.lezzet);
   });
 });

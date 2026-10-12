@@ -177,9 +177,16 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   Toplam farklıysa taslak bekler ve muhasebeye bir kez haber gider. Fatura günü kesildiği gündür, vade o günden hesaplanır.
 - Vade günü tek kuralla: fatura günü + müşterinin vadesi, ama faturadaki ilk teslimin on günlük diliminin bitiminden 30 günü
   geçmez.
-- **Kalan:** web "Kesilecek faturalar" listesi (eksik tamamlama ve onay; yönetici ve muhasebe rolü; onaylanmayan ertesi sabah
-  panoda) ve finans belge listelerinde müşteri adı; Pennylane ölçümü (§7); alacak notu: faturadan sonraki iade ya da eksik aynı
-  listeye taslak olarak düşer, şeması Pennylane'deki açılışı ölçüldükten sonra Faz 5'in şemasıyla gelir.
+- **Ekran (tamamlandı, tasarım 5a):** Para'nın "Belgeler" sekmesinin adı "Faturalar" oldu. Satış faturası alış belgeleriyle aynı
+  listede durur: rozeti "Satış faturası", karşı tarafı müşterinin yasal adı, alt satırda durumu (onay bekliyor ve eksikleri,
+  Pennylane sırasında, Pennylane'e gitmedi ve sebebi, Pennylane ✓). "Kesilecek faturalar" süzgeci kesilmemiş satış faturalarını
+  sayar ve süzer. Eksiği olan satırda "Müşteriyi aç", olmayanda "Onayla" durur; yönetici ve muhasebe onaylar, onay önce müşterinin
+  faturalarını yeniden hesaplar. Onaylanmadan geceyi geçiren fatura panonun "Bugün" kümesinde sayılır. Raporlar'daki elle numara
+  kuyruğuna B2B satışı girmez, elle numara da almaz. Tasarımdan tek fark: satırda "müşteriye gönderildi" yazmaz, çünkü gönderimin
+  başarısı kaydedilmiyor.
+- **Kalan:** Pennylane ölçümü (§7); alacak notu (faturadan sonraki iade ya da eksik "Kesilecek faturalar"a taslak olarak düşer,
+  şeması Pennylane'deki açılışı ölçüldükten sonra Faz 5'in şemasıyla gelir); asistanın belge önerisi açıklaması
+  (`packages/application/src/assistant/kind-meta.ts`) hâlâ "Belgeler sekmesi" diyor, dosyanın yorum temizliğiyle düzeltilir.
 
 **Faz 5 — tahsilat ve cari**
 - Havale kuyruğunda açık satış faturaları aday olur; ipucu fatura numarası ve müşteri adıdır.

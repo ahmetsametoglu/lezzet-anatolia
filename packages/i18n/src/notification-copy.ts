@@ -330,7 +330,7 @@ const PENNYLANE_ENGELI: Record<string, string> = {
   supplier_taken: "Pennylane'deki tedarikçi bizde başka bir karşı tarafa bağlı",
   foreign_matches: "Pennylane'de bizde olmayan bir faturaya da eşli, eşleşme elle düzeltilmeli",
   billing_address: 'müşterinin fatura adresi yok',
-  total_mismatch: "Pennylane'in hesapladığı toplam bizimkinden farklı, taslak kesinleşmedi",
+  total_mismatch: "Pennylane'in toplamı bizimkinden farklı",
   customer_ambiguous: "Pennylane'de bu firmaya uyan birden çok müşteri var",
   customer_taken: "Pennylane'deki müşteri bizde başka bir müşteriye bağlı",
 };

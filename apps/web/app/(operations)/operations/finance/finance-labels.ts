@@ -1,4 +1,4 @@
-import type { AccountType, CounterpartyKind, MovementDirection, MovementType } from '@lezzet/types';
+import type { AccountType, CounterpartyKind, MovementDirection, MovementType, SalesInvoiceGap } from '@lezzet/types';
 import { DOCUMENT_VAT_PROBLEM_LABEL } from '@/components/operation/form/document-form/labels';
 import type { OpsTone } from '@/components/operation/ui/tone';
 
@@ -152,6 +152,16 @@ export const PENNYLANE_STATUS_LABEL = {
   different: "Pennylane'de farklı",
 } as const;
 
+/** Satış faturasının belge türü yerine yazılan adı; alış faturasıyla aynı listede ayrışsın diye. */
+export const SALES_INVOICE_KIND_LABEL = 'Satış faturası';
+
+/** Kesmeyi bekleten eksik, satırın durumunda; Alman şirket SIREN yerine geçerli KDV numarasıyla tanınır. */
+export const SALES_INVOICE_GAP_LABEL: Record<SalesInvoiceGap, string> = {
+  siren: 'SIREN ya da KDV numarası',
+  billing_address: 'fatura adresi',
+  b2b_approval: 'B2B onayı',
+};
+
 /** Carinin türü — seçicide ve sözlükte grup başlığı. */
 export const COUNTERPARTY_KIND_LABEL: Record<CounterpartyKind, string> = {
   institution: 'Kurum',
@@ -184,6 +194,7 @@ export const NOTES = {
   noLedgerMatch: 'Bu süzgeçlerle hareket yok — tarih aralığını genişletin ya da süzgeci kaldırın.',
   noDocuments: 'Henüz belge yok. Fatura, fiş ya da bordro geldiğinde "Eylemler → Belge ekle" ile girilir; ödemesi sonra bağlanır.',
   noDocumentMatch: 'Bu tarih aralığında belge yok.',
+  noInvoicesToIssue: "Kesilecek satış faturası yok — açılan her satış faturası Pennylane'de kesildi.",
   noBankFile:
     'Banka dosyası yüklenmedi. Dosyayı yükleyince satırlar buraya düşer; sistem eşleşme önerir, kararı siz verirsiniz.',
 } as const;

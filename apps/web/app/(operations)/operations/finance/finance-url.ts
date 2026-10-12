@@ -18,8 +18,8 @@ const FINANCE_SCOPES = [ALL_ACCOUNTS, 'unmatched'] as const;
 export type FinanceScope = (typeof FINANCE_SCOPES)[number];
 
 /**
- * Ekranın iki listesi, hareketler ve belgeler; sekme adreste taşınır ki "bu ayın belgeleri" bağlantısı paylaşılabilsin. Tarih süzgeci
- * iki sekmede aynı anlamı taşır: hareketin değer günü, belgenin belge günü.
+ * Ekranın iki listesi, hareketler ve faturalar (fatura, fiş, bordro, sözleşme); sekme adreste taşınır ki "bu ayın faturaları"
+ * bağlantısı paylaşılabilsin. Tarih süzgeci iki sekmede aynı anlamı taşır: hareketin değer günü, belgenin belge günü.
  */
 const FINANCE_TABS = ['movements', 'documents'] as const;
 export type FinanceTab = (typeof FINANCE_TABS)[number];
@@ -33,8 +33,10 @@ export interface FinanceUrlState {
   from: string;
   to: string;
   scope: FinanceScope;
-  /** Belgeler sekmesinde yalnız AÇIK belgeler — ödenmemiş fatura, bize ödenecek dekont. */
+  /** Faturalar sekmesinde yalnız AÇIK belgeler — ödenmemiş fatura, bize ödenecek dekont. */
   open: boolean;
+  /** Faturalar sekmesinde yalnız kesilmemiş satış faturaları — onay bekleyen ve Pennylane'e gitmeyi bekleyen. */
+  toIssue: boolean;
   /** Listelerin iş süzgeci; bakiyeler bölünmez, çünkü iki iş aynı hesapları kullanır. */
   business: BusinessFilter;
 }
@@ -47,6 +49,7 @@ const DEFAULTS: FinanceUrlState = {
   to: '',
   scope: ALL_ACCOUNTS,
   open: false,
+  toIssue: false,
   business: 'all',
 };
 
@@ -70,6 +73,7 @@ export function parseFinanceUrl(params: RawParams): FinanceUrlState {
     to: end,
     scope: oneOf(params.scope, FINANCE_SCOPES, DEFAULTS.scope),
     open: one(params.open) === '1',
+    toIssue: one(params.toissue) === '1',
     business: parseBusinessFilter(params.business),
   };
 }
@@ -84,6 +88,7 @@ export function financeUrl(state: FinanceUrlState): string {
   if (state.to) p.set('to', state.to);
   if (state.scope !== DEFAULTS.scope) p.set('scope', state.scope);
   if (state.open) p.set('open', '1');
+  if (state.toIssue) p.set('toissue', '1');
   if (state.business !== DEFAULTS.business) p.set('business', state.business);
   const qs = p.toString();
   return qs ? `${FINANCE_PATH}?${qs}` : FINANCE_PATH;

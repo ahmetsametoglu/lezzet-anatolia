@@ -70,6 +70,16 @@ export class SalesInvoiceService extends BaseDbService<SalesInvoice, never, neve
   listByStatus(status: SalesInvoiceStatus): Promise<SalesInvoice[]> {
     return this.getAll({ status }, { orderBy: 'createdAt' });
   }
+
+  /** Kesilmemiş faturalar: onay bekleyen ve kuyruktaki; küme iş listesidir, kesilen düşer. */
+  listUnissued(): Promise<SalesInvoice[]> {
+    return this.getAll({ status: ['awaiting_approval', 'queued'] }, { orderBy: 'createdAt' });
+  }
+
+  async listByDocuments(documentIds: readonly string[]): Promise<SalesInvoice[]> {
+    if (documentIds.length === 0) return [];
+    return this.getAll({ documentId: [...documentIds] });
+  }
 }
 
 /** Faturası açılmamış B2B satışlar (`sales_invoice_candidate` görünümü); fatura işi her turda bunları okur. */

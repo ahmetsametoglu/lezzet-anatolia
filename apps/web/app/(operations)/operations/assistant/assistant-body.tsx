@@ -678,7 +678,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // Belge penceresi 640 px için tasarlandı; yanına dilekçe sütunu geliyor.
     width: 1180,
     applyLabel: 'Belgeyi kaydet',
-    appliedNote: 'Belge kaydedildi — Para → Belgeler sekmesinde. Ödeme yapılınca "Ödemesini yaz" ile belgeye bağlanır.',
+    appliedNote: 'Belge kaydedildi — Para → Faturalar sekmesinde. Ödeme yapılınca "Ödemesini yaz" ile belgeye bağlanır.',
   }),
 
   /**

@@ -18,6 +18,7 @@ import type {
   MovementType,
   PennylaneDocumentMirror,
   PennylaneQueue,
+  SalesInvoice,
 } from '@lezzet/types';
 import { amount, dayMonth, money } from '@/components/operation/ui/format';
 import type { DocumentPaymentOptions, MatchOptions, MatchTarget, MatchTargets } from '@/lib/bank/reconcile';
@@ -30,6 +31,8 @@ import {
   MATCH_EFFECT,
   MOVEMENT_TYPE_LABEL,
   PENNYLANE_STATUS_LABEL,
+  SALES_INVOICE_GAP_LABEL,
+  SALES_INVOICE_KIND_LABEL,
   type MatchKindView,
 } from './finance-labels';
 import type {
@@ -107,14 +110,44 @@ function pennylaneLine(status: PennylaneDocumentStatus | null): DocumentRowView[
   }
 }
 
-/** Belge satırları: Belgeler sekmesi ve "Ödemesini yaz" formunun künyesi; açık kalan görünümden gelir, burada hesaplanmaz. */
+/** Satış faturalarının girdisi, tek turda okunmuş haritalar: akış belgeye, müşterinin adı ve aranacağı adres müşteriye göre. */
+export interface DocumentSalesContext {
+  invoices: ReadonlyMap<string, Pick<SalesInvoice, 'status' | 'missing'>>;
+  customers: ReadonlyMap<string, { name: string; href: string }>;
+}
+
+export const NO_SALES: DocumentSalesContext = { invoices: new Map(), customers: new Map() };
+
+/**
+ * Satış faturasının durumu: onay bekleyen eksiğiyle, kuyruktaki Pennylane yazımının hâliyle yazılır, kesilen yalnız işaretini taşır;
+ * sözcükler alış belgesininkiyle aynıdır.
+ */
+function salesInvoiceLine(
+  invoice: Pick<SalesInvoice, 'status' | 'missing'>,
+  queued: Pick<PennylaneQueue, 'attempts' | 'lastError'> | null,
+): DocumentRowView['pennylane'] {
+  if (invoice.status === 'awaiting_approval') {
+    const missing = invoice.missing.map((gap) => SALES_INVOICE_GAP_LABEL[gap]);
+    return { text: missing.length > 0 ? `onay bekliyor: ${missing.join(', ')} eksik` : 'onay bekliyor: eksiği yok', tone: 'amber' };
+  }
+  if (invoice.status === 'issued') return { text: PENNYLANE_STATUS_LABEL.uploaded, tone: 'neutral' };
+  const reason = queued ? queueBlockReason(queued.lastError) : null;
+  if (reason) return { text: `${PENNYLANE_STATUS_LABEL.blocked}: ${pennylaneBlockReasonLabel(reason)}`, tone: 'amber' };
+  if (queued && queued.attempts > 0) return { text: PENNYLANE_STATUS_LABEL.failing, tone: 'amber' };
+  return { text: PENNYLANE_STATUS_LABEL.pending, tone: 'neutral' };
+}
+
+/** Belge satırları: Faturalar sekmesi ve "Ödemesini yaz" formunun künyesi; açık kalan görünümden gelir, burada hesaplanmaz. */
 export function toDocumentRows(
   documents: ReadonlyArray<MoneyDocument & { balance: MoneyDocumentBalance }>,
   names: Pick<MovementReadContext, 'partyNames' | 'natureLabels'>,
   pennylane: DocumentPennylaneContext,
+  sales: DocumentSalesContext,
 ): DocumentRowView[] {
   return documents.map((doc) => {
-    const partyName = partyOf(doc, names.partyNames);
+    const sale = doc.customerId ? (sales.invoices.get(doc.id) ?? null) : null;
+    const customer = doc.customerId ? (sales.customers.get(doc.customerId) ?? null) : null;
+    const partyName = customer?.name ?? partyOf(doc, names.partyNames);
     const queued = pennylane.queue.get(doc.id);
     return {
       id: doc.id,
@@ -131,20 +164,23 @@ export function toDocumentRows(
       amountCents: doc.amountCents,
       vatAmountCents: doc.vatAmountCents,
       vatRegime: doc.vatRegime,
-      kindLabel: DOCUMENT_KIND_LABEL[doc.kind],
+      kindLabel: sale ? SALES_INVOICE_KIND_LABEL : DOCUMENT_KIND_LABEL[doc.kind],
       partyName,
       natureLabel: doc.nature ? (names.natureLabels.get(doc.nature) ?? doc.nature) : null,
       openAmountCents: doc.balance.openAmountCents,
       hasFile: doc.fileKey !== null,
       label: `${documentHead(doc)} · ${partyName ?? '—'} · açık ${money(doc.balance.openAmountCents)}`,
-      pennylane: pennylaneLine(
-        pennylaneDocumentStatus({
-          connected: pennylane.connected,
-          openAmountCents: doc.balance.openAmountCents,
-          mirror: pennylane.mirrors.get(doc.id) ?? null,
-          queue: queued ? { attempts: queued.attempts, blockReason: queueBlockReason(queued.lastError) } : null,
-        }),
-      ),
+      pennylane: sale
+        ? salesInvoiceLine(sale, queued ?? null)
+        : pennylaneLine(
+            pennylaneDocumentStatus({
+              connected: pennylane.connected,
+              openAmountCents: doc.balance.openAmountCents,
+              mirror: pennylane.mirrors.get(doc.id) ?? null,
+              queue: queued ? { attempts: queued.attempts, blockReason: queueBlockReason(queued.lastError) } : null,
+            }),
+          ),
+      salesInvoice: sale && customer ? { status: sale.status, missing: sale.missing, customerHref: customer.href } : null,
     };
   });
 }

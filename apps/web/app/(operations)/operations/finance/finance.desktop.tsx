@@ -15,7 +15,7 @@ import { ALL_ACCOUNTS } from './finance-url';
 import { MovementDialog } from './movement-dialog';
 import type { DocumentRowActions, RowMatcher } from './row-actions';
 
-// Para masaüstü: başlık, hesap süzgeci olan bakiye satırı, "Hareketler | Belgeler" bandı ve satırın bütün işini kendinde taşıyan tam
+// Para masaüstü: başlık, hesap süzgeci olan bakiye satırı, "Hareketler | Faturalar" bandı ve satırın bütün işini kendinde taşıyan tam
 // genişlik liste. Seyrek eylemler bandın sağındaki tek menüdedir; çizimde bu düzen yok, kitin gramerinde yazıldı.
 
 export function FinanceDesktop({
@@ -47,6 +47,7 @@ export function FinanceDesktop({
   onPayDocument,
   onClosePay,
   onOpenDocumentFile,
+  onApproveSale,
 }: FinanceViewProps) {
   // Pasif etiket de adıyla okunur — satır eski etiketi taşımaya devam eder, ad sözlüğün tamamından.
   const tagLabels = new Map(data.dictionary.tags.map((tag) => [tag.slug, tag.label] as const));
@@ -62,7 +63,14 @@ export function FinanceDesktop({
   };
   const onDocuments = urlState.tab === 'documents';
   const matcher: RowMatcher = { busyId: rowBusyId, onApplyTarget, onLinkDocument, onRemoveAllocation, onUnmatch };
-  const documentActions: DocumentRowActions = { busyId, onPay: onPayDocument, onOpenFile: onOpenDocumentFile, onLinkDocument, onRemoveAllocation };
+  const documentActions: DocumentRowActions = {
+    busyId,
+    onPay: onPayDocument,
+    onOpenFile: onOpenDocumentFile,
+    onLinkDocument,
+    onRemoveAllocation,
+    onApproveSale,
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -75,6 +83,7 @@ export function FinanceDesktop({
         urlState={urlState}
         unexplainedCount={data.unexplainedCount}
         openDocumentCount={data.openDocumentCount}
+        toIssueCount={data.toIssueCount}
         writableAccountCount={writableAccounts.length}
         onChange={onFilter}
         onOpenDialog={onOpenDialog}

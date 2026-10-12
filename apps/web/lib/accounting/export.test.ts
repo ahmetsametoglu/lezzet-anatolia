@@ -63,6 +63,7 @@ interface SaleInput {
   cogsAmountCents?: number;
   status?: 'completed' | 'delivered';
   invoiceNo?: string;
+  channel?: 'b2b' | 'b2c';
 }
 
 /**
@@ -77,7 +78,7 @@ async function makeSale(g: SaleInput) {
     {
       warehouseId,
       customerId,
-      channel: 'b2c',
+      channel: g.channel ?? 'b2c',
       orderedTotalCents: qty * unitPriceCents + (g.shippingFeeCents ?? 0),
       shippingFeeCents: g.shippingFeeCents,
       isGiftOrder: g.isGiftOrder,
@@ -204,6 +205,15 @@ describe('fatura eşleştirme kuyruğu', () => {
     const gift = await makeSale({ daysAgo: 190, isGiftOrder: true });
     const queue = await pendingInvoices({ limit: 200 });
     expect(queue.rows.map((r) => r.id)).not.toContain(gift.id);
+  });
+
+  // Elle numara alsaydı aynı satış hem elle hem Pennylane'den kendiliğinden faturalanırdı.
+  it("B2B satışı kuyruğa girmez ve elle numara almaz — faturası Pennylane'de kendiliğinden kesilir", async () => {
+    const b2b = await makeSale({ daysAgo: 190, channel: 'b2b' });
+    const queue = await pendingInvoices({ limit: 200 });
+    expect(queue.rows.map((r) => r.id)).not.toContain(b2b.id);
+    expect(await matchInvoiceNo(b2b.id, 'FA-2026-0043')).toEqual({ status: 'invalid', reason: 'auto_invoiced' });
+    expect((await orders.getById(b2b.id))?.invoiceNo).toBeNull();
   });
 
   it('boş numara reddedilir — satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı', async () => {

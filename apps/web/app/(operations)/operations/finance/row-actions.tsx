@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { ActionMenu } from '@/components/operation/ui/action-menu';
+import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { CheckIcon, DocumentIcon, NavIcon } from '@/components/operation/ui/icons';
 import type { MatchTarget } from '@/lib/bank/reconcile';
@@ -116,6 +118,7 @@ export interface DocumentRowActions {
   onOpenFile: (document: DocumentRowView) => void;
   onLinkDocument: (movementId: string, documentId: string) => Promise<boolean>;
   onRemoveAllocation: (movementId: string, documentId: string) => void;
+  onApproveSale: (document: DocumentRowView) => void;
 }
 
 interface DocumentActionsCellProps {
@@ -133,6 +136,28 @@ export function DocumentActionsCell({ document, actions }: DocumentActionsCellPr
       : []),
     ...(document.hasFile ? [{ key: 'file', icon: <DocumentIcon />, label: 'Belgeyi aç', hint: 'dosya yeni sekmede açılır', onSelect: () => actions.onOpenFile(document) }] : []),
   ];
+
+  // Onay bekleyen satış faturasında ödeme yerine fatura işi durur: eksik varsa müşterinin kaydı açılır, yoksa fatura onaylanır.
+  const sale = document.salesInvoice?.status === 'awaiting_approval' ? document.salesInvoice : null;
+  if (sale) {
+    return (
+      <div className="flex min-w-0 items-center justify-end gap-1">
+        {sale.missing.length > 0 ? (
+          <Link
+            href={sale.customerHref}
+            className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive transition-colors hover:text-ops-olive-dark"
+          >
+            Müşteriyi aç →
+          </Link>
+        ) : (
+          <Button variant="dark" size="sm" loading={busy} disabled={busy} onClick={() => actions.onApproveSale(document)}>
+            Onayla
+          </Button>
+        )}
+        {items.length > 0 ? <ActionMenu compact label="Belgenin eylemleri" items={items} /> : null}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-1">
