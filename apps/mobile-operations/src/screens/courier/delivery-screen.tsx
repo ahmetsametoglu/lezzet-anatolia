@@ -5,9 +5,11 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { ScanSheet } from '@/components/scan/scan-sheet';
 import { FormScroll } from '@lezzet/mobile-kit/src/components/ui/form-scroll';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
@@ -84,37 +86,60 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
 
   return (
     <View style={styles.screen} testID="courier-delivery">
-      {/* Başlık kaydırıcının içindedir, çünkü dışarıda kalsaydı mikro başlık inince altında asılı kalırdı. */}
-      <OperationsScreenChrome
-        title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
-        caption={operationsCopy.sections.courier.tab}
-      >
-        {(bind) => (
-          <FormScroll {...bind} contentContainerStyle={styles.body} testID="courier-delivery-body">
-            <OperationsHeadBleed pad="6xl">
-              <OperationsStackHeader
-                title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
-                subtitle={fillCopy(t.delivery.subtitle, { ref: stop.referenceNo ?? '—', n: String(stop.attempts + 1) })}
-                onBack={() => router.back()}
-                backLabel={t.delivery.back}
-                // Kanal rozeti başlık satırındadır, çünkü kanal durağın kimliğidir ve kurye ona kapıya varmadan bakar.
-                right={
-                  <Text style={styles.channelTag} testID={`courier-delivery-${stop.channel}`}>
-                    {t.channel[stop.channel]}
-                  </Text>
-                }
-                testID="courier-delivery-header"
-              />
-            </OperationsHeadBleed>
-            <DeliveryStopInfo stop={stop} stopNo={delivery.order} />
-            <DeliveryBoxesStep delivery={delivery} boxesLeft={boxesLeft} />
-            {delivery.doorCodeAsked ? <DeliveryCodeStep delivery={delivery} n={stepNo(1)} locked={stepsLocked} /> : null}
-            <DeliveryGoodsStep delivery={delivery} n={afterCode(1)} locked={stepsLocked} />
-            <DeliveryCollectionStep delivery={delivery} n={afterCode(2)} locked={stepsLocked} />
-          </FormScroll>
+      {/* Okutma düğmesi kaydırılan alanın dibinde yüzer; sonuç alanı akışta olduğu için daire onun üstünde kalır. */}
+      <View style={styles.main}>
+        {/* Başlık kaydırıcının içindedir, çünkü dışarıda kalsaydı mikro başlık inince altında asılı kalırdı. */}
+        <OperationsScreenChrome
+          title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
+          caption={operationsCopy.sections.courier.tab}
+        >
+          {(bind) => (
+            <FormScroll {...bind} contentContainerStyle={styles.body} testID="courier-delivery-body">
+              <OperationsHeadBleed pad="6xl">
+                <OperationsStackHeader
+                  title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
+                  subtitle={fillCopy(t.delivery.subtitle, { ref: stop.referenceNo ?? '—', n: String(stop.attempts + 1) })}
+                  onBack={() => router.back()}
+                  backLabel={t.delivery.back}
+                  // Kanal rozeti başlık satırındadır, çünkü kanal durağın kimliğidir ve kurye ona kapıya varmadan bakar.
+                  right={
+                    <Text style={styles.channelTag} testID={`courier-delivery-${stop.channel}`}>
+                      {t.channel[stop.channel]}
+                    </Text>
+                  }
+                  testID="courier-delivery-header"
+                />
+              </OperationsHeadBleed>
+              <DeliveryStopInfo stop={stop} stopNo={delivery.order} />
+              <DeliveryBoxesStep delivery={delivery} boxesLeft={boxesLeft} />
+              {delivery.doorCodeAsked ? <DeliveryCodeStep delivery={delivery} n={stepNo(1)} locked={stepsLocked} /> : null}
+              <DeliveryGoodsStep delivery={delivery} n={afterCode(1)} locked={stepsLocked} />
+              <DeliveryCollectionStep delivery={delivery} n={afterCode(2)} locked={stepsLocked} />
+            </FormScroll>
+          )}
+        </OperationsScreenChrome>
+        {delivery.boxes.length === 0 || boxesLeft === 0 || delivery.finished ? null : (
+          <OperationsScanFab
+            icon="scan"
+            accessibilityLabel={fillCopy(t.delivery.boxes.scanCta, { n: String(boxesLeft) })}
+            onPress={() => delivery.setBoxScanOpen(true)}
+            testID="courier-box-scan"
+          />
         )}
-      </OperationsScreenChrome>
+      </View>
       <DeliveryOutcome delivery={delivery} />
+      {delivery.boxes.length === 0 ? null : (
+        <ScanSheet
+          open={delivery.boxScanOpen}
+          title={t.delivery.boxes.scanTitle}
+          hint={t.delivery.boxes.scanHint}
+          onClose={() => delivery.setBoxScanOpen(false)}
+          onScan={delivery.handleBoxScan}
+          // Kutu QR'ı üretilmiş kayıttır; simülasyon çipi ancak durağın gerçek kodlarından kurulur.
+          devCodes={delivery.boxes.map((box) => ({ label: fillCopy(t.delivery.boxes.row, { n: String(box.boxNo) }), code: box.code }))}
+          testID="courier-box-scan-sheet"
+        />
+      )}
     </View>
   );
 }
@@ -129,6 +154,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space.lg,
   },
+  main: { flex: 1 },
   block: { paddingHorizontal: operationsTheme.space['6xl'] },
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],

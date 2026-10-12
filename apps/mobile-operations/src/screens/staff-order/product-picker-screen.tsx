@@ -4,10 +4,10 @@ import { FlatList, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { StaffVariantRow } from '@lezzet/types';
 
+import { OperationsScanFab, scanFabRoom } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { OperationsStickyBar } from '@/components/operations/sticky-bar';
+import { OperationsStickyBar, STICKY_BAR_HEIGHT } from '@/components/operations/sticky-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
-import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { fetchStaffVariants, scanStaffVariant } from '@/lib/api/staff-order';
 import { money } from '@/lib/operations/money';
@@ -23,8 +23,8 @@ import { activeLines, lineFromRow, subtotalBasisOf } from './staff-order-format'
 import { MIN_SEARCH_TERM, usePickerSearch, type PickerFetch } from './use-picker-search.hook';
 
 /*
-  Ürün seçici müşterinin fiyatını ve siparişin deposunun stoğunu gösterir; arama kutusu ve okutma düğmesi üstte sabittir. Arama
-  boşken liste katalog sırasıyla tamdır, sepet alttaki çubukta yazar.
+  Ürün seçici müşterinin fiyatını ve siparişin deposunun stoğunu gösterir; arama kutusu üstte sabittir, okutma yüzen düğmededir.
+  Arama boşken liste katalog sırasıyla tamdır, sepet alttaki çubukta yazar.
 */
 
 const p = t.productPicker;
@@ -132,26 +132,13 @@ export function StaffProductPickerScreen() {
         testID="staff-order-product-picker-header"
       />
       <View style={styles.top}>
-        <View style={styles.searchRow}>
-          <View style={styles.searchGrow}>
-            <SearchBox
-              value={search.term}
-              onChange={search.setTerm}
-              placeholder={p.placeholder}
-              clearLabel={p.clear}
-              testID="staff-order-variant-search"
-            />
-          </View>
-          <PressableSurface
-            onPress={() => setScanOpen(true)}
-            feedback="scale"
-            style={styles.scan}
-            accessibilityLabel={p.scan}
-            testID="staff-order-variant-scan"
-          >
-            <Icon name="scan" size={operationsTheme.size.headerIcon} color={operationsTheme.colors['on-image']} />
-          </PressableSurface>
-        </View>
+        <SearchBox
+          value={search.term}
+          onChange={search.setTerm}
+          placeholder={p.placeholder}
+          clearLabel={p.clear}
+          testID="staff-order-variant-search"
+        />
         <ListStatus text={statusText} busy={search.busy} testID="staff-order-variant-status" />
       </View>
       <FlatList
@@ -174,7 +161,7 @@ export function StaffProductPickerScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         style={search.busy ? styles.dim : null}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: scanFabRoom(STICKY_BAR_HEIGHT) }]}
         testID="staff-order-variant-list"
       />
       <OperationsStickyBar testID="staff-order-cart-bar">
@@ -197,6 +184,13 @@ export function StaffProductPickerScreen() {
           <Text style={styles.barDone}>{p.done}</Text>
         </PressableSurface>
       </OperationsStickyBar>
+      <OperationsScanFab
+        icon="scan"
+        accessibilityLabel={p.scan}
+        onPress={() => setScanOpen(true)}
+        lift={STICKY_BAR_HEIGHT}
+        testID="staff-order-variant-scan"
+      />
       <ScanSheet
         open={scanOpen}
         title={p.scanTitle}
@@ -216,20 +210,8 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space.sm,
     gap: operationsTheme.space.lg,
   },
-  searchRow: { flexDirection: 'row', gap: operationsTheme.space.md },
-  searchGrow: { flex: 1 },
-  scan: {
-    width: operationsTheme.size.controlMd,
-    height: operationsTheme.size.controlMd,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.ink,
-  },
-  list: {
-    paddingHorizontal: operationsTheme.space['5xl'],
-    paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['9xl'],
-  },
+  /** Alt boşluk çizimde dairenin payından verilir: son satırın "+"sı dairenin altında kalmasın. */
+  list: { paddingHorizontal: operationsTheme.space['5xl'] },
   dim: { opacity: operationsTheme.soldOutOpacity },
   bar: {
     height: operationsTheme.size.controlLg,

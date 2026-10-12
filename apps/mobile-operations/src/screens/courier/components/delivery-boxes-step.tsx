@@ -2,8 +2,6 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
-import { ScanSheet } from '@/components/scan/scan-sheet';
-import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { courierCopy as t } from '../copy';
@@ -68,30 +66,9 @@ export function DeliveryBoxesStep({ delivery, boxesLeft }: DeliveryBoxesStepProp
           );
         })}
       </View>
-      {delivery.finished || boxesLeft === 0 ? null : (
-        <PrimaryButton
-          label={fillCopy(t.delivery.boxes.scanCta, { n: String(boxesLeft) })}
-          onPress={() => delivery.setBoxScanOpen(true)}
-          icon="scan"
-          // Işıma yok: ışımalı düğme araca yükleme ekranının tek eylemidir, buradaki düğme adımın içinde bir kapıdır.
-          elevation="flat"
-          testID="courier-box-scan"
-        />
-      )}
       <Text style={boxesLeft === 0 ? styles.boxComplete : styles.boxNote}>
         {boxesLeft === 0 ? t.delivery.boxes.complete : t.delivery.boxes.pending}
       </Text>
-
-      <ScanSheet
-        open={delivery.boxScanOpen}
-        title={t.delivery.boxes.scanTitle}
-        hint={t.delivery.boxes.scanHint}
-        onClose={() => delivery.setBoxScanOpen(false)}
-        onScan={delivery.handleBoxScan}
-        // Kutu QR'ı üretilmiş kayıttır; simülasyon çipi ancak durağın gerçek kodlarından kurulur.
-        devCodes={delivery.boxes.map((box) => ({ label: fillCopy(t.delivery.boxes.row, { n: String(box.boxNo) }), code: box.code }))}
-        testID="courier-box-scan-sheet"
-      />
     </StepCard>
   );
 }

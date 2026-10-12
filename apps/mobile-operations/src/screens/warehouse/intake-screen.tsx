@@ -18,6 +18,7 @@ import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScanFab, scanFabRoom } from '@/components/operations/scan-fab';
 import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -40,47 +41,21 @@ import { useIntake, type IntakeRowState } from './use-intake.hook';
 import { parseDate, productLabel, shortDate } from './warehouse-format';
 import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
 
-/*
-  D2 · MAL KABUL (v2:353-400).
-
-  ── KONU (TEDARİK SİPARİŞİ) ROTADAN GELİR ───────────────────────────────────
-  Bekleyen sevkiyatları listeleyen bir kapı bugün YOK: uç yalnız "şu siparişin formunu ver" diyor
-  (`GET /intake/:purchaseOrderId`), "hangi siparişler bekliyor" demiyor. Ekran bu yüzden konusunu
-  rotadan alır (bildirim derin bağı ya da yönetim ekranı) ve konusuz açıldığında bunu SÖYLER —
-  uydurma bir sevkiyat listesi çizmek, depocuyu olmayan bir kolinin başına gönderirdi.
-
-  ── SKT · LOT · HASAR ───────────────────────────────────────────────────────
-  Üçü de v2'nin satır altı çipleri. SKT zorunlu (şema zorluyor), lot BOŞ bırakılabilir ama bilinçli
-  olmalı (çip bunu yazıyor), hasar bir NOT alanı açar — fotoğraf yok, gerekçe hook künyesinde.
-
-  ── FARK ÖZETİ YALNIZ SAPAN SATIRLARDIR ─────────────────────────────────────
-  v2'nin başlığı birebir: "FARK ÖZETİ — YALNIZ SAPAN SATIRLAR". Uyan satırı listeye koymak, farkı
-  aramayı zorlaştırırdı. Kabul yine YAZILIR: parçalı kabul meşrudur (DOMAIN §4).
-*/
+/* Mal kabul: konusuz açılış bekleyen sevkiyatları listeler, konu (tedarik siparişi ya da plansız kabul) rotadan gelir. Fark
+   özeti yalnız sapan satırları gösterir ki aranan fark kalabalıkta kaybolmasın; parçalı kabul meşrudur (DOMAIN §4). */
 
 const t = warehouseCopy;
 
 /**
- * İlk yükte çizilen yer tutucu kartın yüksekliği (dp).
- *
- * KAPALI satırın gerçek ölçüsünden türer, uydurma değil: "say →" düğmesi 46 (`controlSm`) ve
- * `lineRow`un dikey dolgusu 2×14 (`space['2xl']`) — toplam 74. Aynı sayı `skeleton-list.tsx`
- * künyesinde de "kuyruk satırı 74" diye ölçülmüş; yer tutucu, yerini tuttuğu şeyin boyunda
- * olmazsa veri gelince sayfa yine zıplar ve skeletonun tek işi zaten bunu önlemek.
+ * İlk yük kartının boyu kapalı satırın ölçüsüdür (`controlSm` 46 + 2 × `space['2xl']`); yer tutucu satırın boyunda olmazsa veri
+ * gelince sayfa zıplar.
  */
 const LINE_SKELETON_HEIGHT = 74;
 
-/**
- * Bekleyen listesinin künyesi (v3:517) — kaç sevkiyat, toplam kaç kalem.
- *
- * `lineCount` "kaç KALEM ısmarlandı"dır, kaç adet değil (sözleşme künyesi): depocu kaç satır
- * sayacağını bilir, kaç kutu taşıyacağını değil. Toplamı burada kuruyoruz çünkü uç yalnız satır
- * başına sayı veriyor — ikinci bir "özet" ucu, iki kez okunan aynı gerçeği bir kez daha okumak
- * olurdu (hub'ın aynı kuralı).
- */
 /** Okutulan satır üste getirilirken bırakılan nefes — satır ekranın tepesine yapışmasın. */
 const SCROLL_MARGIN = 24;
 
+/** Bekleyen listesinin künyesi; toplam kalem burada kurulur, çünkü uç yalnız sevkiyat başına kalem sayısı verir. */
 function pendingSummary(pending: readonly { lineCount: number }[]): string {
   const lines = String(pending.reduce((sum, row) => sum + row.lineCount, 0));
   return pending.length === 1
@@ -89,11 +64,8 @@ function pendingSummary(pending: readonly { lineCount: number }[]): string {
 }
 
 /**
- * Satır TAMAM mı — adet girilmiş VE SKT çözülmüş.
- *
- * Kural `use-intake.hook`un `complete` hesabının satır başına hâlidir ve oradan kopyalanmadı,
- * aynı iki koşulu okur: adet `null` değil ve sıfırdan büyük, tarih ayrıştırılabiliyor. İkisi
- * ayrışırsa künye "3 tamam" derken CTA "her satırda adet + SKT zorunlu" demeye devam ederdi.
+ * Satır tamam mı: adet girilmiş ve SKT çözülmüş. Koşul `use-intake`in `complete` hesabıyla aynı kalmalı, yoksa künye "3 tamam"
+ * derken kayıt düğmesi kapalı kalır.
  */
 function isRowDone(state: { qty: number | null; expiryText: string }): boolean {
   return state.qty !== null && state.qty > 0 && parseDate(state.expiryText) !== null;
@@ -103,40 +75,22 @@ export function IntakeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ purchaseOrderId?: string; unplanned?: string }>();
   const purchaseOrderId = typeof params.purchaseOrderId === 'string' && params.purchaseOrderId.length > 0 ? params.purchaseOrderId : null;
-  /** Plansız kabul (23.13): PO'suz gelen mal — satırları depocu kurar. */
+  /** Plansız kabul: siparişsiz gelen mal, satırları depocu kurar. */
   const unplanned = params.unplanned === '1' && purchaseOrderId === null;
   const intake = useIntake(purchaseOrderId, unplanned);
   const { offline } = useWarehouseStatus();
 
-  /* BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI; toast'a
-     basan köprü de 07.09'da BURADAN KALKTI ve `useNotice`ın içine girdi. Gerekçesi orada. */
   const [searchOpen, setSearchOpen] = useState(false);
 
-  /*
-    TEK KART AÇIK — AKORDEON (kullanıcı kararı 03.09).
-
-    Satır sayıldıktan sonra açık kalıyordu ve altı kalemlik bir kabulde altı dev kart alt alta
-    diziliyordu: SKT alanı, lot alanı, hasar kartı, sebep satırı… Depocu hangi satırda olduğunu
-    kaydırarak arıyordu. Kullanıcının cümlesi: *"başka bir kart açıldığı zaman bir önceki kart
-    küçülsün."*
-
-    Açıklık artık SATIRIN değil EKRANIN durumu — iki satır aynı anda açık olamaz, çünkü kural
-    satırlar ARASINDA. Kapalı kart özetini kendi rozetlerinde taşır (satırın künyesi).
-  */
+  /* Tek kart açık (akordeon): kural satırların arasında olduğu için açıklık ekranın durumudur; açık kartlar alt alta
+     dizilince depocu hangi satırda olduğunu kaydırarak arardı. */
   const [openRow, setOpenRow] = useState<string | null>(null);
   /** Kaydırıcı ve satırların ölçülen y'si — okutulan satırı görünür kılmak için (aşağıdaki künye). */
   const scroll = useRef<ScrollView>(null);
   const rowY = useRef<Record<string, number>>({});
 
-  /*
-    OKUTULAN SATIR EKRANA GETİRİLİR (kullanıcı sorusu 03.09: *"barkod okuttuğum ürünü bu listede
-    bulmak kolay olabilecek mi, liste çok kalabalık olursa?"*).
-
-    Ölçüldü: okutma o satırı açıp adet çekmecesini getiriyordu ama listede satırın NEREDE olduğunu
-    söylemiyordu — altı kalemlik bir siparişte beşinci satır ekranın dışındaydı ve çekmece
-    kapanınca depocu boş bir listeye bakıyordu. Akordeon listeyi zaten kısaltıyor; kaydırma da
-    satırı üste getiriyor. İkisi birlikte "okuttum, işte satırın" cümlesini tamamlıyor.
-  */
+  /* Okutulan satır ekrana getirilir: okutma satırı açıp adet çekmecesini getirir, satır ekranın dışındaysa çekmece kapanınca
+     depocu boş listeye bakardı. */
   useEffect(() => {
     const target = intake.pendingCount;
     if (target === null) return;
@@ -150,19 +104,6 @@ export function IntakeScreen() {
     setOpenRow((current) => (current === variantId ? null : variantId));
   }, []);
 
-  /*
-    OKUTMA PENCERESİ İLE ADET ÇEKMECESİ ARASINDA EL SIKIŞMA YOK — ve gerekmiyor.
-
-    Arıza 30.08'de burada bulunmuştu (iOS: koli okutulunca satır sayıyor ama çekmece ekranın altında
-    asılı kalıyor). Sebebi iki `Modal`ın çakışmasıydı: iOS kapanmakta olanın üstüne yenisini
-    sunmuyor, panelin yerleşimi hiç ölçülmüyor ve ölçüme bağlı açılış hiç tetiklenmiyordu. Çare o
-    gün bu ekranın içine elle yazılmıştı: bir bayrak, iki `onDismiss` teli.
-
-    01.09'da çekmece `@gorhom/bottom-sheet`e geçti ve RN `Modal`ı kullanmıyor — kendi portalına
-    asılıyor. Sınırlamanın kendisi ortadan kalktığı için kapı da söküldü (künyesi
-    `components/ui/bottom-sheet.tsx`).
-  */
-
   /* ARAMADAN SEÇİLEN ÜRÜN, ÇEKMECE KAPANANA KADAR BEKLER (künyesi `onPick`te). İki kanca da aynı
      yere bağlı — `onClosed` her platformda, `onDismiss` yalnız iOS'ta gelir; ikinci çağrı zararsız,
      çünkü bekleyen seçim ilk çağrıda tüketiliyor. */
@@ -173,15 +114,8 @@ export function IntakeScreen() {
     setPickedVariant(null);
   }, [intake, pickedVariant]);
 
-  /*
-    ARAMA ÇEKMECESİ TEK TANIM, İKİ KULLANIM (kullanıcı bulgusu 30.08).
-
-    Ekran plansız kabulde İKİ ayrı blok döndürüyor (liste boş / liste dolu) ve çekmece yalnız
-    boş bloktaydı. Sonucu: ilk ürün eklendikten sonra "Ürün ara ve ekle" düğmesi duruyor ama
-    bastığında hiçbir şey açılmıyordu — ikinci ürün hiç eklenemiyordu. Çekmece bu yüzden bir
-    kez tanımlanıp iki blokta da çiziliyor; ikinci bir kopya yazmak aynı davranışı iki yerde
-    bakmak olurdu (CLAUDE §1).
-  */
+  /* Arama çekmecesi bir kez tanımlanır ve plansız kabulün iki dalında (liste boş / dolu) çizilir; yalnız boş dalda dursaydı
+     ilk üründen sonra arama açılmazdı. */
   const renderSearchSheet = () => (
     <VariantSearchSheet
       visible={searchOpen}
@@ -189,27 +123,12 @@ export function IntakeScreen() {
       onClosed={addPickedRow}
       onDismissed={addPickedRow}
       onPick={(variant) => {
-        /* SATIR ÇEKMECE KAPANDIKTAN SONRA EKLENİR (kullanıcı bulgusu 30.08, iki platformda).
-           Sebebi bu ekranın kendi yapısı: plansız kabulde liste BOŞKEN ayrı bir dönüş bloğu
-           çiziliyor (yukarıdaki `rows.length === 0 && unplanned` dalı) ve arama çekmecesi o
-           bloğun içinde. Satır hemen eklenseydi liste dolar, ekran öteki bloğa geçer ve blok
-           SÖKÜLÜRDÜ — çekmece React tarafından kaldırıldığı için ne `onClosed` ne `onDismiss`
-           gelir, yani "kapandı" sinyali hiç doğmazdı. Adet çekmecesi de o sinyali beklediği
-           için hiç açılmıyordu.
-
-           Sıra bu yüzden ters: seçim yalnız BEKLETİLİR, çekmece kapanır, satır ondan sonra
-           eklenir. Böylece blok değişimi kapanışın ardına düşer ve iki `Modal` aynı pencerede
-           çakışmaz. */
+        /* Satır çekmece kapandıktan sonra eklenir: hemen eklenseydi liste dolar, ekran boş daldan dolu dala geçer ve sökülen
+           çekmecenin kapanış sinyali hiç gelmezdi. Seçim bu yüzden bekletilir, adet çekmecesi kapanışın ardından açılır. */
         setPickedVariant(variant);
         setSearchOpen(false);
-        /*
-          ARAMA ÖĞRENMEDEN AÇILDIYSA KOD DA BU ÜRÜNE GİDER (kullanıcı kararı 25.08).
-
-          Depocu tanınmayan bir kod okuttu, ürünü aradı ve buldu — kodu ikinci kez okutmasını
-          istemek, zaten yaptığı işi tekrarlatmak olurdu. `learn.variantId === null` koşulu
-          şart: arama öğrenmeden BAĞIMSIZ da açılabiliyor (boş hâlin kendi düğmesi) ve o
-          turda ortada öğretilecek bir kod yok.
-        */
+        /* Arama tanınmayan kodu öğretmek için açıldıysa kod da seçilen ürüne yazılır, depocu kodu ikinci kez okutmasın.
+           Arama boş hâlin düğmesinden öğrenmesiz de açılabildiği için koşul `variantId === null` ister. */
         if (intake.learn !== null && intake.learn.variantId === null) {
           intake.pickLearnVariant(variant.variantId);
         }
@@ -224,13 +143,8 @@ export function IntakeScreen() {
       /* Plansız kabulün BAŞLIĞI ayrı (v3:756): "Mal Kabul" beklenen adetlerle çalışılan ekranın
          adı; siparişsiz mal onun bir kipi değil, başka bir iş. Aynı başlık ikisini de taşıyınca
          depocu hangi ekranda olduğunu ancak künyeden anlıyordu. */
-      /* FORMDA BAŞLIK SEVKİYATIN KODUDUR (v3:05 · kullanıcı bulgusu 30.08), sabit "Mal kabul"
-         DEĞİL. Depocunun elindeki kâğıtta yazan şey `TS-26-4VXQEC`; ekranın adını zaten oraya
-         nasıl geldiğinden biliyor. Uç künyeyi 21.11d'den beri gönderiyordu, hook onu düşürüyordu
-         ve başlık sabitti — yani veri vardı, ekrana hiç ulaşmıyordu.
-
-         Kod OKUNAMADIYSA ekranın adına düşer: künyesiz bir sevkiyatı "—" diye başlıklamak,
-         okunamayan bir kimliği boş bir kimlik gibi gösterirdi. */
+      /* Formun başlığı sevkiyatın kodudur, çünkü depocunun elindeki kâğıtta o yazar; kod okunamadıysa ekranın adına düşer,
+         "—" okunamayan kimliği boş gösterirdi. */
       title={unplanned ? t.intake.unplannedTitle : (intake.purchaseOrder?.referenceNo ?? t.intake.title)}
       /* Bekleyen listesinde künye LİSTEYİ anlatır (v3:517 `ov.maKabulAlt`), kategoriyi değil:
          "bekleyen sevkiyatlar" bir başlık tekrarıydı; "2 bekleyen sevkiyat · 11 kalem" depocunun
@@ -243,11 +157,8 @@ export function IntakeScreen() {
             ? intake.status === 'ready'
               ? pendingSummary(intake.pending)
               : t.intake.captionPending
-            : /* FORMDA künye İLERLEMEYİ söyler (v3:598 `maDetayAlt`): "tedarik siparişi · 5 kalem ·
-                 1 tamam". "gönderildi" bir kategoriydi ve depocu zaten oraya gönderildiği için
-                 girmişti; kaçının bittiği ise her satırdan sonra değişen tek sayı. Satır henüz
-                 yüklenmediyse kategoriye düşer — sıfır yazmak "hiçbiri bitmedi" der ve o an
-                 doğru değildir. */
+            : /* Formda künye ilerlemeyi söyler (kaç kalem, kaçı tamam); satır henüz yüklenmediyse kategoriye düşer, çünkü
+                 sıfır yazmak o an doğru olmayan "hiçbiri bitmedi" cümlesidir. */
               intake.rows.length === 0
               ? t.intake.captionPlanned
               : fillCopy(t.intake.formSummary, {
@@ -261,11 +172,8 @@ export function IntakeScreen() {
     />
   );
 
-  /*
-    KONUSUZ AÇILIŞ = BEKLEYEN SEVKİYAT LİSTESİ (24.08). Eskiden burada "bu ekranın konusu yok"
-    yazıyordu ve mal kabule YALNIZ derin bağlantıyla girilebiliyordu; sipariş kimliği her
-    tazelemede değiştiği için o yol sürekli kırılıyordu (ölçüldü). Uç 21.11d'den beri hazırdı.
-  */
+  /* Konusuz açılış bekleyen sevkiyatları listeler; kabule yalnız derin bağlantıyla girilseydi bağlantı kırıldığında ekran
+     kapalı kalırdı. */
   if (purchaseOrderId === null && !unplanned && intake.status !== 'loading') {
     return (
       <View style={styles.screen} testID="warehouse-intake">
@@ -310,10 +218,7 @@ export function IntakeScreen() {
             </PressableSurface>
           </View>
         ) : (
-          /* AŞAĞI ÇEKİNCE YENİLE — YALNIZ LİSTEDE (kullanıcı isteği 30.08). Rampada yeni bir
-             sevkiyat "kabul bekliyor"a düştüğünde depocu ekrandan çıkıp geri giriyordu.
-             **Kabul FORMUNDA çekme YOK ve olmamalı:** form bir kez okunuyor (hook künyesi) ve
-             tazeleme, depocunun yazdığı adetleri sessizce silerdi. */
+          /* Aşağı çekince yenileme yalnız listededir; formda tazeleme depocunun yazdığı adetleri sessizce silerdi. */
           <FormScroll
             contentContainerStyle={styles.list}
             refresh={{ onRefresh: intake.refresh, refreshing: intake.reloading }}
@@ -337,10 +242,8 @@ export function IntakeScreen() {
                 </View>
                 <View style={styles.pendingNames}>
                   <Text style={styles.pendingRef}>{row.referenceNo ?? '—'}</Text>
-                  {/* DURUM ALANDAN GELİR, sabit "gönderildi" DEĞİL (v3:531 · 30.08): liste hem
-                      `sent` hem `partially_received` taşıyor (uç künyesi) ve ikisi ayrı cümledir
-                      — birinde koli hiç açılmadı, ötekinde bu ikinci turdur ve formdaki beklenen
-                      adetler KALANDIR. Sabit yazsaydık listenin yarısı için yalan olurdu. */}
+                  {/* Durum alandan gelir: liste hem `sent` hem `partially_received` taşır ve ikincisinde formdaki beklenen
+                      adetler kalandır. */}
                   <Text style={styles.pendingMeta}>
                     {fillCopy(t.intake.pendingMeta, {
                       supplier: row.supplierName ?? '—',
@@ -362,11 +265,8 @@ export function IntakeScreen() {
               </PressableSurface>
             ))}
 
-            {/* PLANSIZ KABUL LİSTENİN SONUNDA (v3:574). 23.13'te listenin ÜSTÜNDEYDİ ve gerekçesi
-                "bekleyen sevkiyat sayısı değişken, sabit yer sabit alışkanlık" idi. v3 onu listenin
-                sonuna, kendi satırı olarak koyuyor ve gerekçe değişiyor: plansız kabul ISTISNADIR
-                — beklenen adet yoktur, sayım onunla doğrulanamaz. Kuyruğun üstünde durması onu
-                normal yol gibi gösteriyordu. Boş hâlde ise TEK yol olduğu için orada kalıyor. */}
+            {/* Plansız kabul listenin sonunda kendi satırıdır, çünkü istisnadır: beklenen adet yoktur ve sayım onunla
+                doğrulanamaz. */}
             <PressableSurface
               onPress={() => router.push('/intake?unplanned=1')}
               feedback="shadow"
@@ -393,10 +293,7 @@ export function IntakeScreen() {
   }
 
   if (intake.status === 'loading') {
-    /* İLK YÜK SKELETON, HALKA DEĞİL (kullanıcı kararı 30.08). Halka yerleşim tutmaz: söndüğü an
-       sayfa zıplar ve depocu o ana kadar ekranın ne olacağını göremez. Kutular gelecek KALEM
-       KARTLARININ yerini tutuyor — ölçü uydurma değil, `lineRow`un kendi yüksekliği
-       (`skeleton-list.tsx` künyesi: ölçü ÇAĞIRANDAN gelir). */
+    /* İlk yük iskelettir, halka değil: kutular gelecek kalem kartlarının boyunda durur ki veri gelince sayfa zıplamasın. */
     return (
       <View style={styles.screen} testID="warehouse-intake">
         {header}
@@ -441,19 +338,8 @@ export function IntakeScreen() {
             testID="warehouse-intake-unplanned-empty"
           />
           {offline ? null : (
-            /* İKİ DÜĞME AYNI GÖRÜNMEZ (kullanıcı bulgusu N3, 30.08): ikisi de zeytin çerçeveli
-               çizilmişti ve hangisinin asıl yol olduğu okunmuyordu. Tasarım ayırıyor — okutma
-               ZEYTİN çerçeve + ikon (asıl yol), arama KUM çerçeve (yedek yol). Gölge yok: v3
-               operasyon yüzeyinde sert gölge hiç kullanılmıyor. */
+            /* Arama yedek yoldur ve kum çerçeveyle çizilir; asıl yol yüzen okutma düğmesidir. */
             <View style={styles.altCtas}>
-              <SecondaryButton
-                label={t.intake.scan.cta}
-                onPress={intake.openScan}
-                tone="olive"
-                elevation="flat"
-                icon="scan"
-                testID="warehouse-intake-scan-cta"
-              />
               <SecondaryButton
                 label={t.intake.searchCta}
                 onPress={() => setSearchOpen(true)}
@@ -464,6 +350,13 @@ export function IntakeScreen() {
             </View>
           )}
         </View>
+        <OperationsScanFab
+          icon="scan"
+          accessibilityLabel={t.intake.scan.cta}
+          onPress={intake.openScan}
+          disabled={offline}
+          testID="warehouse-intake-scan-cta"
+        />
         <ScanSheet
           open={intake.scanOpen}
           title={t.intake.scan.title}
@@ -473,8 +366,8 @@ export function IntakeScreen() {
           testID="warehouse-intake-scan"
         />
         {renderSearchSheet()}
-        {/* Boş hâlde de ÇİZİLİR: plansız kabulün ilk okutması tanınmayan bir kod olabilir ve
-            çekmece yoksa ekran hiç kıpırdamaz (cihaz turu 25.08 — künyesi `LearnSheet`te). */}
+        {/* Öğrenme çekmecesi boş hâlde de çizilir: plansız kabulün ilk okutması tanınmayan bir kod olabilir ve çekmece
+            yoksa ekran hiç kıpırdamaz. */}
         <LearnSheet intake={intake} onLearnSearch={() => setSearchOpen(true)} />
       </View>
     );
@@ -496,13 +389,7 @@ export function IntakeScreen() {
     );
   }
 
-  /*
-    DÜĞME ASIL EYLEMİ YAZAR, KAPIYI DEĞİL (Komponent Envanteri M1e, 30.08).
-    Envanterin yapışkan taban kuralı: *"üstte gradient maske, gerekiyorsa TEK SATIR KAPI METNİ,
-    sonra tek birincil buton."* Eskiden kapı metni düğmenin ETİKETİNE giriyordu ("Her satırda adet
-    + SKT zorunlu") ve düğme ne yapacağını hiç söylemiyordu; tasarım karesinde ise düğme pasifken
-    de "Kabulü kaydet" yazıyor, eksik olan şey üstteki gri satırda duruyor.
-  */
+  /* Düğme asıl eylemi yazar, kapının sebebini değil: eksik olan şey düğmenin üstündeki tek satırlık kapı metnindedir. */
   const cta = offline
     ? { label: t.common.offlineCta, enabled: false }
     : intake.sending
@@ -520,22 +407,24 @@ export function IntakeScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-intake">
-      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — ama `FormScroll` sarılamaz (klavye farkında
-          kendi kaydırıcısı), o yüzden KROM kapısı: şeridi kabuk çizer, bağlantıyı kaba verir.
-          Başlık kaydırıcının İÇİNDE — dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      {/* `FormScroll` klavye farkında kendi kaydırıcısı olduğu için sarılamaz, mikro başlığı krom kapısı çizer. Başlık
+          kaydırıcının içindedir, dışarıda kalsaydı mikro başlık inince altında asılı kalırdı. */}
       <OperationsScreenChrome
         title={unplanned ? t.intake.unplannedTitle : (intake.purchaseOrder?.referenceNo ?? t.intake.title)}
         caption={operationsCopy.sections.warehouse.tab}
       >
         {(bind) => (
-      <FormScroll {...bind} contentContainerStyle={styles.list} scrollRef={scroll} testID="warehouse-intake-lines">
+      <FormScroll
+        {...bind}
+        /* Liste sonu dairenin payını bırakır, yoksa kapı satırı ve kayıt düğmesi dairenin altında kalır. */
+        contentContainerStyle={[styles.list, { paddingBottom: scanFabRoom() }]}
+        scrollRef={scroll}
+        testID="warehouse-intake-lines"
+      >
         <OperationsHeadBleed pad="6xl">{header}</OperationsHeadBleed>
 
-        {/* ÖĞRENİLEN KOD LİSTENİN ÜSTÜNDE KALIR (v3:05 · kullanıcı bulgusu 30.08). Önceden yalnız
-            geçip giden bir bildirimdi; oysa öğrenme bir ADIM değil bir SONUÇTUR — o kod bir dahaki
-            kabulde tanınacak ve depocunun bunu görmesi, aynı koliyi ikinci kez öğretmeye
-            kalkışmasını önler. Kart kapatılmıyor: kaybolması gereken bir uyarı değil, kabul
-            bitene kadar doğru kalan bir kayıt. */}
+        {/* Öğrenilen kod listenin üstünde kalır: depocu kodun bir dahaki kabulde tanınacağını görürse aynı koliyi ikinci
+            kez öğretmeye kalkmaz. Kart kapatılmaz, kabul bitene kadar doğru kalan bir kayıttır. */}
         {intake.learned === null ? null : (
           <View style={styles.learnedCard} testID="warehouse-intake-learned">
             <Text style={styles.learnedTitle}>
@@ -552,14 +441,9 @@ export function IntakeScreen() {
             </Text>
           </View>
         )}
-        {/* Tarama (Modül 23 · 23.4): barkodun buradaki TEK işi satırı bulmak — koli kodunda adet
-            çarpan kadar önerilir, depocu düzeltebilir. Çevrimdışıyken çizilmez: çözüm sunucuda ve
-            "sonra dene" diyecek bir kuyruğu yok. */}
         {offline ? (
-          /* ÇEVRİMDIŞI: SEBEP YAZILIR, DÜĞME GİZLENMEZ (v3:610). Eskiden okutma düğmesi sessizce
-             çizilmiyordu ve depocu "düğme nerede" diye arıyordu; kilit bir yokluk değil, bir
-             cevaptır. Metin neden yazılamayacağını da söylüyor: çevrimdışı sayılan adet iki
-             deponun stokunu bozar. Okumak serbest — satırlar duruyor. */
+          /* Çevrimdışıyken sebep yazılır: kilit bir yokluk değil cevaptır ve çevrimdışı sayılan adet iki deponun stokunu
+             bozar. Satırlar durur, okumak serbesttir. */
           /* KİLİDİN METNİ KİPE GÖRE (v3:610 vs 813): planlı kabulde sorun SAYIMIN doğruluğudur
              ("çevrimdışı sayılan adet iki deponun stokunu bozabilir"); plansızda henüz sayılacak
              bir şey yok, sorun SATIRIN kendisinin doğamamasıdır (kod eşleşmesi ve parti oluşumu
@@ -568,18 +452,7 @@ export function IntakeScreen() {
             <Text style={styles.formLockedTitle}>{unplanned ? t.intake.unplannedLocked.title : t.intake.formLocked.title}</Text>
             <Text style={styles.formLockedBody}>{unplanned ? t.intake.unplannedLocked.body : t.intake.formLocked.body}</Text>
           </View>
-        ) : (
-          <View style={styles.altCtas}>
-            <SecondaryButton
-              label={t.intake.scan.cta}
-              onPress={intake.openScan}
-              tone="olive"
-              elevation="flat"
-              icon="scan"
-              testID="warehouse-intake-scan-cta"
-            />
-          </View>
-        )}
+        ) : null}
         {/* Arama YALNIZ plansızda: PO'lu kabulde satır kümesi siparişten gelir ve dışarıdan satır
             eklemek fark raporunun göremeyeceği bir yere "beklenmedik mal" yazmak olurdu (23.4). */}
         {offline || !unplanned ? null : (
@@ -642,16 +515,8 @@ export function IntakeScreen() {
         <Text style={styles.footnote}>{t.intake.footnote}</Text>
         <Text style={styles.footnote}>{t.intake.photoNote}</Text>
 
-        {/*
-          KAYIT DÜĞMELERİ LİSTENİN SONUNDA, YAPIŞKAN ÇUBUKTA DEĞİL (kullanıcı kararı 03.09):
-          *"listenin en altında olsunlar, liste en alta kaydırılınca çıksınlar, ekranı
-          daraltmasınlar."*
-
-          Yapışkan çubuk ekranın altını kalıcı olarak yiyordu ve bu ekranda bedeli ağırdı: açık
-          kartın hasar bloğu ile sebep satırı sürekli çubuğun ARDINDA kalıyordu (cihazda ölçüldü
-          — sayaç ve "sebep seç" düğmesi görünmüyordu). Kabul zaten listenin SONUNDA verilen bir
-          karar: her satır sayılır, sonra kaydedilir. Düğmenin yeri de o kararın yeridir.
-        */}
+        {/* Kayıt düğmeleri listenin sonundadır, yapışkan çubukta değil: çubuk açık kartın hasar ve sebep satırını örterdi
+            ve kabul zaten her satır sayıldıktan sonra verilen karardır. */}
         <View style={styles.formActions}>
           {gateNote === null ? null : (
             <Text style={styles.stickyNote} testID="warehouse-intake-gate">
@@ -660,35 +525,24 @@ export function IntakeScreen() {
           )}
           <PrimaryButton
             label={cta.label}
-            /* BAŞARIDA EKRAN KAPANIR (kullanıcı bulgusu 30.08): kabul yazıldıysa bu ekranda
-               yapılacak iş kalmadı — depocu sevkiyat listesine döner ve siparişin listeden
-               düştüğünü görür. Sonucu toast söylüyor (`use-intake` künyesi), yani kapanan
-               ekranda okunmayacak bir şerit beklemiyor. */
+            /* Başarıda ekran kapanır: yapılacak iş kalmadı, sonucu toast söyler ve depocu sevkiyatın listeden düştüğünü
+               görür. */
             onPress={() => intake.submit({ onDone: () => router.back() })}
             disabled={!cta.enabled}
             elevation="flat"
             testID="warehouse-intake-cta"
           />
 
-          {/*
-            İKİNCİ YOL: KISMİ KAYIT (v3:05 · `act.kismiKabul`) — tasarımın yapışkan çubuğunda ayrı
-            bir düğme ve ayrı bir karar. Rampada koli koli gelen bir sevkiyatta "her satırı say"
-            beklemesi gerçek dışı: mal geldiği kadarıyla stoğa girmeli, kalanı açık kalmalı.
-
-            KOŞULU BİZİM kararımız, tasarımın değil: şablon düğmeyi hep çiziyor, biz yalnız
-            "hepsi sayılmamış AMA en az biri sayılmış" hâlinde çiziyoruz. Hepsi sayılıyken ikinci
-            düğme birinciyle aynı şeyi daha kötü yapardı; hiçbiri sayılmamışken de kapıya boş bir
-            kabul göndermeye davet ederdi.
-          */}
+          {/* Kısmi kayıt ikinci yoldur: koli koli gelen sevkiyatta mal geldiği kadarıyla stoğa girer, kalanı açık kalır.
+              Yalnız "hepsi sayılmamış ama en az biri sayılmış" hâlde çizilir; öteki hâllerde ya birinci düğmenin kötü
+              kopyası ya boş kabule davet olurdu. */}
           {offline || intake.complete || !intake.hasAnyCounted ? null : (
             <>
               <SecondaryButton
                 label={t.intake.cta.partialAction}
                 onPress={() => intake.submit({ partial: true })}
-                /* KİREMİT (kullanıcı kararı 03.09: "kırmızı tonlarında olursa daha iyi") — kısmi
-                   kayıt bir HATA değil ama geri alınamayan bir SAPMA: sevkiyat "kısmen teslim
-                   alındı"ya döner ve kalan satırlar açık kalır. Uyarı ailesi tam bunun rengi;
-                   `error` yanlış olurdu — burada bozulan bir şey yok. */
+                /* Kiremit ton: kısmi kayıt hata değil, geri alınamayan bir sapmadır; sevkiyat kısmen teslim alındıya döner
+                   ve kalan satırlar açık kalır. */
                 tone="terracotta"
                 elevation="flat"
                 disabled={intake.sending}
@@ -702,6 +556,16 @@ export function IntakeScreen() {
         )}
       </OperationsScreenChrome>
 
+      {/* Okutma yüzen düğmededir, çünkü akıştaki düğme liste kaydıkça kaybolur; çevrimdışıyken söner, sebebini listedeki kilit
+          yazar. */}
+      <OperationsScanFab
+        icon="scan"
+        accessibilityLabel={t.intake.scan.cta}
+        onPress={intake.openScan}
+        disabled={offline}
+        testID="warehouse-intake-scan-cta"
+      />
+
       <ScanSheet
         open={intake.scanOpen}
         title={t.intake.scan.title}
@@ -713,33 +577,15 @@ export function IntakeScreen() {
 
       {renderSearchSheet()}
 
-      {/* OKUTMA ÇEKMECESİ SÖKÜLDÜ (kullanıcı kararı 30.08 · tasarım deseni). Burada bir
-          "Okutulan ürün" paneli vardı: fotoğraf + kaydırıcı + "Satıra ekle". Tasarımda böyle bir
-          çekmece HİÇ YOK — okutulan kod ANINDA sayılır ve adet çekmecesi açılır
-          (`v3.dc.html:4005-4010`): paket barkodu tek pakete +1, koli barkodu o boydan +1 koli.
-          Panel iki adım ve fazladan bir soru getiriyordu ("kaç tane?"), oysa koli barkodu kaç adet
-          olduğunu KENDİSİ söylüyor (`qtyPerCode`); kaydırıcı da v3'te hiç geçmiyor. Satırın
-          açılması artık `pendingCount` sinyaliyle. */}
-
       <LearnSheet intake={intake} onLearnSearch={() => setSearchOpen(true)} />
     </View>
   );
 }
 
 /**
- * **Öğrenen eşleme çekmecesi** (karar §1.3) — tanınmayan kod için satır seçtirilir; kod o varyanta
- * yazılır, bir daha sorulmaz. Aday kümesi FORMUN satırlarıdır: PO'lu kabulde gelen koli zaten
- * siparişin bir kalemidir; katalog araması açmak, yanlış ürüne öğretmenin kapısını ardına kadar
- * açardı.
- *
- * ── AYRI BİLEŞEN, ÇÜNKÜ İKİ DALDA ÇİZİLİYOR (cihaz turu 25.08) ──────────────
- * Ekranın plansız-boş hâli erken dönüyor ve çekmece yalnız ANA dalda duruyordu: plansız kabulde
- * tanınmayan bir kod okutulunca `setLearn` çalışıyor, state doğru kuruluyor ve **hiçbir şey
- * görünmüyordu**. Sessiz arızanın tam tanımı — kod doğru, yüzey yok; depocu kamerayı suçlar.
- * Cihazda ölçülerek bulundu (TANINMAYAN etiketi okutuldu, ekran kıpırdamadı).
- *
- * Kopyalamak yerine bileşen: iki dalda iki nüsha olsaydı biri gün gelip ötekinden ayrışırdı ve
- * ayrışma yine sessiz olurdu.
+ * Öğrenen eşleme çekmecesi: tanınmayan kod için satır seçtirilir ve kod o varyanta yazılır; aday kümesi formun satırlarıdır,
+ * katalog araması yanlış ürüne öğretmenin kapısını açardı. Ayrı bileşendir, çünkü ekranın iki dalında da çizilmeli ve iki nüsha
+ * zamanla sessizce ayrışırdı.
  */
 function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIntake>; onLearnSearch: () => void }) {
   return (
@@ -751,15 +597,8 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
     >
       {intake.learn === null ? null : intake.learn.variantId === null ? (
         intake.rows.length === 0 ? (
-          /*
-              ADAY LİSTESİ BOŞ — plansız kabulde İLK okutma tanınmayan bir kod olduğunda (cihaz
-              turu 25.08). Eski hâl *"Satırı seçin"* diyor ve altında hiçbir satır çizmiyordu:
-              depocu boşluğa bakıp çıkmaza giriyordu.
-
-              Çözüm iki adımı BİRLEŞTİRİYOR (kullanıcı kararı 25.08): arama açılır, seçilen ürün
-              hem satırı açar hem kodu alır. Ayrı bırakılsaydı depocu ürünü ekleyip kodu İKİNCİ
-              kez okutmak zorunda kalırdı — ve okutma zaten yaptığı işti.
-            */
+          /* Aday listesi boşsa (plansız kabulün ilk okutması) arama açılır ve seçilen ürün hem satırı açar hem kodu alır;
+             ayrı olsaydı depocu kodu ikinci kez okuturdu. */
           <>
             <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnEmptyBody, { code: intake.learn.code })}</Text>
             <PrimaryButton
@@ -800,8 +639,8 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
           </>
         )
       ) : (
-        /* 2. ADIM (23.12): bu kod NEYİ sayıyor? Çarpan öğrenme anında yazılmazsa yazılacak
-             başka yeri yok — web'de kod ekleme bilinçle kapalı (öğrenme kabuldedir, karar §1.3). */
+        /* İkinci adım: bu kod neyi sayıyor? Çarpan öğrenme anında yazılmazsa yazılacak başka yer yok, web'de kod ekleme
+           bilinçle kapalıdır. */
         <>
           <Text style={styles.learnBody}>
             {fillCopy(t.intake.scan.learnUnitBody, {
@@ -825,10 +664,8 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
             />
           </View>
           {intake.learn.kind === 'unit' ? null : (
-            /* KİTİN TEK ADET DESENİ (kullanıcı kararı 02.09: "o kaydırmalı komponent komple
-               kalksın") — kaydırıcının son kullanıcısıydı. Taban 2: koli en az iki paket,
-               `confirmLearn`in kilidi de aynı kuralda. Ortadaki rakam bu çekmecede çekmece açmaz
-               (çekmece çekmece açamaz); çarpan çoğu zaman 6–24 arası, ± yeter. */
+            /* Kitin tek adet sayacı; taban 2, çünkü koli en az iki pakettir ve `confirmLearn` de aynı kuralla kilitlenir.
+               Çekmece içinden çekmece açılmadığı için ortadaki rakam tuş takımı açmaz. */
             <View style={styles.learnQty}>
               <OperationsStepperGroup
                 value={intake.learn.qtyPerCode}
@@ -869,21 +706,13 @@ interface VariantSearchSheetProps {
   onClosed?: () => void;
   /** Çekmece EKRANDAN GERÇEKTEN KALKTIĞINDA (iOS `Modal.onDismiss`) — aynı işi yapar. */
   onDismissed?: () => void;
-  /**
-   * Seçilen satır BÜTÜN olarak geçer, üç alana indirilmez (30.08): satır artık kodunu ve tarih
-   * rejimini de taşıyor ve kabul satırı bunların hepsini istiyor. Daraltılmış bir imza, yeni bir
-   * alan eklendiğinde onu SESSİZCE düşürürdü — tip hiçbir şey demezdi.
-   */
+  /** Seçilen satır bütün geçer: daraltılmış bir imza satıra yeni alan eklendiğinde onu sessizce düşürürdü. */
   onPick: (variant: VariantSearchRowContract) => void;
 }
 
 /**
- * **PLANSIZ KABULÜN ÜRÜN ARAMASI** (23.13) — sayfaya özel, kite terfi etmedi: bugün tek çağıranı
- * var ve ikinci bir yüzey doğduğunda ortak yanı ölçülür (CLAUDE §1'in "önce var mı?" sorusu bu
- * yönde de işler — olmayan bir ortaklık için ortak komponent yazmak da bir duplikasyondur).
- *
- * Arama SUNUCUDA (`GET /warehouse/variants`): katalog istemciye indirilip filtrelenmez (STACK §6).
- * Her tuşta çağrılır ama yarış korumalı — geç dönen eski cevap yenisini ezmez.
+ * Plansız kabulün ürün araması; tek çağıranı olduğu için sayfaya özeldir. Arama sunucudadır ve yarış korumalıdır, geç dönen
+ * eski cevap yenisini ezmez.
  */
 function VariantSearchSheet({ visible, onClose, onClosed, onDismissed, onPick }: VariantSearchSheetProps) {
   const [query, setQuery] = useState('');
@@ -910,10 +739,7 @@ function VariantSearchSheet({ visible, onClose, onClosed, onDismissed, onPick }:
   }, []);
 
   return (
-    /* SABİT YÜKSEKLİK (kullanıcı bulgusu N4, 30.08): çekmece boşken içeriği kadar açılıyordu —
-       yani arama kutusu ekranın dibinde bir şerit gibi. Yazmaya başlayınca satırlar geldikçe
-       çekmece BÜYÜYORDU ve altındaki liste her tuşta zıplıyordu. `fill` boyu baştan sabitler;
-       arama bir çekmece değil bir SAYFA gibi açılır. */
+    /* Sabit yükseklik (`fill`): içeriği kadar açılan çekmece sonuçlar geldikçe büyür ve her tuşta zıplardı. */
     <BottomSheet
       visible={visible}
       title={t.intake.searchTitle}
@@ -934,15 +760,8 @@ function VariantSearchSheet({ visible, onClose, onClosed, onDismissed, onPick }:
       <Text style={styles.learnRowMeta}>{t.intake.searchHint}</Text>
       {query.trim().length > 0 && rows.length === 0 ? <Text style={styles.learnRowMeta}>{t.intake.searchEmpty}</Text> : null}
       {rows.map((row) => (
-        /* SATIR TASARIMIN SATIRI (kullanıcı bulgusu N1, 30.08): ad + "kod · stok N" + yön oku.
-           Önceki hâli iki çıplak metindi ve SKU'yu tek başına yazıyordu — depocunun sorduğu
-           "bu üründen bende var mı" sorusunun cevabı ekranda hiç yoktu.
-
-           ÖN İZLEME GÖRSELİ kullanıcının eklemesi (tasarımda yok): aynı ürünün 225 g ve 450 g
-           boyları yan yana geldiğinde metin ayırt etmeye yetmiyor. Görsel YOKSA yer tutucu da
-           çizilmez — boş bir gri kare, ürünün fotoğrafı yok bilgisini vermez, sadece kirletir.
-           Kare KİTTEN (`OperationsProductThumb`, 21.303): düz `<Image>` CDN'den WebP istemiyordu ve
-           operasyonun öteki satırlarından ayrı bir kare çiziyordu; ölçü aynı (44). */
+        /* Satır ad, "kod · stok N" ve yön okunu taşır, çünkü depocunun sorusu "bu üründen bende var mı"dır. Görsel aynı
+           ürünün boylarını ayırır; görsel yoksa yer tutucu çizilmez, boş kare bilgi vermez. */
         <OperationsSurface
           key={row.variantId}
           tone="card"
@@ -983,11 +802,6 @@ function nameOfRow(rows: readonly IntakeFormRowContract[], variantId: string): s
   return row === undefined ? '—' : productLabel(row.productName, row.variantLabel);
 }
 
-/* `scanMeta` ve `qtyCaption` SİLİNDİ (kullanıcı kararı 30.08): ikisi de sökülen "Okutulan ürün"
-   çekmecesinin künye satırlarıydı. Kodun türü ve kesinlik derecesi artık satırın kendi künyesinde
-   duruyor (`IntakeRowState.scan` → "koli barkodu · çarpan 12"), koli dökümünü de adet çekmecesi
-   canlı yazıyor ("2 × 12 + 3 tek paket = 27 paket"). */
-
 interface IntakeRowProps {
   row: IntakeFormRowContract;
   state: IntakeRowState;
@@ -995,20 +809,13 @@ interface IntakeRowProps {
   unplanned: boolean;
   /** MLOR eşiği (%) — SUNUCUDAN gelen ayar; satırın kendi değeri değil, formun kuralı. */
   mlorPercent: number;
-  /**
-   * Lot ÖNERİLERİ — bu kabulde başka satırlara girilmiş kodlar (kullanıcı kararı 30.08).
-   *
-   * Ekran seviyesinde hesaplanır, satırda değil: satır yalnız kendi durumunu bilir, "bu sevkiyatta
-   * hangi lotlar yazıldı" sorusu FORMUN sorusudur. Kendi kodu listede olmaz — depocuya zaten
-   * yazdığı şeyi önermek gürültüdür.
-   */
+  /** Bu kabulde başka satırlara girilmiş lotlar: soru formundur, satırın değil, ve satırın kendi kodu listede olmaz. */
   lotSuggestions: string[];
-  /** Aynı kabulde BAŞKA satırlara yazılmış SKT'ler (ISO) — tarih tuş takımının hızlı çipleri (03.09). */
+  /** Aynı kabulde başka satırlara yazılmış SKT'ler (ISO), tarih tuş takımının hızlı çipleri. */
   dateSuggestions: string[];
   /**
-   * Bu satır AZ ÖNCE OKUTULDU mu (kullanıcı kararı 30.08). Okutma adedi kendisi yazıyor; geriye
-   * depocuyu o satıra götürmek kalıyor — satır açılır ve adet çekmecesi gelir, tıpkı tasarımın
-   * `sheet:'adet'` adımı gibi. Sinyal bir kez tüketilir, yoksa çekmece her çizimde açılırdı.
+   * Bu satır az önce okutuldu mu: satır açılır ve adet çekmecesi gelir; sinyal bir kez tüketilir, yoksa çekmece her çizimde
+   * açılırdı.
    */
   pendingCount: boolean;
   onCountConsumed: () => void;
@@ -1034,16 +841,13 @@ function IntakeRow({
   dateSuggestions,
   onPatch,
 }: IntakeRowProps) {
-  /** SKT alanı TUŞ TAKIMINI açar (kullanıcı kararı 03.09); tekerlek onun altındaki bağlantıda. */
+  /** SKT alanı tuş takımını açar; tekerlek tuş takımındaki bağlantıdadır. */
   const [dateOpen, setDateOpen] = useState(false);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
-  /** Hasar sayacının ortasındaki rakam TUŞ TAKIMINI açar (kullanıcı kararı 02.09; künye aşağıda). */
+  /** Hasar sayacının ortasındaki rakam tuş takımını açar. */
   const [damageQtyOpen, setDamageQtyOpen] = useState(false);
   const [lotOpen, setLotOpen] = useState(false);
-  /* Hasar SEBEBİ çekmecesinin AÇIKLIĞI artık ekranın durumu değil: kalıp kite taşındı ve çekmeceyi
-     `OperationsQtyReasonRow` kendi içinde tutuyor (02.09) — açılışı ekranın bilmesi gereken bir şey
-     değildi, yalnız seçilen sebep ekranın verisi. */
 
   /* OKUTULAN SATIR KENDİLİĞİNDEN AÇILIR ve adet çekmecesini getirir (tasarım: okutma → `sheet:
      'adet'`). Sinyal hemen tüketiliyor: ikinci bir çizimde çekmece yeniden açılmasın. */
@@ -1053,13 +857,8 @@ function IntakeRow({
     setQtyOpen(true);
     onCountConsumed();
   }, [pendingCount, onCountConsumed]);
-  /* SAYILMIŞ MI — ölçüt adedin GİRİLMİŞ olması (`qty !== null`), sıfırdan büyük olması değil:
-     "0 adet geldi" de bir sayımdır ve o satırın SKT'si sorulmaz ama sapma özetine girer. Sıfırı
-     "sayılmamış" saymak, depocunun bilinçli beyanını "hiç dokunmadım"la eşitlerdi.
-
-     AÇIKLIK AYRI BİR ŞEY (03.09): sayılmış satır da kapalı durur ve özetini rozetlerinde taşır;
-     açık olan tek satırı ekran seçer (akordeon). Eskiden ikisi tek bayraktı ve sayılan her satır
-     sonsuza kadar açık kalıyordu. */
+  /* Sayılmış mı ölçütü adedin girilmiş olmasıdır: "0 adet geldi" de bir sayımdır, sıfırı sayılmamış saymak bilinçli beyanı
+     "dokunmadım"la eşitlerdi. Açıklık ayrı bir şeydir, açık olan tek satırı ekran seçer. */
   const measured = state.qty !== null;
   const counted = expanded;
   const name = productLabel(row.productName, row.variantLabel);
@@ -1079,49 +878,32 @@ function IntakeRow({
       testID={`warehouse-intake-line-${row.variantId}`}
     >
       <View style={styles.lineHead}>
-        {/* BAŞLIK KARTIN ANAHTARI (03.09): dokunuş satırı açar, ikinci dokunuş kapatır. Kapalı
-            kartta da açık kartta da aynı yer — depocu tek bir hareketi öğreniyor. */}
+        {/* Başlık kartın anahtarıdır: dokunuş açar, ikinci dokunuş kapatır. */}
         <PressableSurface
           onPress={onToggle}
           feedback="opacity"
           grow
           compact
           style={styles.rowBody}
-          /* Ad TEK BAŞINA yetmez: aynı ad çekmecelerde de geçiyor ve ekran okuyucu iki ayrı
-             hedefi ayırt edemiyordu (testte ölçüldü). Düğmenin adı satırın kendisidir. */
+          /* Ad tek başına yetmez: aynı ad çekmecelerde de geçer ve ekran okuyucu iki hedefi ayırt edemez. */
           accessibilityLabel={fillCopy(t.intake.rowToggle, { name })}
           accessibilityHint={counted ? t.intake.rowCollapse : t.intake.rowExpand}
           testID={`warehouse-intake-row-toggle-${row.variantId}`}
         >
           <Text style={styles.rowTitle}>{name}</Text>
-          {/*
-            SIFIR BEKLENEN İKİ AYRI ŞEY DEMEK (ölçüldü 30.08, yerel veritabanından):
-            `expectedQty` KALANDIR (`purchase_order_progress.missing_qty`), ısmarlanan değil.
-            Beş kalemlik bir siparişte dördü tamamen alınmıştı ve dördü de künyesiz çizilmişti —
-            plansız kabuldeki "beklenti yok" hâliyle birebir aynı görünüyordu.
-
-            · PLANSIZDA (23.13) kıyaslanacak sipariş YOKTUR ve v3 bunu SÖYLÜYOR: "beklenen yok".
-              Sayı değil KELİME — "beklenen 0" yazmak olmayan bir beklentiyi sıfır diye göstermek
-              olurdu (CLAUDE §1); "yok" demek beklentinin kendisinin bulunmadığını söyler.
-            · PLANLI siparişte sıfır kalan "beklenti KARŞILANDI" demektir ve bu bir bilgidir —
-              depocu ikinci turda o kaleme dokunmayacağını bilmeli. Sessizlik ikisini eşitliyordu.
-          */}
+          {/* Sıfır beklenen iki ayrı şeydir: plansızda kıyaslanacak sipariş yoktur ve "beklenen yok" yazılır, planlıda
+              sıfır kalan beklentinin karşılandığını söyler. `expectedQty` kalandır, ısmarlanan değil. */}
           {row.expectedQty > 0 ? (
-            /* TEDARİKÇİ KODU BEKLENEN ADEDİN YANINDA (v3:604 · 30.08): depocunun elindeki kâğıt
-               bizim katalogumuz değil TEDARİKÇİNİN irsaliyesi ve satırı onunla eşleştirmenin kesin
-               anahtarı bu kod — ürün adı çevrilmiş, boy etiketi bizim dilimizde. Kodu olmayan
-               kalemde (eşlemesiz açılmış) yalnız beklenen yazılır; "—" koymak, olmayan bir kodu
-               boş bir kod gibi gösterirdi. */
+            /* Tedarikçi kodu beklenen adedin yanındadır: depocunun elindeki kâğıt tedarikçinin irsaliyesidir ve satırı
+               onunla eşleştiren kesin anahtar bu koddur. Kodsuz kalemde yalnız beklenen yazılır. */
             <Text style={styles.rowSub} testID={`warehouse-intake-expected-${row.variantId}`}>
               {row.supplierCode === null
                 ? fillCopy(t.intake.expected, { qty: String(row.expectedQty) })
                 : fillCopy(t.intake.expectedWithCode, { qty: String(row.expectedQty), code: row.supplierCode })}
             </Text>
           ) : unplanned ? (
-            /* PLANSIZDA SATIRIN KODU SKU'DUR (v3:657 · 30.08): sipariş kalemi yok, yani tedarikçi
-               kodu da yok — satırı tanıtan tek kod bizimkisi. Satır aramadan da okutmadan da
-               açılabiliyor ve ikisi artık aynı alanı taşıyor (uç künyesi); SKU'suz varyantta
-               kelime hâli yazılır, "SKU —" değil. */
+            /* Plansızda satırın kodu SKU'dur, çünkü sipariş kalemi ve tedarikçi kodu yoktur; SKU'suz varyantta kelime hâli
+               yazılır. */
             <Text style={styles.rowSub} testID={`warehouse-intake-none-${row.variantId}`}>
               {row.sku === null ? t.intake.expectedNone : fillCopy(t.intake.expectedNoneWithSku, { sku: row.sku })}
             </Text>
@@ -1131,28 +913,15 @@ function IntakeRow({
             </Text>
           )}
         </PressableSurface>
-        {/* SAYILMAMIŞ SATIR KAPALI DURUR (v3:05): sağda kesikli "say →", altında hiçbir alan yok.
-            Altı kalemlik bir sipariş açıkken üç ekran sürüyordu ve depocu hangi satıra geldiğini
-            kaydırarak arıyordu; kapalı hâlde altısı da tek ekrana sığıyor. Sayı girilir girilmez
-            satır AÇILIR — çünkü o andan sonra SKT ve lot da sorulacak. */}
+        {/* Sayılmamış satır kapalı durur (kesikli "say →") ki altı kalemlik sipariş tek ekrana sığsın; sayı girilince satır
+            açılır, çünkü sonra SKT ve lot sorulur. */}
         {/* ADET KUTUSU: satır açıksa HER ZAMAN, kapalıysa yalnız SAYILMIŞSA. Kesikli "say →"
             kapalı ve sayılmamış satırın davetidir — açık satırda o davet zaten kabul edilmiştir. */}
         {measured || counted ? (
-          /*
-            ADET KUTUSU CİHAZ KLAVYESİNİ AÇMAZ (v3 · görsel ajanı ölçümü 30.08, fark #1).
-
-            Tasarım bu çözümü ADIYLA reddediyor: tuş takımı çekmecesinin künyesi *"Cihaz klavyesi
-            açılmaz — eldivenle de basılabilecek büyük tuşlar."* Bu bir para kararı değil ELDİVEN
-            kararı ve depocunun eli de eldivenli — rampada koli tutarken sistem klavyesinin küçük
-            tuşları ıskalanıyor.
-
-            Not kuyruğundaki N2 bunu *"kutu tipleri veri modelinde yok, o yüzden klavye"* diye
-            kaydetmişti ve o kayıt YANLIŞTI: eksik veri yalnız `sheetAdet`in "kaç koli geldi"
-            listesini engelliyor, tuş takımını değil. Tuş takımı zaten vardı (21.159, para).
-          */
-          /* ADET KUTUSU KİTTE (21.254): D5 transfer kabulü de aynı kutuyu çiziyor; ölçüler ve iki
-             hâl `quantity-box` künyesinde. Sapma tonu beklentinin VARLIĞINA bağlı: beklenen yokken
-             her sayı "farklı" görünürdü. */
+          /* Adet kutusu cihaz klavyesini açmaz: eldivenli elle sistem klavyesinin küçük tuşları ıskalanır, tuş takımının
+             büyük tuşları basılır. */
+          /* Adet kutusu kittedir (`quantity-box`), transfer kabulü de aynısını çizer. Sapma tonu beklentinin varlığına
+             bağlıdır, beklenen yokken her sayı "farklı" görünürdü. */
           <OperationsQuantityBox
             value={state.qty}
             caption={t.intake.qtyCaption}
@@ -1166,23 +935,8 @@ function IntakeRow({
           />
         ) : (
           <OperationsQuantityBox
-            /*
-              DÜĞME BEKLENEN ADEDİ YAZAR — AMA OTOMATİK DEĞİL (kullanıcı kararı 03.09).
-
-              Burada *"adedi YAZMAZ, yalnız kapıyı açar; beklenen adedi otomatik doldurmayı bir kez
-              yazmıştım ve yanlıştı"* diyordu ve o gerekçe HÂLÂ geçerli: satırlar kendiliğinden dolu
-              gelseydi hiç sayılmamış bir sipariş "sayıldı" görünür, fark raporu sessiz kalır ve
-              eksik mal ancak haftalar sonra sayımda çıkardı.
-
-              Değişen şey doldurmanın OTOMATİK olması değil, kaç dokunuş sürdüğü: altı kalemlik bir
-              sevkiyat "say → çekmece → cetvel → Tamam" ile yirmi dört dokunuş demekti ve rampada
-              en sık gerçek "beklendiği kadar geldi". Düğme artık o cümleyi tek dokunuşla söylüyor
-              — ama dokunuşun kendisi BEYANDIR: depocu sayıyı görüp onaylıyor, ekran onun yerine
-              konuşmuyor. Fark varsa adet kutusu çekmeceyi açıyor (kapalı kartta da).
-
-              Beklenen YOKSA (plansız kabul ya da kalanı bitmiş kalem) eski davranış sürüyor:
-              yazılacak bir sayı yok, düğme yalnız kapıyı açar.
-            */
+            /* Düğme beklenen adedi yazar ama otomatik değil: dokunuşun kendisi beyandır, kendiliğinden dolu satırlar
+               sayılmamış siparişi "sayıldı" gösterirdi. Beklenen yoksa düğme yalnız satırı açar. */
             onPress={() => {
               onToggle();
               if (row.expectedQty > 0) {
@@ -1207,19 +961,8 @@ function IntakeRow({
         )}
       </View>
 
-      {/*
-        KAPALI SATIRIN ÖZETİ (kullanıcı kararı 03.09) — kart kapalıyken ne girildiği rozetlerden
-        okunur: *"son kullanma tarihi kendi rozetinin içinde yazsın, hasar varsa sağ alt köşede
-        hasar adedi."*
-
-        Rozetler DURUMU söyler, kuralı değil:
-        · SKT — girilmemişse zorunluluk (terracotta, "SKT ZORUNLU · DDM"), girilmişse TARİHİN
-          KENDİSİ ("DDM 12.08.26"). Sayılmamış satırda tarih zaten sorulmadı; orada kural doğru.
-        · LOT — yalnız GİRİLDİYSE çizilir. Boş lot meşru bir hâldir ("lot yok") ve kapalı kartta
-          "lot: —" yazmak, doldurulmamış bir alan varmış gibi okunuyordu.
-        · HASAR — sağa yaslı, yalnız beyan varsa. Kapalı kartın tek kırmızı işareti bu; bir sayı
-          olduğu için "hasar var" demekle kalmaz, ne kadarını da söyler.
-      */}
+      {/* Kapalı satırın özeti rozetlerdedir ve durumu söyler: SKT girilmemişse zorunluluk, girilmişse tarihin kendisi; lot
+          yalnız girildiyse; hasar sağa yaslı, yalnız beyan varsa adediyle. */}
       {counted ? null : (
         <View style={styles.chipRow}>
           {measured && expiry !== null ? (
@@ -1242,23 +985,11 @@ function IntakeRow({
 
       {counted ? (
         <>
-          {/*
-        AÇIK SATIRIN KÜNYE SATIRI (v3:05) — rozet + KAYNAK NOTU, başka hiçbir şey.
-
-        Buradaki dört çipten üçü tasarımda YOK ve niçin olmadığı ölçülünce anlaşılıyor:
-        · "SKT gir *" durum çipi — durumu ALANIN KENDİSİ söylüyor (aşağıda, kırmızı çerçeveyle).
-          Çip ayrıca dursaydı aynı bilgi iki yerde olur, biri güncellenmediği gün çelişirdi.
-        · lot ve hasar — tasarımda ÇİP DEĞİL ALAN (aşağıdaki satır). Çip "aç/kapa" der; alan
-          "burayı doldur" der ve ikisi farklı davranış: lot bir DEĞER taşır, bir bayrak değil.
-
-        Yerine gelen `kaynakNotu`, satırın adedinin nereden geldiğini söyler ("barkod okutulmadı"
-        ⟷ okutuldu). Denetim bilgisi: elle sayılan satırla okutulan satır aynı görünmemeli.
-      */}
+          {/* Açık satırın künye satırı yalnız rozet ve kaynak notudur: SKT durumunu alanın kendisi söyler, lot ve hasar çip
+              değil alandır. Kaynak notu adedin okutmadan mı elle mi geldiğini söyler, denetimde ikisi aynı görünmemeli. */}
           <View style={styles.chipRow}>
-            {/* TARİH REJİMİ ÜRÜNDEN (v3:606). Etiketin iki yarısı iki ayrı şey: "SKT ZORUNLU" her
-            satırda aynı (sözleşme kuralı — `expiryDate` zorunlu), "DLC/DDM" ise ÜRÜNE göre
-            değişiyor ve depocunun kutunun üstünde arayacağı yazı bu. Kapalı satırla AYNI rozet:
-            açıkken gri olsaydı depocu zorunluluğun kalktığını sanabilirdi. */}
+            {/* Tarih rejimi üründen: "SKT ZORUNLU" her satırda aynıdır, "DLC/DDM" ürüne göre değişir ve depocunun kutuda
+                arayacağı yazıdır. Kapalı satırla aynı rozettir, gri olsaydı zorunluluk kalkmış sanılırdı. */}
             <Text style={[styles.badge, styles.badgeRequired]} testID={`warehouse-intake-datetype-${row.variantId}`}>
               {fillCopy(t.intake.dateTag, { type: row.dateType })}
             </Text>
@@ -1267,10 +998,7 @@ function IntakeRow({
             </Text>
           </View>
 
-          {/* OKUTMA KUTUSU (v3:05 · `okutTuru`/`okutNotu`) — satır okutularak açıldıysa NEYİN
-          okutulduğunu söyler. Zeytin ton bilinçli: bu bir uyarı değil, bir DOĞRULAMA — kutunun
-          üstündeki kod ile kayıt eşleşti. Elle sayılan satırda hiç çizilmez, çünkü söyleyecek
-          bir şey yok. */}
+          {/* Okutma kutusu satırın neyle okutulduğunu söyler; zeytin ton bir doğrulamadır, elle sayılan satırda çizilmez. */}
           {state.scan === null ? null : (
             <View style={styles.scanNote} testID={`warehouse-intake-scan-note-${row.variantId}`}>
               <Text style={styles.scanNoteTitle}>{t.intake.scan.kind[state.scan.kind]}</Text>
@@ -1278,18 +1006,11 @@ function IntakeRow({
             </View>
           )}
 
-          {/* SKT SEÇİCİYLE GİRİLİR, KLAVYEYLE DEĞİL (v3 · `00-ortak` → `openSkt`).
-          Rampada koli tutulurken, eldivenle yazılan tarih iki yerden bozuluyordu: olmayan gün
-          ("31.02") ve belirsiz biçim ("2.6.26" mi 6.2.26 mı). Üç sütunlu seçicide ikisi de
-          imkânsız — gün listesi ayın gerçek uzunluğu kadar. Alan artık bir GİRDİ değil, seçiciyi
-          açan düğme. */}
-          {/* SATIRIN ÜÇ ÖĞESİ TASARIMDAN (kullanıcı bulgusu N2, 30.08): takvim ikonu · seçili tarih ·
-          "seç →". Önceki hâli çıplak bir metindi ve dokunulabilir olduğu hiçbir yerden
-          anlaşılmıyordu — depocu tarihi yazmayı bekleyip klavye açılmayınca duruyordu. */}
-          {/* ALAN DURUMU KENDİ ÜSTÜNDE TAŞIR (v3:05 — `c2.sktAlan` üçlüsü): SKT girilmemişken çerçeve,
-          ikon ve metin TERRACOTTA, girilmişse nötr. Ayrı bir "SKT gir *" çipi bu yüzden yok —
-          eksikliği söyleyen şey alanın kendisi. Metin de bir yer tutucu değil EYLEM: "gg.aa.yyyy"
-          neyin isteneceğini söylüyordu ama ne yapılacağını değil; alan zaten klavye açmıyor. */}
+          {/* SKT alanı bir girdi değil, tuş takımını açan düğmedir: eldivenle cihaz klavyesinde yazılan tarih olmayan gün
+              ve belirsiz biçim üretir. */}
+          {/* Alan takvim ikonu, tarih ve "seç →" taşır ki dokunulabilir olduğu okunsun. */}
+          {/* Alan durumunu kendi üstünde taşır: SKT yoksa çerçeve, ikon ve metin uyarı tonundadır; ayrı bir "SKT gir" çipi
+              bu yüzden yok. */}
           <PressableSurface
             onPress={() => setDateOpen(true)}
             feedback="scale"
@@ -1321,11 +1042,8 @@ function IntakeRow({
               feedback="scale"
               grow
               selected={state.lotText.length > 0}
-              /* YEŞİL = LOT GİRİLDİ (tasarım `lotAlan`, `v3.dc.html:3969`): dolu alan yeşile
-                 boyanır, boş alan dolgusuz kalır. Eskiden yeşil olan şey "lot yok" seçimiydi —
-                 yani gösterge tersine çalışıyor, hiçbir kod girilmemiş satır tamamlanmış gibi
-                 görünüyordu. "Lot yok" bilinçli bir boşluktur; işaretini METNİ taşır, rengi
-                 değil. */
+              /* Dolu lot alanı yeşile boyanır, boş alan dolgusuz kalır: "lot yok" bilinçli bir boşluktur, işaretini metni
+                 taşır. */
               style={[styles.subField, state.lotText.length > 0 ? styles.subFieldFilled : null]}
               accessibilityLabel={state.lotText.length === 0 ? t.intake.lot.pick : fillCopy(t.intake.lot.known, { lot: state.lotText })}
               testID={`warehouse-intake-lot-toggle-${row.variantId}`}
@@ -1353,10 +1071,8 @@ function IntakeRow({
           </View>
 
 
-          {/* HASARIN TUŞ TAKIMI — sayacın ortasındaki rakamdan; ADET ÇEKMECESİ DEĞİL (kullanıcı
-              kararı 02.09: koli sorulmayan yerde çekmece gürültü — hasar paket paket işaretlenir).
-              CANLI: her tuş sayaca yazılır, kapatmak yeter. Tavan tuşta: kabul edilen adetten
-              fazlasını yazacak tuş işlemez. */}
+          {/* Hasarın tuş takımı adet çekmecesi değildir, çünkü hasar paket paket işaretlenir. Her tuş sayaca canlı yazılır;
+              tavan kabul edilen adettir. */}
           <OperationsAmountKeypad
             visible={damageQtyOpen}
             title={t.intake.damage.keypad.title}
@@ -1373,9 +1089,8 @@ function IntakeRow({
             testID={`warehouse-intake-damage-keypad-${row.variantId}`}
           />
 
-          {/* SKT ALTI RAKAMLA (kullanıcı kararı 03.09): kolideki "12.09.27" okunup yazılır; aynı
-              kabulün öteki tarihleri çip. Tekerlek DURUYOR — çekmecedeki "takvimden seç" bağlantısı
-              bunu kapatıp onu açar (tarihi okunamayan koli için yol kapanmıyor). */}
+          {/* SKT altı rakamla girilir: kolideki tarih okunup yazılır, aynı kabulün öteki tarihleri çiptir. Tarihi
+              okunamayan koli için çekmecedeki "takvimden seç" tekerleği açar. */}
           <OperationsDateKeypad
             visible={dateOpen}
             title={t.intake.expiry.sheet.title}
@@ -1422,18 +1137,8 @@ function IntakeRow({
             testID={`warehouse-intake-expiry-wheel-${row.variantId}`}
           />
 
-          {/* KALAN ÖMÜR SATIRIN İÇİNDE, KAYITTAN SONRA DEĞİL (v3:610 · 30.08).
-          Uyarı zaten vardı ama yalnız kabul YAZILDIKTAN sonra, ekranın altında (`intake.warnings`)
-          — yani depocu kararı verdikten sonra. Şablonun istediği an başka: SKT girilir girilmez,
-          o satırın içinde. Karar "kabul edeyim mi" sorusudur ve cevabı yazmadan ÖNCE gerekir.
-
-          Hesap MOTORDAN (`meetsMlor`, `@lezzet/domain-core`): ekran kendi yüzdesini kurmaz — kapı
-          da aynı motoru çağırıyor ve ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı.
-          Eşik SUNUCUDAN (`mlorPercent`, ayar): koda gömülseydi operatör eşiği değiştirdiği gün
-          ekranın söylediği kural sistemin kuralı olmaktan çıkardı.
-
-          ENGELLEMEZ (DOMAIN §4) ve raf ömrü bilinmiyorsa hiç görünmez: ölçüt yokken uyarı üretmek
-          yanlış alarmdır (`remainingShelfLifePercent` `null` döner). */}
+          {/* Kalan ömür uyarısı SKT girilir girilmez satırın içindedir, çünkü "kabul edeyim mi" kararı yazmadan önce
+              verilir. Hesap motordan, eşik sunucudandır ve engellemez (DOMAIN §4); raf ömrü bilinmiyorsa uyarı üretilmez. */}
           {life === null || life.ok ? null : (
             <View style={styles.lifeBox} testID={`warehouse-intake-life-${row.variantId}`}>
               <Text style={styles.lifeText}>{fillCopy(t.intake.lifeInline, { pct: String(Math.round(life.remainingPercent ?? 0)) })}</Text>
@@ -1441,17 +1146,8 @@ function IntakeRow({
             </View>
           )}
 
-          {/*
-        LOT ÇEKMECESİ (v3 · `sheetLot`) — cihazda görüldü 30.08: "lot seç" düğmesi VARDI ama
-        altında ayrıca ham bir metin kutusu duruyordu, yani TEK değer için İKİ kontrol. Düğme
-        değeri göstermiyor, kutu neyin sorulduğunu söylemiyordu.
-
-        Tasarımın çekmecesi ADAY LİSTESİ sunuyor ("Okunan koliden gelen adaylar — biri geri
-        çağırma anahtarı olur"); okutma yanıtı lot TAŞIMADIĞI için o liste bugün boş. Çekmecenin
-        kendisi yine de doğru yer: elle giriş de, "bilinçli boş" kararı da orada veriliyor ve
-        satır tek bir alanla temsil ediliyor. Adaylar sözleşme genişleyince buraya eklenir
-        (kayıt: `v3-tasarim-veri-modeli-notlari.md`).
-      */}
+          {/* Lot çekmecesi: tek değer tek kontrolle girilir, elle giriş de bilinçli boş da burada verilir. Tasarımın
+              "okunan koliden adaylar" listesi okutma yanıtı lot taşımadığı için yoktur. */}
           <BottomSheet
             visible={lotOpen}
             title={t.intake.lot.sheet.title}
@@ -1460,12 +1156,8 @@ function IntakeRow({
           >
             <Text style={styles.learnRowMeta}>{t.intake.lot.sheet.hint}</Text>
 
-            {/* ALANIN KENDİSİ KAYITTIR, ONAY DÜĞMESİ YOK (kullanıcı kararı 30.08). Eskiden altta
-                iki düğme vardı ("Lot yok" ve "Yaz") ve ikisi de aynı şeyi ikinci kez soruyordu:
-                kutuya yazılan kod zaten satıra işleniyordu, "Yaz" yalnız çekmeceyi kapatıyordu.
-                Bugün kutu doluysa lot VARDIR, boşsa YOKTUR; temizleme kutunun sağındaki düğmede.
-                Böylece "bilinçli boş" ayrı bir beyan olmaktan çıktı — boş bırakmak zaten karardır
-                ve sözleşme de onu `lotNumber: null` diye taşıyor. */}
+            {/* Alanın kendisi kayıttır, onay düğmesi yok: kutu doluysa lot vardır, boşsa yoktur ve sözleşme bunu
+                `lotNumber: null` diye taşır. */}
             <View style={styles.lotFieldRow}>
               <View style={styles.lotFieldInput}>
                 <TextField
@@ -1490,12 +1182,8 @@ function IntakeRow({
               )}
             </View>
 
-            {/* ÖNERİLER — bugünkü tek kaynak AYNI KABULDE girilen lotlar. Bir sevkiyatın satırları
-                çoğunlukla aynı lottan ya da iki üç lottan gelir; depocu bir kez yazar, ötekilerde
-                seçer. Tasarımın kaynağı başkadır ("okunan koliden gelen adaylar") ve o veri bugün
-                hiçbir uçtan gelmiyor — kaynağı saklamak, listeye olmayan bir kesinlik atfetmek
-                olurdu. Depodaki partilerin lotları ikinci kaynak olarak sözleşme genişleyince
-                eklenecek (kullanıcı kararı 30.08). */}
+            {/* Öneriler aynı kabulde girilen lotlardır: sevkiyatın satırları çoğunlukla aynı lottan gelir, depocu bir kez
+                yazar, ötekilerde seçer. */}
             {lotSuggestions.length === 0 ? null : (
               <View style={styles.lotSuggestions}>
                 <Text style={styles.lotSuggestionsLabel}>{t.intake.lot.sheet.suggestions}</Text>
@@ -1518,17 +1206,11 @@ function IntakeRow({
             )}
           </BottomSheet>
 
-          {/* HASAR KARTI (v3:05 · `hasarAcik`) — tasarımın kendi bloğu: adet SAYILIR, sebep
-              İŞARETLENİR, not isteğe bağlı kalır. Eskiden yalnız serbest bir not kutusu vardı ve
-              "kaç paket hasarlı" sorusu hiç sorulmuyordu; oysa kabul edilen adet değişmiyor,
-              hasar onun İÇİNDEN işaretleniyor. */}
+          {/* Hasar kartı: adet sayılır, sebep işaretlenir; hasar kabul edilen adedin içinden işaretlenir, onu değiştirmez. */}
           {damaged ? (
             <View style={styles.damageCard} testID={`warehouse-intake-damage-card-${row.variantId}`}>
               <Text style={styles.damageTitle}>{t.intake.damage.title}</Text>
-              {/* SAYAÇLAR SORU CÜMLESİNİN SONUNDA (kullanıcı kararı 30.08 — tasarımdan sapma):
-                  şablon "sağlam/hasarlı" ikilisini sayacın SAĞINA koyuyor; kullanıcı onu gri
-                  metnin devamına aldı ve sağdaki alanı sebep düğmesine ayırdı. Sayı zaten cümlenin
-                  konusu ("4 paketin kaçı"), bir kelime sonra tekrar etmesi doğal okunuyor. */}
+              {/* Sayaçlar soru cümlesinin sonundadır, sağdaki alan sebep düğmesine kalır. */}
               <Text style={styles.damageQuestion}>
                 {fillCopy(t.intake.damage.question, { n: String(state.qty ?? 0) })}{' '}
                 <Text style={styles.damageSound}>
@@ -1538,10 +1220,7 @@ function IntakeRow({
                 <Text style={styles.damageBroken}>{fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}</Text>
               </Text>
 
-              {/* ADET SOLDA, SEBEP SAĞDA — kalıp 02.09'da KİTE TAŞINDI (`qty-reason-row`).
-                  Burada doğmuştu ve burada kalsaydı ikinci kullanıcısı (D4b · stok düşümü) onu
-                  ancak kopyalayarak alabilirdi. Ekranın kendi kuralı prop olarak duruyor: tavan
-                  KABUL EDİLEN ADET — hasar toplamın içinden işaretlenir, onu aşamaz. */}
+              {/* Adet solda, sebep sağda (kitin `qty-reason-row` kalıbı); tavan kabul edilen adettir, hasar toplamı aşamaz. */}
               <OperationsQtyReasonRow
                 qty={state.damagedQty}
                 onQtyChange={(next) => onPatch({ damagedQty: next })}
@@ -1558,35 +1237,16 @@ function IntakeRow({
                 testID={`warehouse-intake-damage-${row.variantId}`}
               />
 
-              {/* SERBEST NOT KUTUSU YOK — tasarımda öyle bir alan hiç çizilmemiş (kullanıcı
-                  bulgusu 30.08). Eski koddan taşımıştım ve bu bir FAZLALIKTI: hasarın ne olduğunu
-                  dört sebep çipi söylüyor, serbest metin aynı bilgiyi ikinci kez ve denetlenemez
-                  biçimde topluyordu. Kaldırıldı; `damageNote` alanı sözleşmede duruyor ama ekran
-                  onu artık doldurmuyor.
-
-                  DİPNOT TASARIMDAN SAPIYOR VE SEBEBİ ÖLÇÜLDÜ: şablon "hasarlı paketler stoğa
-                  'hasarlı' olarak girer" diyor; bizde öyle bir ayrım YOK — sözleşmede satır başına
-                  hasar alanı bulunmuyor, bilgi kabul notuna yazılıyor. Tasarımın cümlesini aynen
-                  yazmak, depocuya olmayan bir makineyi vaat etmek olurdu (CLAUDE §1). */}
+              {/* Serbest not kutusu yok: hasarın ne olduğunu sebep çipleri denetlenebilir biçimde söyler. Dipnot tasarımdan
+                  sapar, çünkü satır başına "hasarlı stok" ayrımı yoktur ve bilgi kabul notuna yazılır. */}
               <Text style={styles.damageFootnote}>{t.intake.damage.footnote}</Text>
             </View>
           ) : null}
         </>
       ) : null}
 
-      {/*
-        ADET ÇEKMECESİ KARTIN KÖKÜNDE, AÇIK DALIN İÇİNDE DEĞİL (kullanıcı bulgusu 03.09).
-
-        Ölçülen arıza: kapalı ama SAYILMIŞ kartta adet kutusuna dokununca hiçbir şey olmuyordu —
-        `qtyOpen` doğru oluyor ama çekmece açık dalın içinde çizildiği için hiç monte edilmiyordu.
-        Depocu kartı adından açtığında çekmece bir anda beliriyordu ("önce kart genişliyor, sonra
-        çekmece bir anda açılıyor"). Kapalı kartta adet düzeltmek meşru bir iş ve kartı açmayı
-        gerektirmez.
-
-        Kural kitin çekmece künyesindekiyle aynı: çekmece bir DALIN parçası değil, satırın
-        parçasıdır. Öteki çekmeceler (tarih · lot · hasar tuş takımı) yalnız açık kartta
-        tetiklenebiliyor, o yüzden yerlerinde kaldılar.
-      */}
+      {/* Adet çekmecesi kartın kökündedir, açık dalın içinde değil: kapalı ama sayılmış kartta adet düzeltmek kartı açmayı
+          gerektirmez. Öteki çekmeceler yalnız açık kartta tetiklenir, yerlerinde kalırlar. */}
         {/* ADET ÇEKMECESİ — tuş takımı DEĞİL (v3 `sheetAdet`; künyesi komponentte). Toplam ile döküm
         TEK yamada yazılır: ikisi ayrı gitseydi biri bir gün ötekinden geride kalırdı. */}
         <OperationsQuantitySheet
@@ -1633,7 +1293,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
-    /* Alt nefes artık YAPIŞKAN ÇUBUK payı değil, listenin kendi sonu (03.09): düğmeler içeride. */
+    /* Kayıt düğmeleri listenin içinde olduğu için alt nefes listenin kendi sonudur. */
     paddingBottom: operationsTheme.space['8xl'],
     // Kartlar arası nefes: ayraç çizgisi kalktı, boşluk onun işini görüyor.
     gap: operationsTheme.space.lg,
@@ -1650,17 +1310,8 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.card,
     backgroundColor: operationsTheme.colors.panel,
   },
-  /*
-    SAYILMAMIŞ SATIR SOLUK (v3:05 — `opacity:.7`, kullanıcı bulgusu 30.08).
-
-    Tasarımın listeyi okutma biçimi bu: sayılmış satırlar tam parlaklıkta, sayılmamışlar geride.
-    Depocu altı kalemlik bir siparişte "nerede kaldım"ı KAYDIRMADAN görüyor — kartların içine
-    bakmasına gerek yok, parlaklık söylüyor. Bizde hepsi opaktı ve liste düz bir duvardı.
-
-    Opaklık bir DURUM göstergesi, engellilik değil: satır dokunulabilir olmayı sürdürüyor
-    (`disabled` verilmiyor) ve ekran okuyucuya hiçbir şey söylenmiyor — orada bilgi zaten
-    "say →" düğmesinin adında.
-  */
+  /* Sayılmamış satır soluktur: depocu "nerede kaldım"ı kaydırmadan parlaklıktan görür. Opaklık durum göstergesidir,
+     engellilik değil; satır dokunulabilir kalır. */
   lineRowIdle: { opacity: 0.7 },
   lineHead: {
     flexDirection: 'row',
@@ -1716,15 +1367,8 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors.card,
   },
-  /* SKT GİRİLMEMİŞ HÂL: DOLGUSUZ, yalnız kenar ve metin uyarı tonunda (kullanıcı bulgusu 30.08).
-     Tasarımın kuralı tek satırda yazılı (`v3.dc.html:3968`) ve iki hâli birden tanımlıyor:
-       boş  → `bg:#fff · bd:#d9a97f · fg:#b05c2e`
-       dolu → `bg:#f2f7e8 · bd:#c3d3a4 · fg:#46601f`
-     Yani DOLGU BİR TAMAMLANDI İŞARETİDİR: alan doldukça yeşile boyanır, boş alan dolgusuz kalır.
-     Bizde tersiydi — boş alan şeftaliye boyanıyor, dolan alan nötr kalıyordu; gösterge tersine
-     çalışıyor, ekranda renkli olan şey "yapılmamış" oluyordu. Eski künye bunu bilinçli sanmıştı
-     ("dolgulu kutu engel gibi okunur"); gerekçe kendi içinde tutarlıydı ama tasarımın anlamını
-     ters çeviriyordu. Kenar artık `warning-line` (#d9a97f — tasarımın kenarıyla BİREBİR). */
+  /* SKT girilmemiş alan dolgusuzdur, yalnız kenar ve metin uyarı tonundadır: dolgu bir tamamlandı işaretidir, alan doldukça
+     yeşile boyanır. */
   expiryFieldMissing: {
     borderColor: operationsTheme.colors['warning-line'],
   },
@@ -1799,9 +1443,8 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors['tab-inactive'],
     textAlign: 'center',
   },
-  /* ── ÖĞRENİLEN KOD KARTI ve SATIRIN OKUTMA KUTUSU — ikisi de ZEYTİN ailesinden (v3:05).
-     Ton bilinçli: ikisi de bir DOĞRULAMA anlatıyor ("kod artık tanınıyor", "kutunun üstündeki kod
-     ile kayıt eşleşti"), bir uyarı değil. Terracotta olsaydı depocu bir sorun sanırdı. */
+  /* Öğrenilen kod kartı ve okutma kutusu zeytin ailesindendir, çünkü ikisi de doğrulama anlatır; uyarı tonu depocuya sorun
+     sandırırdı. */
   learnedCard: {
     gap: operationsTheme.space['2xs'],
     padding: operationsTheme.space.xl,
@@ -1852,20 +1495,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.control,
     color: operationsTheme.colors.muted,
   },
-  /* KAPALI SATIRIN "say →" DÜĞMESİ — kesikli, çünkü bir kayıt değil bir DAVET: burada henüz
-     sayılmış bir şey yok. Dolu bir düğme, satırı sayılmış gibi gösterirdi. */
-  /*
-    ADET KUTUSU ve "say →" KİTTE (`quantity-box`, 21.254): ölçü (74×52, `OperationsQtyField`in
-    `md` kutusuyla aynı kaynak), kesikli/dolu hâl ve tonlar orada — D5 transfer kabulü aynı kutuyu
-    çiziyor. Ölçüm tarihçesi (30.08: "say →"ye basınca kutunun zıplaması) kitin künyesinde.
-  */
-  /*
-    KAPALI SATIRIN İKİ ROZETİ (v3:05) — dolgulu, çerçevesiz, `tight` yarıçapta.
-
-    Bizdeki hâl çerçeveli/zeminsizdi ve ikisi de aynı griydi; tasarım ikisini AYRI ailelere
-    koyuyor çünkü ayrı şeyler söylüyorlar: SKT bir ZORUNLULUK (terracotta — dikkat), lot bir
-    DURUM (nötr krem — bilgi). Aynı tonda çizmek, depocuya ikisini aynı ağırlıkta okutuyordu.
-  */
+  /* Kapalı satırın iki rozeti ayrı ailelerdedir: SKT bir zorunluluktur (uyarı tonu), lot bir durumdur (nötr). */
   badge: {
     paddingVertical: operationsTheme.space.xs,
     paddingHorizontal: operationsTheme.space.md,
@@ -1886,7 +1516,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors['olive-dark'],
   },
-  /** Hasar rozeti SAĞA yaslanır (kullanıcı 03.09: "sağ alt köşede hasar adedi"). */
+  /** Hasar rozeti sağa yaslanır, kapalı kartın tek kırmızı işaretidir. */
   badgeDamage: {
     marginLeft: 'auto',
     backgroundColor: operationsTheme.colors['error-bg'],
@@ -1934,10 +1564,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['field-label'],
     color: operationsTheme.colors.error,
   },
-  /* SEBEP DÜĞMESİ — sayacın sağındaki boş alan (kullanıcı kararı 30.08). Boşken kum çerçeveli
-     ve sessiz; sebep seçilince hasar ailesine geçer (kenar + metin), çünkü artık bir beyan var. */
-  /* LOT ALANI + TEMİZLE (kullanıcı kararı 30.08): kutu esner, temizle içeriği kadar yer kaplar
-     ve YALNIZ dolu kutuda çizilir — boş kutunun yanında "temizle" bir şey vaat edip yapmazdı. */
+  /* Lot kutusu esner, temizle düğmesi içeriği kadar yer kaplar ve yalnız dolu kutuda çizilir. */
   lotFieldRow: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.lg },
   lotFieldInput: { flex: 1 },
   lotClear: {
@@ -2221,9 +1848,8 @@ const styles = StyleSheet.create({
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.terracotta,
   },
-  /* Fotoğraflı bant. Yükseklik `circleSm` (96) + künyenin nefesi: kart bir kahraman görsel değil,
-     tanıma yetecek kadar fotoğraf + üç satır künye. Kırpılır (`overflow`), yoksa fotoğrafın köşeleri
-     yuvarlak çerçeveyi taşar. */
+  /* Fotoğraflı bant: tanımaya yetecek fotoğraf ve üç satır künye; kırpılır, yoksa fotoğrafın köşeleri yuvarlak çerçeveyi
+     taşar. */
   scannedCard: {
     height: operationsTheme.size.circleSm + operationsTheme.space['8xl'],
     borderRadius: operationsTheme.radius.card,

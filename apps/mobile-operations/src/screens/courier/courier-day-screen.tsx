@@ -3,7 +3,6 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
-import { ScanSheet } from '@/components/scan/scan-sheet';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
@@ -284,21 +283,6 @@ export function CourierDayScreen() {
           )}
         </OperationsStickyBar>
       )}
-
-      <ScanSheet
-        open={day.boxScanOpen}
-        title={t.day.boxes.scanTitle}
-        hint={t.day.boxes.scanHint}
-        onClose={() => day.setBoxScanOpen(false)}
-        onScan={day.handleLoadScan}
-        // Kutu QR'ı üretilmiş kayıttır — çipler günün yüklenmemiş kutularından kurulur.
-        devCodes={stops.flatMap((stop) =>
-          stop.boxes
-            .filter((box) => box.loadedAt === null)
-            .map((box) => ({ label: `${stop.referenceNo ?? '—'} · K${box.boxNo}`, code: box.code })),
-        )}
-        testID="courier-day-box-scan-sheet"
-      />
     </View>
   );
 }

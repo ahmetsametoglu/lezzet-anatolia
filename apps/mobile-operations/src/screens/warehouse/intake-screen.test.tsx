@@ -15,9 +15,8 @@ import { resetWarehouseStatus } from './warehouse-status';
 
 const mockParams: { purchaseOrderId?: string; unplanned?: string } = {};
 const mockPush = jest.fn();
-/* SONUÇ ARTIK TOAST'TA (30.08): başarı bildirimi ekrandan kabuğa taşındı — ekran kapandığı için
-   şeritte kalamıyordu. Testler bu yüzden toast deposunu dinliyor; hata bildirimi hâlâ ekranda ve
-   `warehouse-intake-notice` ile ölçülüyor. */
+/* Başarı bildirimi toast'tadır, çünkü başarıda ekran kapanır; testler bu yüzden toast deposunu dinler, hata bildirimi
+   ekranda kalır (`warehouse-intake-notice`). */
 const mockToast = jest.fn();
 /** Başarılı kabul ekranı KAPATIR — geri dönüşü ölçmek için ayrı casus. */
 const mockBack = jest.fn();
@@ -30,7 +29,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: mockBack, push: mockPush }),
   useLocalSearchParams: () => mockParams,
-  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  /* Kabuk kromunun odak hizalaması; taklit modülü bütünüyle değiştirir. */
   useFocusEffect: () => undefined,
 }));
 
@@ -57,39 +56,16 @@ const ROW_B = intakeRow({
    ayrıştırılamaz ve ekran "sevkiyatlar yüklenemedi" der. Değer ayarın varsayılanı. */
 const MLOR = 75;
 
-/*
-  SKT ARTIK SEÇİCİYLE giriliyor (v3 · `00-ortak` → `openSkt`, 30.08): alan bir `TextInput` değil,
-  üç sütunlu seçiciyi açan düğme. Testler kapıdaki GERÇEK yolu izliyor — alana dokun, gün/ay/yıl
-  seç, "yaz". Metin yazmak artık var olmayan bir yolu ölçerdi.
-
-  **"31 Şubat" testi de bu yüzden değişti:** seçicide o gün LİSTEDE HİÇ YOK, yani yazılamıyor.
-  İddia korunuyor ama yeri değişti: kural artık `date-wheel-value.test.ts`te ("gün sütunu ayın
-  gerçek uzunluğu kadar").
-*/
-/*
-  SATIR KAPALI BAŞLAR (v3:05, 30.08): sayılmamış satırda adet alanı YOK, sağda kesikli "say →"
-  var. Düğme satırı AÇAR, adedi yazmaz — otomatik doldurma "saydım" ile "dokundum"u eşitlerdi.
-*/
-/**
- * Bir satırı sayar: "say →" ile satırı açar, ADET kutusuna dokunur, çekmecenin TEK PAKET
- * cetvelinden sayıyı seçer ve kapatır.
- *
- * Yardımcı 30.08'de İKİNCİ kez değişti çünkü etkileşim yine değişti. Önce cihaz klavyesinden tuş
- * takımına geçmişti; oysa tuş takımı PARANIN çekmecesidir (`keypadAcik`) — adedin çekmecesi
- * (`sheetAdet`) hiç tuş taşımaz, koli sayacı ve tek paket cetvelinden kurulur. Test kapıdaki
- * GERÇEK yolu izlemeli: kullanıcının yapamadığı bir yoldan geçen test, yeşil kalırken hiçbir şey
- * ölçmez.
- *
- * Cetvel 0–24 arası; daha büyük adetler koli sayacıyla girilir (`countCases`).
- */
-/*
-  ÇEKMECE BİR KARE SONRA ÇİZİLİR (01.09) — `visible` prop'u kütüphanenin `present()`ine çevriliyor
-  ve o bir durum değişimi. Cihazda görünmez; testte `fireEvent`ler aynı karede koştuğu için görünür.
-*/
+/* Çekmece bir kare sonra çizilir: `visible` kütüphanenin `present()`ine çevrilir ve testte `fireEvent`ler aynı karede
+   koştuğu için beklenir. */
 async function openSheet(firstTestID: string): Promise<void> {
   await waitFor(() => expect(screen.getByTestId(firstTestID)).toBeOnTheScreen());
 }
 
+/**
+ * Bir satırı sayar: "say →" satırı açar, adet kutusu çekmeceyi açar ve tek paket cetvelinden (0–24) sayı seçilir. Test
+ * kullanıcının gerçek yolunu izler; yapamadığı yoldan geçen test yeşil kalırken hiçbir şey ölçmez.
+ */
 async function countRow(variantId: string, qty: string) {
   await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${variantId}`));
   await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${variantId}`));
@@ -100,8 +76,8 @@ async function countRow(variantId: string, qty: string) {
 }
 
 /**
- * SKT ALTI RAKAMLA (kullanıcı kararı 03.09): alan tuş takımını açar, depocu kolideki tarihi
- * `gg aa yy` diye yazar, "yaz"a basar. Tekerlek ayrı bir bağlantının arkasında (`pickExpiryOnWheel`).
+ * SKT altı rakamla girilir: alan tuş takımını açar, depocu kolideki tarihi `gg aa yy` diye yazar ve "yaz"a basar; tekerlek ayrı
+ * bağlantının arkasındadır (`openWheel`).
  */
 async function pickExpiry(variantId: string, day: number, month: number, year: number) {
   await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${variantId}`));
@@ -188,8 +164,7 @@ beforeEach(() => {
 
 describe('D2 · mal kabul', () => {
   it('konusuz açılırsa BEKLEYEN SEVKİYATLARI listeler — kabul formu çizilmez', async () => {
-    // 24.08'e kadar burada "konu yok" yazıyordu ve mal kabule yalnız derin bağlantıyla
-    // girilebiliyordu; sipariş kimliği her tazelemede değiştiği için o yol sürekli kırılıyordu.
+    // Konusuz açılış bekleyen sevkiyatları listeler; kabul derin bağlantıya bağlı kalmasın.
     delete mockParams.purchaseOrderId;
     fetchMock.mockImplementation(() =>
       Promise.resolve(
@@ -287,12 +262,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId('warehouse-intake-no-subject')).toBeOnTheScreen();
   });
 
-  /*
-    FORM KÜNYESİ İLERLEMEYİ SÖYLER (v3:598) — "tedarik siparişi · 2 kalem · 1 tamam".
-    "gönderildi" bir kategoriydi ve depocu zaten oraya gönderildiği için girmişti; kaçının bittiği
-    ise her satırdan sonra değişen tek sayı. "Tamam" ölçüsü CTA'nınkiyle AYNI iki koşuldur (adet +
-    SKT) — ayrışsalardı künye "1 tamam" derken CTA "adet + SKT zorunlu" demeye devam ederdi.
-  */
+  /* Form künyesi ilerlemeyi söyler (kaç kalem, kaçı tamam); "tamam" ölçüsü kayıt düğmesininkiyle aynı iki koşuldur (adet +
+     SKT), ayrışsalardı künye "1 tamam" derken düğme kapalı kalırdı. */
   it('form künyesi kaç kalem ve kaçının TAMAM olduğunu söyler', async () => {
     withForm([ROW_A, ROW_B]);
 
@@ -305,10 +276,9 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId('warehouse-intake-header')).toHaveTextContent(/2 kalem · 1 tamam/);
   });
 
-  /* ÇEVRİMDIŞI: SEBEP YAZILIR, DÜĞME GİZLENMEZ (v3:610). Eskiden okutma düğmesi sessizce
-     çizilmiyordu; depocu "düğme nerede" diye arıyordu. Kilit bir yokluk değil, bir cevaptır —
-     ve neden yazılamayacağını da söylüyor. Satırlar duruyor: okumak serbest. */
-  it('ağ düşünce okutma düğmesinin YERİNE sebep yazılır, satırlar kalır', async () => {
+  /* Çevrimdışıyken okutma düğmesi söner ve sebep yazılır: kilit bir yokluk değil cevaptır. Satırlar durur, okumak
+     serbesttir. */
+  it('ağ düşünce okutma düğmesi SÖNER ve sebep yazılır, satırlar kalır', async () => {
     let first = true;
     fetchMock.mockImplementation(() => {
       if (first) {
@@ -329,19 +299,14 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-locked')).toBeOnTheScreen());
-    expect(screen.queryByTestId('warehouse-intake-scan-cta')).toBeNull();
+    expect(screen.getByTestId('warehouse-intake-scan-cta')).toBeDisabled();
     expect(screen.getByTestId('warehouse-intake-locked')).toHaveTextContent(/iki deponun stokunu bozabilir/);
     // Satırlar YERİNDE: okumak serbest.
     expect(screen.getByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeOnTheScreen();
   });
 
-  /*
-    SIFIR BEKLENEN İKİ AYRI ŞEY DEMEK (ölçüldü 30.08, yerel veritabanından). `expectedQty`
-    KALANDIR (`purchase_order_progress.missing_qty`), ısmarlanan değil: beş kalemlik bir siparişte
-    dördü tamamen alınmıştı ve dördü de künyesiz çizilmişti — plansız kabuldeki "beklenti yok"
-    hâliyle birebir aynı görünüyordu. Planlı siparişte sıfır kalan "beklenti KARŞILANDI" demektir
-    ve depocu ikinci turda o kaleme dokunmayacağını bilmeli.
-  */
+  /* Sıfır beklenen iki ayrı şeydir: `expectedQty` kalandır, ısmarlanan değil; planlı siparişte sıfır kalan "beklenti
+     karşılandı" demektir ve depocu ikinci turda o kaleme dokunmayacağını bilmeli. */
   it('PLANLI siparişte sıfır kalan "tamamlandı" der — sessiz kalmaz', async () => {
     withForm([intakeRow({ variantId: ROW_A.variantId, expectedQty: 0 })]);
 
@@ -361,16 +326,8 @@ describe('D2 · mal kabul', () => {
     delete mockParams.unplanned;
   });
 
-  /*
-    ELLE EKLENEN SATIR DA SAYIM ÇEKMECESİNİ AÇAR (kullanıcı bulgusu 30.08).
-
-    Okutmada çekmece zaten açılıyordu; aramadan seçilen üründe açılmıyordu ve bu, aynı sonuca
-    varan iki yoldan birini yarım bırakmaktı. Üstelik burada çekmece DAHA gerekli: okutulan satırın
-    adedi kodun kendisinden yazılıyor, elle eklenenin adedi SIFIR.
-
-    Test kapıyı da ölçüyor: iOS'ta arama çekmecesi ekrandan kalkmadan adet çekmecesi açılmaz
-    (iki `Modal` aynı pencerede sunulamıyor — `intake-scan.test.tsx`teki aynı kapı).
-  */
+  /* Elle eklenen satır da sayım çekmecesini açar: okutulan satırın adedi koddan gelir, elle eklenenin adedi sıfırdır ve
+     çekmece burada daha gereklidir. */
   it('PLANSIZ kabulde aramadan eklenen ürün adet çekmecesini AÇAR', async () => {
     /* ANDROID DALI: iOS'ta çekmece arama penceresi ekrandan kalkana kadar bekliyor ve o kapı
        Reanimated'ın kapanış geri çağrısına bağlı — jest'te koşmuyor. Kapının KENDİSİ
@@ -426,9 +383,7 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
 
-    /* DÜĞME ASIL EYLEMİ YAZAR, KAPIYI ÜSTTEKİ SATIR SÖYLER (Komponent Envanteri M1e, 30.08).
-       Eskiden bu beklenti düğmenin ETİKETİNDEYDİ; tasarım karesinde düğme pasifken de "Kabulü
-       kaydet" yazıyor ve eksik olan şey üstteki gri satırda duruyor — sayacıyla birlikte. */
+    /* Düğme asıl eylemi yazar; beklentiyi üstteki kapı satırı sayacıyla birlikte söyler. */
     expect(screen.getByTestId('warehouse-intake-cta')).toBeDisabled();
     expect(screen.getByTestId('warehouse-intake-gate')).toHaveTextContent(/adet \+ SKT zorunlu/);
     expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_A.variantId}`)).toHaveTextContent('SKT gir *');
@@ -446,10 +401,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId('warehouse-intake-gate')).toHaveTextContent(/1\/2 satır dolu/);
   });
 
-  /* CİHAZDA GÖRÜLDÜ 30.08: PO'lu kabulden siparişsize geçince ekran bir önceki siparişin
-     satırlarıyla açılıyordu ("beklenen 36 · GZT-1005" yazan bir SİPARİŞSİZ kabul). Ekran aynı
-     rota olduğu için yeniden kurulmuyor; plansız dal satırları temizlemek zorunda. Beklenen adet
-     plansızda YOKTUR ve o satırlar depocuya olmayan bir siparişi vaat ediyordu. */
+  /* Siparişli kabulden plansıza geçince ekran aynı rota olduğu için yeniden kurulmaz; plansız dal önceki siparişin
+     satırlarını temizlemeli, yoksa depocuya olmayan bir siparişin beklentisini gösterirdi. */
   it('PLANSIZA geçince önceki siparişin satırları TEMİZLENİR', async () => {
     withForm([ROW_A, ROW_B]);
 
@@ -470,9 +423,8 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
 
-    /* Eski hâlde "31.02.2026" YAZILABİLİYOR ve ekran onu reddediyordu. Seçicide o gün listeye hiç
-       girmiyor: hata yakalanmıyor, DOĞMUYOR. Şubat'a geçen seçici günü de kendiliğinden kırpıyor
-       (`date-wheel-value.test.ts` — "ay kısaldığında gün son güne iner"). */
+    /* Seçicide olmayan gün listeye hiç girmez: hata yakalanmaz, doğmaz; Şubat'a geçen seçici günü kendiliğinden kırpar
+       (`date-wheel-value.test.ts`). */
     const sheet = await openWheel(ROW_A.variantId);
     await fireEvent.press(screen.getByTestId(`${sheet}-month-2`));
 
@@ -481,11 +433,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`${sheet}-day-28`)).toBeOnTheScreen();
   });
 
-  /*
-    TUŞ TAKIMI (kullanıcı kararı 03.09): olmayan gün YAZILABİLİR ama onaylanamaz — kırmızı satır
-    söyler, düğme kapalı kalır. Aynı kabuldeki öteki satırın tarihi çip olarak gelir ve taslağı
-    doldurur; "yaz" düğmesi hangi tarihi yazacağını söyler.
-  */
+  /* Tuş takımında olmayan gün yazılabilir ama onaylanamaz: kırmızı satır söyler, düğme kapalı kalır. Aynı kabuldeki öteki
+     satırın tarihi çip olarak gelir ve taslağı doldurur. */
   it('tuş takımında olmayan gün onaylanamaz; öteki satırın tarihi çip olarak gelir', async () => {
     withForm([ROW_A, ROW_B]);
     await renderIntake();
@@ -494,7 +443,7 @@ describe('D2 · mal kabul', () => {
     await pickExpiry(ROW_A.variantId, 12, 9, 2027);
     expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_A.variantId}`)).toHaveTextContent('12.09.27');
 
-    // B satırı: 31.02.27 yazılır, onay kapalı, uyarı satırı kırmızı cümleyi okur.
+    // B satırı: olmayan gün yazılır, onay kapalı kalır ve uyarı satırı kırmızı cümleyi okur.
     await countRow(ROW_B.variantId, '4');
     await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${ROW_B.variantId}`));
     const sheet = `warehouse-intake-expiry-sheet-${ROW_B.variantId}`;
@@ -504,7 +453,7 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
     expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_B.variantId}`)).toHaveTextContent('SKT gir *');
 
-    // GEÇMİŞ tarih de onaylanamaz (kullanıcı 03.09): altı kez sil, 01.01.20 yaz, kırmızı satır.
+    // Geçmiş tarih de onaylanamaz: altı kez sil, geçmiş bir tarih yaz, kırmızı satır.
     for (let i = 0; i < 6; i += 1) await fireEvent.press(screen.getByTestId(`${sheet}-delete`));
     for (const digit of '010120') await fireEvent.press(screen.getByTestId(`${sheet}-key-${digit}`));
     expect(screen.getByTestId(`${sheet}-hint`)).toHaveTextContent(/Tarih geçmişte/);
@@ -562,8 +511,7 @@ describe('D2 · mal kabul', () => {
     await countRow(ROW_A.variantId, '10');
     await pickExpiry(ROW_A.variantId, 12, 8, 2027);
 
-    /* KUTU BOŞSA LOT YOKTUR (kullanıcı kararı 30.08): "Lot yok" diye ayrı bir düğme kalmadı —
-       yazılanı TEMİZLE düğmesi siler ve boş kutu zaten `lotNumber: null` demektir. */
+    /* Kutu boşsa lot yoktur: yazılanı temizle düğmesi siler ve boş kutu `lotNumber: null` demektir. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
     await openSheet(`warehouse-intake-lot-${ROW_A.variantId}`);
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
@@ -574,16 +522,9 @@ describe('D2 · mal kabul', () => {
     expect(lastPostBody().lines[0]?.lotNumber).toBeNull();
   });
 
-  /*
-    LOT ÖNERİLERİNİN İKİNCİ KAYNAĞI: DEPODAKİ PARTİLER (21.175 · kullanıcı kararı 30.08).
-
-    Birinci kaynak (aynı kabuldeki öteki satırların kodları) İLK SATIRDA boştur — o satırı yazan
-    depocu hiçbir öneri görmüyordu. Kapı artık varyantın depoda duran partilerinin kodlarını da
-    taşıyor (`lotCandidates`) ve çekmece ikisini birleştiriyor.
-
-    SIRA ÖLÇÜLÜYOR, çünkü tesadüf değil: aynı kabulde az önce yazılmış bir kod, elindeki koliyle
-    depodaki eski bir partiden daha büyük ihtimalle aynıdır.
-  */
+  /* Lot önerilerinin iki kaynağı vardır: aynı kabuldeki öteki satırların kodları ilk satırda boştur, depodaki partilerin
+     kodları (`lotCandidates`) o boşluğu doldurur. Sıra ölçülür, çünkü aynı kabulde az önce yazılmış kod eldeki koliyle daha
+     büyük ihtimalle aynıdır. */
   it('lot önerileri İKİ kaynaktan gelir — aynı kabuldekiler ÖNCE, depodakiler sonra', async () => {
     withForm([
       intakeRow({ variantId: ROW_A.variantId, lotCandidates: ['DEPO-1', 'DEPO-2'] }),
@@ -709,13 +650,8 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`));
-    /* KAYITLI BOYU OLMAYAN ÜRÜNDE DE EKLEME KAPISI DURUR (düzeltildi 30.08, cihaz bulgusu).
-       Eskiden bölüm hiç çizilmiyordu ve bu satır onu ölçüyordu; kapatılan şey gerekçesinden
-       fazlaydı — depocu kayıtlı boyu olmayan üründe koli SAYAMIYORDU. Uydurma çarpan yasağı
-       yerinde duruyor: liste boş, önceden sayılmış hiçbir KOLİ yok, yalnız ekleme satırı var.
-
-       Toplam 0 DEĞİL 10: düğme artık beklenen adedi yazıyor (03.09) ve o sayı TEK PAKET olarak
-       duruyor — koli dökümü yine boş, ölçülen şey de o. */
+    /* Kayıtlı boyu olmayan üründe de ekleme satırı durur, yoksa depocu koli sayamazdı; uydurma çarpan yine yok, liste
+       boştur. Toplam 10'dur, çünkü düğme beklenen adedi tek paket olarak yazar ve koli dökümü boş kalır. */
     expect(screen.getByTestId(`${sheet}-add-size`)).toBeOnTheScreen();
     expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('10');
 
@@ -723,13 +659,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('2');
   });
 
-  /*
-    BEKLENEN ADET TEK DOKUNUŞLA YAZILIR — ama OTOMATİK DEĞİL (kullanıcı kararı 03.09).
-
-    Ölçülen şey ayrımın kendisi: satır dokunulmadan ÖNCE boştur (`say` düğmesi bir davet, bir
-    kayıt değil), dokunuşla beklenen adet yazılır ve kart açılır — çekmece açılmaz, çünkü
-    yazılacak sayı zaten söylenmiştir. Fark varsa adet kutusu çekmeceyi açar.
-  */
+  /* Beklenen adet tek dokunuşla yazılır ama otomatik değil: satır dokunulmadan önce boştur, dokunuşla beklenen adet yazılır
+     ve kart açılır. Çekmece açılmaz, çünkü yazılacak sayı söylenmiştir; fark varsa adet kutusu çekmeceyi açar. */
   it('beklenen adet DOKUNUNCA yazılır; açılışta satır boş kalır', async () => {
     withForm([ROW_A]);
 
@@ -758,15 +689,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`)).toHaveTextContent(/^—/);
   });
 
-  /*
-    ── KISMİ KAYIT: İKİNCİ YOL (v3:05 · `act.kismiKabul`) ────────────────────
-    Rampada koli koli gelen bir sevkiyatta "her satırı say" beklemesi gerçek dışı: mal geldiği
-    kadarıyla stoğa girmeli, kalanı açık kalmalı. İstek gövdesi zaten sayılmamış satırı atlıyordu;
-    eksik olan tek şey `complete` kilidiydi.
-
-    Düğmenin KOŞULU bizim kararımız (tasarım hep çiziyor): hepsi sayılıyken ikinci düğme
-    birinciyle aynı şeyi daha kötü yapar, hiçbiri sayılmamışken kapıya boş bir kabul gönderir.
-  */
+  /* Kısmi kayıt ikinci yoldur: koli koli gelen sevkiyatta mal geldiği kadarıyla stoğa girer, kalanı açık kalır. Düğme hepsi
+     sayılıyken birincinin kötü kopyası, hiçbiri sayılmamışken boş kabule davet olacağı için yalnız arada çizilir. */
   it('hiçbir satır sayılmamışken kısmi kayıt düğmesi ÇİZİLMEZ — boş kabul davetiye olurdu', async () => {
     withForm([ROW_A, ROW_B]);
 
@@ -790,16 +714,8 @@ describe('D2 · mal kabul', () => {
     expect(lines[0]?.variantId).toBe(ROW_A.variantId);
   });
 
-  /*
-    SONUÇ TOAST'TA, EKRAN KAPANIR (kullanıcı bulgusu 30.08).
-
-    Eskiden başarı ekrandaki yeşil şeritte yazıyordu ve ekran açık kalıyordu: kullanıcının
-    gördüğü şey "hiçbir şey olmadı" idi. Şimdi tam kabulde ekran kapanıyor — kapanan ekrandaki
-    şeridi kimse okuyamayacağı için bildirim kabuğun toast katmanına taşındı.
-
-    KISMİ KAYIT AYRI: orada iş bitmedi, ekran KAPANMAZ; sunucu kalanları yeniden hesapladığı için
-    form yenilenir.
-  */
+  /* Tam kabulde sonuç toast'tadır ve ekran kapanır, çünkü kapanan ekrandaki bildirimi kimse okuyamaz. Kısmi kayıtta iş
+     bitmediği için ekran kapanmaz; sunucu kalanları yeniden hesapladığı için form yenilenir. */
   it('TAM kabul: toast basılır ve ekran KAPANIR', async () => {
     withForm([ROW_A]);
 
@@ -835,15 +751,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId('warehouse-intake-cta')).toBeOnTheScreen();
   });
 
-  /* HASAR ARTIK SAYI + SEBEP (v3:05, düzeltildi 30.08). Eskiden serbest bir not kutusu vardı ve
-     bu test onu dolduruyordu; tasarımda öyle bir alan hiç yok — hasar, kabul edilen adedin
-     İÇİNDEN sayaçla işaretleniyor ve sebep çiplerden seçiliyor. Sözleşmede satır başına hasar
-     alanı olmadığı için üçü isteğin tek notunda, satır adı yazılarak birleşiyor. */
-  /*
-    AKORDEON (kullanıcı kararı 03.09) — *"başka bir kart açıldığı zaman bir önceki kart küçülsün."*
-    Ölçülen şey satırın FORMUNUN kapanması: kapalı satırda SKT alanı çizilmez, yerine özet rozeti
-    durur. Sayılmış olmak satırı açık TUTMAZ; açık olan tek satırı ekran seçer.
-  */
+  /* Akordeon: kapalı satırda SKT alanı çizilmez, yerine özet rozeti durur; sayılmış olmak satırı açık tutmaz, açık olan tek
+     satırı ekran seçer. */
   it('başka satır açılınca öncekinin FORMU kapanır — açık kart tektir', async () => {
     withForm([ROW_A, ROW_B]);
 
@@ -876,10 +785,7 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`warehouse-intake-damage-badge-${ROW_A.variantId}`)).toHaveTextContent('hasarlı 1');
   });
 
-  /* KAPALI KARTTA DA ADET DÜZELTİLİR (kullanıcı bulgusu 03.09): sayılmış bir satırın adet
-     kutusuna dokunmak çekmeceyi AÇAR — kartı açmayı gerektirmez. Eskiden çekmece açık dalın
-     içinde çiziliyordu ve kapalı kartta hiç monte edilmiyordu: dokunuş sessizce yutuluyor, kart
-     sonradan açıldığında çekmece bir anda beliriyordu. */
+  /* Kapalı kartta da adet düzeltilir: sayılmış satırın adet kutusuna dokunmak çekmeceyi açar, kartı açmak gerekmez. */
   it('kapalı kartta adet kutusu çekmeceyi AÇAR — kartı açmaya gerek yok', async () => {
     withForm([ROW_A, ROW_B]);
 
@@ -922,8 +828,7 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
-    /* Sebep artık çekmeceden ve TEK seçim (kullanıcı kararı 30.08): kartta çip yok, sayacın
-       sağındaki düğme listeyi açıyor. */
+    /* Sebep çekmeceden ve tek seçimdir: kartta çip yok, sayacın sağındaki düğme listeyi açar. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-reason`));
     await openSheet(`warehouse-intake-damage-${ROW_A.variantId}-option-ezik / kırık`);
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-option-ezik / kırık`));
@@ -948,9 +853,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`warehouse-intake-damage-card-${ROW_A.variantId}`)).toHaveTextContent(/sağlam 0/);
   });
 
-  /* HASAR SAYACININ ORTASINDAKİ RAKAM TUŞ TAKIMINI AÇAR (kullanıcı kararı 02.09) — adet çekmecesini
-     değil: koli sorulmayan yerde çekmece gürültü. Canlı yazar; tavan tuşta (kabul edilen 2 iken
-     "3" işlemez, "2" yazılır). */
+  /* Hasar sayacının ortasındaki rakam adet çekmecesini değil tuş takımını açar, çünkü hasar paket paket işaretlenir. Canlı
+     yazar ve tavan tuştadır: kabul edilen 2 iken "3" işlemez, "2" yazılır. */
   it('hasar sayacının rakamı canlı tuş takımını açar; kabul edilenden fazlasını yazacak tuş işlemez', async () => {
     withForm([ROW_A]);
 
@@ -988,10 +892,8 @@ describe('D2 · mal kabul', () => {
   });
 });
 
-/*
-  PLANSIZ KABUL (23.13) — PO'suz gelen mal. PO'lu kabulün TERSİ iki noktada: satır kümesi yok
-  (depocu kurar) ve beklenen adet yok (kıyaslanacak sipariş yok).
-*/
+/* Plansız kabul: siparişsiz gelen mal; satır kümesi yoktur (depocu kurar) ve beklenen adet yoktur (kıyaslanacak sipariş
+   yok). */
 describe('D2 · plansız kabul', () => {
   beforeEach(() => {
     delete mockParams.purchaseOrderId;
@@ -1009,8 +911,8 @@ describe('D2 · plansız kabul', () => {
                 productName: ROW_A.productName,
                 variantLabel: ROW_A.variantLabel,
                 sku: 'SKU-1',
-                // Tarih rejimi ve raf ömrü ARAMA satırında da var (30.08): okutmayla açılan satırla
-                // aynı alanları taşımalı, yoksa aynı listede biri ömür uyarısı üretir öteki üretmez.
+                // Tarih rejimi ve raf ömrü arama satırında da vardır: okutmayla açılan satırla aynı alanları taşımazsa aynı
+                // listede biri ömür uyarısı üretir, öteki üretmez.
                 dateType: 'DDM',
                 shelfLifeDays: 360,
                 imageUrl: null,
@@ -1039,9 +941,8 @@ describe('D2 · plansız kabul', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-intake-search-${ROW_A.variantId}`));
 
     await waitFor(() => expect(screen.getByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeOnTheScreen());
-    /* "beklenen 0" YAZILMAZ: olmayan bir beklentiyi sıfır diye göstermek, ölçülemeyeni sıfıra
-       düşürmektir (CLAUDE §1). v3 ile satır artık SUSMUYOR, beklentinin YOKLUĞUNU söylüyor
-       (v3:770) — sayı değil kelime. İddia bu yüzden iki yönlü: cümle var, RAKAM yok. */
+    /* "beklenen 0" yazılmaz, olmayan beklentiyi sıfır göstermek ölçülemeyeni sıfıra düşürmektir (CLAUDE §1). İddia iki
+       yönlüdür: cümle var, rakam yok. */
     expect(screen.getByTestId(`warehouse-intake-none-${ROW_A.variantId}`)).toHaveTextContent(/beklenen yok/);
     expect(screen.queryByText(/beklenen \d/)).toBeNull();
   });

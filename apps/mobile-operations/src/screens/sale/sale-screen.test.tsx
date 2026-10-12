@@ -449,7 +449,7 @@ it('okutmayla gelen adet kalanı aşınca çekmece onaylatmaz ve sebebini söyle
   withScan({ status: 'ok', product: COK, variant: BOYLAR[1], qtyPerCode: 6 });
   await renderSale();
 
-  await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+  await fireEvent.press(screen.getByTestId('sale-scan-fab'));
   await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'KOLI-1KG');
 
   await waitFor(() => expect(screen.getByTestId('sale-drawer-overstock')).toBeTruthy());
@@ -459,7 +459,15 @@ it('okutmayla gelen adet kalanı aşınca çekmece onaylatmaz ve sebebini söyle
   expect(screen.queryByTestId(`sale-cart-${COK_VARYANT_2}`)).toBeNull(); // sepete yazılmadı
 });
 
-it('yüzen daire de okutmayı açar; simülasyon çipinin altında okutulacak ÜRÜNÜN ADI yazar', async () => {
+// Okutma tek yerdedir; akışta ikinci bir okutma düğmesi aynı işin iki yolunu gösterirdi.
+it('okutma YALNIZ yüzen dairededir — ekranda ikinci okutma düğmesi yok', async () => {
+  withNetwork({ status: 'failed' });
+  await renderSale();
+
+  expect(screen.getAllByLabelText(saleCopy.scanCta)).toHaveLength(1);
+});
+
+it('yüzen daire okutmayı açar; simülasyon çipinin altında okutulacak ÜRÜNÜN ADI yazar', async () => {
   /* Yerinde satışta da barkod düğmesi var ve çiplerde ürün adı yazar. Ad aynı `/sale/scan` ucundan çözülür: çipin altındaki ad,
      basınca açılacak çekmecenin başlığıdır. */
   withScan({ status: 'ok', product: COK, variant: { ...BOYLAR[1], availableHere: 12 }, qtyPerCode: 6 });
@@ -639,7 +647,7 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     withScan({ status: 'ok', product: COK, variant: { ...BOYLAR[1], availableHere: 12 }, qtyPerCode: 6 });
     await renderSale();
 
-    await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+    await fireEvent.press(screen.getByTestId('sale-scan-fab'));
     await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'KOLI-1KG');
 
     await waitFor(() => expect(screen.getByTestId('sale-drawer-confirm')).toBeTruthy());
@@ -658,7 +666,7 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     withScan({ status: 'unknown_code' });
     await renderSale();
 
-    await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+    await fireEvent.press(screen.getByTestId('sale-scan-fab'));
     await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'YOK-123');
 
     await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/Kod tanınmadı/));
@@ -669,7 +677,7 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     withScan({ status: 'not_here', name: 'Kara Orman Pastası' });
     await renderSale('van');
 
-    await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+    await fireEvent.press(screen.getByTestId('sale-scan-fab'));
     await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'KOP-1');
 
     await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/Kara Orman Pastası araçta yok/));
@@ -885,7 +893,6 @@ describe('kapı satışı kapalı depo', () => {
     await waitFor(() => expect(screen.getByTestId('sale-closed')).toBeTruthy());
     expect(screen.getByTestId('sale-closed')).toHaveTextContent(/QUALITE/);
     expect(screen.queryByTestId('sale-retry')).toBeNull();
-    expect(screen.queryByTestId('sale-scan-cta')).toBeNull();
     expect(screen.queryByTestId('sale-scan-fab')).toBeNull();
   });
 });

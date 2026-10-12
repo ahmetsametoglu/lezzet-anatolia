@@ -3,22 +3,12 @@ import type { CourierVanCandidate, CourierVanStockLine } from '@lezzet/types';
 
 import { CourierVanStockScreen } from './van-stock-screen';
 
-/*
-  K · ARACA SERBEST ÜRÜN (v3:19).
-
-  ── NE ÖLÇÜLÜYOR ────────────────────────────────────────────────────────────
-  Ekranın taşıdığı tek karar "ne alayım" ve ona ÜÇ yoldan varılıyor: barkod okutma, ürün arama ve
-  sık koyulanlar şeridi. İlk ikisi 31.08'e kadar HİÇ ÇİZİLMEMİŞTİ — şeritte olmayan bir ürünü
-  araca almanın yolu yoktu ve şerit tavanlı bir seçki (12 satır).
-
-  Ayrıca üç bilgi kararın kendisi ve üçü de eksikti: şerit kartının "araçta N" hâli (kurye aynı
-  üründen ikinci kez alıp almadığını göremiyordu), araçtaki satırın "depoda kalan"ı (artırırken
-  depoyu boşaltıp boşaltmadığı) ve ✕ (adedi tek tek sıfıra indirmek geri koymanın adı değil).
-*/
+/* Testler ekranın taşıdığı kararı ölçer: "ne alayım"a üç yoldan (okutma, arama, sık koyulanlar) varılır ve satırlar kararın
+   bilgisini taşır ("araçta N", "depoda kalan", geri koyma). */
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
-  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  /* Kabuk kromunun odak hizalaması; taklit modülü bütünüyle değiştirir. */
   useFocusEffect: () => undefined,
 }));
 
@@ -96,38 +86,35 @@ beforeEach(() => {
 });
 
 describe('K · araca serbest ürün', () => {
-  it('OKUTMA ve ARACA ÜRÜN AL kapıları sayfanın başında çizilir', async () => {
+  it('OKUTMA yüzen düğmede, ARACA ÜRÜN AL sayfanın başında çizilir', async () => {
     mockVanStock();
 
     await render(<CourierVanStockScreen />);
     await waitFor(() => expect(screen.getByTestId('courier-van-scan')).toBeOnTheScreen());
 
-    /* İkisi de 31.08'e kadar YOKTU: şerit tavanlı (12 satır) ve rampada kurye ürünü listeden
-       aramaz, kutunun üstündeki kodu okutur. */
+    /* Rampada kurye ürünü listeden aramaz, kutunun üstündeki kodu okutur; arama da sık koyulanlar seçkisinde olmayan ürünün
+       yoludur. */
     expect(screen.getByTestId('courier-van-search')).toBeOnTheScreen();
   });
 
   it('ÇEKMECE boş sorguda SIK KOYULANLARI gösterir; satır adı, boyu ve hâlini yazar', async () => {
-    /* Şerit 31.08'de sayfadan ÇEKMECEYE taşındı (kullanıcı kararı): on iki kart yan yana
-       dizilince ekran "kırışık" okunuyordu ve sayfanın taşıması gereken bilgi "araçta ne var"dı.
-       Sık koyulanlar ile arama TEK çekmecede — ikisi ayrı yerde dursaydı kurye "listede yoksa
-       nereye bakacağım" sorusunu kendi çözerdi. */
+    /* Sık koyulanlar ile arama tek çekmecededir, sayfa yalnız "araçta ne var"ı taşır; ikisi ayrı yerde dursaydı kurye
+       "listede yoksa nereye bakacağım" sorusunu kendi çözerdi. */
     mockVanStock({ candidates: [candidate({ available: 9 })], onVan: [vanLine({ qty: 3, available: 9 })] });
 
     await render(<CourierVanStockScreen />);
     await waitFor(() => expect(screen.getByTestId('courier-van-search')).toBeOnTheScreen());
-    // Sayfada alma satırı YOK: sayfa artık yalnız "araçta ne var"ı taşıyor.
+    // Sayfada alma satırı yok: sayfa yalnız "araçta ne var"ı taşır.
     expect(screen.queryByTestId(`courier-van-take-${SOBIYET}`)).toBeNull();
     await fireEvent.press(screen.getByTestId('courier-van-search'));
 
     const card = screen.getByTestId(`courier-van-take-${SOBIYET}`);
-    /* Boy artık BAŞLIĞIN ince yarısında (kitin `OperationsProductRow` deseni), meta satırı
-       yalnız stok sayısını taşıyor — iki ekranın aynı satırı iki farklı biçimde yazmasın. */
+    /* Boy başlığın ince yarısındadır (kitin `OperationsProductRow` deseni), meta satırı yalnız stok sayısını taşır ki iki
+       ekran aynı satırı iki biçimde yazmasın. */
     expect(card).toHaveTextContent(/Şöbiyet/);
     expect(card).toHaveTextContent(/500 g/);
     expect(card).toHaveTextContent(/depoda 9/);
-    /* Kart araçta olan üründe de "dokun, araca al" diyordu — kurye ikinci kez alıp almadığını
-       hiçbir yerde göremiyordu (tur 31.08). */
+    /* Kart araçta olan üründe "araçta N" der, kurye aynı üründen ikinci kez alıp almadığını görsün. */
     expect(card).toHaveTextContent(/araçta 3/);
   });
 
@@ -147,8 +134,7 @@ describe('K · araca serbest ürün', () => {
     await fireEvent.press(screen.getByTestId(`courier-van-remove-${SOBIYET}`));
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/van-stock/set'));
-      /* Tel MUTLAK konuşuyor (21.263): "3 geri koy" değil "0 olsun, ben 3 görüyorum". Taban da
-         gidiyor ki sunucu iddiayı doğrulayabilsin. */
+      /* Tel mutlak konuşur: "3 geri koy" değil "0 olsun, ben 3 görüyorum"; taban da gider ki sunucu iddiayı doğrulayabilsin. */
       expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ variantId: SOBIYET, targetQty: 0, observedQty: 3 });
     });
   });
@@ -194,11 +180,8 @@ describe('K · araca serbest ürün', () => {
 
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/van-stock/scan'));
-      /* Barkod → varyant eşlemesi `variant_barcode`ta ve istemcinin oraya erişimi YOK; kodu
-         istemcide çözmeye çalışmak ikinci bir sözleşme kurmak olurdu.
-
-         Gövde YALNIZ kod (21.263): okutan taraf varyantı bilmediği için o varyantın araçtaki
-         adedini de bilemez — hedef ve taban gönderemez. Adet sabit 1, uçta. */
+      /* Barkod → varyant eşlemesi `variant_barcode`tadır ve istemcinin oraya erişimi yoktur, istemcide çözmek ikinci bir
+         sözleşme olurdu. Gövde yalnız koddur: okutan taraf varyantı bilmediği için taban gönderemez, adet uçta sabit 1. */
       expect(JSON.parse(String(call?.[1]?.body))).toEqual({ code: '8690000000001' });
     });
   });
@@ -213,10 +196,8 @@ describe('K · araca serbest ürün', () => {
   });
 
   it('İLK OKUMA DÜŞERSE ekran "araç boş" DEMEZ, okunamadığını söyler ve yazmayı kapatır', async () => {
-    /* ÖLÇÜLEN ARIZA (21.263, 05.09): `status: 'error'` yazılıyor ama hiçbir yerde çizilmiyordu.
-       `hasVehicle` varsayılanı `true` olduğu için akış normal gövdeye düşüyor, `onVan` boş kaldığı
-       için ekran "Araç şimdilik yalnız durak kutularını taşıyor" diyordu — ölçülemeyen değer SIFIR
-       gösteriliyordu (CLAUDE §1). Kurye araçtaki malı görmediği için yeniden alırdı. */
+    /* İlk okuma düşerse ekran "araç boş" demez: ölçülemeyen değer sıfır gösterilseydi kurye araçtaki malı görmeyip yeniden
+       alırdı. */
     fetchMock.mockImplementation(() => Promise.reject(new Error('ağ yok')));
 
     await render(<CourierVanStockScreen />);
@@ -230,9 +211,8 @@ describe('K · araca serbest ürün', () => {
   });
 
   it('YAZIM TELDE DÜŞERSE liste yine ÖLÇÜLÜR — kurye eski sayıya bakmaya devam etmez', async () => {
-    /* Arızanın görünmeyen yarısı: hata dalı erken `return` ediyor ve tazelemeyi atlıyordu. Ekran
-       "yeniden dene" diyor, kurye dokunuyor, mal ikinci kez biniyordu. Sayının tazelenmesi
-       çift yazımı engellemez ama kuryeye GERÇEĞİ gösterir — tekrar kararını o vererek verir. */
+    /* Hata dalı tazelemeyi atlarsa ekran "yeniden dene" der ve mal ikinci kez biner; tazeleme çift yazımı engellemez ama
+       kuryeye gerçeği gösterir. */
     let okumaSayisi = 0;
     fetchMock.mockImplementation((url) => {
       const address = String(url);

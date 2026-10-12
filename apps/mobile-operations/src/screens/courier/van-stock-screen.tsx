@@ -10,9 +10,10 @@ import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsScanFab, scanFabRoom } from '@/components/operations/scan-fab';
 import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
-import { OperationsStickyBar } from '@/components/operations/sticky-bar';
+import { OperationsStickyBar, STICKY_BAR_HEIGHT } from '@/components/operations/sticky-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
@@ -26,43 +27,15 @@ import { newRequestKey } from '@/lib/request-key';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { courierCopy } from './copy';
 
-/*
-  K · ARACA SERBEST ÜRÜN (v3:19) — sipariş dışı, kapıda satılabilecek mal.
-
-  ── NEDEN AYRI BİR EKRAN ────────────────────────────────────────────────────
-  Araca iki tür mal biniyor ve mekanizmaları AYNI DEĞİL: sipariş kutusu bir EMANET değişimidir
-  (stok oynamaz, `loadBox` yalnız damga yazar), serbest ürün ise GERÇEK stok hareketidir — mal
-  depodan çıkıp aracın stoğuna girer, kapıda oradan satılır, akşam sayılıp geri devredilir.
-  İkisini tek listede toplamak, kuryeye aynı görünen iki farklı sorumluluğu karıştırırdı.
-
-  ── SAYFA "NE VAR"I GÖSTERİR, ÇEKMECE "NE ALAYIM"I SORAR (kullanıcı kararı 31.08) ──
-  Tasarım (v3:19) alma şeridini SAYFAYA seriyor: "SIK KOYULANLAR" başlığı altında iki sütunlu
-  kartlar. Tasarımın kendi karesinde o şerit DÖRT karttı; gerçek depoda aday sayısı 12 (ucun
-  tavanı) ve ekran cihazda kalabalıklaştı — kullanıcı ölçtü: *"çok fazla kırışık ve karmaşık."*
-
-  Ayrım şu: sayfanın taşıdığı bilgi **"araçta ne var"**dır — kurye kapıda ona bakar, gün boyunca
-  ona döner. **"Ne alayım"** ise rampada bir kez sorulan bir SEÇİM anıdır; seçim anları bu yüzeyde
-  çekmeceye gider (araç seçimi, adet klavyesi, parti seçimi — hepsi öyle). Şerit çekmecenin içine
-  alındı: çekmece boş sorguyla sık koyulanları gösteriyor, yazdıkça aynı liste aramaya dönüşüyor.
-  Sayfa tek işe indi, şeridin kalabalığı da seçim anında kaldı.
-
-  ── SATIRIN DİZİLİMİ (kullanıcı kararı 31.08) ───────────────────────────────
-  Solda KAPAK, ortada ad + boy/depo, sağda adet düğmeleri, altta sonucun notu. Tasarımda kapak
-  yok ve adet düğmeleri solda; ikisi de değişti çünkü rampada kurye ürünü adından değil
-  GÖRÜNÜŞÜNDEN tanıyor (dört "Cevizli Baklava" satırını ayıran şey boy etiketi değil kapaktır) ve
-  parmağın düştüğü yer satırın sağıdır. Not artık kendi satırında: sağda sıkışınca iki satıra
-  kırılıyor ve adet düğmesinin yüksekliğini büyütüyordu.
-
-  ── İSTEĞE BAĞLI, VE BUNU SÖYLÜYOR ──────────────────────────────────────────
-  Boş hâl bir eksiklik gibi değil bir DAVET gibi çiziliyor (v3:19'un kendi cümlesi: *"Almadan da
-  yola çıkabilirsin"*). Serbest ürün almadan sefer sürmek meşru; ekranın boş hâli kuryeye
-  yapmadığı bir işi hatırlatmamalı.
-*/
+/* Araca serbest ürün: sipariş dışı, kapıda satılabilecek mal; sipariş kutusu stoğu oynatmayan bir emanetken serbest ürün
+   gerçek stok hareketidir ve ikisi tek listede kuryeye aynı görünen iki ayrı sorumluluğu karıştırırdı. Sayfa "araçta ne
+   var"ı gösterir, "ne alayım" rampada bir kez sorulan seçimdir ve çekmecededir; boş hâl bir davettir, çünkü serbest ürün
+   almadan sefer sürmek meşrudur. */
 
 const t = courierCopy;
 
-/** İlk yük iskeleti — okutma düğmesi, arama düğmesi ve iki satır; ekranın çizdiği bloklar. */
-const VAN_STOCK_SKELETON = { scan: 54, search: 52, row: 108 } as const;
+/** İlk yük iskeleti: arama düğmesi ve satır, ekranın çizdiği bloklar. */
+const VAN_STOCK_SKELETON = { search: 52, row: 108 } as const;
 
 export function CourierVanStockScreen() {
   const router = useRouter();
@@ -70,40 +43,20 @@ export function CourierVanStockScreen() {
   const [onVan, setOnVan] = useState<CourierVanStockLine[]>([]);
   const [candidates, setCandidates] = useState<CourierVanCandidate[]>([]);
   const [hasVehicle, setHasVehicle] = useState(true);
-  /*
-    SONUÇ TOAST'TA — TEK İSTİSNA AÇIK ÇEKMECE (kullanıcı kararı 01.09).
-
-    Sayfadaki bildirim şeridi söküldü; hareketin sonucu artık toast. Ama toast KÖKTE çiziliyor ve
-    okutma çekmecesi bir yerel `Modal`: Android'de modal kendi penceresini açtığı için kökteki
-    katman onun ALTINDA kalır ve kurye kodu okutup hiçbir şey görmez. 31.08'de ölçülen arıza tam
-    buydu ve çözümü de aynı kalıyor — çekmece açıkken sonucu ÇEKMECE söyler (`hint`).
-
-    Kural tek cümle: **mesaj kullanıcının baktığı katmanda görünür.**
-  */
+  /* Sonuç toast'ta söylenir; okutma çekmecesi açıkken sonucu çekmece söyler (`hint`), çünkü Android'de yerel `Modal` kökteki
+     toast katmanını örter ve kurye okuttuğu kodun sonucunu görmezdi. */
   const [sheetHint, setSheetHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
-  /*
-    ADET ÇEKMECESİ (kullanıcı kararı 02.09) — sayacın ORTASINDAKİ rakama basınca açılır.
-
-    Gerekçe rampanın kendisi: 12 adet koyacak kurye artı düğmesine on iki kez basıyor. Çekmece
-    aynı sayacı büyük hâliyle veriyor (`OperationsScanQtySheet`) ve tek yazımda bitiriyor.
-
-    Durum İKİ parça: hangi satır (`qtyLine`) ve çekmecedeki O ANKİ değer (`qtyDraft`). Taslak ayrı
-    tutuluyor çünkü çekmecede oynanan sayı ONAYLANANA KADAR araca yazılmıyor — her dokunuşta uca
-    istek gitseydi kurye 12'ye çıkarken on iki hareket kaydı doğardı.
-  */
+  /* Adet çekmecesi sayacın ortasındaki rakamdan açılır, 12 adet için on iki dokunuş gerekmesin. Taslak (`qtyDraft`) onaya
+     kadar araca yazılmaz; her dokunuşta uca gitseydi on iki hareket kaydı doğardı. */
   const [qtyLine, setQtyLine] = useState<CourierVanStockLine | null>(null);
   const [qtyDraft, setQtyDraft] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CourierVanCandidate[]>([]);
-  /*
-    LİSTE BAYAT (21.263). Yazımdan SONRAKİ tazeleme düştüğünde açılır: ekrandaki sayılar artık
-    ölçüm değil hatıra. Satırların TAVSİYE cümlesi ("depoda N kalır") o hâlde GİZLENİYOR — çünkü
-    o cümle bir ölçüme dayanıyordu ve dayanağı düştü; söylemeye devam etmek CLAUDE §1'in
-    yasakladığı şey olurdu (ölçülemeyen değeri ölçülmüş gibi göstermek).
-  */
+  /* Liste bayat: yazımdan sonraki tazeleme düştü ve ekrandaki sayılar ölçüm değil hatıradır. Satırların "depoda N kalır"
+     tavsiyesi bu hâlde gizlenir, dayanağı düşmüş sayıyı söylemek ölçülemeyeni ölçülmüş göstermektir. */
   const [refreshFailed, setRefreshFailed] = useState(false);
 
   /** Okuma başarılı mıydı — yazım sonrası ölçümün düşüp düşmediğini çağıran bilmek zorunda. */
@@ -147,14 +100,8 @@ export function CourierVanStockScreen() {
     };
   }, [query, searchOpen]);
 
-  /*
-    HAREKET TEK KAPIDAN — alma da geri koyma da. İki ayrı çağrı sarmalayıcısı yazılsaydı biri
-    cevabın bir dalını (`not_enough`, `stuck`, `unknown_code`) işlemeyi unuturdu; burada dokuz dal
-    tek yerde okunuyor ve ekran her hâlde SEBEBİ söylüyor.
-
-    Kimlik iki dallı: varyant (çekmece/adet) ya da KOD (okutma). Uç kodu `variant_barcode`
-    üzerinden çözüyor; tanınmayan kod kendi dalıyla geliyor ve sessizce yutulmuyor.
-  */
+  /* Hareket tek kapıdan: alma da geri koyma da aynı sarmalayıcıdan geçer ki cevabın hiçbir dalı unutulmasın ve ekran her
+     hâlde sebebi söylesin. Kimlik ya varyanttır (çekmece/adet) ya koddur (okutma); tanınmayan kod kendi dalıyla gelir. */
   const submit = useCallback(
     (
       run: () => Promise<ApiResult<CourierVanStockMoveResponse>>,
@@ -166,12 +113,8 @@ export function CourierVanStockScreen() {
         else if (tone === 'ok') toastSuccess(text);
         else toastError(text);
       };
-      /*
-        MEŞGULKEN GELEN DOKUNUŞ ARTIK SESSİZ DEĞİL (21.263). Bu satır çıplak bir `return`du:
-        önceki yazım sürerken okutulan ikinci kutu hiçbir iz bırakmadan kayboluyor, kurye
-        okuttuğunu sanıyordu. Sebep söylenmeden yutulan hareket, bu dosyanın `unknown_code`
-        künyesinin yasakladığı şeyin ta kendisi.
-      */
+      /* Meşgulken gelen dokunuş sessiz yutulmaz: önceki yazım sürerken okutulan ikinci kutu iz bırakmadan kaybolsaydı kurye
+         okuttuğunu sanırdı. */
       if (busy) {
         announce('error', t.vanStock.busyScan);
         return;
@@ -180,12 +123,8 @@ export function CourierVanStockScreen() {
       setSheetHint(null);
       void (async () => {
         const result = await run();
-        /*
-          TEL HATASINDA DA ÖLÇÜLÜR (21.263 · ölçülen arıza). Burada bir erken `return` duruyordu ve
-          alttaki `load()`u atlıyordu: kurye eski sayıya bakmaya devam ediyor, üstelik ekran ona
-          "yeniden dene" diyordu — yanlışa davet. Cevabın gelmemesi "yazılmadı" DEMEK DEĞİLDİR;
-          tek dürüst hareket ölçüp gerçeği göstermektir.
-        */
+        /* Tel hatasında da ölçülür: cevabın gelmemesi "yazılmadı" demek değildir, tek dürüst hareket ölçüp gerçeği
+           göstermektir. */
         if (result.error !== null) {
           const taze = await load();
           setBusy(false);
@@ -195,9 +134,8 @@ export function CourierVanStockScreen() {
         }
         const data = result.data;
         if (data.status === 'ok') {
-          /* İŞARET YÖNÜ SÖYLER (21.263): yön artık istemcinin gönderdiği bir parametre değil,
-             sunucunun ölçtüğü sonuç. `0` = hiçbir hareket yazılmadı ve bu GİZLENMEZ — "2 alındı"
-             demek yazılmamış bir hareketi yazılmış göstermek olurdu. */
+          /* İşaret yönü söyler ve yön sunucunun ölçtüğü sonuçtur; `0` hiçbir hareket yazılmadı demektir ve gizlenmez, "2
+             alındı" demek yazılmamış hareketi yazılmış gösterirdi. */
           announce(
             'ok',
             data.delta === 0
@@ -221,9 +159,8 @@ export function CourierVanStockScreen() {
         } else {
           announce('error', t.vanStock.failed);
         }
-        /* ÖLÇÜM YAZIMDAN SONRA, KİLİT ÖLÇÜMDEN SONRA: `setBusy(false)` buraya taşındı (21.263).
-           Eskiden istekten hemen sonra açılıyordu, yani kurye HENÜZ TAZELENMEMİŞ bir listeye
-           ikinci kez dokunabiliyordu — farkın tabanı da o bayat listeden geliyordu. */
+        /* Kilit ölçümden sonra açılır: kurye henüz tazelenmemiş listeye ikinci kez dokunabilseydi farkın tabanı bayat
+           listeden gelirdi. */
         const taze = await load();
         setRefreshFailed(!taze);
         if (!taze) announce('error', t.vanStock.refreshFailed);
@@ -234,13 +171,8 @@ export function CourierVanStockScreen() {
   );
 
   /**
-   * **Araçtaki adedi yaz** — hedef ve GÖRÜLEN taban birlikte gider (21.263). Fark aritmetiği
-   * ekrandan kalktı: `next - line.qty` iki yerde duruyordu ve tabanı bayat olabilen bir listeden
-   * alıyordu. Artık istemci yalnız ne gördüğünü ve ne istediğini söylüyor.
-   *
-   * Anahtar HER ÇAĞRIDA yeni: burada korunan şey insanın tekrarı değil (onu mutlak hedef zaten
-   * zararsız kılıyor), tek bir isteğin telde ÇOĞALMASI. Kapıda tahsilattaki gibi bir `ref`te
-   * saklanmıyor çünkü burada kuyruk yok — künye `request-key.ts`te.
+   * Araçtaki adedi yazar: hedef ve görülen taban birlikte gider, istemci yalnız ne gördüğünü ve ne istediğini söyler. Anahtar
+   * her çağrıda yenidir, çünkü korunan şey tek bir isteğin telde çoğalmasıdır (`request-key.ts`).
    */
   const setQty = useCallback(
     (variantId: string, targetQty: number, observedQty: number, surface: 'page' | 'sheet' = 'page') => {
@@ -270,25 +202,13 @@ export function CourierVanStockScreen() {
     return (
       <View style={styles.screen} testID="courier-van-stock">
         {header}
-        <OperationsSkeletonList
-          heights={[VAN_STOCK_SKELETON.scan, VAN_STOCK_SKELETON.search, VAN_STOCK_SKELETON.row]}
-          label={t.day.loading}
-        />
+        <OperationsSkeletonList heights={[VAN_STOCK_SKELETON.search, VAN_STOCK_SKELETON.row]} label={t.day.loading} />
       </View>
     );
   }
 
-  /*
-    İLK OKUMA DÜŞTÜĞÜNDE EKRAN "ARAÇ BOŞ" DEMEZ (21.263 · ölçüldü 05.09).
-
-    `status: 'error'` yazılıyordu ama HİÇBİR YERDE ÇİZİLMİYORDU: `hasVehicle` varsayılanı `true`
-    olduğu için akış normal gövdeye düşüyor, `onVan` boş kaldığı için de ekran *"Araç şimdilik
-    yalnız durak kutularını taşıyor"* diyordu. Yani ölçülemeyen değer SIFIR olarak gösteriliyordu —
-    CLAUDE §1'in adıyla andığı hata. Kurye araçtaki malı görmediği için yeniden alır.
-
-    Yazma yolları da bu hâlde KAPALI kalıyor (gövde hiç çizilmiyor): taban bilinmiyorken hedef
-    hesaplanamaz.
-  */
+  /* İlk okuma düştüğünde ekran "araç boş" demez: ölçülemeyen değer sıfır gösterilseydi kurye araçtaki malı görmeyip yeniden
+     alırdı. Gövde çizilmediği için yazma yolları da kapalıdır, taban bilinmeden hedef hesaplanamaz. */
   if (status === 'error') {
     return (
       <View style={styles.screen} testID="courier-van-stock">
@@ -316,12 +236,12 @@ export function CourierVanStockScreen() {
 
   return (
     <View style={styles.screen} testID="courier-van-stock">
-      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
-          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE. */}
+      {/* Yapışkan mikro başlık ve alt çubuk gizlemesi bu kaptan beslenir; başlık kaydırıcının içindedir. */}
       <OperationsScreenScroll
         title={t.vanStock.title}
         caption={operationsCopy.sections.courier.tab}
-        contentContainerStyle={styles.list}
+        /* Araçlı ekranda dönüş çubuğu ve daire var; liste sonu dairenin payını bırakır ki son satırın adet düğmeleri basılabilsin. */
+        contentContainerStyle={[styles.list, hasVehicle ? { paddingBottom: scanFabRoom(STICKY_BAR_HEIGHT) } : null]}
       >
         <OperationsHeadBleed pad="2xl">{header}</OperationsHeadBleed>
         {!hasVehicle ? (
@@ -335,17 +255,7 @@ export function CourierVanStockScreen() {
           />
         ) : (
           <>
-            {/* ALMANIN İKİ YOLU, İKİSİ DE SAYFANIN BAŞINDA: rampada kurye ya elindeki kutunun
-                kodunu okutur ya listeden seçer. Liste artık çekmecede — sayfa "araçta ne var"a
-                ayrıldı (dosya künyesi). */}
-            <PrimaryButton
-              label={t.vanStock.scan}
-              onPress={() => setScanOpen(true)}
-              tone="olive"
-              elevation="flat"
-              icon="scan"
-              testID="courier-van-scan"
-            />
+            {/* Rampada kurye kutunun kodunu yüzen düğmeyle okutur; listeden seçim sayfanın başındaki çekmecededir. */}
             <SecondaryButton
               label={t.vanStock.search}
               onPress={() => setSearchOpen(true)}
@@ -380,7 +290,7 @@ export function CourierVanStockScreen() {
                   line={line}
                   stale={refreshFailed}
                   onChange={(next) => {
-                    // Fark aritmetiği KALKTI (21.263): sayaç zaten mutlak düşünüyor, tel de öyle.
+                    // Sayaç mutlak düşünür, tel de öyle: hedef ve görülen taban birlikte gider.
                     setQty(line.variantId, next, line.qty);
                   }}
                   onPressQty={() => {
@@ -413,20 +323,19 @@ export function CourierVanStockScreen() {
           />
         </OperationsStickyBar>
       )}
+      {!hasVehicle ? null : (
+        <OperationsScanFab
+          icon="scan"
+          accessibilityLabel={t.vanStock.scan}
+          onPress={() => setScanOpen(true)}
+          lift={STICKY_BAR_HEIGHT}
+          testID="courier-van-scan"
+        />
+      )}
 
-      {/*
-        ── ADET ÇEKMECESİ (kullanıcı kararı 02.09) ──────────────────────────────
-        Sayacın ortasındaki rakama basınca açılır ve aynı sayacı büyük hâliyle verir. Kite yeni bir
-        çekmece yazılmadı: `OperationsScanQtySheet` zaten tam bu iş için var (ad · bağlam sayısı ·
-        büyük sayaç · onay) ve depo tarafında okutmadan sonra aynı soruyu soruyor.
-
-        ARACA YAZIM ONAYDA, her dokunuşta DEĞİL: çekmecede 1'den 12'ye çıkan kurye on iki hareket
-        kaydı doğurmamalı. Fark tek çağrıda uygulanıyor — artıysa depodan alınır, eksiyse geri
-        konur; ikisi de listenin `+/−` düğmeleriyle aynı kapıdan (`move`).
-
-        TAVAN FİZİKSEL: araçtaki adet + depoda kalan. Yumuşak bir sınır değil — depoda olmayan malı
-        araca yazmak, olmayan malı satmanın ilk adımıdır (`DOMAIN §17`).
-      */}
+      {/* Adet çekmecesi kitin `OperationsScanQtySheet`idir; araca yazım onayda ve tek çağrıda olur, listenin `+/−`
+          düğmeleriyle aynı kapıdan geçer. Tavan fizikseldir (araçtaki + depoda kalan), çünkü depoda olmayan malı araca
+          yazmak olmayan malı satmanın ilk adımıdır (DOMAIN §17). */}
       <OperationsScanQtySheet
         visible={qtyLine !== null}
         name={qtyLine?.name ?? ''}
@@ -465,9 +374,8 @@ export function CourierVanStockScreen() {
       <ScanSheet
         open={scanOpen}
         title={t.vanStock.scanTitle}
-        /* SONUÇ ÇEKMECENİN İÇİNDE (cihazda ölçüldü 31.08): okutma sayfadaki bildirim satırını
-           yazıyordu ama çekmece açık kaldığı için o satır katmanın ALTINDA kalıyordu — kurye
-           kodu okutuyor, hiçbir şey olmamış gibi görünüyor ve ikinci kez okutuyordu. */
+        /* Sonuç çekmecenin içindedir: çekmece açıkken sayfadaki satır katmanın altında kalır ve kurye kodu ikinci kez
+           okuturdu. */
         hint={sheetHint ?? t.vanStock.sheetHint}
         onClose={() => {
           setScanOpen(false);
@@ -477,15 +385,8 @@ export function CourierVanStockScreen() {
         testID="courier-van-scan-sheet"
       />
 
-      {/*
-        ARACA ÜRÜN AL — sık koyulanlar VE arama, TEK çekmecede (kullanıcı kararı 31.08).
-
-        Boş sorguda sık koyulanlar, yazdıkça aynı liste aramaya dönüşüyor: ikisi ayrı yerlerde
-        dursaydı kurye "listede yoksa nereye bakacağım" sorusunu kendi çözerdi. Çekmece
-        dokunmayla KAPANMIYOR — rampada arka arkaya birkaç ürün alınıyor ve her biri için
-        çekmeceyi yeniden açmak aynı işi üç kez yaptırırdı; satır hâlini ("araçta N") yerinde
-        güncelliyor, sonuç cümlesi de başlığın sağında.
-      */}
+      {/* Araca ürün al: sık koyulanlar ve arama tek çekmecededir, boş sorguda sık koyulanlar, yazdıkça arama gelir. Çekmece
+          dokunmayla kapanmaz, çünkü rampada arka arkaya birkaç ürün alınır; satır hâli ("araçta N") yerinde güncellenir. */}
       <BottomSheet
         visible={searchOpen}
         title={t.vanStock.searchTitle}
@@ -540,11 +441,7 @@ export function CourierVanStockScreen() {
 }
 
 /**
- * **ÇEKMECENİN ALMA SATIRI** — kapak · ad + boy/depo · hâl.
- *
- * Sayfadaki iki sütunlu kart ızgarasının yerini aldı (kullanıcı kararı 31.08): on iki kart yan
- * yana dizilince ekran "kırışık" okunuyordu ve kartların hiçbiri ürünün ne olduğunu
- * göstermiyordu. Satır biçimi hem kapağa yer açıyor hem de listenin uzunluğunu zararsız kılıyor —
+ * Çekmecenin alma satırı: kapak, ad ve boy/depo, hâl. Satır biçimi kapağa yer açar ve listenin uzunluğunu zararsız kılar, çünkü
  * çekmece kaydırılır, sayfa kaydırılmaz.
  */
 function CandidateRow({
@@ -582,16 +479,8 @@ function CandidateRow({
 }
 
 /**
- * **ARAÇTAKİ SATIR** — kapak solda · ad + boy/depoda kalan ortada · adet düğmeleri SAĞDA ·
- * sonucun notu ALTTA (kullanıcı kararı 31.08).
- *
- * Tasarım (v3:19) adet düğmelerini sola, notu onların sağına koyuyordu; not orada iki satıra
- * kırılıp satırın yüksekliğini büyütüyor, kapağa da yer kalmıyordu. Yeni dizilim üç şeyi birden
- * çözüyor: ürün görünüşünden tanınıyor, parmağın düştüğü yer satırın sağı oluyor ve not kendi
- * satırında tek satıra sığıyor.
- *
- * "Araçtan çıkar" ayrı duruyor çünkü ayrı bir karar: adedi tek tek sıfıra indirmek "geri koymak"ın
- * adı değil.
+ * Araçtaki satır: kapak solda, adet düğmeleri sağda, sonucun notu altta; kurye ürünü görünüşünden tanır ve parmağı satırın
+ * sağına düşer. "Araçtan çıkar" ayrı durur, çünkü adedi tek tek sıfıra indirmek geri koymanın adı değildir.
  */
 function VanLine({
   line,
@@ -602,9 +491,8 @@ function VanLine({
 }: {
   line: CourierVanStockLine;
   /**
-   * Liste BAYAT (21.263): yazımdan sonraki ölçüm düştü. `available`e dayanan iki cümle (satırın
-   * "depoda N kalır" notu ve "depoda N" künyesi) bu hâlde YAZILMIYOR — dayanağı düşmüş bir sayıyı
-   * söylemeye devam etmek, ölçülemeyen değeri ölçülmüş göstermektir (CLAUDE §1).
+   * Liste bayat: yazımdan sonraki ölçüm düştü; `available`e dayanan iki cümle yazılmaz, yoksa dayanağı düşmüş sayı ölçülmüş
+   * gibi görünürdü.
    */
   stale: boolean;
   onChange: (next: number) => void;
@@ -662,12 +550,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
   list: {
     paddingHorizontal: operationsTheme.space['2xl'],
-    // Yapışkan çubuk listenin ÜSTÜNDE duruyor; son satır onun altında kalmasın.
-    paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
-    /* SATIR ARASI SIKI (kullanıcı bulgusu 31.08 — "kartlar arasında biraz fazla boş var").
-       Satırlar artık kapaklı ve iki katlı; her biri zaten kendi kenarıyla ayrılıyor, aradaki
-       boşluğun ayırma işi yok. `md`(8) → `sm`(6): kart yüksekliği büyüdükçe aralığın azalması
-       listeyi bir yığın değil bir DİZİ gibi okutuyor. */
+    /* Satır arası sıkı: kapaklı satırlar kendi kenarıyla ayrılır ve dar aralık listeyi bir yığın değil dizi gibi okutur. */
     gap: operationsTheme.space.sm,
   },
   searchButton: { backgroundColor: operationsTheme.colors.panel },
@@ -714,8 +597,7 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   removeHit: { paddingVertical: operationsTheme.space.xs, paddingHorizontal: operationsTheme.space.sm },
-  /* "✕" YERİNE SÖZCÜK (31.08): tek başına bir çarpı, adedin sıfırlanması mı satırın silinmesi mi
-     olduğunu söylemiyor — eylemin adı yazılırsa soru da doğmuyor. */
+  /* "✕" yerine sözcük: tek başına çarpı adedin sıfırlanması mı satırın silinmesi mi olduğunu söylemez. */
   remove: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.meta,

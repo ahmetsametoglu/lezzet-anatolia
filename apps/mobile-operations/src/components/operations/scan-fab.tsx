@@ -7,73 +7,39 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
-  YÜZEN OKUTMA DÜĞMESİ (FAB) — okutmanın her ekranda AYNI yerde durması (kullanıcı kararı 31.08).
-
-  ── NİÇİN VAR ───────────────────────────────────────────────────────────────
-  Ölçüldü: **yedi** operasyon ekranı barkod okutuyor (`preparation` · `intake` · `adjustment` ·
-  `handover` · `courier-day` · `delivery` · `load`) ve yedisi de okutmayı KENDİ yerinde, sayfanın
-  akışında çiziyor. Kullanıcının cümlesi: *"Barkod okutma yukarılarda bir yerde kalmamalı, her
-  zaman elinin altında olmalı."* Akıştaki bir düğme kaydırınca kaybolur; depocunun elinde koli
-  varken kaybolan bir düğme, aranan bir düğmedir.
-
-  Bu yüzden konum komponentin KENDİSİNDE: çağıran nereye koyacağını değil, NE okutulduğunu söyler.
-  Konumu çağırana bıraksaydık yedi ekran yedi ayrı "sağ alt" bulurdu (`OperationsStickyBar`ın
-  aynı gerekçesi — orada 11 ekran aynı üç satırı elle yazıyordu).
-
-  ── İKİ TON, ÇÜNKÜ İKİ EYLEM ────────────────────────────────────────────────
-  Tasarım aynı daireyi iki renkte kullanıyor (v3:03 `topFabRenk`): kutu açıkken **zeytin**
-  (okutma), kutu yokken **mürekkep** (o an yapılacak asıl iş — kutu aç). Yani daire "okutma
-  düğmesi" değil "buradaki tek eylem" demek; ekranın hâli değişince eylem de değişiyor ve düğme
-  yerinde kalıyor. Bu bir renk süsü değil: elin gittiği yer sabit kalsın diye.
-
-  ── GÜVENLİ ALAN ÜSTTEN DEĞİL ALTTAN ────────────────────────────────────────
-  Tasarımın `bottom:92px`i şablonun sekme çubuğunun üstüdür. Bizde D1 yığın ekranıdır ve sekme
-  çubuğu gizlenir (`(operations)/picking.tsx` künyesi), yani 92'yi olduğu gibi almak düğmeyi
-  boşlukta asardı. Ölçü ALT GÜVENLİ ALANDAN türer: jestli telefonda ev göstergesinin üstünde,
-  düğmeli telefonda ekranın kenarında — ikisinde de aynı fiziksel mesafede.
-
-  Güvenli alan `UnistylesRuntime`dan okunur, `useSafeAreaInsets`ten değil: ikincisi bir sağlayıcı
-  ister ve kitin testleri onu kurmuyor (`micro-header` künyesi — 25 ekran testi bu yüzden düşmüştü).
+  Yüzen okutma düğmesi: okutma her ekranda aynı yerde, elin altında durur; akıştaki düğme liste kaydıkça kaybolur. Konum bileşenin
+  kendisindedir ve alt güvenli alandan türer, çağıran yalnız ne okutulduğunu ve altında ne kadarlık çubuk olduğunu söyler.
 */
 
+/**
+ * Dairenin alt kenarı: alt güvenli alanın üstünde sabit nefes, yapışkan çubuk varsa onun kadar yukarıda. Güvenli alan
+ * `UnistylesRuntime`dan okunur, çünkü `useSafeAreaInsets` bir sağlayıcı ister ve ekran testleri onu kurmaz.
+ */
+function fabBottom(lift: number): number {
+  return UnistylesRuntime.insets.bottom + operationsTheme.space['8xl'] + lift;
+}
+
+/**
+ * Kayan listenin sonunda bırakılacak boşluk: son satır dairenin üstüne çıkabilsin, yoksa satırın sağındaki düğme dairenin altında
+ * kalır ve basılamaz. `lift` dairenin aldığıyla aynıdır.
+ */
+export function scanFabRoom(lift = 0): number {
+  return fabBottom(lift) + operationsTheme.size.fab + operationsTheme.space.xl;
+}
+
 interface OperationsScanFabProps {
-  /** Dairenin içindeki çizim — okutmada `scan`, başka bir eylemde onun ikonu. */
+  /** Dairenin içindeki çizim: okutmada `scan`, başka bir eylemde onun ikonu. */
   icon: IconName;
   onPress: () => void;
-  /** Ekran okuyucu adı — ZORUNLU: daire metinsizdir, ad düğmenin üstünde durur. */
+  /** Ekran okuyucu adı zorunludur, çünkü daire metinsizdir. */
   accessibilityLabel: string;
-  /**
-   * · `scan` (varsayılan) — zeytin: okutma.
-   * · `action` — mürekkep: okutmadan ÖNCE yapılması gereken iş (kutu aç, sefer kur).
-   */
+  /** `scan` (zeytin) okutmadır; `action` (mürekkep) okutmadan önce yapılması gereken iştir (kutu aç, sefer kur). */
   tone?: 'scan' | 'action';
-  /**
-   * Kapalıyken daire ÇİZİLİR ama sönüktür — gizlemek yerine söndürmek bilinçli: kaybolan düğme
-   * "bu ekranda okutma yok" der, sönük düğme "şimdi olmaz" der. Çevrimdışı depo kartlarında
-   * doğru cümle ikincisidir (yazma kapalı, okuma açık).
-   */
+  /** Kapalı daire gizlenmez, söner: kaybolan düğme "burada okutma yok" der, sönük düğme "şimdi olmaz". */
   disabled?: boolean;
-  /**
-   * Ekranın dibinde YAPIŞIK bir çubuk varsa daire onun kadar yukarı kalkar (dp).
-   *
-   * Konumu bileşen sahipleniyor (künye yukarıda) ve bu, çağıranın onu istediği yere koyması
-   * DEĞİL: çubuk varsa daire onun ÜSTÜNDE durmalı, yoksa çubuğun yazısını örter (ölçüldü 31.08 —
-   * eksik bildirme çubuğunun cümlesi dairenin altında kalıyordu). Çağıranın söyleyebileceği tek
-   * şey "altımda şu kadarlık bir çubuk var"; nereye oturacağına yine bileşen karar veriyor.
-   */
+  /** Ekranın dibindeki yapışkan çubuğun boyu (dp); daire onun üstüne kalkar, yoksa çubuğun yazısını örter. */
   lift?: number;
-  /**
-   * **METİN — daire hapa dönüşür** (kullanıcı kararı 01.09).
-   *
-   * Yükleme ekranında son kutu binince okutacak bir şey kalmıyor ve daire kayboluyordu: elin
-   * gittiği yer boşalıyor, kurye "bitir"i aramak için yukarı kaydırmak zorunda kalıyordu.
-   * Kullanıcının çözümü: *"tarama butonu tüm kutular eklendikten sonra yüklemeyi bitir butonuna
-   * dönebilir; fab butonu içinde metin barındıran geniş bir buton olur."*
-   *
-   * Yani düğme kaybolmuyor, İŞİ değişiyor — dosyanın kendi kuralının devamı ("daire okutma
-   * düğmesi değil, buradaki tek eylem"). Metin gelince yalnız kabuk genişler: konum, gölge, ton
-   * ve dokunma alanı aynı kalır.
-   */
+  /** Metin gelince daire hapa döner: okutacak şey kalmayınca düğme kaybolmaz, işi değişir (yükleme ekranında "bitir"). */
   label?: string;
   accessibilityHint?: string;
   testID?: string;
@@ -91,32 +57,14 @@ export function OperationsScanFab({
   testID,
 }: OperationsScanFabProps) {
   /*
-    KONUM DIŞ KABA, GÖRÜNÜŞ DÜĞMEYE (cihazda ölçüldü 01.09 — kullanıcı bulgusu: *"FAB butonu
-    bazen çalışmıyor"*).
-
-    `position:'absolute'` doğrudan `PressableSurface`ın `style`ine veriliyordu ve o stil İÇ görünüme
-    gidiyor (`pressable-surface` künyesi bunu açıkça yazıyor: *"`style` İÇ yüzeye gider"*). Sonuç:
-    daire ÇİZİLİYOR ama dış `Pressable` akışta kalıyor ve tek çocuğu mutlak konumlandığı için
-    **0×0** ölçülüyor — yani dokunacak bir alan yok. Ölçüm: `uiautomator` dökümünde ekranın
-    tıklanabilir düğümleri arasında daire HİÇ görünmüyordu.
-
-    Aynı sınıf hata kitte bir kez daha çözülmüştü: satırda esneyen düğmenin `flex`i de `style`e
-    yazılamıyor, `grow` prop'undan DIŞ Pressable'a veriliyor. Burada da konum dış kaba alındı;
-    `PressableSurface`a yalnız dairenin kendisi (boy, yarıçap, dolgu, gölge) kalıyor ve Pressable
-    o daireye göre ölçülüyor.
-
-    `pointerEvents="box-none"`: kap ekranın köşesinde duran şeffaf bir çerçeve ve altındaki listeyi
-    yutmamalı — dokunuşu yalnız dairenin kendisi alır.
+    Konum dış kapta, görünüş düğmede: `PressableSurface`ın `style`ı iç yüzeye gider ve mutlak konum oraya verilirse dış `Pressable`
+    0×0 ölçülür, dokunacak alan kalmaz. `box-none` kabın altındaki listeyi yutmaması içindir; dokunuşu yalnız daire alır.
   */
   return (
-    <View
-      style={[styles.anchor, { bottom: UnistylesRuntime.insets.bottom + operationsTheme.space['8xl'] + lift }]}
-      pointerEvents="box-none"
-    >
+    <View style={[styles.anchor, { bottom: fabBottom(lift) }]} pointerEvents="box-none">
       <PressableSurface
         onPress={onPress}
         disabled={disabled}
-        /* Tasarımın `style-active="transform:scale(.94)"`i — küçük yuvarlak öğenin durağı. */
         feedback="scale-small"
         style={[
           styles.fab,
@@ -130,9 +78,7 @@ export function OperationsScanFab({
         <Icon
           name={icon}
           size={operationsTheme.size.fabIcon}
-          /* Koyu ve zeytin dolgunun ikisinde de krem: `on-image` rolünün tanımı zaten "koyu yüzey
-           üstünde krem metin" (token künyesi). Sönük hâlde de aynı krem kalır — daire zaten
-           soluyor, ikinci bir soldurma ikonu okunmaz yapardı. */
+          /* Koyu ve zeytin dolguda da krem (`on-image`); sönük daire zaten soluk, ikinci bir soldurma ikonu okunmaz yapardı. */
           color={operationsTheme.colors['on-image']}
           bold
         />
@@ -143,17 +89,14 @@ export function OperationsScanFab({
 }
 
 const styles = StyleSheet.create({
-  /** Ekranın köşesine çakılan ŞEFFAF kap — dokunuşu yutmaz (`box-none`), yalnız daireyi taşır. */
+  /** Ekranın köşesine çakılan şeffaf kap; `bottom` çizimde güvenli alandan verilir. */
   anchor: {
     position: 'absolute',
-    /* `bottom` çizimde veriliyor (güvenli alan) — burada yalnız değişmeyen yarısı. */
     right: operationsTheme.space['5xl'],
   },
   fab: {
     height: operationsTheme.size.fab,
-    /* Tam daire: yarıçap ölçekten DEĞİL boyun yarısından türer — `radius` ailesi kutu köşesidir,
-       burada istenen şey köşe değil dairenin kendisi. Metinli hâlde de aynı yarıçap kalıyor: hap
-       biçimi, dairenin iki yana uzamış hâlidir — köşesi değişen bir düğme başka bir düğme olurdu. */
+    /* Yarıçap boyun yarısıdır, çünkü istenen köşe değil dairenin kendisi; hap da dairenin iki yana uzamış hâlidir. */
     borderRadius: operationsTheme.size.fab / 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -178,8 +121,7 @@ const styles = StyleSheet.create({
   },
   fab_disabled: {
     backgroundColor: operationsTheme.colors['disabled-fill'],
-    /* Sönük düğme YÜZMEZ: gölge "bu öğe üstte ve basılabilir" der, basılamayan bir dairede
-       o cümle yalan olurdu. */
+    /* Gölge "üstte ve basılabilir" der; basılamayan dairede bu cümle yanlış olurdu. */
     boxShadow: 'none',
   },
 });

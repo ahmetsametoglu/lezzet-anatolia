@@ -806,7 +806,7 @@ describe('adım numarası (v3 · 30.08)', () => {
     mockRoutes({ day: courierDay([boxedStop()]) });
     await renderDelivery();
 
-    expect(screen.getByTestId('courier-box-scan')).toHaveTextContent(/2 kaldı/);
+    expect(screen.getByLabelText('Kutuyu okut — 2 kaldı')).toBeOnTheScreen();
     expect(screen.getByText(/dönüş dökümüne/)).toBeOnTheScreen();
 
     for (const label of ['Kutu 1', 'Kutu 2']) {

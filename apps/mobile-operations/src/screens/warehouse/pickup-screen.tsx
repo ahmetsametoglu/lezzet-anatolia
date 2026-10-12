@@ -7,6 +7,7 @@ import { DoorMethodEnum, ORDER_STATUS_LABELS, type PickupDeliverResponse, type P
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsHeadBleed } from '@/components/operations/head-bleed';
+import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
@@ -161,9 +162,6 @@ export function PickupScreen() {
                 {scanNotice}
               </Text>
             )}
-            {pickup.allBoxesScanned ? null : (
-              <SecondaryButton label={t.pickup.deliver.scanCta} onPress={() => setScanOpen(true)} disabled={offline} testID="warehouse-pickup-scan" />
-            )}
 
             {pickup.dueCents === 0 ? (
               <View style={styles.settled} testID="warehouse-pickup-settled">
@@ -259,6 +257,16 @@ export function PickupScreen() {
           })
         )}
       </OperationsScreenScroll>
+
+      {selected === null || pickup.allBoxesScanned ? null : (
+        <OperationsScanFab
+          icon="scan"
+          accessibilityLabel={t.pickup.deliver.scanCta}
+          onPress={() => setScanOpen(true)}
+          disabled={offline}
+          testID="warehouse-pickup-scan"
+        />
+      )}
 
       <ScanSheet
         open={scanOpen}

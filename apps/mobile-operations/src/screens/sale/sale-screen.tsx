@@ -1,6 +1,5 @@
 import { memo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { SaleCatalogProduct } from '@lezzet/types';
@@ -10,6 +9,7 @@ import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsStickyBar, STICKY_BAR_HEIGHT } from '@/components/operations/sticky-bar';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { OperationsProductRow } from '@/components/operations/product-row';
@@ -45,9 +45,6 @@ const t = saleCopy;
  */
 const SALE_CARD_HEIGHT =
   operationsTheme.space['2xl'] * 2 + operationsTheme.size.thumb + operationsTheme.border.base * 2;
-
-/** Sepet çubuğunun boyu (`styles.sticky` + `styles.cta`) — daire bunun kadar yukarı kalkar. */
-const CART_BAR_LIFT = operationsTheme.space.xl + operationsTheme.size.controlLg + operationsTheme.space['3xl'];
 
 export function SaleScreen() {
   const router = useRouter();
@@ -98,10 +95,6 @@ export function SaleScreen() {
         testID="sale-header"
       />
 
-      {/*
-        Giriş tasarımın iki düğmesidir (Barkod okut, Ürün ara); arama çekmecede durur ve gövde tazelenirken sökülmez, sökülseydi her
-        tuşta IME kompozisyonu ölürdü.
-      */}
       <View style={styles.customerBlock}>
         <SaleCustomerCard
           customer={sale.customer}
@@ -111,17 +104,12 @@ export function SaleScreen() {
         />
       </View>
 
+      {/*
+        Okutma yüzen düğmededir, arama çekmecede durur; çekmece gövde tazelenirken sökülmez, sökülseydi her tuşta IME kompozisyonu
+        ölürdü.
+      */}
       {!catalogOpen ? null : (
         <View style={styles.entryBlock}>
-          <PrimaryButton
-            label={t.scanCta}
-            icon="scan"
-            tone="olive"
-            elevation="glow"
-            onPress={() => sale.setScanOpen(true)}
-            disabled={offline}
-            testID="sale-scan-cta"
-          />
           <SecondaryButton
             label={t.searchCta}
             icon="plus"
@@ -195,7 +183,7 @@ export function SaleScreen() {
       {/* SEPET ÇUBUĞU — yalnız sepet doluyken; dokunuş sepet yüzeyine götürür. Satışın kendisi
           burada YAZILMAZ: parayı yazan düğme, kalemlerin son kez görüldüğü ekranda durur. */}
       {sale.lines.length === 0 ? null : (
-        <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+        <OperationsStickyBar>
           <PressableSurface
             onPress={() => router.navigate('/sale/cart')}
             feedback="shadow"
@@ -210,7 +198,7 @@ export function SaleScreen() {
               })}
             </Text>
           </PressableSurface>
-        </LinearGradient>
+        </OperationsStickyBar>
       )}
 
       {/* Arama çekmecesi: ürün seçilince kapanır ve kartın çekmecesi açılır; liste aynı `sale.products`tır, iki liste iki gerçek
@@ -250,8 +238,8 @@ export function SaleScreen() {
           açar, bulunamayan kod toast'la söylenir. Simülasyon çipleri kitin havuzundan (ürün
           barkodları statik formülle taklit edilebiliyor — `dev-scan-pool`). */}
       {/*
-        Okutma yüzen düğmede de durur, çünkü üstteki giriş düğmesi listeyle kayıp gider; sepet çubuğu varken daire onun kadar yukarı
-        kalkar, yoksa tutarı örterdi.
+        Okutma yüzen düğmededir, çünkü akıştaki düğme listeyle kayıp gider; sepet çubuğu varken daire onun kadar yukarı kalkar, yoksa
+        tutarı örterdi.
       */}
       {!catalogOpen ? null : (
         <OperationsScanFab
@@ -260,7 +248,7 @@ export function SaleScreen() {
           accessibilityLabel={t.scanCta}
           onPress={() => sale.setScanOpen(true)}
           disabled={offline}
-          lift={sale.lines.length === 0 ? 0 : CART_BAR_LIFT}
+          lift={sale.lines.length === 0 ? 0 : STICKY_BAR_HEIGHT}
           testID="sale-scan-fab"
         />
       )}
@@ -481,11 +469,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space.xl,
   },
-  /** İki giriş düğmesi alt alta, listeyle aynı yan nefes. */
+  /** Arama düğmesi listeyle aynı yan nefeste. */
   entryBlock: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space.xl,
-    gap: operationsTheme.space.xl,
   },
   /** Arama çekmecesinin sonuç listesi — kutunun altında, kartlar arası listeyle aynı aralık. */
   sheetList: {
@@ -597,15 +584,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text['card-title-sm'],
     color: operationsTheme.colors.muted,
-  },
-  sticky: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingTop: operationsTheme.space.xl,
-    paddingBottom: operationsTheme.space['3xl'],
-    paddingHorizontal: operationsTheme.space['5xl'],
   },
   cta: {
     height: operationsTheme.size.controlLg,
