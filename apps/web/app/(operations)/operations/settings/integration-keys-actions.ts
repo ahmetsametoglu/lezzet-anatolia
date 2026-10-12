@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { IntegrationSecretService, serviceDb } from '@lezzet/database';
-import { forgetIntegrationSecrets } from '@lezzet/application';
+import { forgetIntegrationSecrets, revealIntegrationSecret } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
 import { IntegrationSecretNameEnum } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -10,8 +10,8 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { SETTINGS_PATH } from './settings-url';
 
 /**
- * Bağlantı anahtarlarının yazma yolu. Kapı yöneticinin: anahtar kasaya, bankaya ve ödeme sağlayıcısına yazma hakkı açar.
- * Değer yalnız Vault'a gider; loga, cevaba ve deftere kimlik yazılır, değer asla.
+ * Bağlantı anahtarlarının yazma ve kopyalama yolu; kapı yöneticinin, çünkü anahtar kasaya, bankaya ve ödeme sağlayıcısına yazma
+ * hakkı açar. Loga ve deftere kimlik yazılır, değer asla; değer yalnız kopyalama isteğinin cevabında, istendiği an gider.
  */
 
 /** Sağlayıcıların anahtarları birkaç yüz karakteri geçmez; sınır yanlışlıkla yapıştırılan metni durdurur. */
@@ -48,6 +48,20 @@ export async function clearIntegrationKeyAction(input: { name: string }): Promis
     logger.info({ name: name.data, actor: staff.profileId }, 'entegrasyon anahtarı kaldırıldı');
     revalidatePath(SETTINGS_PATH);
     return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+export async function copyIntegrationKeyAction(input: { name: string }): Promise<ActionResult<string>> {
+  try {
+    const staff = await requireAdmin();
+    const name = IntegrationSecretNameEnum.safeParse(input.name);
+    if (!name.success) return { data: null, error: 'Tanınmayan anahtar.' };
+    const value = await revealIntegrationSecret(serviceDb(), name.data);
+    if (!value) return { data: null, error: 'Bu anahtar tanımlı değil.' };
+    logger.info({ name: name.data, actor: staff.profileId }, 'entegrasyon anahtarı kopyalandı');
+    return { data: value, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

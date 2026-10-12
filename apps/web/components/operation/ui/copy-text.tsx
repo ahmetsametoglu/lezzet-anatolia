@@ -5,42 +5,32 @@ import { Button } from './button';
 import { CopyIcon } from './icons';
 
 /**
- * **Panoya kopyalama — operasyon yüzeyinin TEK kapısı.**
- *
- * Beş ayrı yerde beş kez yazılmıştı (`error.tsx` · `stack-block` · `purchase-order-dialog` + iki
- * müşteri ekranı) ve üçü zaten AYRIŞMIŞTI: biri hatayı sessizce yutuyor, biri "kopyalanamadı"
- * diyor, biri iki saniye sonra sıfırlanırken öteki 1,6 saniyede. Aynı işin üç farklı davranışı,
- * kullanıcının aynı düğmeye iki ekranda iki farklı güven duyması demekti (`CLAUDE §1`).
- *
- * ── DAVRANIŞ ORTAK, GÖRÜNÜM DEĞİL ───────────────────────────────────────────
- * Paylaşılan şey `useCopy`: yazma, üç hâl (`idle`/`done`/`failed`), zamanlayıcı ve **temizliği**.
- * Görünüm ikiye ayrılıyor çünkü bağlamlar gerçekten farklı: hata ekranındaki kopyalama bir
- * EYLEMDİR (görünür düğme, etiketli), künyedeki kopyalama bir KOLAYLIKTIR (metnin yanında sessiz
- * bir ikon — kendini metnin önüne koymamalı).
- *
- * ── HATA SESSİZ GEÇMEZ ──────────────────────────────────────────────────────
- * Pano izni reddedilebilir (güvenli olmayan bağlam, tarayıcı ayarı). Düğme "kopyalanamadı" der:
- * **başarı iddia eden bir düğme, boş bir yapıştırmadan daha kötüdür** — kullanıcı panoyu dolu
- * sanıp gider ve eksikliği bir sonraki ekranda, sebebini bilmeden fark eder.
+ * Panoya kopyalamanın operasyon yüzeyindeki tek kapısı: yazma, üç hâl ve zamanlayıcı burada, görünüm üç bileşende. Pano izni
+ * reddedilebildiği için düğme "kopyalanamadı" der; başarı iddia eden düğme boş bir yapıştırmadan kötüdür.
  */
 
-/** Kopyalamanın üç hâli. `failed` ayrı bir hâl: sessizce `idle`a dönmek yalan söylemek olurdu. */
 type CopyState = 'idle' | 'done' | 'failed';
 
-/** Geri bildirimin ekranda kalma süresi (ms). Okunacak kadar uzun, unutulacak kadar kısa. */
+/** Kopyalanacak metin ya da onu tıklama anında getiren fonksiyon; gizli değer sayfaya hiç gelmesin diye ikincisi var. */
+type CopySource = string | (() => Promise<string>);
+
 const FEEDBACK_MS = 1600;
 
-/**
- * Dışa VERİLMİYOR ve bu bir sınır: kopyalama davranışı bu dosyanın üç görünümü üzerinden
- * kullanılır. Hook'u dışarı açmak, dördüncü bir görünümün başka bir dosyada doğmasına ve
- * "kopyalanamadı" hâlini yeniden unutmasına kapı açardı — kapattığımız hatanın aynısı.
- */
-function useCopy(text: string): { state: CopyState; copy: () => void } {
+/** Safari panoya yazmayı yalnız tıklamanın içinde kabul eder; sunucudan gelecek değer söz olarak verilir ki tıklamayla bağı kopmasın. */
+async function writeToClipboard(source: CopySource): Promise<void> {
+  if (typeof source === 'string') return navigator.clipboard.writeText(source);
+  if (typeof ClipboardItem !== 'undefined') {
+    const blob = source().then((text) => new Blob([text], { type: 'text/plain' }));
+    return navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+  }
+  return navigator.clipboard.writeText(await source());
+}
+
+/** Dışa verilmez: kopyalama davranışı bu dosyanın görünümleri dışında yeniden yazılırsa "kopyalanamadı" hâli yine unutulur. */
+function useCopy(source: CopySource): { state: CopyState; copy: () => void } {
   const [state, setState] = useState<CopyState>('idle');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Komponent geri bildirim penceresi içinde sökülürse zamanlayıcı sahipsiz kalır ve sökülmüş bir
-  // komponentin durumunu güncellemeye çalışır. Temizlik ŞART, kolaylık değil.
   useEffect(
     () => () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -49,15 +39,14 @@ function useCopy(text: string): { state: CopyState; copy: () => void } {
   );
 
   const copy = useCallback(() => {
-    void navigator.clipboard
-      .writeText(text)
+    void writeToClipboard(source)
       .then(() => setState('done'))
       .catch(() => setState('failed'))
       .finally(() => {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => setState('idle'), FEEDBACK_MS);
       });
-  }, [text]);
+  }, [source]);
 
   return { state, copy };
 }
@@ -65,15 +54,11 @@ function useCopy(text: string): { state: CopyState; copy: () => void } {
 interface CopyButtonProps {
   text: string;
   label: string;
-  /** Kopyalandıktan sonraki etiket — "Kopyalandı ✓" varsayılan. */
   doneLabel?: string;
   fullWidth?: boolean;
 }
 
-/**
- * **Görünür kopyalama düğmesi** — kopyalamanın kendisi bir eylem olduğunda (hata referansı, sipariş
- * metni). Etiket taşır, çünkü buraya gelen kişi tam da bunu aramaktadır.
- */
+/** Kopyalamanın kendisi eylem olduğunda (hata referansı, sipariş metni) görünen, etiketli düğme. */
 export function CopyButton({ text, label, doneLabel = 'Kopyalandı ✓', fullWidth = false }: CopyButtonProps) {
   const { state, copy } = useCopy(text);
 
@@ -98,11 +83,13 @@ export function CopyButton({ text, label, doneLabel = 'Kopyalandı ✓', fullWid
   );
 }
 
-/**
- * **İkonlu kopyalama düğmesi** — ortak kabuğu (`Button`) kullanan hâli. `error.tsx` gibi kendi
- * yerleşimi olan ekranlarda, ikon + etiket birlikte istendiğinde.
- */
-export function CopyAction({ text, label = 'Kopyala' }: { text: string; label?: string }) {
+interface CopyActionProps {
+  text: string;
+  label?: string;
+}
+
+/** Ortak düğme kabuğundaki ikonlu kopyalama; kendi yerleşimi olan ekranlar için. */
+export function CopyAction({ text, label = 'Kopyala' }: CopyActionProps) {
   const { state, copy } = useCopy(text);
 
   return (
@@ -113,16 +100,14 @@ export function CopyAction({ text, label = 'Kopyala' }: { text: string; label?: 
   );
 }
 
-/**
- * **Sessiz kopyalama** — metnin yanında duran ikon. Künye alanları için: depo kodu ve adres sistem
- * DIŞINA elle taşınıyor (`design/pages/admin-depolar.md §2/§7` — belge öneki denetmenin elle
- * yazdığı şey, adres irsaliyeye giriyor).
- *
- * Etiketsiz, çünkü burada asıl olan METİN; düğme kendini onun önüne koymamalı. Erişilebilirlik
- * `aria-label`dan geliyor ve kopyalanan şeyi ADIYLA söylüyor ("Kodu kopyala") — ekran okuyucuda
- * yalnız "Kopyala" duyan kişi, sayfadaki üç kopyalamadan hangisine bastığını bilemezdi.
- */
-export function CopyInline({ text, what }: { text: string; what: string }) {
+interface CopyInlineProps {
+  text: CopySource;
+  /** Kopyalanan şeyin adı; sayfada birden çok kopyalama olduğunda ekran okuyucu hangisine basıldığını bilsin. */
+  what: string;
+}
+
+/** Metnin yanında duran sessiz ikon; asıl olan metindir, düğme kendini onun önüne koymaz. */
+export function CopyInline({ text, what }: CopyInlineProps) {
   const { state, copy } = useCopy(text);
 
   return (

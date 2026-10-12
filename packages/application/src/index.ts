@@ -655,7 +655,8 @@ export {
   forgetIntegrationSecrets,
   installEmailKeySource,
   integrationSecrets,
-  type ResolvedSecret,
+  revealIntegrationSecret,
+  type MaskedSecret,
   type SecretLookup,
 } from './integration/secrets';
 export { pennylaneFromSecrets } from './accounting/pennylane/client';

@@ -8,14 +8,14 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { shortDateTime } from '@/components/operation/ui/format';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
-import { clearIntegrationKeyAction, setIntegrationKeyAction } from './integration-keys-actions';
+import { clearIntegrationKeyAction, copyIntegrationKeyAction, setIntegrationKeyAction } from './integration-keys-actions';
 import type { IntegrationKeyGroupView, IntegrationKeysPanelData, IntegrationKeyView } from './integration-keys-read';
 import { DialogError, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
 
 /**
- * Bağlantı anahtarları: Revolut, Pennylane, Hiboutik ve e-posta anahtarları Vault'ta şifreli durur ve buradan değişir. Geçerli değer
- * sağlayıcının sayfasındakiyle karşılaştırılabilsin diye kaynağıyla görünür; Kurulum'da kayıtlı olmayan anahtar ortamdan okunur.
+ * Bağlantı anahtarları Vault'ta şifreli durur ve buradan değişir; Kurulum'da kayıtlı olmayan anahtar ortamdan okunur. Sayfaya yalnız
+ * maske gelir, tam değer kopyala düğmesine basıldığı an sunucudan istenir.
  */
 interface IntegrationKeysCardProps {
   data: IntegrationKeysPanelData;
@@ -70,6 +70,13 @@ export function IntegrationKeysCard({ data }: IntegrationKeysCardProps) {
   );
 }
 
+/** Hata düğmede "kopyalanamadı" olarak görünsün diye fırlatılır; değer bileşenin durumuna yazılmaz. */
+async function copyValue(name: IntegrationKeyView['name']): Promise<string> {
+  const result = await copyIntegrationKeyAction({ name });
+  if (result.data === null) throw new Error(result.error ?? 'Anahtar alınamadı.');
+  return result.data;
+}
+
 interface KeyRowProps {
   row: IntegrationKeyView;
   /** Kopyalama düğmesinin erişilebilir adı; aynı etiket ("API anahtarı") birden çok grupta geçer. */
@@ -93,10 +100,10 @@ function KeyRow({ row, what, onEdit }: KeyRowProps) {
             <Badge tone="amber">Tanımlı değil</Badge>
           )}
         </div>
-        {row.value ? (
+        {row.masked ? (
           <span className="flex items-start gap-1.5">
-            <span className="min-w-0 break-all font-ops-mono text-ops-xs text-ops-strong">{row.value}</span>
-            <CopyInline text={row.value} what={what} />
+            <span className="min-w-0 break-all font-ops-mono text-ops-xs text-ops-strong">{row.masked}</span>
+            <CopyInline text={() => copyValue(row.name)} what={what} />
           </span>
         ) : null}
         <span className="font-ops-body text-ops-xs text-ops-body">

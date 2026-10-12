@@ -72,10 +72,35 @@ export function integrationSecrets(db: Db): Promise<SecretLookup> {
   return shared.lookup();
 }
 
+/** Ekranın gördüğü hâl: değerin kendisi yok, yalnız maskesi ve kaynağı. */
+export interface MaskedSecret {
+  masked: string | null;
+  source: ResolvedSecret['source'];
+}
+
+const MASK = '••••••••';
+/** Kısa değerde son dört hane değerin büyük kısmıdır; o yüzden yalnız bu uzunluktan sonra görünür. */
+const MASK_REVEAL_MIN_LENGTH = 16;
+
+/** Maskenin boyu sabittir ki değerin uzunluğu da sızmasın. */
+export function maskSecret(value: string): string {
+  return value.length >= MASK_REVEAL_MIN_LENGTH ? `${MASK}${value.slice(-4)}` : MASK;
+}
+
 /** Kurulum ekranının görünümü; önbelleksiz okunur ki yazılan ya da kaldırılan anahtar ekranda hemen görünsün. */
-export async function describeIntegrationSecrets(db: Db): Promise<Map<IntegrationSecretName, ResolvedSecret>> {
+export async function describeIntegrationSecrets(db: Db): Promise<Map<IntegrationSecretName, MaskedSecret>> {
   const vault = await new IntegrationSecretService(db).readValues();
-  return new Map(IntegrationSecretNameEnum.options.map((name) => [name, resolveSecret(name, vault)]));
+  return new Map(
+    IntegrationSecretNameEnum.options.map((name) => {
+      const { value, source } = resolveSecret(name, vault);
+      return [name, { masked: value ? maskSecret(value) : null, source }];
+    }),
+  );
+}
+
+/** Tam değer yalnız kopyalama isteğinde, önbelleksiz okunur; ekran verisine hiçbir zaman girmez. */
+export async function revealIntegrationSecret(db: Db, name: IntegrationSecretName): Promise<string | null> {
+  return resolveSecret(name, await new IntegrationSecretService(db).readValues()).value;
 }
 
 /** Kurulum'dan anahtar yazan süreç kendi önbelleğini hemen bırakır; öteki süreçler ömür dolunca okur. */

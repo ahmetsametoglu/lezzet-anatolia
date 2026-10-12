@@ -1,14 +1,14 @@
 import 'server-only';
 
-import { describeIntegrationSecrets, type ResolvedSecret } from '@lezzet/application';
+import { describeIntegrationSecrets, type MaskedSecret } from '@lezzet/application';
 import { IntegrationSecretLogService, IntegrationSecretService, UserProfileService, serviceDb } from '@lezzet/database';
 import type { IntegrationSecretName } from '@lezzet/types';
 
 /**
- * Kurulum'daki bağlantı anahtarları: her anahtarın geçerli değeri ve kaynağı, son değişiklik ve defter. Değer yalnız bu yönetici
- * sayfasına gider; ortam değeri web sürecininkidir, sunucuda bütün süreçler aynı ortam dosyasını okur.
+ * Kurulum'daki bağlantı anahtarları: maskesi ve kaynağı, son değişiklik ve defter; değerin kendisi sayfaya gelmez. Ortam değeri web
+ * sürecininkidir, sunucuda bütün süreçler aynı ortam dosyasını okur.
  */
-export interface IntegrationKeyView extends ResolvedSecret {
+export interface IntegrationKeyView extends MaskedSecret {
   name: IntegrationSecretName;
   label: string;
   /** Vault'ta kayıtlıysa son değişiklik; değilse `null`. */
@@ -79,7 +79,7 @@ export async function readIntegrationKeysPanel(): Promise<IntegrationKeysPanelDa
         return {
           name,
           label,
-          value: resolved.get(name)?.value ?? null,
+          masked: resolved.get(name)?.masked ?? null,
           source: resolved.get(name)?.source ?? null,
           stored: row ? { at: row.updatedAt, byName: row.updatedBy ? (nameOf.get(row.updatedBy) ?? null) : null } : null,
         };

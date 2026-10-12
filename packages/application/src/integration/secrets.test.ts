@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { IntegrationSecretName } from '@lezzet/types';
-import { resolveSecret, secretCache } from './secrets';
+import { maskSecret, resolveSecret, secretCache } from './secrets';
 
 const vault = (entries: Array<[IntegrationSecretName, string]>) => {
   const calls = { count: 0 };
@@ -60,5 +60,15 @@ describe('entegrasyon anahtarı okuyucusu', () => {
     await expect(cache.lookup(0)).rejects.toThrow('veritabanına ulaşılamadı');
     fail = false;
     expect((await cache.lookup(1))('hiboutik_api_key')).toBe('v2');
+  });
+});
+
+// Maske kısa anahtarın hanelerini ya da bir anahtarın uzunluğunu açığa vurursa kırmızıya döner.
+describe('anahtar maskesi', () => {
+  it('kısa anahtarda hane görünmez, uzunda yalnız son dört hane; maskenin boyu değerden bağımsız', () => {
+    expect(maskSecret('lezzet')).toBe('••••••••');
+    expect(maskSecret('x'.repeat(15))).toBe('••••••••');
+    expect(maskSecret('sk_live_0123456789abcdef')).toBe('••••••••cdef');
+    expect(maskSecret(`${'a'.repeat(16)}WXYZ`)).toBe(maskSecret(`${'b'.repeat(200)}WXYZ`));
   });
 });
