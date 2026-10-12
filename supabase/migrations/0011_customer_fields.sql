@@ -2,6 +2,8 @@
 -- ticari alanlar eklenir, çünkü 1:1 uzantı tablosu her sepet ve ödeme okumasına bir join eklerdi.
 
 create type public.customer_price_basis as enum ('list', 'cost');
+-- Profesyonel müşterinin satış faturası teslim başına ya da aynı ayın teslimleri için ayın son günü tek faturada kesilir.
+create type public.invoice_mode as enum ('per_delivery', 'month_end');
 
 alter table public.user_profiles
   -- Doluysa B2B. Kanal (b2b/b2c) SAKLANMAZ, bunun varlığından türetilir (DATA_MODEL türetme ilkesi).
@@ -32,6 +34,8 @@ alter table public.user_profiles
   add column credit_enabled boolean not null default false,
   add column credit_limit numeric(10, 2),
   add column payment_term_days int,                  -- boşsa Setting varsayılanı (30)
+  -- Satış faturasının düzeni; bireysel müşteride okunmaz (docs/feature/profesyonel-satis.md, karar 18).
+  add column invoice_mode invoice_mode not null default 'per_delivery',
 
   -- Müşterinin genel fiyat kuralı (DOMAIN §5): liste fiyatından yüzde indirim ya da alış fiyatı üzerine yüzde pay; ürün bazlı
   -- özel fiyatla aynı basamaktadır ve yalnız grup ya da listeden ucuzsa kazanır.

@@ -85,6 +85,11 @@ export function exportEligibility(sale: Pick<OrderSale, 'isGiftOrder'>): ExportE
   return sale.isGiftOrder ? { included: false, reason: 'gift_order' } : { included: true };
 }
 
+/** Faturaya basılan yasal ibare; yalnız ters yüklemede. Döküm satırı ve satış faturası aynı ibareyi taşır. */
+export function invoiceNoteOf(treatment: VatTreatment): AccountingExportRow['invoiceNote'] {
+  return isZeroRated(treatment) ? 'Autoliquidation' : null;
+}
+
 /**
  * Bir satışın aktarım satırı: kargo kalemlere oransal dağıtılır, çünkü teslimat bedeli malın oranını izler ve tek orana yazmak
  * %5,5'lik gıdada KDV'yi fazla beyan ederdi. Ters yüklemede KDV yoktur, satır net = brüt gider.
@@ -104,7 +109,7 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
     deliveryCountry: sale.deliveryCountry,
     vatTreatment: sale.vatTreatment,
     vatNumber: sale.vatNumberSnapshot,
-    invoiceNote: isZeroRated(sale.vatTreatment) ? 'Autoliquidation' : null,
+    invoiceNote: invoiceNoteOf(sale.vatTreatment),
     gross: sumOf(vatLines, 'gross'),
     net: sumOf(vatLines, 'net'),
     vat: sumOf(vatLines, 'vat'),
@@ -131,7 +136,12 @@ export type SaleVatBasis = Pick<OrderSale, 'pricesIncludeVat' | 'vatTreatment' |
  * tanımla aynıdır, dönüşüm oran başına bir kez uygulanır, çünkü kalem kalem çevirmek kuruş artığı biriktirirdi. Hazırlık
  * kesinleşmemişse (`settled` yanlış) kalemler borçla aynı kuralla sipariş edilen adetten okunur.
  */
-export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[], settled = true): ExportVatLine[] {
+export function vatLinesOf(
+  sale: SaleVatBasis,
+  items: readonly AccountingLine[],
+  settled = true,
+  keepZeroRatedRates = false,
+): ExportVatLine[] {
   const charged = items
     .map((item) => ({ line: fulfilledLineOf(item), vatRate: item.vatRate }))
     .filter(({ line }) => chargedQtyOf(line, settled) > 0)
@@ -141,7 +151,7 @@ export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[],
     charged.map((part) => ({ vatRate: part.vatRate, totalCents: part.amountCents })),
   ).map((part) => ({ vatRate: part.vatRate, amountCents: part.amountCents }));
 
-  return vatByRate(charged, shipping, sale.pricesIncludeVat, isZeroRated(sale.vatTreatment))
+  return vatByRate(charged, shipping, sale.pricesIncludeVat, isZeroRated(sale.vatTreatment), keepZeroRatedRates)
     .filter((line) => line.grossCents > 0)
     .map((line) => ({
       vatRate: line.vatRate,

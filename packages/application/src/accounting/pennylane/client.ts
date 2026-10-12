@@ -7,6 +7,10 @@ import {
   PennylaneApiCategoryPageSchema,
   PennylaneApiCategorySchema,
   PennylaneApiChangePageSchema,
+  PennylaneApiCustomerInvoicePageSchema,
+  PennylaneApiCustomerInvoiceSchema,
+  PennylaneApiCustomerPageSchema,
+  PennylaneApiCustomerSchema,
   PennylaneApiFileAttachmentSchema,
   PennylaneApiAssignedCategoryPageSchema,
   PennylaneApiInvoiceLinePageSchema,
@@ -18,10 +22,13 @@ import {
   PennylaneApiTransactionMatchPageSchema,
   PennylaneApiTransactionPageSchema,
   PennylaneApiTransactionSchema,
+  type PennylaneApiCustomerInvoice,
   type PennylaneApiTransaction,
   type PennylaneCategory,
   type PennylaneChangePage,
   type PennylaneCompany,
+  type PennylaneCustomer,
+  type PennylaneCustomerInvoice,
   type PennylaneInvoice,
   type PennylaneInvoiceLine,
   type PennylaneMode,
@@ -215,6 +222,66 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       });
       return supplierOf(parse(PennylaneApiSupplierSchema, body, 'tedarikçi'));
     },
+    async findCustomer(externalReference) {
+      const filter = JSON.stringify([{ field: 'external_reference', operator: 'eq', value: externalReference }]);
+      const page = parse(PennylaneApiCustomerPageSchema, await read(`/customers?${query({ filter, limit: 2 })}`), 'müşteriler');
+      return page.items[0] ? customerOf(page.items[0]) : null;
+    },
+    async createCustomer(draft) {
+      const body = await write('POST', '/company_customers', {
+        json: {
+          name: draft.name,
+          external_reference: draft.externalReference,
+          ...(draft.regNo ? { reg_no: draft.regNo } : {}),
+          ...(draft.vatNumber ? { vat_number: draft.vatNumber } : {}),
+          emails: draft.emails,
+          billing_address: {
+            address: draft.billingAddress.address,
+            postal_code: draft.billingAddress.postalCode,
+            city: draft.billingAddress.city,
+            country_alpha2: draft.billingAddress.countryAlpha2,
+          },
+          billing_language: draft.language,
+        },
+      });
+      return customerOf(parse(PennylaneApiCustomerSchema, body, 'müşteri'));
+    },
+    async findCustomerInvoice(externalReference) {
+      const filter = JSON.stringify([{ field: 'external_reference', operator: 'eq', value: externalReference }]);
+      const body = await read(`/customer_invoices?${query({ filter, limit: 2 })}`);
+      const page = parse(PennylaneApiCustomerInvoicePageSchema, body, 'müşteri faturaları');
+      return page.items[0] ? customerInvoiceOf(page.items[0]) : null;
+    },
+    async createCustomerInvoice(draft) {
+      const body = await write('POST', '/customer_invoices', {
+        json: {
+          customer_id: draft.customerId,
+          date: draft.date,
+          deadline: draft.deadline,
+          draft: true,
+          currency: 'EUR',
+          language: draft.language,
+          external_reference: draft.externalReference,
+          ...(draft.templateId !== null ? { customer_invoice_template_id: draft.templateId } : {}),
+          ...(draft.specialMention ? { special_mention: draft.specialMention } : {}),
+          invoice_lines: draft.lines.map((line) => ({
+            label: line.label,
+            quantity: line.quantity,
+            unit: line.unit,
+            raw_currency_unit_price: line.unitPrice,
+            vat_rate: line.vatCode,
+          })),
+        },
+      });
+      return customerInvoiceOf(parse(PennylaneApiCustomerInvoiceSchema, body, 'müşteri faturası'));
+    },
+    async finalizeCustomerInvoice(invoiceId) {
+      const body = await write('PUT', `/customer_invoices/${invoiceId}/finalize`, null);
+      return customerInvoiceOf(parse(PennylaneApiCustomerInvoiceSchema, body, 'müşteri faturası'));
+    },
+    async sendCustomerInvoice({ invoiceId, recipients }) {
+      await write('POST', `/customer_invoices/${invoiceId}/send_by_email`, { json: { recipients } });
+    },
     async findInvoices(filter) {
       const conditions =
         'externalReference' in filter
@@ -328,6 +395,24 @@ function categoryOf(row: { id: number; label: string; category_group: { id: numb
 
 function supplierOf(row: { id: number; name: string; external_reference: string | null; vat_number: string | null }): PennylaneSupplier {
   return { id: row.id, name: row.name, externalReference: row.external_reference, vatNumber: row.vat_number || null };
+}
+
+function customerOf(row: { id: number; name: string; external_reference: string | null }): PennylaneCustomer {
+  return { id: row.id, name: row.name, externalReference: row.external_reference };
+}
+
+function customerInvoiceOf(row: PennylaneApiCustomerInvoice): PennylaneCustomerInvoice {
+  return {
+    id: row.id,
+    invoiceNumber: row.invoice_number,
+    externalReference: row.external_reference,
+    amountCents: toCents(Number(row.amount)),
+    netCents: toCents(Number(row.currency_amount_before_tax)),
+    taxCents: toCents(Number(row.tax)),
+    date: row.date,
+    deadline: row.deadline,
+    status: row.status,
+  };
 }
 
 function invoiceOf(row: {

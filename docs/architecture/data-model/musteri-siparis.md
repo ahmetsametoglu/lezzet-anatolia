@@ -46,6 +46,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `credit_enabled` | boolean |  | `false` |
 | `credit_limit` | numeric(10, 2) | • |  |
 | `payment_term_days` | int | • |  |
+| `invoice_mode` | invoice_mode |  | `'per_delivery'` |
 | `price_rule_basis` | public | • |  |
 | `price_rule_percent` | numeric(6, 2) | • |  |
 | `price_group_id` | uuid | • |  |
@@ -86,6 +87,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 - **`credit_enabled`** — vadeli (hesaba) sipariş yetkisi — **varsayılan false**, admin elle açar (bkz. `DOMAIN.md §7`)
 - **`credit_limit`** — vade limiti (€) — vade açılırken admin girer; açık bakiye **türetilir** (ödenmemiş `on_account` siparişler), saklanmaz
 - **`payment_term_days`** — vade süresi (gün) — boşsa `Setting` varsayılanı (30); gecikme bundan türetilir
+- **`invoice_mode`** — profesyonel müşterinin satış faturası düzeni: `per_delivery` (varsayılan, her teslimden sonra) ya da `month_end` (aynı ayın teslimleri ayın son günü tek faturada; profesyonel satış, karar 18). Bireysel müşteride okunmaz.
 - **`price_rule_basis` / `price_rule_percent`** — müşterinin genel fiyat kuralı: `list` liste fiyatından yüzde indirim (%0 < p < %100), `cost` alış fiyatı üzerine yüzde pay (p ≥ 0); ikisi birlikte dolu ya da boş (bkz. `DOMAIN.md §5`)
 - **`price_group_id`** — fiyat grubu üyeliği (B2B alt kademesi — `katalog.md › PriceGroup`, 20.08); `restrict` FK, `null` = düz liste
 - **`cod_allowed`** — kapıda ödeme izni (varsayılan true); kötüye kullanımda kapatılır (bkz. `DOMAIN.md §7`)

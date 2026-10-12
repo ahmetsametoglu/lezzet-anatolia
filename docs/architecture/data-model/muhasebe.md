@@ -108,6 +108,23 @@ Belgenin karşı tarafının (tedarikçi ya da cari) Pennylane'deki tedarikçisi
   reddetmez; tedarikçi açılmadan önce KDV numarası, yoksa adı tutan kayıt aranır ve bağlanır. Bir Pennylane tedarikçisi bizde tek
   karşı tarafa bağlıdır.
 
+## PennylaneCustomer (müşteri aynası)
+
+Satış faturasının müşterisinin Pennylane'deki müşteri kaydı.
+
+<!-- alanlar:pennylane_customer -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `pennylane_id` | bigint |  |  |
+| `customer_id` | uuid |  |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **Fatura kesilmeden önce açılır** — müşteri Pennylane'de yoksa satış faturası kesilmez; kayıt bir kez açılır, sonraki faturalar aynı
+  kayda gider.
+
 ## PennylaneQueue (yazım kuyruğu)
 
 Pennylane'e yazılacak alış belgesi ya da eşleşmesi yazılacak banka satırı; satırın tek hedefi vardır. Ortak kuyruk satırıdır (kasa

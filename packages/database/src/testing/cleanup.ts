@@ -65,6 +65,11 @@ export async function purgeOrders(db: SupabaseClient, orderIds: readonly string[
   await mustDelete(db, 'stock_movement', (q) => q.in('order_id', ids));
   // Kasa fişi siparişi `restrict` ile tutar; satırları ve ödemeleri fişe cascade.
   await mustDelete(db, 'register_ticket', (q) => q.in('order_id', ids));
+  // Satış faturası siparişi `restrict` ile tutar; belgesi gider, siparişlerle bağı, akışı ve para bağları belgeye cascade.
+  const { data: invoiced, error } = await db.from('money_document_order').select('document_id').in('order_id', ids);
+  if (error) throw error;
+  const salesDocumentIds = [...new Set((invoiced ?? []).map((row) => (row as { document_id: string }).document_id))];
+  if (salesDocumentIds.length > 0) await mustDelete(db, 'money_document', (q) => q.in('id', salesDocumentIds));
   // Kalem–parti eşlemesi siparişe `cascade`, partiye `restrict` bağlı: sipariş silinince kendi
   // gider, ama partisi hâlâ duruyorsa `purgeVariantStock` onu ayrıca toplamak zorunda kalır.
   await mustDelete(db, 'order', (q) => q.in('id', ids)); // kalem/log/discount_use CASCADE
@@ -413,6 +418,9 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // "Gelince haber ver" kayıtları profilden önce: `customer_id` `set null`, profil gidince satır sahipsiz kalır ve hiçbir cascade
       // toplamaz.
       await mustDelete(db, 'variant_stock_notice', (q) => q.in('customer_id', profileIds));
+      // Satış belgesi ve Pennylane müşteri aynası müşteriyi `restrict` ile tutar.
+      await mustDelete(db, 'money_document', (q) => q.in('customer_id', profileIds));
+      await mustDelete(db, 'pennylane_customer', (q) => q.in('customer_id', profileIds));
       await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE
     }
 

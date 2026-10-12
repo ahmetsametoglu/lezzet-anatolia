@@ -110,6 +110,7 @@ export {
 export {
   PennylaneBankAccountService,
   PennylaneCursorService,
+  PennylaneCustomerService,
   PennylaneDocumentService,
   PennylaneMatchRemovedService,
   PennylaneQueueService,
@@ -118,6 +119,7 @@ export {
 } from './services/pennylane.service';
 export { BankImportProfileService, BankImportService } from './services/bank-import.service';
 export { JobRunService } from './services/job-run.service';
+export { MoneyDocumentOrderService, SalesInvoiceCandidateService, SalesInvoiceService } from './services/sales-invoice.service';
 export { WebhookEventService } from './services/webhook-event.service';
 export { IntegrationSecretLogService, IntegrationSecretService } from './services/integration-secret.service';
 export { ErrorLogService, errorFingerprint, type ListErrorLogsOptions } from './services/error-log.service';

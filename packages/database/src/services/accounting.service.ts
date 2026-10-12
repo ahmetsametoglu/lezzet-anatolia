@@ -46,6 +46,14 @@ export class OrderSaleService extends BaseDbService<OrderSale, never, never> {
     return all;
   }
 
+  /** Siparişlerin satış satırı; gerçekleşmemiş sipariş görünümde yoktur. Kimlikler öbeklenir, çünkü `in(...)` listesi URL'e gömülür. */
+  async listByIds(ids: readonly string[]): Promise<OrderSale[]> {
+    const BATCH_SIZE = 200;
+    const all: OrderSale[] = [];
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) all.push(...(await this.getAll({ id: ids.slice(i, i + BATCH_SIZE) })));
+    return all;
+  }
+
   /**
    * Fatura numarası bekleyen satışlar (`reference_no` ↔ `invoice_no` eşleştirme kuyruğu), en uzun bekleyen başta. Hediye sipariş
    * kuyruğa girmez, çünkü dış muhasebeye gitmediği için hiç fatura numarası almaz ve kuyruk asla boşalmazdı.

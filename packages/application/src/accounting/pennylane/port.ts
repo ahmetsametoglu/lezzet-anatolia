@@ -5,6 +5,10 @@ import type {
   PennylaneCategoryGroup,
   PennylaneChangePage,
   PennylaneCompany,
+  PennylaneCustomer,
+  PennylaneCustomerDraft,
+  PennylaneCustomerInvoice,
+  PennylaneCustomerInvoiceDraft,
   PennylaneInvoice,
   PennylaneInvoiceDraft,
   PennylaneInvoicePatch,
@@ -60,6 +64,17 @@ export interface PennylanePort {
   matchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
   /** Tek bir faturanın bağını çözmek hareketin bütün eşleşmelerini çözer; çağıran kalanları yeniden kurar. */
   unmatchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
+  /** Dış referansla müşteri; referans tekil olduğu için en çok bir tane. */
+  findCustomer(externalReference: string): Promise<PennylaneCustomer | null>;
+  /** Aynı dış referansla ikinci açılış reddedilir (`validation`); çağıran önce arar. */
+  createCustomer(draft: PennylaneCustomerDraft): Promise<PennylaneCustomer>;
+  /** Dış referansla müşteri faturası; yarıda kalmış kesme denemesinin faturası ikinci kez açılmasın diye önce aranır. */
+  findCustomerInvoice(externalReference: string): Promise<PennylaneCustomerInvoice | null>;
+  /** Faturayı taslak açar; toplamları Pennylane satırlardan hesaplar ve kesinleştirmeden önce bizimkiyle karşılaştırılır. */
+  createCustomerInvoice(draft: PennylaneCustomerInvoiceDraft): Promise<PennylaneCustomerInvoice>;
+  /** Taslağı kesinleştirir ve numarasını verir; kesinleşen fatura düzenlenmez, düzeltmesi alacak notudur. */
+  finalizeCustomerInvoice(invoiceId: number): Promise<PennylaneCustomerInvoice>;
+  sendCustomerInvoice(input: { invoiceId: number; recipients: readonly string[] }): Promise<void>;
   listCategoryGroups(): Promise<PennylaneCategoryGroup[]>;
   createCategoryGroup(label: string): Promise<PennylaneCategoryGroup>;
   listCategories(): Promise<PennylaneCategory[]>;

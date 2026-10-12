@@ -15,7 +15,7 @@ import { PENNYLANE_CATEGORY_KEYS } from '@lezzet/domain-core';
 import type { MoneyDocumentInsert } from '@lezzet/types';
 import { processPennylaneQueueRow } from './queue';
 import { PennylaneError } from './errors';
-import { memoryPennylane } from './memory-pennylane.testkit';
+import { memoryPennylane, stuckDocumentAlerts } from './memory-pennylane.testkit';
 
 /*
   Alış belgesinin Pennylane'e yazımı gerçek tablolar, bellek içi Pennylane ve bellek içi dosya kaynağıyla sınanır. Kuyruk küresel olduğu
@@ -79,13 +79,7 @@ const invoice = async (over: Partial<MoneyDocumentInsert> = {}, file: { content?
   if (file) await documents.update({ id: row.id, fileKey: fileOf(row.id, file.content, file.extension) });
   return row;
 };
-const stuckAlerts = async (documentId: string) => {
-  const { data, error } = await db.from('notification').select('payload').eq('kind', 'pennylane_document_stuck');
-  if (error) throw error;
-  return ((data ?? []) as Array<{ payload: { documentId?: string; reason?: string } }>).filter(
-    (row) => row.payload.documentId === documentId,
-  );
-};
+const stuckAlerts = (documentId: string) => stuckDocumentAlerts(db, documentId);
 
 describe('alış belgesinin Pennylane yüklemesi', () => {
   it('fatura tedarikçisiyle birlikte bir kez yüklenir; yeniden işaretlenince ikinci kez yüklenmez, tedarikçi ikinci kez açılmaz', async () => {

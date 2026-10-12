@@ -397,6 +397,21 @@ select o.*,
   ) s on s.order_id = o.id
  where o.status in ('delivered', 'completed');
 
+-- Faturası açılmamış B2B satışlar; fatura işi her turda bunları okur. Ayrım kasanınkiyle aynıdır (`register/plan.ts`): kasa B2B
+-- satışını yazmaz, onun faturası buradan kesilir. Hediye sipariş satış değildir, ikisine de girmez (DOMAIN §9).
+create or replace view public.sales_invoice_candidate with (security_invoker = true) as
+select s.id as order_id,
+       s.customer_id,
+       s.business,
+       s.sale_date,
+       s.vat_treatment,
+       c.invoice_mode
+  from public.order_sale s
+  join public.user_profiles c on c.id = s.customer_id
+ where s.channel = 'b2b'
+   and not s.is_gift_order
+   and not exists (select 1 from public.money_document_order d where d.order_id = s.id);
+
 -- Tedarik siparişi tek işe yazılır: kalemin hedef deposu siparişin işinden olmak zorunda, yoksa tek fatura iki işin malını kapsardı
 -- (docs/feature/iki-is.md, karar 4).
 create or replace function public.purchase_order_item_business() returns trigger

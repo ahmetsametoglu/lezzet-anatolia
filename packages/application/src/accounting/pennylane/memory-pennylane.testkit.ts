@@ -1,9 +1,13 @@
+import type { Db } from '@lezzet/database';
 import type {
   PennylaneAssignedCategory,
   PennylaneBankAccount,
   PennylaneCategory,
   PennylaneCategoryGroup,
   PennylaneChange,
+  PennylaneCustomerDraft,
+  PennylaneCustomerInvoice,
+  PennylaneCustomerInvoiceDraft,
   PennylaneInvoiceDraft,
   PennylanePaymentStatus,
   PennylaneSupplierDraft,
@@ -11,6 +15,15 @@ import type {
 } from '@lezzet/types';
 import { PennylaneError } from './errors';
 import type { PennylaneCategoryTarget, PennylanePort } from './port';
+
+/** Belgenin "Pennylane'e yazılamıyor" haberleri; haber muhasebe ve yönetimdeki her kişiye ayrı satırdır. */
+export async function stuckDocumentAlerts(db: Db, documentId: string) {
+  const { data, error } = await db.from('notification').select('payload').eq('kind', 'pennylane_document_stuck');
+  if (error) throw error;
+  return ((data ?? []) as Array<{ payload: { documentId?: string; reason?: string } }>).filter(
+    (row) => row.payload.documentId === documentId,
+  );
+}
 
 /** İkizdeki fatura: yüklenen taslak, dosyası ve ödeme işareti; müşteri faturası yalnız başkasının girdiği faturadır. */
 export type MemoryInvoice = Omit<PennylaneInvoiceDraft, 'externalReference'> & {
@@ -21,6 +34,15 @@ export type MemoryInvoice = Omit<PennylaneInvoiceDraft, 'externalReference'> & {
   paymentStatus: PennylanePaymentStatus | null;
 };
 
+/** İkizde kestiğimiz müşteri faturası: taslağı, Pennylane'in verdiği numara ve toplamlar, gönderildiği alıcılar. */
+export type MemoryCustomerInvoice = PennylaneCustomerInvoiceDraft &
+  Omit<PennylaneCustomerInvoice, 'externalReference'> & {
+    sentTo: string[][];
+  };
+
+/** Oran kodunun KDV'si; ters yükleme ve muafiyet kodlarında KDV yoktur. */
+const VAT_OF_CODE: Record<string, number> = { FR_21: 0.021, FR_55: 0.055, FR_100: 0.1, FR_200: 0.2 };
+
 /**
  * Testlerin bellek içi Pennylane'i, ölçülen davranışla: liste kimlik sırasıyla ve sayfalıdır, akış olayları işlendiği anla verir ve
  * eşlenen hareket faturalara açılma sırasıyla dağılır. `silently` akışa olay düşmeden değiştirir, akışın kaçırdığı değişikliği kurar.
@@ -30,6 +52,8 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   const bankAccounts = new Map<number, PennylaneBankAccount>();
   const transactions = new Map<number, PennylaneTransaction>();
   const suppliers = new Map<number, PennylaneSupplierDraft & { id: number }>();
+  const customers = new Map<number, PennylaneCustomerDraft & { id: number }>();
+  const customerInvoices = new Map<number, MemoryCustomerInvoice>();
   const files = new Map<number, string>();
   const invoices = new Map<number, MemoryInvoice>();
   /** Hareket başına eşlenen faturalar. */
@@ -82,6 +106,18 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     openCents: openOf(row.id),
   });
 
+  const customerInvoiceView = (row: MemoryCustomerInvoice): PennylaneCustomerInvoice => ({
+    id: row.id,
+    invoiceNumber: row.invoiceNumber,
+    externalReference: row.externalReference,
+    amountCents: row.amountCents,
+    netCents: row.netCents,
+    taxCents: row.taxCents,
+    date: row.date,
+    deadline: row.deadline,
+    status: row.status,
+  });
+
   /** İmleç sayfanın başlangıç sırasıdır; Pennylane'inki opaktır, buradaki ondan fazlasını söylemez. */
   const pageOf = <T>(rows: T[], cursor: string | null) => {
     const start = cursor ? Number(cursor) : 0;
@@ -126,6 +162,68 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       const id = (nextId += 1);
       suppliers.set(id, { ...draft, id });
       return { id, name: draft.name, externalReference: draft.externalReference, vatNumber: draft.vatNumber };
+    },
+    findCustomer: async (externalReference) => {
+      failing('findCustomer');
+      const found = [...customers.values()].find((row) => row.externalReference === externalReference);
+      return found ? { id: found.id, name: found.name, externalReference: found.externalReference } : null;
+    },
+    createCustomer: async (draft) => {
+      failing('createCustomer');
+      if ([...customers.values()].some((row) => row.externalReference === draft.externalReference)) throw taken(draft.externalReference);
+      const id = (nextId += 1);
+      customers.set(id, { ...draft, id });
+      return { id, name: draft.name, externalReference: draft.externalReference };
+    },
+    findCustomerInvoice: async (externalReference) => {
+      failing('findCustomerInvoice');
+      const found = [...customerInvoices.values()].find((row) => row.externalReference === externalReference);
+      return found ? customerInvoiceView(found) : null;
+    },
+    // Toplam satır başına yuvarlanır; bu bir varsayımdır, Pennylane'in yuvarlaması ölçülmedi.
+    createCustomerInvoice: async (draft) => {
+      failing('createCustomerInvoice');
+      if (!customers.has(draft.customerId)) throw notFound();
+      if ([...customerInvoices.values()].some((row) => row.externalReference === draft.externalReference)) {
+        throw taken(draft.externalReference);
+      }
+      const lines = draft.lines.map((line) => {
+        const netCents = Math.round(line.quantity * Number(line.unitPrice) * 100);
+        return { netCents, taxCents: Math.round(netCents * (VAT_OF_CODE[line.vatCode] ?? 0)) };
+      });
+      const netCents = lines.reduce((sum, line) => sum + line.netCents, 0);
+      const taxCents = lines.reduce((sum, line) => sum + line.taxCents, 0);
+      const id = (nextId += 1);
+      const row: MemoryCustomerInvoice = {
+        ...draft,
+        id,
+        invoiceNumber: null,
+        amountCents: netCents + taxCents,
+        netCents,
+        taxCents,
+        status: 'draft',
+        sentTo: [],
+      };
+      customerInvoices.set(id, row);
+      return customerInvoiceView(row);
+    },
+    finalizeCustomerInvoice: async (invoiceId) => {
+      failing('finalizeCustomerInvoice');
+      const row = customerInvoices.get(invoiceId);
+      if (!row) throw notFound();
+      if (row.status !== 'draft') {
+        throw new PennylaneError({ code: 'validation', message: 'Pennylane isteği reddetti (422): invoice is not a draft' });
+      }
+      const issued = [...customerInvoices.values()].filter((other) => other.invoiceNumber !== null).length;
+      row.invoiceNumber = `F-2026-${String(issued + 1).padStart(4, '0')}`;
+      row.status = 'upcoming';
+      return customerInvoiceView(row);
+    },
+    sendCustomerInvoice: async ({ invoiceId, recipients }) => {
+      failing('sendCustomerInvoice');
+      const row = customerInvoices.get(invoiceId);
+      if (!row) throw notFound();
+      row.sentTo.push([...recipients]);
     },
     findInvoices: async (filter) => {
       failing('findInvoices');
@@ -271,6 +369,8 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     },
     invoices: () => [...invoices.values()],
     suppliers: () => [...suppliers.values()],
+    customers: () => [...customers.values()],
+    customerInvoices: () => [...customerInvoices.values()],
     /** Pennylane'e başkasının girdiği fatura: dış referansı bizim değildir, dosyası yoktur. */
     addForeignInvoice(
       row: Pick<MemoryInvoice, 'supplierId' | 'invoiceNumber'> & { kind?: MemoryInvoice['kind']; grossCents?: number },

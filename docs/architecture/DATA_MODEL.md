@@ -107,6 +107,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `feedback_context`: purchase, candidate
 - `feedback_vote`: like, dislike
 - `health_status`: ok, warn, crit
+- `invoice_mode`: per_delivery, month_end *(profesyonel müşterinin satış faturası düzeni — teslim başına ya da aynı ayın teslimleri ay sonunda tek faturada)*
 - `mcp_scope`: read, propose *(MCP anahtarının araç ailesi — `propose` `read`i kapsar)*
 - `message_direction`: inbound, outbound
 - `message_kind`: text, interactive, template, media, unsent
@@ -131,6 +132,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `register_write_status`: writing, written *(kasaya çağrı başladı ama sonucu aynaya geçmedi / geçti)*
 - `return_disposition`: restock, discard, goodwill
 - `review_status`: pending, approved, rejected
+- `sales_invoice_status`: awaiting_approval, queued, issued *(satış faturasının akışı — bilgisi eksik onay bekliyor, kesilmek üzere kuyrukta, Pennylane'de kesildi)*
 - `setting_scope`: global, channel, zone, country, warehouse *(ayarın hangi eksende istisna aldığı)*
 - `shipment_status`: created, handed_over, in_transit, out_for_delivery, delivered, returned, cancelled, error *(taşıyıcıdaki gönderi; bizim sipariş durumumuzdan AYRI — biri kolinin nerede olduğunu, öteki siparişin hangi aşamada olduğunu söyler)*
 - `site_image_slot`: home_hero, packages_hero, professionals_hero, empty_cart

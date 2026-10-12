@@ -156,6 +156,10 @@ export type PreferredLanguage = z.infer<typeof PreferredLanguageEnum>;
 export const CustomerTypeEnum = z.enum(['individual', 'company']);
 export type CustomerType = z.infer<typeof CustomerTypeEnum>;
 
+/** Profesyonel müşterinin satış faturası düzeni: teslim başına ya da aynı ayın teslimleri ay sonunda tek faturada. */
+export const InvoiceModeEnum = z.enum(['per_delivery', 'month_end']);
+export type InvoiceMode = z.infer<typeof InvoiceModeEnum>;
+
 /** İndirim tetikleyicisi: kupon (kod girilir) / otomatik kampanya (DOMAIN §5). */
 export const DiscountTriggerEnum = z.enum(['coupon', 'automatic']);
 export type DiscountTrigger = z.infer<typeof DiscountTriggerEnum>;

@@ -80,6 +80,72 @@ export type PennylaneInvoiceDraft = z.infer<typeof PennylaneInvoiceDraftSchema>;
 export const PennylaneInvoicePatchSchema = PennylaneInvoiceDraftSchema.omit({ externalReference: true }).partial();
 export type PennylaneInvoicePatch = z.infer<typeof PennylaneInvoicePatchSchema>;
 
+/** Faturanın ve müşteri kaydının dili; Pennylane yalnız bu dört dili tanır. */
+export const PennylaneLanguageEnum = z.enum(['fr_FR', 'de_DE', 'en_GB', 'es_ES']);
+export type PennylaneLanguage = z.infer<typeof PennylaneLanguageEnum>;
+
+/** Pennylane'deki müşteri; bizim müşterimize dış referansla bağlanır (`cus:<kimlik>`). */
+export const PennylaneCustomerSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  externalReference: z.string().nullable(),
+});
+export type PennylaneCustomer = z.infer<typeof PennylaneCustomerSchema>;
+
+/** Açılacak şirket müşterisi; fatura adresi Pennylane'in şartıdır, SIREN `regNo`dur. */
+export const PennylaneCustomerDraftSchema = z.object({
+  name: z.string().min(1),
+  externalReference: z.string(),
+  regNo: z.string().nullable(),
+  vatNumber: z.string().nullable(),
+  emails: z.array(z.string()),
+  billingAddress: z.object({
+    address: z.string(),
+    postalCode: z.string(),
+    city: z.string(),
+    countryAlpha2: z.string().length(2),
+  }),
+  language: PennylaneLanguageEnum,
+});
+export type PennylaneCustomerDraft = z.infer<typeof PennylaneCustomerDraftSchema>;
+
+/** Müşteri faturasının satırı: adet, KDV hariç birim fiyat (Pennylane'in ondalık dizesi) ve oran kodu. */
+export const PennylaneCustomerInvoiceLineSchema = z.object({
+  label: z.string().min(1),
+  quantity: z.number().positive(),
+  unit: z.string(),
+  unitPrice: z.string(),
+  vatCode: z.string(),
+});
+export type PennylaneCustomerInvoiceLine = z.infer<typeof PennylaneCustomerInvoiceLineSchema>;
+
+/** Kesilecek müşteri faturası; Pennylane onu taslak açar ve toplamları satırlardan kendisi hesaplar. */
+export const PennylaneCustomerInvoiceDraftSchema = z.object({
+  customerId: z.number().int(),
+  date: z.string(),
+  deadline: z.string(),
+  externalReference: z.string(),
+  templateId: z.number().int().nullable(),
+  language: PennylaneLanguageEnum,
+  specialMention: z.string().nullable(),
+  lines: z.array(PennylaneCustomerInvoiceLineSchema).min(1),
+});
+export type PennylaneCustomerInvoiceDraft = z.infer<typeof PennylaneCustomerInvoiceDraftSchema>;
+
+/** Pennylane'deki müşteri faturası (**cent**); toplamları Pennylane hesaplar ve resmî olan odur. */
+export const PennylaneCustomerInvoiceSchema = z.object({
+  id: z.number().int(),
+  invoiceNumber: z.string().nullable(),
+  externalReference: z.string().nullable(),
+  amountCents: z.number().int(),
+  netCents: z.number().int(),
+  taxCents: z.number().int(),
+  date: z.string().nullable(),
+  deadline: z.string().nullable(),
+  status: z.string(),
+});
+export type PennylaneCustomerInvoice = z.infer<typeof PennylaneCustomerInvoiceSchema>;
+
 /** Hareketin Pennylane'de eşlendiği fatura; müşteri faturası da olabilir, bizim yazdığımız yalnız alış faturasıdır. */
 export const PennylaneTransactionMatchSchema = z.object({
   invoiceId: z.number().int(),
@@ -216,6 +282,17 @@ export type PennylaneSupplierMirror = z.infer<typeof PennylaneSupplierMirrorSche
 
 export const PennylaneSupplierMirrorInsertSchema = PennylaneSupplierMirrorSchema.omit({ createdAt: true });
 export type PennylaneSupplierMirrorInsert = z.infer<typeof PennylaneSupplierMirrorInsertSchema>;
+
+/** Satış faturasının müşterisinin Pennylane'deki müşteri kaydı (`pennylane_customer`). */
+export const PennylaneCustomerMirrorSchema = z.object({
+  pennylaneId: z.number().int(),
+  customerId: z.string().uuid(),
+  createdAt: z.string(),
+});
+export type PennylaneCustomerMirror = z.infer<typeof PennylaneCustomerMirrorSchema>;
+
+export const PennylaneCustomerMirrorInsertSchema = PennylaneCustomerMirrorSchema.omit({ createdAt: true });
+export type PennylaneCustomerMirrorInsert = z.infer<typeof PennylaneCustomerMirrorInsertSchema>;
 
 /** Pennylane yazım kuyruğu (`pennylane_queue`): bir alış belgesi ya da eşleşmesi yazılacak bir banka satırı; satırı tetikleyiciler yazar. */
 export const PennylaneQueueSchema = QueueRowSchema.extend({

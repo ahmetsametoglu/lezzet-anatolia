@@ -23,19 +23,21 @@ export interface RateVat {
 }
 
 /**
- * Siparişin oran bazında KDV kırılımı; borç, aktarım ve kâr bu tek hesaptan okur. KDV dahil fiyatta kalem ve kargo aynı oranda birlikte
- * bölünür; KDV hariç fiyatta KDV kalemin oran toplamına eklenir, kargonun içinden ayrılır. Ters yüklemede oran sıfırdır.
+ * Siparişin oran bazında KDV kırılımı; borç, aktarım ve kâr bu tek hesaptan okur: KDV dahil fiyatta kalem ve kargo aynı oranda
+ * birlikte bölünür, KDV hariç fiyatta KDV kalemin oran toplamına eklenir ve kargonun içinden ayrılır. Ters yüklemede KDV sıfırdır ve
+ * kırılım tek sıfır oranda toplanır; `keepZeroRatedRates` beyandaki oranları korur, çünkü belge ve fatura satırı oranı KDV'siz yazar.
  */
 export function vatByRate(
   goods: readonly RateAmount[],
   shipping: readonly RateAmount[],
   pricesIncludeVat: boolean,
   zeroRated = false,
+  keepZeroRatedRates = false,
 ): RateVat[] {
   const sumByRate = (parts: readonly RateAmount[]) => {
     const byRate = new Map<number, number>();
     for (const part of parts) {
-      const vatRate = zeroRated ? 0 : part.vatRate;
+      const vatRate = zeroRated && !keepZeroRatedRates ? 0 : part.vatRate;
       byRate.set(vatRate, (byRate.get(vatRate) ?? 0) + part.amountCents);
     }
     return byRate;
@@ -47,13 +49,14 @@ export function vatByRate(
   return rates.map((vatRate) => {
     const goodsCents = goodsByRate.get(vatRate) ?? 0;
     const shippingCents = shippingByRate.get(vatRate) ?? 0;
+    const appliedRate = zeroRated ? 0 : vatRate;
     if (pricesIncludeVat) {
       const grossCents = goodsCents + shippingCents;
-      const netCents = removeVat(grossCents, vatRate);
+      const netCents = removeVat(grossCents, appliedRate);
       return { vatRate, grossCents, netCents, vatCents: grossCents - netCents };
     }
-    const grossCents = addVat(goodsCents, vatRate) + shippingCents;
-    const netCents = goodsCents + removeVat(shippingCents, vatRate);
+    const grossCents = addVat(goodsCents, appliedRate) + shippingCents;
+    const netCents = goodsCents + removeVat(shippingCents, appliedRate);
     return { vatRate, grossCents, netCents, vatCents: grossCents - netCents };
   });
 }

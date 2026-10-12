@@ -10,6 +10,8 @@ import {
   PennylaneMatchRemovedSchema,
   PennylaneQueueInsertSchema,
   PennylaneQueueSchema,
+  PennylaneCustomerMirrorInsertSchema,
+  PennylaneCustomerMirrorSchema,
   PennylaneSupplierMirrorInsertSchema,
   PennylaneSupplierMirrorSchema,
   PennylaneTransactionCategoryDueSchema,
@@ -28,6 +30,8 @@ import {
   type PennylanePaymentStatus,
   type PennylaneQueue,
   type PennylaneQueueInsert,
+  type PennylaneCustomerMirror,
+  type PennylaneCustomerMirrorInsert,
   type PennylaneSupplierMirror,
   type PennylaneSupplierMirrorInsert,
   type PennylaneTransactionCategoryDue,
@@ -185,6 +189,27 @@ export class PennylaneSupplierService extends BaseDbService<PennylaneSupplierMir
   }
 
   save(row: PennylaneSupplierMirrorInsert): Promise<PennylaneSupplierMirror> {
+    return this.upsert(row, 'pennylane_id');
+  }
+}
+
+/** Satış faturasının müşterisinin Pennylane kaydı; fatura kesilmeden önce açılır, bir müşteri bir kez açılır. */
+export class PennylaneCustomerService extends BaseDbService<PennylaneCustomerMirror, PennylaneCustomerMirrorInsert, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'pennylane_customer',
+      PennylaneCustomerMirrorSchema,
+      PennylaneCustomerMirrorInsertSchema,
+      PennylaneCustomerMirrorSchema as never,
+    );
+  }
+
+  findByCustomer(customerId: string): Promise<PennylaneCustomerMirror | null> {
+    return this.getOneBy({ customerId });
+  }
+
+  save(row: PennylaneCustomerMirrorInsert): Promise<PennylaneCustomerMirror> {
     return this.upsert(row, 'pennylane_id');
   }
 }

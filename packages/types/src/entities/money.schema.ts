@@ -257,9 +257,11 @@ export const MoneyDocumentSchema = z.object({
   issuedOn: z.string(),
   /** Vade — ödemenin son günü; belgede yazmıyorsa `null`. Belge gününden önce olamaz (veri kısıtı). */
   dueOn: z.string().nullable(),
-  /** Karşı taraf: cari (kiraya veren, çalışan, kurum) — tedarikçiyse `supplierId`; ikisinden en çok biri. */
+  /** Karşı taraf: cari (kiraya veren, çalışan, kurum), tedarikçi (`supplierId`) ya da müşteri (`customerId`); en çok biri. */
   counterpartyId: z.string().uuid().nullable(),
   supplierId: z.string().uuid().nullable(),
+  /** Satış faturasının müşterisi; müşteri belgesi giriş yönlü faturadır. */
+  customerId: z.string().uuid().nullable(),
   /**
    * Stok alımının faturası mal kabule ya da tedarik siparişine bağlanır (en çok biri, ikisi de tedarikçi ister). Borç bu belgeden
    * türer, çünkü kabulün satır toplamı KDV hariçtir ve nakliyeyi bilmez; belgeli kabul borca ikinci kez girmez.
@@ -298,6 +300,7 @@ export const MoneyDocumentInsertSchema = z.object({
   dueOn: z.string().nullish(),
   counterpartyId: z.string().uuid().nullish(),
   supplierId: z.string().uuid().nullish(),
+  customerId: z.string().uuid().nullish(),
   stockIntakeId: z.string().uuid().nullish(),
   purchaseOrderId: z.string().uuid().nullish(),
   business: BusinessEnum,

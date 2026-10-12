@@ -60,6 +60,29 @@ export const PennylaneApiInvoicePageSchema = pageOf(PennylaneApiInvoiceSchema);
 /** Satırların yalnız kimliği okunur: güncellemede eski satırlar kimlikle silinir. */
 export const PennylaneApiInvoiceLinePageSchema = pageOf(z.object({ id: z.number().int() }));
 
+/** Müşteri kaydı; alanlar Pennylane başvuru belgesinden, cevap biçimi ölçülmedi. */
+export const PennylaneApiCustomerSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  external_reference: z.string().nullable(),
+});
+export const PennylaneApiCustomerPageSchema = pageOf(PennylaneApiCustomerSchema);
+
+/** Müşteri faturası (başvuru belgesinden, cevap biçimi ölçülmedi); tutarlar ondalık dize, numara fatura kesinleşince dolar. */
+export const PennylaneApiCustomerInvoiceSchema = z.object({
+  id: z.number().int(),
+  invoice_number: z.string().nullable(),
+  external_reference: z.string().nullable(),
+  amount: z.string(),
+  currency_amount_before_tax: z.string(),
+  tax: z.string(),
+  date: z.string().nullable(),
+  deadline: z.string().nullable(),
+  status: z.string(),
+});
+export type PennylaneApiCustomerInvoice = z.infer<typeof PennylaneApiCustomerInvoiceSchema>;
+export const PennylaneApiCustomerInvoicePageSchema = pageOf(PennylaneApiCustomerInvoiceSchema);
+
 /** Liste eşleme sırasını vermiyor: faturalar kimliğe göre azalan sırayla gelir. */
 export const PennylaneApiTransactionMatchPageSchema = pageOf(z.object({ id: z.number().int(), type: z.enum(['supplier', 'customer']) }));
 

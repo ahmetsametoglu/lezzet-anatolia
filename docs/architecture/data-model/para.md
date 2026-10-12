@@ -188,6 +188,7 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 | `due_on` | date | • |  |
 | `counterparty_id` | uuid | • |  |
 | `supplier_id` | uuid | • |  |
+| `customer_id` | uuid | • |  |
 | `stock_intake_id` | uuid | • |  |
 | `purchase_order_id` | uuid | • |  |
 | `business` | business |  |  |
@@ -206,7 +207,7 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 
 **Kararlar**
 
-- **Satış faturaları burada değil:** bizim kestiğimiz fatura numarası siparişin üstünde (`order.invoice_no`, 12.7).
+- **Satış faturası da burada** (profesyonel satış Faz 4): karşı tarafı müşteridir (`customer_id`), türü fatura, yönü `in` (`money_document_customer`). Teslimde doğar, akışı `sales_invoice`ta yürür; kesilince Pennylane'deki numarası belgeye ve siparişe (`order.invoice_no`) yazılır. Alış yüklemesi yalnız `out` belgeyi aldığı için satış faturası Pennylane'e kendi akışıyla, müşteri faturası olarak gider.
 - ~~**Stok alımının faturası mal kabule bağlanır** (`stock_intake_id`) ve ikinci bir borç DOĞURMAZ — tedarikçi borcu mal kabulden türemeye devam eder (12.3).~~ **Borç belgeden türer** (12.26 · kullanıcı kararı 14.09): stok alımının faturası mal kabule (`stock_intake_id`) ya da mal gelmeden kesildiyse tedarik siparişine (`purchase_order_id`) bağlanır — ikisinden en çok biri, ikisi de tedarikçi ister (`money_document_stock_link` · `money_document_supply_party`). Tedarikçi borcu faturanın toplamından okunur; faturası girilmemiş kabulün satır toplamı yedektir (`SupplierService.debt`). Ölçüm: kabulün satırları KDV hariç ve nakliyesizdi, sahadan yapılan kabulde sıfırdı — ödenen şey faturanın toplamıydı. Aynı kabule ya da siparişe ikinci fatura bağlanamaz (kapı, `link_has_document`).
 - **`vat_regime`** — `standard` · `reverse_charge` (autoliquidation: AB içi alım ya da ithalat; belgede KDV yok, beyanda hesaplanır) · `exempt` (sigorta, banka masrafı). Etiket değil alan: "KDV 0" iki ayrı şeyi anlatır. Ters yüklemede kırılımın KDV'si sıfır, muaf belgenin kırılımı yok (`money_document_vat_regime`); öneri tedarikçinin ülkesinden (`suggestVatRegime`). Muhasebeci dökümünde sütun.
 - **`vat_lines`** — KDV kırılımı, belgenin KDV'sinin tek kaynağı: oran başına KDV hariç tutar ve KDV, cent (`[{vatRate, netCents, vatCents}]`; oran 5,5 · 10 · 20 · 2,1, tekrar etmez — `money_document_vat_lines`). Satır varsa toplamı belgenin tutarıdır (`money_document_vat_gross`). Ayrı tablo değil, çünkü belge tek satırlık yazımla doğar ve kırılımı onunla tutarlı kalır. Kapının iki kuralı veride durmaz (`documentVatProblem`): ödeyeceğimiz fatura ve fiş kırılımsız kaydedilmez; satırın KDV'si orana uyar, pay en az 2 cent ya da beklenenin binde beşi.
@@ -214,8 +215,54 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 - **`direction`** hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz, `in` = bize ödenecek.
 - **`vat_amount`** kırılımdan türeyen üretilmiş kolon; satırsız belgede NULL, sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
 - **`file_key`** — özel R2 kovası (`r2Keys.financeDocument`), public adresi yok: belgede karşı tarafın adı ve banka bilgisi yazar.
-- **Karşı taraf** cari (`counterparty_id`) YA DA tedarikçi (`supplier_id`) — ikisi birden olmaz (`money_document_party`). Serbest metin `counterparty` kalktı (13.09 · ikinci karar): aynı ev sahibi iki yazımla iki kişi oluyordu.
+- **Karşı taraf** cari (`counterparty_id`), tedarikçi (`supplier_id`) ya da müşteri (`customer_id`) — en çok biri (`money_document_party`). Serbest metin `counterparty` kalktı (13.09 · ikinci karar): aynı ev sahibi iki yazımla iki kişi oluyordu.
 - **`nature`** — belgenin türü. Ekstre satırı belgeye TAMAMEN bağlanınca türü ve karşı tarafı satıra geçer; "Ödemesini yaz" formu belgenin türüyle açılır.
+
+## MoneyDocumentOrder (satış faturasının siparişleri)
+
+Bir satış faturası bir ya da birçok siparişi kapsar: teslim başına fatura tek siparişin, ay sonu faturası ayın teslimlerinin faturasıdır.
+
+<!-- alanlar:money_document_order -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `document_id` | uuid |  |  |
+| `order_id` | uuid |  |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **Sipariş tek faturada** (`order_id` tekil); faturalı sipariş silinemez (`restrict`), fatura silinirse bağ gider.
+
+## SalesInvoice (satış faturasının akışı)
+
+Teslimde doğar; bilgisi tam olan kuyruğa girer ve Pennylane'de kesilir, eksik olan "Kesilecek faturalar" listesinde onay bekler
+(profesyonel satış, karar 17).
+
+<!-- alanlar:sales_invoice -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `document_id` | uuid |  |  |
+| `status` | sales_invoice_status |  |  |
+| `missing` | text[] |  | `'{}'` |
+| `approved_by` | uuid | • |  |
+| `approved_at` | timestamptz | • |  |
+| `pennylane_invoice_id` | bigint | • |  |
+| `issued_at` | timestamptz | • |  |
+| `created_at` | timestamptz |  | `now()` |
+| `updated_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`status`** — `awaiting_approval` · `queued` · `issued`. Kuyruktaki ve kesilen faturanın eksiği yoktur (`sales_invoice_missing`);
+  kesilen faturanın Pennylane kimliği ve kesilme anı vardır (`sales_invoice_issued`).
+- **`missing`** — kesmeyi bekleten eksikler: `siren` · `billing_address` · `b2b_approval` (`sales_invoice_missing_known`). Müşteri
+  kaydında tamamlanınca fatura yeniden hesaplanır ve onayla kuyruğa girer.
+- **Kesilen fatura değişmez** — düzeltmesi alacak notudur.
+- **Kuyruk** — durumu `queued` olan fatura Pennylane yazım kuyruğuna düşer; Pennylane taslağın toplamını hesaplar, toplam bizimkiyle
+  aynıysa fatura kesinleşir, değilse kuyrukta bekler.
+- **Aday** — `sales_invoice_candidate` görünümü faturası açılmamış B2B satışları verir (kanal `b2b`, hediye dışı); ayrım kasanınkiyle
+  aynıdır, kasa B2B satışını yazmaz. Faturanın ne zaman ve hangi satışlarla açılacağına (fatura düzeni) uygulama karar verir.
 
 ## MoneyAllocation (belge bağı)
 

@@ -94,6 +94,13 @@ create table public.pennylane_supplier (
   constraint pennylane_supplier_party check ((supplier_id is null) <> (counterparty_id is null))
 );
 
+-- Müşterinin Pennylane'deki kaydı; satış faturası kesilmeden önce açılır, aynı müşteri ikinci kez açılmaz.
+create table public.pennylane_customer (
+  pennylane_id bigint primary key,
+  customer_id uuid not null unique references public.user_profiles (id) on delete restrict,
+  created_at timestamptz not null default now()
+);
+
 -- ── Yazım kuyruğu ───────────────────────────────────────────────────────────
 -- Alış belgesi değişince belge, Pennylane'den okunan banka satırının bağı değişince hareket işaretlenir; işleyen belgeyi yükler,
 -- günceller, ödeme durumunu ya da hareketin eşleşmesini yazar.
@@ -182,6 +189,24 @@ create trigger money_document_pennylane_queue
   on public.money_document
   for each row execute function public.pennylane_queue_mark();
 
+-- Kuyruğa giren satış faturası Pennylane'de müşteri faturası olarak kesilir; onay bekleyen ve kesilmiş fatura işaretlenmez.
+create or replace function public.pennylane_queue_mark_sales_invoice() returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if new.status = 'queued' and (tg_op = 'INSERT' or old.status is distinct from new.status) then
+    perform public.pennylane_queue_mark_document(new.document_id);
+  end if;
+  return null;
+end;
+$$;
+
+create trigger sales_invoice_pennylane_queue
+  after insert or update of status on public.sales_invoice
+  for each row execute function public.pennylane_queue_mark_sales_invoice();
+
 -- Bağ yüklenmiş belgenin ödeme durumunu ve hareketin eşleşmesini değiştirir; henüz yüklenmemiş belgenin ikisi yüklenince yazılır.
 -- Taşınan bağın iki yakası da işaretlenir, çünkü "zaten yazmıştım" birleşmesi ve geri alınması bağı bir hareketten ötekine geçirir.
 create or replace function public.pennylane_queue_mark_allocation() returns trigger
@@ -228,11 +253,13 @@ revoke execute on function public.pennylane_queue_mark_movement(uuid) from publi
 revoke execute on function public.pennylane_queue_mark() from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark_allocation() from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark_uploaded() from public, anon, authenticated;
+revoke execute on function public.pennylane_queue_mark_sales_invoice() from public, anon, authenticated;
 
 alter table public.pennylane_bank_account enable row level security;
 alter table public.pennylane_transaction enable row level security;
 alter table public.pennylane_cursor enable row level security;
 alter table public.pennylane_supplier enable row level security;
+alter table public.pennylane_customer enable row level security;
 alter table public.pennylane_queue enable row level security;
 alter table public.pennylane_document enable row level security;
 alter table public.pennylane_match_removed enable row level security;

@@ -125,7 +125,7 @@ create unique index counterparty_name_key on public.counterparty (lower(name));
 
 -- ── Belge ────────────────────────────────────────────────────────────────────
 -- Belge para değil borçtur: ödeme sonra hareket olarak gelir ve tutarıyla bağlanır (`money_allocation`), açık kalan türetilir.
--- Satış faturası siparişte (`order.invoice_no`) durur, burada değil.
+-- Satış faturası da buradadır: karşı tarafı müşteridir, akışı `sales_invoice`ta yürür ve kesilince numarası siparişe de yazılır.
 
 -- KDV kırılımının biçimi: her satır izinli bir oran (yüzde), pozitif KDV hariç tutar ve eksi olmayan KDV taşır (cent), oran
 -- tekrar etmez. CASE sırayı sabitler, çünkü dizi olmayan değerde dizi işlevi kısıtı açıklamak yerine hata fırlatırdı.
@@ -191,9 +191,11 @@ create table public.money_document (
   issued_on date not null,
   -- Ödemenin son günü; belgede yoksa NULL, belge gününden önce olamaz (`money_document_due`).
   due_on date,
-  -- Karşı taraf cari ya da tedarikçi, en çok biri; serbest metin aynı kurumu iki yazımla iki kişi yapardı.
+  -- Karşı taraf cari, tedarikçi ya da müşteri, en çok biri; serbest metin aynı kurumu iki yazımla iki kişi yapardı.
   counterparty_id uuid references public.counterparty (id) on delete set null,
   supplier_id uuid references public.supplier (id) on delete set null,
+  -- Satış faturasının müşterisi; kişisel verisi silinen müşterinin kaydı kalır, faturası ona bağlı kalmalı.
+  customer_id uuid references public.user_profiles (id) on delete restrict,
   -- Stok alımının faturası mal kabule ya da mal gelmeden kesildiyse tedarik siparişine bağlanır, ikisine birden değil.
   -- Borç bu belgeden türer, çünkü kabulün satır toplamı KDV hariçtir ve nakliyeyle iskontoyu bilmez.
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
@@ -221,7 +223,9 @@ create table public.money_document (
   note text,
   created_at timestamptz not null default now(),
 
-  constraint money_document_party check (counterparty_id is null or supplier_id is null),
+  constraint money_document_party check (num_nonnulls(counterparty_id, supplier_id, customer_id) <= 1),
+  -- Müşteriye kesilen belge satış faturasıdır; alacağımızdır, yönü `in`.
+  constraint money_document_customer check (customer_id is null or (kind = 'invoice' and direction = 'in')),
   constraint money_document_stock_link check (stock_intake_id is null or purchase_order_id is null),
   constraint money_document_supply_party check ((stock_intake_id is null and purchase_order_id is null) or supplier_id is not null),
   constraint money_document_vat_lines check (public.money_document_vat_lines_valid(vat_lines)),
@@ -238,6 +242,7 @@ create index money_document_counterparty_idx on public.money_document (counterpa
 create index money_document_supplier_idx on public.money_document (supplier_id) where supplier_id is not null;
 create index money_document_intake_idx on public.money_document (stock_intake_id) where stock_intake_id is not null;
 create index money_document_purchase_order_idx on public.money_document (purchase_order_id) where purchase_order_id is not null;
+create index money_document_customer_idx on public.money_document (customer_id) where customer_id is not null;
 
 create table public.money_movement (
   id uuid primary key default gen_random_uuid(),
@@ -588,6 +593,147 @@ select d.id                                                       as document_id
   left join public.money_movement m on m.id = a.movement_id
  group by d.id;
 
+-- ── Satış faturası ───────────────────────────────────────────────────────────
+-- Bir fatura bir ya da birçok siparişi kapsar, bir sipariş tek faturaya girer; faturalı sipariş silinemez.
+create table public.money_document_order (
+  document_id uuid not null references public.money_document (id) on delete cascade,
+  order_id uuid not null unique references public."order" (id) on delete restrict,
+  primary key (document_id, order_id)
+);
+
+-- Teslimde doğar; bilgisi tam olan kuyruğa girer ve Pennylane'de kesilir, eksik olan onay bekler (karar 17). Kesilen fatura
+-- değişmez, düzeltmesi alacak notudur.
+create type sales_invoice_status as enum ('awaiting_approval', 'queued', 'issued');
+create table public.sales_invoice (
+  document_id uuid primary key references public.money_document (id) on delete cascade,
+  status sales_invoice_status not null,
+  -- Kesmeyi bekleten eksikler; müşteri kaydında tamamlanınca fatura yeniden hesaplanır.
+  missing text[] not null default '{}',
+  approved_by uuid references public.user_profiles (id) on delete set null,
+  approved_at timestamptz,
+  pennylane_invoice_id bigint unique,
+  issued_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint sales_invoice_missing check (status = 'awaiting_approval' or missing = '{}'),
+  constraint sales_invoice_missing_known check (missing <@ array['siren', 'billing_address', 'b2b_approval']),
+  constraint sales_invoice_issued check ((status = 'issued') = (pennylane_invoice_id is not null and issued_at is not null))
+);
+create index sales_invoice_status_idx on public.sales_invoice (status) where status <> 'issued';
+
+-- Belge, siparişleri ve akışı tek yazımdır; yarısı yazılmış fatura ya siparişsiz belge ya da belgesiz sipariş bağı bırakırdı.
+-- Eksiği olmayan fatura kuyruğa, olan onaya girer; aynı sipariş ikinci faturaya giremez (`money_document_order.order_id`).
+create or replace function public.sales_invoice_open(
+  p_customer_id uuid,
+  p_business business,
+  p_order_ids uuid[],
+  p_issued_on date,
+  p_due_on date,
+  p_amount numeric,
+  p_vat_lines jsonb,
+  p_vat_regime document_vat_regime,
+  p_missing text[]
+) returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  if coalesce(cardinality(p_order_ids), 0) = 0 then
+    raise exception 'Satış faturası siparişsiz açılamaz' using errcode = 'check_violation';
+  end if;
+  insert into public.money_document (kind, issued_on, due_on, customer_id, business, direction, amount, vat_lines, vat_regime)
+  values ('invoice', p_issued_on, p_due_on, p_customer_id, p_business, 'in', p_amount, p_vat_lines, p_vat_regime)
+  returning id into v_id;
+  insert into public.money_document_order (document_id, order_id) select v_id, o from unnest(p_order_ids) as o;
+  insert into public.sales_invoice (document_id, status, missing)
+  values (
+    v_id,
+    (case when coalesce(cardinality(p_missing), 0) = 0 then 'queued' else 'awaiting_approval' end)::public.sales_invoice_status,
+    coalesce(p_missing, '{}')
+  );
+  return v_id;
+end;
+$$;
+
+-- Onay bekleyen fatura müşteri kaydı tamamlanınca yeniden hesaplanır; kuyruktaki ya da kesilmiş fatura değişmez, `false` döner.
+create or replace function public.sales_invoice_refresh(
+  p_document_id uuid,
+  p_due_on date,
+  p_amount numeric,
+  p_vat_lines jsonb,
+  p_vat_regime document_vat_regime,
+  p_missing text[]
+) returns boolean
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  update public.sales_invoice set missing = coalesce(p_missing, '{}'), updated_at = now()
+   where document_id = p_document_id and status = 'awaiting_approval';
+  if not found then
+    return false;
+  end if;
+  update public.money_document
+     set due_on = p_due_on, amount = p_amount, vat_lines = p_vat_lines, vat_regime = p_vat_regime
+   where id = p_document_id;
+  return true;
+end;
+$$;
+
+-- Onay bekleyen fatura eksiği kalmamışsa onaylayanın adıyla kuyruğa girer; eksiği olan ya da başka durumdaki fatura `false` döner.
+create or replace function public.sales_invoice_approve(p_document_id uuid, p_actor_id uuid) returns boolean
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  update public.sales_invoice
+     set status = 'queued', approved_by = p_actor_id, approved_at = now(), updated_at = now()
+   where document_id = p_document_id and status = 'awaiting_approval' and missing = '{}';
+  return found;
+end;
+$$;
+
+-- Pennylane'de kesilen faturanın numarası ve günleri belgeye, numarası faturanın siparişlerine yazılır; tutar yazılmaz, çünkü
+-- fatura yalnız Pennylane'in toplamı bizimkiyle aynıysa kesinleşir. Yalnız kuyruktaki fatura kesilmiş sayılır; ikinci yazım `false`
+-- döner ve kesilmiş künyeyi değiştirmez.
+create or replace function public.sales_invoice_issue(
+  p_document_id uuid,
+  p_pennylane_invoice_id bigint,
+  p_number text,
+  p_issued_on date,
+  p_due_on date
+) returns boolean
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  update public.sales_invoice
+     set status = 'issued', pennylane_invoice_id = p_pennylane_invoice_id, issued_at = now(), updated_at = now()
+   where document_id = p_document_id and status = 'queued';
+  if not found then
+    return false;
+  end if;
+  update public.money_document set number = p_number, issued_on = p_issued_on, due_on = p_due_on where id = p_document_id;
+  update public."order" o set invoice_no = p_number
+    from public.money_document_order l
+   where l.document_id = p_document_id and l.order_id = o.id;
+  return true;
+end;
+$$;
+
+revoke execute on function public.sales_invoice_open(uuid, business, uuid[], date, date, numeric, jsonb, document_vat_regime, text[])
+  from public, anon, authenticated;
+revoke execute on function public.sales_invoice_refresh(uuid, date, numeric, jsonb, document_vat_regime, text[])
+  from public, anon, authenticated;
+revoke execute on function public.sales_invoice_approve(uuid, uuid) from public, anon, authenticated;
+revoke execute on function public.sales_invoice_issue(uuid, bigint, text, date, date) from public, anon, authenticated;
+
 -- ── Mal kabulün açık kalanı ──────────────────────────────────────────────────
 -- Faturası girilmemiş kabulün borcu: tutar − bağlı ödemeler. Faturası kabule ya da siparişine girilmişse `has_document`
 -- taşır ve borç belgeden okunur, böylece iki kez sayılmaz; `note` banka satırıyla referans eşleşmesinin anahtarıdır.
@@ -616,6 +762,8 @@ alter table public.counterparty enable row level security;
 alter table public.money_document enable row level security;
 alter table public.money_movement enable row level security;
 alter table public.money_allocation enable row level security;
+alter table public.money_document_order enable row level security;
+alter table public.sales_invoice enable row level security;
 
 
 -- ═══ SİPARİŞ PARASI ═══

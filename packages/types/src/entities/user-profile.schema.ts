@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { dbNumeric } from '../primitives/db-numeric';
-import { BusinessEnum, CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
+import { BusinessEnum, CountryEnum, CustomerTypeEnum, InvoiceModeEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
 import { TranslationBagSchema } from '../primitives/user-text.schema';
 
 // Kullanıcı profili: müşteri ve personel tek tabloda, rolle ayrılır. Ticari alanlar aynı satırdadır, çünkü 1:1 uzantı
@@ -142,6 +142,8 @@ export const UserProfileSchema = z.object({
    */
   creditLimitCents: z.number().int().nullable(),
   paymentTermDays: z.number().int().nullable(),
+  /** Satış faturasının düzeni; bireysel müşteride okunmaz. */
+  invoiceMode: InvoiceModeEnum,
   /** Genel fiyat kuralının tabanı; `null` kural yok. */
   priceRuleBasis: CustomerPriceBasisEnum.nullable(),
   /** Genel fiyat kuralının yüzdesi (para değil); taban ile birlikte dolu ya da boş. */
