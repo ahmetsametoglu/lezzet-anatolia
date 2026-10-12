@@ -326,12 +326,12 @@ export { courierVanContext, listVanCandidates, readVanStock, returnFromVan, setV
 export type { CourierVanContext } from './courier/van-stock';
 export type { CourierRouteView } from './courier/routes';
 export { confirmDoorDelivery } from './courier/delivery';
-export type { DeliveryProofInput, DoorDeliveryOutcome } from './courier/delivery';
+export type { DoorDeliveryOutcome } from './courier/delivery';
 export { loadBox } from './courier/load';
 export type { LoadBoxOutcome } from './courier/load';
 export { closeCourierDay, openDayClose } from './courier/day-close';
 export type { DayCloseDraft } from './courier/day-close';
-export { readDeliveryProof, requestDeliveryProofUploadUrl } from './courier/proof';
+export { readDeliveryProof } from './courier/proof';
 
 // ── Sipariş düzeltmesi ve para bağları: kurye, operasyon, şikâyet ve ödeme webhook'u aynı kapıyı çağırır ──
 export { adjustFulfillment, cancelOrder, cardRefundMovementKey, deliverOrderWithAdjustments, retryRefund } from './order/refund';

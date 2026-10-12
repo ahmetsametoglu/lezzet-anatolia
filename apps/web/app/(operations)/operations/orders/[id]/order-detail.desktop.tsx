@@ -494,8 +494,6 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, onRetryRefund
               {/* Yerinde satışta (`pickup` + `door`) hazırlık yok, kutu satırı da yok: "kutu açılmadı" orada yanlış olurdu.
                   Gel-al checkout'u ise kutuyla hazırlanır — iki `pickup` yolunu kaynak ayırır. */}
               {order.delivery.type !== 'pickup' || order.source !== 'door' ? <BoxRows boxes={order.delivery.boxes} type={order.delivery.type} /> : null}
-              {/* Kanıt açılabilir olmalı: ihtilafta bakılan şey görselin kendisi. Kova yoksa görsel yerine sebep yazılır, boş çerçeve
-                  "kanıt bozuk" derdi. */}
               {order.delivery.proof ? (
                 <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-olive-line bg-ops-olive-bg px-3 py-2.5">
                   <span className="font-ops-display text-ops-xs font-semibold text-ops-olive-dark">Teslim kanıtı</span>
@@ -509,21 +507,10 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, onRetryRefund
                       </span>
                     ) : null}
                   </div>
-                  {order.delivery.proof.imageUrl ? (
-                    // Ham `<img>` bilerek: adres süreli imzalı, `next/image` onu önbelleğe alıp süresi dolunca kırık gösterirdi.
-                    <img
-                      src={order.delivery.proof.imageUrl}
-                      alt={`Teslim kanıtı — ${PROOF_KIND_LABEL[order.delivery.proof.kind]}`}
-                      className="max-h-56 w-full rounded-ops-btn border border-ops-olive-line bg-ops-white object-contain"
-                    />
-                  ) : (
-                    <span className="rounded-ops-btn border border-ops-olive-line bg-ops-white px-2.5 py-2 font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">
-                      {/* `box_scan` görselsizdir ve arıza değil: "açılamıyor" cümlesi yanlış olurdu. */}
-                      {order.delivery.proof.kind === 'box_scan' ? ORDER_NOTES.proofBoxScan : ORDER_NOTES.proofImageUnavailable}
-                    </span>
-                  )}
+                  <span className="rounded-ops-btn border border-ops-olive-line bg-ops-white px-2.5 py-2 font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">
+                    {ORDER_NOTES.proofBoxScan}
+                  </span>
                   <span className="font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">
-                    {order.delivery.proof.receivedBy ? `Teslim alan: ${order.delivery.proof.receivedBy} · ` : ''}
                     "eksik geldi" ihtilafında dayanak budur.
                   </span>
                 </div>

@@ -21,15 +21,6 @@ import { verifyDoorCode } from './door-code';
  * `stale` dönerse karşılıksız para yazılmaz. Kurye hesap yapmaz: tahsil edilecek tutarı ödeme durumu türetimi tek yerde hesaplar.
  */
 
-/** Teslim onayı: müşteri ekranda imzalar ya da kurye fotoğraf çeker (DOMAIN §6). */
-export interface DeliveryProofInput {
-  kind: 'signature' | 'photo';
-  /** Depolanan görselin anahtarı (imza çizimi de görsel olarak saklanır). */
-  imageKey: string;
-  /** Kapıda teslim alan kişi — B2B'de "kim imzaladı" ihtilafın cevabıdır. */
-  receivedBy?: string | null;
-}
-
 export type DoorDeliveryOutcome =
   | {
       status: 'ok';
@@ -70,7 +61,6 @@ export async function confirmDoorDelivery(
      * (kalan adet), fark değil — ekranda görülen sayı gönderilir.
      */
     adjustments?: readonly FulfillmentAdjustment[];
-    proof?: DeliveryProofInput | null;
     /** Müşterinin söylediği kapı kodu; boş = kodsuz teslim. Kod üretilmemiş siparişte yok sayılır. */
     doorCode?: string | null;
     collection?: DoorCollectionInputContract | null;
@@ -110,17 +100,12 @@ export async function confirmDoorDelivery(
 
   /*
     Düzeltme ve teslim tek yazımdır (`deliverOrderWithAdjustments`), çünkü ardışık iki çağrıda teslim `stale` dönünce düzeltme ve müşteriye giden "eksik" haberi geri alınamıyordu.
-    Okutulan kutu kodları ve kapı kodunun sonucu kanıta yazılır: görselli kanıt varsa onun içine, yoksa görselsiz `box_scan` kaydı olarak.
+    Okutulan kutu kodları ve kapı kodunun sonucu kanıt olarak yazılır.
   */
   const adjustments = input.adjustments ?? [];
-  const boxCodes = boxes.length > 0 ? boxes.map((box) => box.code) : null;
   const written = await deliverOrderWithAdjustments(db, input.orderId, adjustments, {
     actorId: input.courierId,
-    deliveryProof: input.proof
-      ? proofRecord(input.proof, input.courierId, boxCodes, doorCode)
-      : boxCodes
-        ? boxScanRecord(boxCodes, input.courierId, doorCode)
-        : null,
+    deliveryProof: boxScanRecord(boxes.map((box) => box.code), input.courierId, doorCode),
     effects: input.effects,
   });
   if (written.status === 'stale') return { status: 'stale', currentStatus: written.currentStatus };
@@ -189,35 +174,12 @@ export function cashLegalLimitCents(db: SupabaseClient): Promise<number> {
 }
 
 /**
- * Siparişe yazılan kanıt (ne, kim, ne zaman): "eksik geldi" ihtilafının tek sigortası.
- * Şekil `packages/types`tan gelir, çünkü elle yazıldığında okuyan ekran başka alan adları arıyor ve hata vermiyordu.
- */
-function proofRecord(
-  proof: DeliveryProofInput,
-  courierId: string,
-  boxCodes: string[] | null,
-  doorCode: DeliveryProofRecord['doorCode'],
-): DeliveryProofRecord {
-  return {
-    kind: proof.kind,
-    imageKey: proof.imageKey,
-    receivedBy: proof.receivedBy ?? null,
-    courierId,
-    at: new Date().toISOString(),
-    ...(boxCodes ? { boxCodes } : {}),
-    ...(doorCode ? { doorCode } : {}),
-  };
-}
-
-/**
- * Görselsiz kanıt: kapıda okutulan kodlar; yalnız kutulu siparişin görselsiz tesliminde doğar, görselli kanıt varken kodlar onun içine yazılır.
- * Gel-al tezgâhı da bu kaydı yazar; `courierId` orada teslim eden depocudur.
+ * Teslim kanıtı: kapıda okutulan kutu kodları ve kapı kodunun sonucu, "eksik geldi" ihtilafının dayanağı. Gel-al tezgâhı da bu kaydı
+ * yazar; `courierId` orada teslim eden depocudur.
  */
 export function boxScanRecord(boxCodes: string[], courierId: string, doorCode: DeliveryProofRecord['doorCode'] = null): DeliveryProofRecord {
   return {
     kind: 'box_scan',
-    imageKey: null,
-    receivedBy: null,
     courierId,
     at: new Date().toISOString(),
     boxCodes,

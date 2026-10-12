@@ -21,9 +21,8 @@ describe('ticketAttachmentScope', () => {
     });
   });
 
-  it('YABANCI anahtarı reddeder: muhasebe belgesi, teslim kanıtı ve sohbet medyası talebe ek olamaz', () => {
+  it('YABANCI anahtarı reddeder: muhasebe belgesi ve sohbet medyası talebe ek olamaz', () => {
     expect(ticketAttachmentScope(r2Keys.financeDocument('d-1', 'fatura.pdf'))).toBeNull();
-    expect(ticketAttachmentScope(r2Keys.deliveryProof('o-1', 'p-3', 'imza.png'))).toBeNull();
     expect(ticketAttachmentScope(r2Keys.conversationMedia('k-1', 'm-1', 'ses.ogg'))).toBeNull();
   });
 

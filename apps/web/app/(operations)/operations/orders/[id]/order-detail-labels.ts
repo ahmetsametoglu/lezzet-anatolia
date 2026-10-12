@@ -12,8 +12,7 @@ import type { DeliveryProofView, OrderDetailView } from './order-detail-types';
 const SOURCE_LABELS: Record<OrderSource, string> = {
   web: 'İnternetten',
   whatsapp: 'WhatsApp',
-  // 15.23 iki kanal ekledi (sepet şeridi) ve enum büyüdü; etiketler operasyon şeridinin işi.
-  // Platform ADIYLA yazılıyor — operatörün gördüğü "sosyal medya" değil, hangi uygulama.
+  // Platform adıyla yazılır, çünkü operatörün bilmesi gereken "sosyal medya" değil hangi uygulama olduğudur.
   messenger: 'Messenger',
   instagram: 'Instagram',
   door: 'Kapı önü',
@@ -44,15 +43,8 @@ export function paymentHeadline(order: OrderDetailView): string {
 }
 
 /**
- * Para hareketi HİÇ yokken yazılan cümle (01.09, kullanıcı bildirimi).
- *
- * Burada koşulsuz *"tahsilat kapıda yapılacak, hareket kurye kapanışında düşer"* yazıyordu ve
- * **vadeli siparişte düpedüz yanlıştı:** hemen üstünde "Vade 30 Eyl" yazan kart, altında kapıda
- * tahsilat vaat ediyordu. `DOMAIN §7` vadeli siparişin havaleyle kapandığını söylüyor; kurye o
- * kapıdan para istemez.
- *
- * Üç hâl üç ayrı şey söyler: vade defterde bekliyor · kapıda alınacak · alınacak bir şey yok
- * (peşin ödenmiş ya da mal hiç gitmemiş). Tek cümleye indirmek, üçünden ikisine yalan söylemekti.
+ * Para hareketi yokken yazılan cümle: vade defterde bekliyor, kapıda alınacak ya da alınacak bir şey yok. Vadeli sipariş havaleyle
+ * kapandığı için ona kapıda tahsilat vaat edilmez (DOMAIN §7).
  */
 export function emptyMovementsText(order: OrderDetailView): string {
   const { onAccount, dueDate, openCents } = order.payment;
@@ -200,17 +192,8 @@ export function creditFill(order: OrderDetailView): string {
 }
 
 /**
- * Kanıt türünün yüzü. Ham `kind` ekrana yazılmaz (`signature`/`photo`); ihtilafta sorulan soru
- * "imza mı foto mu" diye Türkçe sorulur.
- */
-/**
- * Gönderi durumu — TAŞIYICININ taksonomisi, bizim sipariş durumumuz DEĞİL. İkisi ayrı eksen:
- * sipariş "yolda" iken gönderi "sıralama merkezinde" olabilir ve operatörün müşteriye söyleyeceği
- * cümle bu ikincisidir.
- *
- * `error` "hata" değil **"müdahale gerekiyor"** diye yazılıyor: kod bir arıza bildirmiyor, bir
- * karar bekliyor (adres geçersiz, teslim edilemedi). "Hata" yazsaydık operatör kendi sisteminde
- * bir bozukluk arardı.
+ * Gönderi durumu taşıyıcının taksonomisidir, sipariş durumu değil: sipariş "yolda"yken gönderi "sıralama merkezinde" olabilir. `error`
+ * "müdahale gerekiyor" diye yazılır, çünkü kod bir arıza değil bir karar bekliyor (adres geçersiz, teslim edilemedi).
  */
 export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
   created: 'Etiket hazır',
@@ -224,22 +207,11 @@ export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
 };
 
 export const PROOF_KIND_LABEL: Record<DeliveryProofView['kind'], string> = {
-  signature: 'imza',
-  photo: 'foto',
-  /** 23.8: kanıt kapıda okutulan kutu QR'larıdır — görseli yoktur, kaydı vardır. */
   box_scan: 'kutu QR',
 };
 
 /** Sipariş detayının kısa cümleleri — ekranda tekrarlanan metin koda gömülmez. */
 export const ORDER_NOTES = {
-  /**
-   * Kanıt KAYDI var ama görseli açılamıyor. Boş bir çerçeve "kanıt bozuk" derdi; oysa kayıt
-   * yerinde, açılamayan şey depolama bağlantısı. Sebebi yazmak, ihtilafta neye bakılacağını da
-   * söylüyor — anahtar kayıtta duruyor.
-   */
-  proofImageUnavailable:
-    'Kanıt kaydı var ama görsel açılamıyor — depolama bağlantısı yok ya da anahtar geçersiz. Kayıt siparişte duruyor.',
-  /** `box_scan` görselsizdir ve bu bir arıza DEĞİL (23.8) — cümle "açılamıyor"la karışmasın. */
   proofBoxScan:
     'Kanıt, kapıda okutulan kutu QR kodları — görseli yoktur, okutulan kodlar teslim kaydında duruyor.',
   /** Kutu izi boş: hazırlık kutuyla başlar (mobil depo ekranı); kutu yoksa çıkan bir şey de yok. */
@@ -247,12 +219,8 @@ export const ORDER_NOTES = {
 } as const;
 
 /**
- * **Kutu satırının izi** (07.09) — damgalar SIRAYLA ve yalnız VARSA: mühür → yükleme/devir → kapı.
- *
- * `loaded_at` tek kolon, iki fiil: rota kulvarında araca yükleme, kargoda rampada taşıyıcıya devir —
- * cümle kulvarı bilmek zorunda, yoksa kargo kutusu "araca yüklendi" derdi. `scannedAtDoor === null`
- * HİÇ yazılmaz: kanıt yokken "okutulmadı" demek, olmayan bir teslimi olmuş gibi okuturdu (CLAUDE §1).
- * Personel adı yalnız çözülebildiyse — adsız damga yine damgadır, ad uydurulmaz.
+ * Kutu satırının izi: damgalar sırayla ve yalnız varsa yazılır (mühür → yükleme ya da devir → kapı); `loaded_at` rotada araca yüklemeyi,
+ * kargoda taşıyıcıya devri söyler. Kapı damgası bilinmiyorsa (`null`) hiçbir şey yazılmaz ve çözülemeyen personel adı uydurulmaz.
  */
 export function boxTrailOf(box: OrderBoxTrace, type: DeliveryType): string[] {
   const who = (name: string | null): string => (name ? ` ${name}` : '');

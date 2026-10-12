@@ -28,7 +28,6 @@ import type {
   CourierVanStockMoveResponse,
   CourierVanStockResponse,
   DayCloseDraftContract,
-  DeliveryProofUploadResponse,
   MarkUndeliveredResponse,
   OrderStatus,
   StartCourierDayResponse,
@@ -755,34 +754,6 @@ describe('POST /api/v1/courier/stops/:orderId/undelivered', () => {
     const res = await post(`/api/v1/courier/stops/${orderId}/undelivered`, { outcome: 'olmadi', note: 'zil bozuk' });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ data: null, error: 'invalid_body' });
-  });
-});
-
-describe('POST /api/v1/courier/stops/:orderId/proof-upload', () => {
-  it('imzalı yükleme adresi + anahtarı SUNUCU seçer', async () => {
-    const orderId = await dispatched();
-
-    const res = await post(`/api/v1/courier/stops/${orderId}/proof-upload`, { filename: 'imza.png' });
-    expect(res.status).toBe(200);
-
-    const result = await dataOf<DeliveryProofUploadResponse>(res);
-    if (!result.ok) throw new Error(`imzalı adres üretilemedi: ${result.reason}`);
-    // Anahtar istemciden gelmiyor: siparişe çıpalı ve tek kullanımlık bir kimlik taşıyor.
-    expect(result.key).toContain(orderId);
-    expect(result.key.endsWith('.png')).toBe(true);
-    expect(result.uploadUrl).toMatch(/^https?:\/\//);
-  });
-
-  it('desteklenmeyen dosya türü reddedilir', async () => {
-    const orderId = await dispatched();
-    const res = await post(`/api/v1/courier/stops/${orderId}/proof-upload`, { filename: 'kanit.pdf' });
-    expect(await dataOf<DeliveryProofUploadResponse>(res)).toEqual({ ok: false, reason: 'unsupported_type' });
-  });
-
-  it("başka kuryenin siparişi için izin ÜRETİLMEZ — 'yok' ile 'senin değil' aynı cevap", async () => {
-    const orderId = await dispatched({ courier: otherCourierId });
-    const res = await post(`/api/v1/courier/stops/${orderId}/proof-upload`, { filename: 'imza.png' });
-    expect(await dataOf<DeliveryProofUploadResponse>(res)).toEqual({ ok: false, reason: 'not_found' });
   });
 });
 

@@ -492,7 +492,7 @@ görünmesi mi isteniyor, görünmemesi mi?*
 
 | | Public kova (`R2_BUCKET_NAME`) | Private kova (`R2_PRIVATE_BUCKET_NAME`) |
 | --- | --- | --- |
-| Ne durur | Katalog/koleksiyon/paket görselleri | Görünmemesi gereken dosyalar: müşterinin şikâyet fotoğrafı (16.2, `support/tickets/`), kurye teslim kanıtı (`delivery/proofs/`), kargo etiketi PDF'i (`shipping-labels/`), sohbet medyası (`conversationMedia`); ileride B2B belgesi (bugün anahtarı yok) |
+| Ne durur | Katalog/koleksiyon/paket görselleri | Görünmemesi gereken dosyalar: müşterinin şikâyet fotoğrafı (16.2, `support/tickets/`), kargo etiketi PDF'i (`shipping-labels/`), sohbet medyası (`conversationMedia`); ileride B2B belgesi (bugün anahtarı yok) |
 | Okuma | İmzasız, kalıcı adres (`publicImageUrl`) | Süreli imzalı adres (`privateReadUrl`, 15 dk) |
 | Yükleme | Sunucudan (`getR2().uploadFile`) | İstemciden doğrudan, imzalı adresle (`privateUploadUrl`, 10 dk — müşterinin tarayıcısı ya da native uygulaması, kurye cihazı; izni `packages/application` kapıları verir: `ticket/attachments.ts`, `courier/proof.ts`) ya da sunucudan (`getR2Private().uploadFile` — kargo etiketi, gelen mesaj medyası) |
 | Google görsün mü | **Evet** — amaç bu | **Hayır** — tam tersi |

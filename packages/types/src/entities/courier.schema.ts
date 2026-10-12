@@ -1,17 +1,12 @@
 import { z } from 'zod';
 
 /**
- * Teslim kanıtı (`order.delivery_proof`): kurye kapısı yazar, operasyon ekranı okur. Şema tek kaynaktır, çünkü iki uç ayrı ayrı
- * yazıldığında alan adları ayrışmış ve kanıt yazıldığı hâlde açılamamıştı.
+ * Teslim kanıtı (`order.delivery_proof`): kurye kapısı ve gel-al tezgâhı yazar, operasyon ekranı okur. İki uç aynı şemayı kullanır ki
+ * alan adları ayrışmasın.
  */
 export const DeliveryProofRecordSchema = z.object({
-  /** Kanıtın türü; `box_scan` görselsizdir, kanıt kapıda okutulan kutu kodlarıdır. */
-  // BEKLEYEN(K.76): imza ve fotoğraf türleri kapı kodundan sonra yazılmıyor; okuyan operasyon detayıyla birlikte sökülür.
-  kind: z.enum(['signature', 'photo', 'box_scan']),
-  /** Private kovadaki anahtar (`delivery/proofs/{orderId}/…`), public adresi yoktur; `null` yalnız `box_scan`da, çünkü o kanıtın kodları vardır. */
-  imageKey: z.string().nullable(),
-  /** Kapıda teslim alan kişi — B2B'de "kim imzaladı" ihtilafın cevabıdır. */
-  receivedBy: z.string().nullable(),
+  /** Kanıt kapıda okutulan kutu kodlarıdır, görseli yoktur. */
+  kind: z.literal('box_scan'),
   /** Kanıtı üreten kurye — sipariş sonradan başkasına atansa da kanıt kimin olduğunu söyler. */
   courierId: z.string().uuid(),
   at: z.string(),

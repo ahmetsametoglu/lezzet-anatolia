@@ -720,6 +720,7 @@ function doorCodeView(codes: readonly OrderDeliveryCode[], orderId: string, maxA
  * döner.
  */
 function hasVisualProof(order: Order): boolean {
+  // BEKLEYEN(K.76): imza ve fotoğraf artık yazılmıyor; alan kurye gün listesindeki "imza var" etiketiyle birlikte sökülür.
   const kind = order.deliveryProof?.['kind'];
   return kind === 'signature' || kind === 'photo';
 }

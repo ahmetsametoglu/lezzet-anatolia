@@ -20,7 +20,6 @@ import {
   openDayClose,
   readCourierRuns,
   readDoorCollection,
-  requestDeliveryProofUploadUrl,
   discardCourierRun,
   startCourierDay,
 } from '@lezzet/application';
@@ -39,8 +38,6 @@ import {
   DepartCourierRunResponseSchema,
   DiscardCourierRunResponseSchema,
   DayCloseDraftSchema,
-  DeliveryProofUploadRequestSchema,
-  DeliveryProofUploadResponseSchema,
   LoadBoxRequestSchema,
   LoadBoxResponseSchema,
   MarkUndeliveredRequestSchema,
@@ -313,7 +310,8 @@ courier.post('/boxes/load', async (c) => {
 });
 
 /**
- * Kapıda teslim: kanıt, eksik kalem ve tahsilat tek istekte, çünkü üç uca bölünse ağın koptuğu an yarısı yazılmış bir teslimat kalırdı.
+ * Kapıda teslim: kutu kodları, kapı kodu, eksik kalem ve tahsilat tek istekte, çünkü uçlara bölünse ağın koptuğu an yarısı yazılmış bir
+ * teslimat kalırdı.
  * `idempotencyKey` istemcide üretilir ki çevrimdışı kuyruğun tekrarı parayı iki kez yazmasın.
  */
 courier.post('/stops/:orderId/deliver', async (c) => {
@@ -365,27 +363,6 @@ courier.post('/stops/:orderId/undelivered', async (c) => {
 
   const body: z.input<typeof MarkUndeliveredResponseSchema> = outcome;
   return ok(c, MarkUndeliveredResponseSchema.parse(body));
-});
-
-/**
- * Kanıt yükleme izni: dosya sunucudan geçmez, cihaz kovaya yükler ve sunucu yalnız yetkiyi doğrulayıp kısa ömürlü izin yazar. Sipariş
- * kimliği yolda durur ki gövde sözleşmeyle birebir kalsın; `alreadyRequested` tavanı istemciden gelir, gerçek kilit iznin kısa ömrüdür.
- */
-courier.post('/stops/:orderId/proof-upload', async (c) => {
-  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
-  if (!orderId.success) return fail(c, 'invalid_order_id', 400);
-
-  const parsed = DeliveryProofUploadRequestSchema.safeParse(await readJsonBody(c));
-  if (!parsed.success) return fail(c, 'invalid_body', 400);
-
-  const result = await requestDeliveryProofUploadUrl(serviceDb(), {
-    orderId: orderId.data,
-    courierId: c.get('staff').id,
-    ...parsed.data,
-  });
-
-  const body: z.input<typeof DeliveryProofUploadResponseSchema> = result;
-  return ok(c, DeliveryProofUploadResponseSchema.parse(body));
 });
 
 /**

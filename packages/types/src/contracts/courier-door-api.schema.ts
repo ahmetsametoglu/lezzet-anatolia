@@ -30,19 +30,8 @@ export const MarkUndeliveredResponseSchema = z.discriminatedUnion('status', [
 export type MarkUndeliveredResponse = z.infer<typeof MarkUndeliveredResponseSchema>;
 
 /**
- * Teslim kanıtı girdisi: imza ve fotoğraf görsel olarak saklanır.
- * `box_scan` istemciden gelmez, o kaydı sunucu okutulan kodlardan kurar; girdi bu yüzden kayıt şemasından dardır.
- */
-export const DeliveryProofInputSchema = z.object({
-  kind: z.enum(['signature', 'photo']),
-  imageKey: z.string().min(1),
-  /** Kapıda teslim alan kişi — B2B'de "kim imzaladı" ihtilafın cevabıdır. */
-  receivedBy: z.string().nullish(),
-});
-export type DeliveryProofInputContract = z.infer<typeof DeliveryProofInputSchema>;
-
-/**
- * Kapıda teslim isteği: sıra sunucuda sabittir (kanıt → mal → teslim → para), istemci tek istek gönderir ki yarısı yazılmış teslimat kalmasın.
+ * Kapıda teslim isteği: sıra sunucuda sabittir (kutu ve kapı kodu → mal ve teslim → para), istemci tek istek gönderir ki yarısı yazılmış
+ * teslimat kalmasın.
  */
 export const ConfirmDoorDeliveryRequestSchema = z.object({
   /**
@@ -50,7 +39,6 @@ export const ConfirmDoorDeliveryRequestSchema = z.object({
    * Akıbet (`returnDisposition`) kuryede yoktur, çünkü malın satılabilir olup olmadığını depoda bakan kişi beyan eder; `note` kalır.
    */
   adjustments: z.array(FulfillmentAdjustmentSchema.omit({ returnDisposition: true })).optional(),
-  proof: DeliveryProofInputSchema.nullish(),
   collection: DoorCollectionInputSchema.nullish(),
   /**
    * Kapıda okutulan kutu kodları: kutulu siparişte teslimin ön koşuludur, eksik kutuda `boxes_missing` döner ve hiçbir yazım yapılmaz.
@@ -87,28 +75,3 @@ export const ConfirmDoorDeliveryResponseSchema = z.discriminatedUnion('status', 
   z.object({ status: z.literal('not_found') }),
 ]);
 export type ConfirmDoorDeliveryResponse = z.infer<typeof ConfirmDoorDeliveryResponseSchema>;
-
-/**
- * Kanıt yükleme izni isteği: dosya sunucudan geçmez, cihaz doğrudan kovaya yükler.
- * Sunucu yetkiyi doğrular, anahtarı seçer ve kısa ömürlü izin yazar.
- */
-export const DeliveryProofUploadRequestSchema = z.object({
-  filename: z.string().min(1),
-  /** Bu teslimat için daha önce kaç kanıt istendiği — tavan kontrolü (imza + birkaç fotoğraf). */
-  alreadyRequested: z.number().int().nonnegative().optional(),
-});
-export type DeliveryProofUploadRequest = z.infer<typeof DeliveryProofUploadRequestSchema>;
-
-export const DeliveryProofUploadResponseSchema = z.discriminatedUnion('ok', [
-  z.object({ ok: z.literal(true), key: z.string(), uploadUrl: z.string() }),
-  z.object({
-    ok: z.literal(false),
-    /**
-     * `not_found` "yok" ile "senin değil"in ORTAK cevabıdır (bilerek): ayrı cevap verilseydi kimlik
-     * deneyerek hangi siparişlerin var olduğu haritalanabilirdi.
-     * `storage_unavailable` kova yapılandırılmamış — "yüklendi" demekle karıştırılmaz.
-     */
-    reason: z.enum(['unsupported_type', 'too_many', 'not_found', 'storage_unavailable']),
-  }),
-]);
-export type DeliveryProofUploadResponse = z.infer<typeof DeliveryProofUploadResponseSchema>;

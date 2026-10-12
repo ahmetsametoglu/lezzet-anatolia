@@ -4,6 +4,7 @@ import type { OrderBoxTrace } from '@lezzet/application';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type { TrustView } from '@/lib/customer/trust';
 import type {
+  DeliveryProofRecord,
   DeliveryType,
   DoorCheck,
   OrderItemReturn,
@@ -179,12 +180,8 @@ export interface OrderFinanceView {
  */
 export interface DeliveryProofView {
   when: string | null;
-  /** Kapıda teslim ALAN kişi — B2B'de "kim imzaladı" ihtilafın asıl cevabıdır. */
-  receivedBy: string | null;
-  /** Kanıt türü — imza çizimi · kapı fotoğrafı · kutu okutması (görselsiz, kodların kendisi kanıt). */
-  kind: 'signature' | 'photo' | 'box_scan';
-  /** Süreli imzalı adres (15 dk, private kova); kalıcı bağlantı değil, saklanmaz. `null` = kova yok ya da anahtar ölü. */
-  imageUrl: string | null;
+  kind: DeliveryProofRecord['kind'];
+  // BEKLEYEN(K.76): kapı kodunun sonucu (`doorCode`) taşınmıyor; detay kodun doğrulandığını ya da kodsuz teslimi göstermiyor.
 }
 
 /** Sağ rayın müşteri kartı: kim, ne kadar borcu var, limiti ne. */

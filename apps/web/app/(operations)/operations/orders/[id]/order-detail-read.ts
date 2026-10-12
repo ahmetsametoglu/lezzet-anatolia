@@ -301,7 +301,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       recipient: recipientOf(order.addressSnapshot, customer?.name ?? null),
       courierName: courier?.name ?? null,
       runReference: run?.referenceNo ?? null,
-      proof: await proofOf(order.deliveryProof),
+      proof: proofOf(order.deliveryProof),
       warehouse: warehouseLabels.get(order.warehouseId) ?? null,
       // Kutu izi paketin kapısından; ikinci okuma yok.
       boxes: await listOrderBoxes(db, order),
@@ -681,14 +681,10 @@ function recipientOf(
   return fallback ? { name: fallback, phone, fromAccount: true } : null;
 }
 
-/**
- * Ham blok burada ayrıştırılmaz; okuma tek kapıda (`readDeliveryProof`) ki yazan ve okuyan aynı şemayı kullansın. Şemaya uymayan
- * kanıt gösterilmez: yarım kanıt yine "kanıt var" der.
- */
-async function proofOf(raw: unknown): Promise<OrderDetailView['delivery']['proof']> {
-  const proof = await readDeliveryProof(raw);
-  if (!proof) return null;
-  return { when: proof.at, receivedBy: proof.receivedBy, kind: proof.kind, imageUrl: proof.imageUrl };
+/** Ham blok burada ayrıştırılmaz; okuma tek kapıda (`readDeliveryProof`) ki yazan ve okuyan aynı şemayı kullansın. */
+function proofOf(raw: unknown): OrderDetailView['delivery']['proof'] {
+  const proof = readDeliveryProof(raw);
+  return proof ? { when: proof.at, kind: proof.kind } : null;
 }
 
 /** Kuyrukta bekleyen siparişin sebebi: plan durduysa sebep, kasaya yazılamıyorsa deneme sayısı ve hata, yoksa sırada. */

@@ -96,15 +96,6 @@ export const r2Keys = {
     `messaging/conversations/${sanitize(conversationId)}/${sanitize(mediaToken)}.${extOf(sourceFilename)}`,
 
   /**
-   * İmza çizimi ya da kapı fotoğrafı; PRIVATE kova, public adresi YOK. Deterministik DEĞİL: bir
-   * teslimatta hem imza hem fotoğraf olabilir ve ikinci deneme de aynı siparişe yazar — anahtar
-   * yalnız sipariş kimliğinden türeseydi ikincisi, "eksik geldi" ihtilafının tek sigortasının
-   * üstüne yazardı.
-   */
-  deliveryProof: (orderId: string, photoToken: string, sourceFilename: string): string =>
-    `delivery/proofs/${sanitize(orderId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
-
-  /**
    * PRIVATE kova, public adresi YOK: belgede karşı tarafın adı, tutarı ve çoğu zaman banka bilgisi
    * yazar. Belge kimliğine göre klasörlenir ve deterministik — yeniden yüklenirse eskisinin üstüne
    * yazılır, yetim obje kalmaz; dosya adı uzantı dışında kullanılmaz.
