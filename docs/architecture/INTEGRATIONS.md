@@ -46,6 +46,10 @@ loga, hata metnine ve ekran verisine yazılmaz.
 
 - **Faz 1.** Rota dışı teslimat için kargo şirketi: etiket üretimi, takip numarası, durum güncellemesi.
 - Sağlayıcı FR/DE'de çalışan bir kargo olacak; agnostik arayüz.
+- **Gönderen varış ülkesine göre:** kargo teklifi ve etiket gönderen adresini deponun o ülke için teslim noktasından alır
+  (`warehouse_ship_country.handover`; boşsa deponun adresi). Almanya paketi Strasbourg'da hazırlanıp Kehl'de taşıyıcıya
+  verilir, tarife yurt içi Almanya. Sendcloud göndereni istekte açıkça alır (`from_address`). Teklif ölçüldü (1,5 kg): Kehl
+  çıkışlı 41 seçenek, en ucuzu 5,38 €; Strasbourg çıkışlı 10 seçenek, en ucuzu 5,62 €. Almanya çıkışlı etiket ilk gerçek gönderide ölçülür.
 - **BEDAVA ama ATILAN bir adres sinyali var** (ölçüldü 02.09): `announce` cevabındaki `errors[]`
   alınıp düşürülüyor (`packages/sendcloud/src/client.ts` — yalnız istisna detayında görünüyor).
   Taşıyıcının adres hakkında söylediği tek şey o ve bize hiçbir şeye mal olmuyor. **Ama geç geliyor:**

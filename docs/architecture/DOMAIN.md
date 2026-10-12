@@ -153,8 +153,9 @@ Rezervasyonun serbest bırakılması **yalnızca mal fiziksel olarak depoya geri
   - *Tükenen teklif partisi aynı akıştan geçer:* near-expiry indirimi **partiye** aittir (indirimin sebebi o partinin tarihidir), başka partiye taşınmaz. Çıpalı parti checkout'a kadar tükenmişse kalem sessizce normal fiyata dönmez — aynı bildirim/onay akışıyla normal fiyat teklif edilir (bkz. §4 batch-pinned, §5 teklif çakışması).
 - **B2B fiyatı** ayrı liste; ayrıca **müşteriye özel fiyat** olabilir.
 - **B2C fiyatı** ayrı.
+- **Ülkeye özel fiyat:** tüketici ve işletme listesi ülkeye göre geçersiz kılınabilir (`Price.country`); ülke satırı yoksa genel fiyat geçer. Fiyatın okunduğu ülke yerin ülkesidir; yer bilinmezken Almanca arayüz Almanya fiyatını, öteki diller genel fiyatı gösterir. Gel-al ve yerinde satışta ülke deponun ülkesidir, çünkü mal Fransa'da el değiştirir.
 - Fiyatlar arası ilişki (perakende fiyatının toptan müşteriyi rahatsız etmemesi) bir iş kararıdır; sistem farklı fiyat seviyelerini destekler, politikayı admin belirler.
-- KDV oranı ürün bazında (donuk gıda %5,5; bazı ürünler %20).
+- KDV oranı ürün bazında (donuk gıda %5,5; bazı ürünler %20) ve satıcının ülkesinindir (FR). Öteki ülkelerin oranı ayrı tutulur (`product_vat_rate`), çünkü oranlar ülkeye göre farklı sınıflanır (lokum FR %20, DE %7).
 
 ### KDV ve sınır ötesi (müşteri-yüzü doğru, beyan muhasebede)
 
@@ -162,8 +163,9 @@ Muhasebe programı değiliz; beyan/OSS/VIES-yönetimi muhasebenindir. Ama KDV **
 
 - **Yurt içi (FR) ve FR müşteri:** Fransız KDV'si (ürün oranından).
 - **Alman B2B + geçerli vergi no:** **reverse charge** — %0 KDV, müşteri kendi ülkesinde beyan eder; faturada "Autoliquidation" ibaresi. Vergi no alınır ve VIES açık API'siyle doğrulanır (`Customer.vat_number`, `vat_number_valid`). `vat_treatment = intra_eu_b2b_reverse_charge`.
-- **Alman B2C:** şimdilik Fransız KDV'si. AB kuralı: Almanya'ya tüketici satışı yıllık **10.000 €** eşiğini aşınca Alman KDV'si + OSS gerekir — **eşik aşılana kadar bizi ilgilendirmez** (fiyatı ancak o zaman değiştirir); aşılırsa o an ele alınır. Sistem DE'ye giden B2C ciroyu (`Order.delivery_country`) yıl bazında türetip izler; parametrik eşiğe yaklaşınca **uyarır**.
-  - ⚠ **Depo ağı uyarısı (01.08):** bu eşik yalnız **uzaktan satış** kuralıdır. Almanya'da depo açılırsa DE deposundan DE müşterisine satış **yerel satış** olur — eşik hiç işlemez, Alman KDV'si ilk günden gerekir ve yanlış kesilen KDV geriye dönük düzeltilemez. DE deposu açılmadan önce mali danışmana sorulacak (bkz. §17).
+- **Alman B2C — uzaktan satış:** mal Strasbourg'dan çıkar. AB'ye uzaktan satışların toplamı içinde bulunulan ya da önceki takvim yılında KDV hariç **10.000 €**'yu geçmedikçe Fransız KDV'si uygulanır (`intra_eu_distance_origin`); geçince varış ülkesinin oranı (`intra_eu_distance_oss`), beyan OSS'den. Karar sipariş yazılırken verilir ve eşiği aşan sipariş de varış oranını alır; eşik o yıl bir kez aşıldıysa iade toplamı düşürse de yıl sonuna kadar aşılmış kalır. Eşik, uyarı seviyeleri (%80, %95) ve sistem dışı satışın açılış tutarları ayardır. Eşik işi seviyeyi yönetime ve muhasebeye yılda bir kez bildirir; durum Pano'da ve Raporlar › Muhasebe export'ta görünür.
+  - **Almanya oranı olmayan ürün Almanya'daki tüketiciye satılmaz:** vitrin işaretler, checkout reddeder. İşletme satışında Alman oranı uygulanmadığı için aranmaz.
+  - ⚠ **Depo ağı uyarısı (01.08):** bu eşik yalnız **uzaktan satış** kuralıdır. Almanya'da depo açılırsa DE deposundan DE müşterisine satış **yerel satış** olur — eşik hiç işlemez, Alman KDV'si ilk günden gerekir ve yanlış kesilen KDV geriye dönük düzeltilemez. Sistem satıcının ülkesi dışındaki depodan satışı reddeder (`sale_origin_unsupported`); DE deposu açılmadan önce mali danışmana sorulacak (bkz. §17).
 - Her siparişe **KDV işleme tipi** (`vat_treatment`) yazılır ve export'a girer; muhasebe doğru beyanı bundan yapar.
 
 Kısaca: müşteri-yüzü doğru KDV = bizim işimiz (fiyat); beyan/OSS/iade = muhasebenin, biz temiz veriyi veririz.
@@ -219,7 +221,8 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 **Otomatik fiyatın kuralları** (üç tetik — mal kabulde maliyet değişimi, anahtar/hedef değişimi, elle toplu hizalama — hepsi aynı hesaba iner):
 
 - **İki yönlüdür:** maliyet artınca fiyat yükselir, düşünce iner. Tek yönlü olsaydı "otomatik" ürün zamanla hedefin üstüne demirler, indirimi de admin'in elle kovalaması gerekirdi.
-- **Yuvarlama 5 kuruşa ve YUKARI.** Aşağı yuvarlamak hedefi kılpayı ıskalar ve ürün, otomatik olduğu hâlde marj-altı uyarısına düşerdi — sistemin kendi kuralını bozması. Adım parametriktir.
+- **Yuvarlama 50 sente ve YUKARI:** fiyat tam euro ya da 50 sentle biter, çünkü nakit ödemede küsurat istenmiyor. Aşağı yuvarlamak hedefi kılpayı ıskalar ve ürün, otomatik olduğu hâlde marj-altı uyarısına düşerdi — sistemin kendi kuralını bozması. Adım ayardır (`auto_price_step_cents`). Elle yazılan fiyat ve yüzdeyle türeyen fiyatlar (grup, müşteri kuralı, kupon) yuvarlanmaz, çünkü verilen oran bozulur.
+- **Almanya fiyatı da otomatiktir:** otomatik fiyatlı üründe Almanya tüketici fiyatı hedef marjdan, Almanya'da o an uygulanan oranla hesaplanır; genel fiyattan farklı çıkarsa ayrı satır yazılır. Eşik durumu değişince fiyatlar yeniden hizalanır.
 - **Fiyatı olmayan kanal AÇILMAZ.** Fiyat satırının yokluğu "o kanalda satışa kapalı" demektir; otomatik hesap kapalı kanalı kendiliğinden açsaydı ürün, kimsenin kararı olmadan toptan listesine düşerdi.
 - **Maliyet yoksa fiyat uydurulmaz:** elde alış fiyatlı parti yoksa ürünün fiyatı olduğu gibi kalır.
 - **Anahtar kapatılınca fiyata dokunulmaz:** son otomatik fiyat, ürünün geçerli fiyatıdır ("eski elle fiyata dön" diye bir kayıt yoktur).

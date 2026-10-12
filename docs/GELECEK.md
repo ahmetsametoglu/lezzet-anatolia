@@ -9,9 +9,8 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
   türü (`FR`, `DE`), 5 haneli posta kodu kuralı, adres formunun ülke seçicisi ve ülkeye göre adres önerisi/doğrulama
   sağlayıcısı (FR'de BAN, DE'de Google). Açmak için: ülke listesi; ülkeye göre posta kodu biçimi; o ülkenin adres önerisi ve
   doğrulaması; kargo tarifesi; varış ülkesinin KDV oranı (AB tek durak düzeni); yasal metinler ve dil.
-- (K.37) **Sınır ötesi satış — birbirine bağlı üç eksik:** depo → ülke eşlemesi yok (kargo deposu yalnız varış ülkesindeki
-  depodan seçiliyor, `domain-core/delivery/warehouse-resolve.ts`; ölçüme göre Fransa dışındaki her yere Almanya'dan göndermek
-  daha ucuz); BE · LU · NL · AT adresi girilemiyor (07.17); kargo adresinde sokak düzeyinde doğrulama yok (11.11).
+- (K.37) **Sınır ötesi satış — birbirine bağlı iki eksik:** BE · LU · NL · AT adresi girilemiyor (07.17); kargo adresinde sokak
+  düzeyinde doğrulama yok (11.11).
 
 ## Teslimat ve kargo
 

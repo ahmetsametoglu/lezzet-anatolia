@@ -13,6 +13,8 @@
 - **"Livraison" kategorisini silme, kargo ürününün kategorisini değiştirme.** Silinen kategori ürünlerden düşer; kargo geliri
   Pennylane'de ürün satışına (707) karışır.
 - **WEB ve VIR ödeme türlerini kapatma.** O yöntemle yazılan ödeme reddedilir.
+- **%7 ve %19 KDV oranlarını kapatma ya da adını değiştirme.** Almanya'daki tüketiciye eşikten sonraki satış bu oranlarla yazılır;
+  kargo ürünü oranı kimliğiyle ister, kapalı oranda kasa yazımı durur (`docs/runbook/almanya-satisi.md`).
 - **Yeni tesisi kurulum kartında mağazaya eşle.** Eşlemesiz tesisin satışı kasaya yazılmaz, kuyrukta bekler.
 - **"Kapanmadı" uyarısını aynı gün çöz.** Kapanmayan kasa günü yasal açıktır, sonraki günler de bekler.
 
