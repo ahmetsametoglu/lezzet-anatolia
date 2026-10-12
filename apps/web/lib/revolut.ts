@@ -9,9 +9,8 @@ import {
 import { serviceDb } from '@lezzet/database';
 
 /**
- * Revolut istemcisinin web'deki tek kurulum yeri. Anahtar ya da kip yoksa `null` döner ve çağıran açık bir "sağlayıcı yok" cevabı
- * verir; yerelde anahtarsız çalışmak meşrudur ama "ödeme alındı" demek değildir. İstemci saklanmaz, çünkü Kurulum'dan yenilenen
- * anahtar okuyucunun kısa önbelleği dolunca geçmeli.
+ * Anahtar ya da kip yoksa `null` döner ve çağıran açık bir "sağlayıcı yok" cevabı verir; yerelde anahtarsız çalışmak meşrudur ama
+ * "ödeme alındı" demek değildir. İstemci saklanmaz, çünkü Bağlantılar'dan yenilenen anahtar okuyucunun kısa önbelleği dolunca geçmeli.
  */
 export async function webRevolutClient(): Promise<RevolutClient | null> {
   return revolutClientFromSecrets(serviceDb());

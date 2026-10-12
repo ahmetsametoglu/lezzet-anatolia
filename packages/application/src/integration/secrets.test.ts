@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 describe('entegrasyon anahtarı okuyucusu', () => {
-  it("Kurulum'dan yazılan değer ortamdakinin önüne geçer; Vault'ta olmayan anahtar ortamdan okunur", async () => {
+  it("Bağlantılar'dan yazılan değer ortamdakinin önüne geçer; Vault'ta olmayan anahtar ortamdan okunur", async () => {
     process.env.HIBOUTIK_API_KEY = 'ortam-hiboutik';
     process.env.PENNYLANE_API_TOKEN = 'ortam-pennylane';
     const { read } = vault([['hiboutik_api_key', 'vault-hiboutik']]);
@@ -29,7 +29,7 @@ describe('entegrasyon anahtarı okuyucusu', () => {
     expect(secret('resend_api_key')).toBeNull();
   });
 
-  it('Kurulum ekranı geçerli değeri kaynağıyla gösterir: Kurulum değeri ortamdakinin önünde, ikisi de yoksa tanımsız', () => {
+  it('Bağlantılar ekranı geçerli değeri kaynağıyla gösterir: Vault değeri ortamdakinin önünde, ikisi de yoksa tanımsız', () => {
     const stored = new Map<IntegrationSecretName, string>([['hiboutik_api_key', 'vault-hiboutik']]);
     const env = { HIBOUTIK_API_KEY: 'ortam-hiboutik', PENNYLANE_API_TOKEN: 'ortam-pennylane' };
 

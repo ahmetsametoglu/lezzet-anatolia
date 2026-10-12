@@ -1,6 +1,6 @@
 import { setAiUsageRecorder } from '@lezzet/ai';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
-import { installEmailKeySource } from '@lezzet/application/integration/secrets';
+import { installEmailKeySource, loadIntegrationSecrets } from '@lezzet/application/integration/secrets';
 import { serviceDb } from '@lezzet/database';
 import { installSupabaseKeepAlive } from '@lezzet/database/keep-alive';
 
@@ -11,4 +11,6 @@ import { installSupabaseKeepAlive } from '@lezzet/database/keep-alive';
 */
 setAiUsageRecorder(aiUsageRecorder(serviceDb()));
 installEmailKeySource(serviceDb());
+// Bağlantılar'da yazılan anahtarlar istek karşılanmadan önce belleğe yüklenir; sonra dakikada bir tazelenir.
+await loadIntegrationSecrets(serviceDb());
 installSupabaseKeepAlive();

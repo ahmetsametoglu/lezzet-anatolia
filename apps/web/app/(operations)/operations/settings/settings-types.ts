@@ -127,6 +127,10 @@ export interface SettingsData {
   propagationSeconds: number;
   /** Kurulum sekmesinin verisi; yalnız o sekme açıkken okunur, öteki sekmelerde `null`. */
   setup: SetupData | null;
+  /** Bağlantılar sekmesinin verisi; anahtarlar yalnız o sekme açıkken çözülür, öteki sekmelerde `null`. */
+  connections: IntegrationKeysPanelData | null;
+  /** Tanımlı bağlantı anahtarı sayısı; sekme sayacı her sekmede görünür. */
+  connectionCount: number;
 }
 
 export interface SetupData {
@@ -135,7 +139,6 @@ export interface SetupData {
   mcp: McpPanelData;
   register: RegisterPanelData;
   pennylane: PennylanePanelData;
-  integrationKeys: IntegrationKeysPanelData;
 }
 
 /** Bir konu kartı ve içinde çizilecek satırlar. */

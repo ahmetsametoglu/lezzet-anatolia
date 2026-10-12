@@ -4,17 +4,18 @@ import { Chip } from '@/components/operation/ui/chip';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Tabs } from '@/components/operation/ui/tabs';
+import { IntegrationSecretNameEnum } from '@lezzet/types';
 import { SETTING_TABS, sectionTab } from './settings-layout';
 import { CardGrid, GridCell, SectionGrid, StaffCard } from './settings-sections';
 import { SiteImagesCard } from './site-images-card';
 import { McpCard } from './mcp-card';
 import { RegisterCard } from './register-card';
 import { PennylaneCard } from './pennylane-card';
-import { IntegrationKeysCard } from './integration-keys-card';
+import { ConnectionsPanel } from './connections-panel';
 import type { SettingsViewProps } from './settings-types';
 
 /**
- * Ayarlar — dört sekme, konu kartları. Arama ve "Değişenler" süzgeci sekmeden bağımsızdır; açıkken bütün sekmelerden eşleşen
+ * Ayarlar — beş sekme, konu kartları. Arama ve "Değişenler" süzgeci sekmeden bağımsızdır; açıkken bütün sekmelerden eşleşen
  * satırlar kartlarıyla birlikte çizilir.
  */
 export function SettingsDesktop({
@@ -39,7 +40,7 @@ export function SettingsDesktop({
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Ayarlar"
-        subtitle={`${data.rows.length} parametre · ${data.staff.length} personel`}
+        subtitle={`${data.rows.length} parametre · ${data.staff.length} personel · ${IntegrationSecretNameEnum.options.length} bağlantı anahtarı`}
         search={{ value: search, onChange: onSearch, placeholder: 'Ayar ara…' }}
       />
 
@@ -47,6 +48,7 @@ export function SettingsDesktop({
         items={[
           ...SETTING_TABS.map((t) => ({ key: t.key, label: t.label, count: data.rows.filter((r) => sectionTab(r.section) === t.key).length })),
           { key: 'setup' as const, label: 'Kurulum' },
+          { key: 'connections' as const, label: 'Bağlantılar', count: data.connectionCount },
         ]}
         active={urlState.tab}
         onSelect={onTab}
@@ -94,10 +96,11 @@ export function SettingsDesktop({
               <GridCell>
                 <McpCard data={data.setup.mcp} />
               </GridCell>
-              <GridCell>
-                <IntegrationKeysCard data={data.setup.integrationKeys} />
-              </GridCell>
             </CardGrid>
+          ) : null
+        ) : urlState.tab === 'connections' ? (
+          data.connections ? (
+            <ConnectionsPanel data={data.connections} />
           ) : null
         ) : (
           <SectionGrid sections={sections} flat={false} onOpen={onOpenSetting} />

@@ -16,6 +16,7 @@ import {
   installEmailKeySource,
 } from '@lezzet/application';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
+import { loadIntegrationSecrets } from '@lezzet/application/integration/secrets';
 import { serviceDb } from '@lezzet/database';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
@@ -74,8 +75,10 @@ process.on('uncaughtException', (error) => {
   bu süreçteki koşular bedava görünürdü.
 */
 setAiUsageRecorder(aiUsageRecorder(serviceDb()));
-// E-posta anahtarı Kurulum'dan okunur; takılmasaydı yalnız ortam değişkeni okunurdu.
+// E-posta anahtarı Bağlantılar'dan okunur; takılmasaydı yalnız ortam değişkeni okunurdu.
 installEmailKeySource(serviceDb());
+// Bağlantılar'da yazılan anahtarlar işler başlamadan önce belleğe yüklenir; sonra dakikada bir tazelenir.
+await loadIntegrationSecrets(serviceDb());
 
 const app = new Hono<AppEnv>();
 

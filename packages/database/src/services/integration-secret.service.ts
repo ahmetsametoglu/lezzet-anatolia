@@ -3,6 +3,7 @@ import {
   IntegrationSecretLogSchema,
   IntegrationSecretNameEnum,
   IntegrationSecretSchema,
+  type IntegrationCheckStatus,
   type IntegrationSecret,
   type IntegrationSecretLog,
   type IntegrationSecretName,
@@ -35,8 +36,18 @@ export class IntegrationSecretService extends BaseDbService<IntegrationSecret, n
   }
 
   /** Anahtarı yazar ya da yeniler; değişiklik deftere kimlikle düşer, değerle değil. */
-  async set(name: IntegrationSecretName, value: string, actorId: string | null): Promise<void> {
-    await this.executeRpc('integration_secret_set', { p_name: name, p_value: value, p_actor: actorId });
+  async set(
+    name: IntegrationSecretName,
+    value: string,
+    actorId: string | null,
+    check: IntegrationCheckStatus | null = null,
+  ): Promise<void> {
+    await this.executeRpc('integration_secret_set', { p_name: name, p_value: value, p_actor: actorId, p_check: check });
+  }
+
+  /** Tam değerin kopyalandığını deftere yazar; değer okunmaz. */
+  async recordCopy(name: IntegrationSecretName, actorId: string | null): Promise<void> {
+    await this.executeRpc('integration_secret_copied', { p_name: name, p_actor: actorId });
   }
 
   async clear(name: IntegrationSecretName, actorId: string | null): Promise<void> {

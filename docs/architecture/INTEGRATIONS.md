@@ -6,11 +6,13 @@ Genel ilke: her dış servis bir **agnostik arayüzün** arkasında yaşar. Sağ
 
 Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK §7): web uygulamasının yeniden dağıtımından bağımsız olurlar.
 
-Sağlayıcı anahtarları (Revolut gizli anahtarı ve bildirim imza anahtarı, Pennylane, Hiboutik, Resend) Ayarlar › Kurulum › Bağlantı
-anahtarları'ndan Supabase Vault'a şifreli yazılır; süreçler onları `integrationSecrets` okuyucusundan alır (süreç başına 60 sn önbellek,
-değişiklik en geç bu sürede geçer). Kurulum'da tanımlı olmayan anahtar için ortam değişkeni okunur. Kurulum ekranına değer gelmez: anahtar
-kaynağıyla (Kurulum ya da ortam) ve maskeli görünür (16 karakterden uzunsa son dört hanesiyle); tam değer yöneticinin kopyala düğmesiyle o an
-sunucudan istenir, istek loga kimlik ve anahtar adıyla düşer. Kip değişkenleri (`*_MODE`),
+Sağlayıcı anahtarları (Revolut, Pennylane, Hiboutik, Resend, Sendcloud, Meta, yapay zekâ, R2, sunucu harita anahtarı, web bildirimi gizli
+anahtarı) Ayarlar › Bağlantılar'dan Supabase Vault'a şifreli yazılır; anahtar kaydedilmeden önce sağlayıcıda salt okuyan bir çağrıyla
+sınanır, reddedilen anahtar kaydedilmez (`application/integration/checks.ts`). Her süreç (web, backend, mobile-api) açılırken Vault'taki
+değerleri kendi belleğindeki ortama yükler ve dakikada bir tazeler (`loadIntegrationSecrets`); ortamı okuyan kod buradan yazılan değeri
+böylece görür, disk üzerindeki ortam dosyasına yazılmaz. Burada yazılmamış anahtar için ortam dosyasındaki değer okunur. Ekrana
+değer gelmez: anahtar kaynağıyla (Vault ya da ortam) ve maskeli görünür (16 karakterden uzunsa son dört hanesiyle); tam değer
+yöneticinin kopyala düğmesiyle o an sunucudan istenir ve kopyalama deftere kimlik ve anahtar adıyla düşer. Kip değişkenleri (`*_MODE`),
 veritabanı adresi, servis anahtarı ve Vault'un ana anahtarı ortamda kalır.
 
 ---

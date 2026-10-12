@@ -721,9 +721,10 @@ Oyunlaştırma (puan değerleri, puan→kupon eşiği) ve ödeme komisyon oranla
 
 ## IntegrationSecret (entegrasyon anahtarı)
 
-Revolut, Pennylane, Hiboutik ve e-posta anahtarları Vault'ta şifreli durur; bu tablo yalnız hangi anahtarın tanımlı olduğunu
-ve son değişikliği taşır. Uygulama anahtarı `integration_secrets_read` ile okur ve süreç başına kısa süre bellekte tutar; tanımsız
-anahtarda ortam değişkenine düşer. Yazım ve temizleme Kurulum'dan, yalnız sunucu rolünün çağırabildiği fonksiyonlarla.
+Dış servis anahtarları (ödeme, muhasebe, kasa, e-posta, kargo, mesajlaşma, yapay zekâ, depolama, harita, web bildirimi) Vault'ta
+şifreli durur; bu tablo yalnız hangi anahtarın tanımlı olduğunu ve son değişikliği taşır. Uygulama anahtarı `integration_secrets_read`
+ile okur, süreç açılırken belleğindeki ortama yükler ve dakikada bir tazeler; tanımsız anahtarda ortam dosyasındaki değer geçer.
+Yazım ve temizleme Bağlantılar'dan, yalnız sunucu rolünün çağırabildiği fonksiyonlarla.
 
 <!-- alanlar:integration_secret -->
 | Kolon | Tip | Null | Varsayılan |
@@ -734,7 +735,8 @@ anahtarda ortam değişkenine düşer. Yazım ve temizleme Kurulum'dan, yalnız 
 | `updated_by` | uuid | • |  |
 <!-- /alanlar -->
 
-**Değişiklik defteri** (`integration_secret_log`): kim, ne zaman, hangi anahtar, yazıldı mı kaldırıldı mı; eski ve yeni değer yazılmaz.
+**Değişiklik defteri** (`integration_secret_log`): kim, ne zaman, hangi anahtar; yazıldı, kaldırıldı ya da kopyalandı; yazımda
+sağlayıcı sınamasının sonucu (`check_status`). Eski ve yeni değer yazılmaz.
 
 <!-- alanlar:integration_secret_log -->
 | Kolon | Tip | Null | Varsayılan |
@@ -742,6 +744,7 @@ anahtarda ortam değişkenine düşer. Yazım ve temizleme Kurulum'dan, yalnız 
 | `id` | uuid |  | `gen_random_uuid()` |
 | `name` | text |  |  |
 | `action` | text |  |  |
+| `check_status` | text | • |  |
 | `actor` | uuid | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->

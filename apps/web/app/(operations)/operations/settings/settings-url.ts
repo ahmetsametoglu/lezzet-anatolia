@@ -5,12 +5,15 @@ import { SETTING_TABS, type SettingTab } from './settings-layout';
 
 const SETTINGS_PATH = '/operations/settings';
 
-/** Üç ayar sekmesi ve Kurulum; Kurulum ayar değil, personel, vitrin görselleri ve MCP anahtarları gibi yöneticinin kurulum işleri. */
-export const SETTINGS_TABS: readonly (SettingTab | 'setup')[] = [...SETTING_TABS.map((t) => t.key), 'setup'];
-export type SettingsTab = SettingTab | 'setup';
+/**
+ * Üç ayar sekmesi, Kurulum ve Bağlantılar. Kurulum yöneticinin kurulum işleri (personel, vitrin görselleri, MCP), Bağlantılar dış
+ * servislerin anahtarları; ikisi de ayar değildir.
+ */
+export const SETTINGS_TABS: readonly (SettingTab | 'setup' | 'connections')[] = [...SETTING_TABS.map((t) => t.key), 'setup', 'connections'];
+export type SettingsTab = SettingTab | 'setup' | 'connections';
 
 export function isSettingTab(tab: SettingsTab): tab is SettingTab {
-  return tab !== 'setup';
+  return tab !== 'setup' && tab !== 'connections';
 }
 
 export interface SettingsUrlState {

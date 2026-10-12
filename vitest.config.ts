@@ -64,6 +64,8 @@ const UYGULAMA_DBSIZ = [
   'packages/application/src/accounting/pennylane/client.test.ts',
   // Anahtar okuyucusunun önbelleği ve ortam yedeği saf: okuma fonksiyonu dışarıdan verilir.
   'packages/application/src/integration/secrets.test.ts',
+  // Anahtar sınamasının kararları saf: sağlayıcı `fetch` taklidiyle cevap verir.
+  'packages/application/src/integration/checks.test.ts',
 ];
 
 const WEB_LIB_DBSIZ = [

@@ -12,8 +12,8 @@ import { serviceDb } from '@lezzet/database';
 import { SOURCES } from '@lezzet/observability';
 
 /**
- * `apps/mobile-api`nin ödeme sağlayıcısı kapısı. Anahtar ya da kip yoksa çağıran `null` görür ve "sağlayıcı yok" cevabı verir;
- * anahtarsız yerel çalışma meşrudur ama "ödeme alındı" demek değildir. İstemci saklanmaz ki Kurulum'dan yenilenen anahtar geçsin.
+ * Anahtar ya da kip yoksa çağıran `null` görür ve "sağlayıcı yok" cevabı verir; anahtarsız yerel çalışma meşrudur ama "ödeme
+ * alındı" demek değildir. İstemci saklanmaz ki Bağlantılar'dan yenilenen anahtar geçsin.
  */
 async function client(): Promise<RevolutClient | null> {
   return revolutClientFromSecrets(serviceDb());

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+
+  .hd { padding:16px 24px; border-bottom:1px solid #e6e7e1; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .search { font:500 12.5px 'IBM Plex Mono'; color:#4a4f45; border:1px solid #d9dbd2; border-radius:7px; padding:8px 12px; display:flex; align-items:center; gap:6px; }
+  .tabs { padding:0 24px; border-bottom:1px solid #e6e7e1; display:flex; gap:2px; background:#f8f9f5; align-items:stretch; }
+  .tab { font:600 13px 'Space Grotesk'; padding:12px 14px 11px; margin-bottom:-1px; border-bottom:2px solid transparent; display:flex; align-items:center; gap:7px; cursor:pointer; }
+  .tab-n { font:500 10.5px 'IBM Plex Mono'; border-radius:9px; padding:1px 6px; flex:none; }
+
+  .body { flex:1; padding:18px 24px 30px; display:flex; flex-direction:column; gap:14px; }
+  .bar { display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+  .info { font:400 12px/1.55 'Karla'; color:#6a7065; flex:1; min-width:280px; max-width:780px; text-wrap:pretty; }
+  .cols { columns:2; column-gap:14px; }
+  .cell { break-inside:avoid; padding-bottom:14px; }
+  .card { background:#fff; border:1px solid #e2e3dd; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+  .c-hd { padding:10px 16px; display:flex; align-items:center; gap:8px; background:#f8f9f5; min-height:22px; }
+  .c-t { font:600 13.5px 'Space Grotesk'; color:#22251f; }
+  .c-n { font:500 10.5px 'IBM Plex Mono'; color:#6a7065; background:#e9ebe4; border-radius:9px; padding:1px 7px; }
+  .c-sub { font:400 11.5px/1.5 'Karla'; color:#6a7065; padding:9px 16px 10px; border-top:1px solid #eceee8; }
+
+  .pill { font:600 10px 'Space Grotesk'; border-radius:6px; padding:3px 8px; white-space:nowrap; flex:none; }
+  .btn2 { font:600 11.5px 'Space Grotesk'; color:#3a3f37; background:#fff; border:1px solid #d9dbd2; border-radius:7px; padding:5px 10px; cursor:pointer; flex:none; white-space:nowrap; }
+  .krow { display:flex; align-items:flex-start; gap:14px; padding:11px 16px; border-top:1px solid #eceee8; }
+  .row-l { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .row-t { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .lbl { font:600 13.5px 'Karla'; color:#22251f; }
+  .bdg { font:600 10px 'Space Grotesk'; border-radius:6px; padding:3px 8px; white-space:nowrap; }
+  .mask { display:flex; align-items:center; gap:6px; font:500 12.5px 'IBM Plex Mono'; color:#3a3f37; letter-spacing:.02em; }
+  .cp { color:#9aa094; cursor:pointer; display:grid; place-items:center; padding:2px; border-radius:5px; }
+  .meta { font:400 11.5px/1.45 'Karla'; color:#6a7065; }
+  .chk { display:flex; align-items:baseline; gap:6px; font:500 11.5px/1.45 'Karla'; }
+  .chk-dot { width:7px; height:7px; border-radius:50%; flex:none; transform:translateY(-1px); }
+
+  .log { display:flex; align-items:baseline; gap:10px; padding:6px 16px; border-top:1px solid #f0f1ec; }
+  .log-l { font:500 12px 'Karla'; color:#22251f; }
+  .log-m { font:400 11px 'Karla'; color:#8b9086; }
+  .log-t { margin-left:auto; font:400 10.5px 'IBM Plex Mono'; color:#8b9086; }
+
+  .field { border:1.5px solid #5f7a2c; border-radius:9px; padding:11px 13px; font:500 15px 'IBM Plex Mono'; background:#fff; display:flex; align-items:center; gap:10px; }
+  .box { border-radius:9px; padding:11px 14px; display:flex; align-items:flex-start; gap:9px; font:500 11.5px/1.5 'Karla'; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:14px;max-width:1360px;flex-wrap:wrap">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Ayarlar · Bağlantılar sekmesi · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065;max-width:820px">Dış servislerin anahtarları kendi sekmesinde: sağlayıcı başına kart, anahtar başına satır. Değer ekrana gelmez; yazılan anahtar kaydedilmeden önce sağlayıcıda sınanır.</span>
+    </div>
+
+    <div data-screen-label="Ayarlar · Bağlantılar" style="width:100%;max-width:1360px;box-sizing:border-box;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="ayarlar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+        <div class="hd">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Ayarlar</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">49 parametre · 8 personel · 20 bağlantı anahtarı</span>
+          </div>
+          <span class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Ayar ara</span>
+        </div>
+        <div class="tabs">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+            <span class="tab" style="color:{{ t.fg }};border-bottom-color:{{ t.edge }}">{{ t.label }}<sc-if value="{{ t.hasCount }}" hint-placeholder-val="{{ true }}"><span class="tab-n" style="background:{{ t.cBg }};color:{{ t.cFg }}">{{ t.count }}</span></sc-if></span>
+          </sc-for>
+        </div>
+
+        <div class="body">
+          <div class="bar">
+            <span class="info">Anahtarlar veritabanında şifreli durur ve ekranda yalnız son dört hanesi görünür. Kopyala tam değeri o an sunucudan ister; kimin kopyaladığı kayda geçer. Yeni değer kaydedilmeden önce sağlayıcıda sınanır, reddedilen anahtar kaydedilmez. Burada yazılı olmayan anahtar ortam dosyasından okunur.</span>
+            <span class="btn2" onClick="{{ checkAll }}" style-hover="border-color:#5f7a2c">{{ checkAllLabel }}</span>
+          </div>
+
+          <div class="cols">
+            <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+              <div class="cell"><div class="card">
+                <div class="c-hd">
+                  <span class="c-t">{{ g.title }}</span>
+                  <span class="c-n">{{ g.count }}</span>
+                  <span class="pill" style="margin-left:auto;background:{{ g.pBg }};color:{{ g.pFg }}">{{ g.pLabel }}</span>
+                  <span class="btn2" onClick="{{ g.test }}" style-hover="border-color:#5f7a2c">Sına</span>
+                </div>
+                <span class="c-sub">{{ g.purpose }}</span>
+                <sc-for list="{{ g.keys }}" as="k" hint-placeholder-count="2">
+                  <div class="krow">
+                    <div class="row-l">
+                      <div class="row-t"><span class="lbl">{{ k.label }}</span><span class="bdg" style="background:{{ k.sBg }};color:{{ k.sFg }}">{{ k.source }}</span></div>
+                      <sc-if value="{{ k.hasMask }}" hint-placeholder-val="{{ true }}">
+                        <span class="mask">{{ k.mask }}<span class="cp" title="{{ k.copyTitle }}" style-hover="background:#eef0ea;color:#22251f"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg></span></span>
+                      </sc-if>
+                      <span class="meta">{{ k.meta }}</span>
+                      <sc-if value="{{ k.hasCheck }}" hint-placeholder-val="{{ false }}">
+                        <span class="chk" style="color:{{ k.cFg }}"><span class="chk-dot" style="background:{{ k.cDot }}"></span>{{ k.check }}</span>
+                      </sc-if>
+                    </div>
+                    <span class="btn2" onClick="{{ k.edit }}" style-hover="border-color:#5f7a2c">{{ k.editLabel }}</span>
+                  </div>
+                </sc-for>
+              </div></div>
+            </sc-for>
+            <div class="cell" style="column-span:all"><div class="card">
+              <div class="c-hd"><span class="c-t">Son değişiklikler</span><span class="c-n">{{ logCount }}</span></div>
+              <sc-for list="{{ log }}" as="l" hint-placeholder-count="4">
+                <div class="log"><span class="log-l">{{ l.label }}</span><span class="log-m">{{ l.action }}</span><span class="log-m">{{ l.by }}</span><span class="log-t">{{ l.at }}</span></div>
+              </sc-for>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:760px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+    <span style="font:700 14px 'Space Grotesk';color:#3a4147">Kurallar</span>
+    <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+      <li>Değer sayfaya hiç gelmez; maske sabit boydadır, 16 karakterden uzun anahtarda son dört hane görünür. Kopyala tam değeri tıklama anında ister.</li>
+      <li>Kart başlığındaki rozet o kartta son sınamanın en kötü sonucudur: Reddedildi › Ulaşılamadı › Eksik › Çalışıyor. Sınanmamış kart "Sınanmadı" der.</li>
+      <li>Sınama ücretsiz ve salt okur; imza anahtarları sağlayıcıda sınanamaz, yalnız biçimi denetlenir.</li>
+      <li>Yazma: önce sınama. Reddedilen kaydedilmez; sağlayıcıya ulaşılamazsa "Yine de kaydet" bilerek seçilir. Eksik kardeş anahtarı olan değer kaydedilir, eksik girilince birlikte sınanır.</li>
+      <li>Burada yazılan değer ortamdakinin önüne geçer ve en geç bir dakikada bütün süreçlere yayılır; Kaldır ortamdaki değere döndürür.</li>
+    </ul>
+  </div>
+
+  <sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDialog }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:480px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto"><span style="font:600 18px 'Space Grotesk'">{{ dlg.title }}</span><span style="font:400 12px 'Karla';color:#8b9086">{{ dlg.sub }}</span></div>
+          <span onClick="{{ closeDialog }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 11.5px 'Karla';color:#6a7065">Yeni değer</span>
+            <div class="field"><span style="flex:1;letter-spacing:.12em">••••••••••••••••••••••••</span><span style="font:600 11px 'Space Grotesk';color:#5f7a2c;cursor:pointer">Göster</span></div>
+            <span style="font:400 10.5px 'Karla';color:#9aa094">Değer kayıt defterine ve loga yazılmaz; yalnız kimin, ne zaman yazdığı düşer.</span>
+          </div>
+          <sc-if value="{{ dlg.isRejected }}" hint-placeholder-val="{{ false }}">
+            <div class="box" style="background:#fbe9e7;border:1px solid #e2c4c0;color:#8a3a33"><span style="width:7px;height:7px;border-radius:50%;background:#a5443c;flex:none;margin-top:6px"></span><span>{{ dlg.rejected }}</span></div>
+          </sc-if>
+          <sc-if value="{{ dlg.isUnreachable }}" hint-placeholder-val="{{ false }}">
+            <div class="box" style="background:#fdf7ec;border:1px solid #ecd9b4;color:#6e4a12"><span style="width:7px;height:7px;border-radius:50%;background:#9a6416;flex:none;margin-top:6px"></span><span>{{ dlg.unreachable }}</span></div>
+          </sc-if>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <sc-if value="{{ dlg.canClear }}" hint-placeholder-val="{{ true }}"><span onClick="{{ closeDialog }}" style="font:600 13px 'Space Grotesk';color:#a5443c;padding:10px 4px;cursor:pointer">Kaldır</span></sc-if>
+          <span onClick="{{ closeDialog }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 16px;cursor:pointer;margin-left:auto">Vazgeç</span>
+          <sc-if value="{{ dlg.isUnreachable }}" hint-placeholder-val="{{ false }}"><span onClick="{{ closeDialog }}" style="font:600 13px 'Space Grotesk';color:#6e4a12;border:1px solid #ecd9b4;background:#fdf7ec;border-radius:8px;padding:10px 16px;cursor:pointer">Yine de kaydet</span></sc-if>
+          <span onClick="{{ submit }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">{{ dlg.primary }}</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { dialog: null, mode: 'idle', checked: false };
+  renderVals() {
+    // Kaynak rozeti ve sınama sonucunun renkleri; ayarlar ekranının rozet tonlarıyla aynı.
+    const SRC = {
+      vault: { label: 'Kayıtlı', bg: '#eef4e2', fg: '#4a6121' },
+      env: { label: 'Ortamdan', bg: '#eceef0', fg: '#4d5560' },
+      none: { label: 'Tanımlı değil', bg: '#fdf1e3', fg: '#9a6416' },
+    };
+    const ST = {
+      ok: { label: 'Çalışıyor', bg: '#eef4e2', fg: '#4a6121', dot: '#5f7a2c', rank: 1 },
+      rejected: { label: 'Reddedildi', bg: '#fbe9e7', fg: '#a5443c', dot: '#a5443c', rank: 4 },
+      unreachable: { label: 'Ulaşılamadı', bg: '#fdf1e3', fg: '#9a6416', dot: '#9a6416', rank: 3 },
+      incomplete: { label: 'Eksik', bg: '#fdf1e3', fg: '#9a6416', dot: '#9a6416', rank: 2 },
+      unverifiable: { label: 'Sınanamaz', bg: '#eceef0', fg: '#4d5560', dot: '#9aa094', rank: 0 },
+    };
+    // Anahtar: etiket, kaynak, maske, değişiklik, sınama sonucu ve cümlesi.
+    const K = (label, src, mask, meta, check, checkText) => ({ label, src, mask, meta, check, checkText });
+    const VAULT = (who) => 'Son değişiklik ' + who;
+    const ENV = 'Ortam dosyasındaki değer kullanılıyor';
+    const NONE = 'Bu anahtar olmadan bağlantı kurulmaz';
+    const GROUPS = [
+      { title: 'Revolut', provider: 'Revolut', purpose: 'Kartla online ödeme, kapıda kart ve aktarımlar', keys: [
+        K('Gizli anahtar', 'vault', '••••••••a91c', VAULT('12.10 14:32 · Selin Kaya'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+        K('Bildirim imza anahtarı', 'vault', '••••••••7Qd2', VAULT('12.10 14:33 · Selin Kaya'), 'unverifiable', 'Sınanamaz · Revolut imza anahtarını API üzerinden sınatmaz; ilk bildirimde imza doğrulanır'),
+      ] },
+      { title: 'Kargo (Sendcloud)', provider: 'Sendcloud', purpose: 'Kargo fiyatı, etiket ve gönderi takibi', keys: [
+        K('Açık anahtar', 'env', '••••••••e0b4', ENV, 'rejected', 'Reddedildi · Sendcloud anahtarları reddetti'),
+        K('Gizli anahtar', 'env', '••••••••19fa', ENV, 'rejected', 'Reddedildi · Sendcloud anahtarları reddetti'),
+        K('Bildirim imza anahtarı', 'none', '', NONE, null, ''),
+      ] },
+      { title: 'Pennylane', provider: 'Pennylane', purpose: 'Muhasebe: alış belgeleri ve banka eşleşmesi', keys: [
+        K('API anahtarı', 'env', '••••••••7d02', ENV, null, ''),
+      ] },
+      { title: 'Meta', provider: 'Meta', purpose: 'WhatsApp, Messenger ve Instagram mesajları', keys: [
+        K('Erişim jetonu', 'vault', '••••••••ZBkA', VAULT('09.10 11:02 · Selim A.'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+        K('Sayfa erişim jetonu', 'env', '••••••••mQ3z', ENV, 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+        K('Uygulama sırrı', 'env', '••••••••', ENV, 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+        K('Bildirim doğrulama değeri', 'env', '••••••••', ENV, 'unverifiable', 'Sınanamaz · Bu değeri biz belirleriz; Meta bildirim kaydına aynısı girilmelidir'),
+      ] },
+      { title: 'Hiboutik', provider: 'Hiboutik', purpose: 'Sertifikalı kasa: satışların kasaya yazımı ve gün kapanışı', keys: [
+        K('Hesap adı', 'env', '••••••••', ENV, 'incomplete', 'Eksik · Kullanıcı girilince birlikte sınanır'),
+        K('Kullanıcı', 'none', '', NONE, null, ''),
+        K('API anahtarı', 'env', '••••••••c4e1', ENV, 'incomplete', 'Eksik · Kullanıcı girilince birlikte sınanır'),
+      ] },
+      { title: 'Yapay zekâ', provider: 'Anthropic', purpose: 'Asistan, otomatik cevap ve çeviri', keys: [
+        K('Anthropic API anahtarı', 'vault', '••••••••uX8w', VAULT('08.10 18:40 · Selim A.'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+        K('Google AI API anahtarı', 'none', '', NONE, null, ''),
+      ] },
+      { title: 'E-posta (Resend)', provider: 'Resend', purpose: 'Giriş kodları, sipariş ve bildirim e-postaları', keys: [
+        K('API anahtarı', 'vault', '••••••••Qx3k', VAULT('08.10 18:41 · Selim A.'), 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+      ] },
+      { title: 'Dosya deposu (Cloudflare R2)', provider: 'R2', purpose: 'Ürün ve sayfa görselleri, müşteri ekleri', keys: [
+        K('Erişim anahtarı kimliği', 'env', '••••••••41d9', ENV, 'unreachable', 'Ulaşılamadı · The operation was aborted due to timeout'),
+        K('Gizli erişim anahtarı', 'env', '••••••••b7Ue', ENV, 'unreachable', 'Ulaşılamadı · The operation was aborted due to timeout'),
+      ] },
+      { title: 'Harita (Google)', provider: 'Google', purpose: 'Almanya adreslerinde öneri ve doğrulama', keys: [
+        K('Sunucu API anahtarı', 'env', '••••••••Ha0c', ENV, null, ''),
+      ] },
+      { title: 'Web bildirimi', provider: 'Web bildirimi', purpose: 'Telefona kurulu siteye anlık bildirim', keys: [
+        K('Gizli VAPID anahtarı', 'env', '••••••••Kp2s', ENV, 'ok', 'Çalışıyor · 12.10 14:35 sınandı'),
+      ] },
+    ];
+
+    const checked = this.state.checked;
+    const groups = GROUPS.map((g) => {
+      const statuses = g.keys.map((k) => k.check).filter((s) => s && ST[s].rank > 0);
+      const worst = statuses.sort((a, b) => ST[b].rank - ST[a].rank)[0];
+      const anyCheck = g.keys.some((k) => k.check);
+      const pill = checked ? (worst ? ST[worst] : anyCheck ? ST.unverifiable : null) : null;
+      const defined = g.keys.filter((k) => k.src !== 'none').length;
+      return {
+        title: g.title, purpose: g.purpose, count: defined + ' / ' + g.keys.length,
+        pLabel: pill ? pill.label : 'Sınanmadı', pBg: pill ? pill.bg : '#eceef0', pFg: pill ? pill.fg : '#4d5560',
+        test: () => this.setState({ checked: true }),
+        keys: g.keys.map((k) => {
+          const s = SRC[k.src];
+          const r = k.check ? ST[k.check] : null;
+          return {
+            label: k.label, source: s.label, sBg: s.bg, sFg: s.fg,
+            hasMask: k.src !== 'none', mask: k.mask, copyTitle: g.title + ' ' + k.label + ' kopyala',
+            meta: k.meta,
+            hasCheck: checked && !!r, check: k.checkText, cFg: r ? r.fg : '#6a7065', cDot: r ? r.dot : '#9aa094',
+            editLabel: k.src === 'vault' ? 'Yenile' : 'Yaz',
+            edit: () => this.setState({ dialog: { group: g.title, provider: g.provider, key: k.label, stored: k.src === 'vault' }, mode: 'idle' }),
+          };
+        }),
+      };
+    });
+
+    const defined = GROUPS.reduce((n, g) => n + g.keys.filter((k) => k.src !== 'none').length, 0);
+    // Bağlantılar sayacı tanımlı anahtar sayısıdır; sekme sayacı kapsamı söyler, iş bekletmez.
+    const TABS = [['Sipariş & depo', '13'], ['Para', '9'], ['Müşteri', '27'], ['Kurulum', ''], ['Bağlantılar', String(defined)]];
+    const tabs = TABS.map(([label, count], i) => {
+      const on = i === TABS.length - 1;
+      return { label, count, hasCount: !!count, fg: on ? '#22251f' : '#6a7065', edge: on ? '#5f7a2c' : 'transparent', cBg: on ? '#eef4e2' : '#eef0ea', cFg: on ? '#4a6121' : '#6a7065' };
+    });
+
+    const log = [
+      { label: 'Revolut · Bildirim imza anahtarı', action: 'yazıldı · sınanamaz', by: 'Selin Kaya', at: '12.10 14:33' },
+      { label: 'Revolut · Gizli anahtar', action: 'yazıldı · çalışıyor', by: 'Selin Kaya', at: '12.10 14:32' },
+      { label: 'Meta · Erişim jetonu', action: 'yazıldı · çalışıyor', by: 'Selim A.', at: '09.10 11:02' },
+      { label: 'E-posta (Resend) · API anahtarı', action: 'kopyalandı', by: 'Selim A.', at: '08.10 18:44' },
+      { label: 'Pennylane · API anahtarı', action: 'kaldırıldı', by: 'Selim A.', at: '08.10 18:42' },
+    ];
+
+    const d = this.state.dialog;
+    const mode = this.state.mode;
+    const dlg = d ? {
+      title: d.group + ' · ' + d.key,
+      sub: 'Kaydetmeden önce sağlayıcıda sınanır',
+      isRejected: mode === 'rejected', isUnreachable: mode === 'unreachable', canClear: d.stored,
+      rejected: d.provider + ' anahtarı reddetti (401 — yetkisiz). Anahtar kaydedilmedi; değeri sağlayıcının sayfasıyla karşılaştırın.',
+      unreachable: 'Sağlayıcıya ulaşılamadı (The operation was aborted due to timeout). Anahtar sınanmadan kaydedilebilir; kart sınanana kadar "Sınanmadı" der.',
+      primary: mode === 'unreachable' ? 'Tekrar sına' : 'Sına ve kaydet',
+    } : { title: '', sub: '', isRejected: false, isUnreachable: false, canClear: false, rejected: '', unreachable: '', primary: '' };
+
+    return {
+      tabs, groups, log, logCount: String(log.length),
+      checkAll: () => this.setState({ checked: true }),
+      checkAllLabel: checked ? 'Tümünü yeniden sına' : 'Tümünü sına',
+      dialogOpen: !!d, dlg,
+      submit: () => this.setState({ mode: mode === 'idle' ? 'rejected' : mode === 'rejected' ? 'unreachable' : 'idle', dialog: mode === 'unreachable' ? null : d }),
+      closeDialog: () => this.setState({ dialog: null, mode: 'idle' }),
+      stop: (e) => e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

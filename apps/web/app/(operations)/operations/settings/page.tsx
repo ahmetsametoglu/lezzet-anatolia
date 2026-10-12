@@ -18,7 +18,7 @@ import { readSiteImages } from './site-images-read';
 import { readMcpPanel } from './mcp-read';
 import { readRegisterPanel } from './register-read';
 import { readPennylanePanel } from './pennylane-read';
-import { readIntegrationKeysPanel } from './integration-keys-read';
+import { readIntegrationKeyCount, readIntegrationKeysPanel } from './integration-keys-read';
 import { parseSettingsUrl } from './settings-url';
 import type { SettingsData, SetupData } from './settings-types';
 
@@ -43,7 +43,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const urlState = parseSettingsUrl(await searchParams);
   const db = serviceDb();
 
-  const [settings, staff, zones, warehouses, accounts, setup] = await Promise.all([
+  const [settings, staff, zones, warehouses, accounts, setup, connections, connectionCount] = await Promise.all([
     readAllSettings(new SettingsService(db)),
     readStaff(new UserProfileService(db)),
     new DeliveryZoneService(db).list(),
@@ -52,6 +52,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     new AccountService(db).list(),
     // Kurulum kartları yalnız Kurulum sekmesinde çizilir; öteki sekmeler onları okumaz.
     urlState.tab === 'setup' ? readSetup() : Promise.resolve(null),
+    urlState.tab === 'connections' ? readIntegrationKeysPanel() : Promise.resolve(null),
+    readIntegrationKeyCount(),
   ]);
 
   const { rows } = toSettingRows({ settings, zones, accounts, warehouses });
@@ -66,6 +68,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     accountOptions: accounts.filter((a) => a.isActive).map((a) => ({ value: a.id, label: a.name, type: a.type })),
     propagationSeconds: Math.round(SETTINGS_CACHE_TTL_MS / 1000),
     setup,
+    connections,
+    connectionCount,
   };
 
   return <SettingsClient data={data} urlState={urlState} />;
@@ -78,12 +82,11 @@ async function readAllSettings(svc: SettingsService): Promise<Setting[]> {
 }
 
 async function readSetup(): Promise<SetupData> {
-  const [siteImages, mcp, register, pennylane, integrationKeys] = await Promise.all([
+  const [siteImages, mcp, register, pennylane] = await Promise.all([
     readSiteImages(),
     readMcpPanel(),
     readRegisterPanel(),
     readPennylanePanel(),
-    readIntegrationKeysPanel(),
   ]);
-  return { siteImages, mcp, register, pennylane, integrationKeys };
+  return { siteImages, mcp, register, pennylane };
 }

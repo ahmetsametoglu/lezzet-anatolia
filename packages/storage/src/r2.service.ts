@@ -101,10 +101,10 @@ class R2Service {
   }
 }
 
-// ─── Env'den lazy singleton ──────────────────────────────
+// ─── Ortamdan tembel kurulum ──────────────────────────────
 
-let cached: R2Service | null | undefined;
-let cachedPrivate: R2Service | null | undefined;
+type Cached = { key: string; service: R2Service | null };
+const cache: Record<'public' | 'private', Cached | undefined> = { public: undefined, private: undefined };
 
 /** İki kovanın ortak ayarları — hesap aynı, değişen yalnız kova adı. */
 function baseConfig(): Omit<R2Config, 'bucket'> | null {
@@ -117,30 +117,44 @@ function baseConfig(): Omit<R2Config, 'bucket'> | null {
   return { endpoint, accessKeyId, secretAccessKey, pathPrefix: process.env.R2_PATH_PREFIX };
 }
 
-/**
- * Env değişkenlerinden R2Service üretir; eksikse `null` (graceful degradation — local'de R2 ayarsızsa
- * upload skip + görselsiz devam). Env: R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
- * R2_BUCKET_NAME, R2_PATH_PREFIX (opsiyonel; varsayılan 'dev').
- */
-export function getR2(): R2Service | null {
-  if (cached !== undefined) return cached;
-
+/** Ayar aynı kaldıkça kurulan istemci döner; anahtar yenilenince istemci yeniden kurulur. */
+function serviceFor(kind: 'public' | 'private', bucket: string | undefined): R2Service | null {
   const base = baseConfig();
-  const bucket = process.env.R2_BUCKET_NAME;
-  cached = base && bucket ? new R2Service({ ...base, bucket }) : null;
-  return cached;
+  const key = base && bucket ? [base.endpoint, base.accessKeyId, base.secretAccessKey, base.pathPrefix ?? '', bucket].join('\n') : '';
+  const hit = cache[kind];
+  if (hit?.key === key) return hit.service;
+  const service = base && bucket ? new R2Service({ ...base, bucket }) : null;
+  cache[kind] = { key, service };
+  return service;
+}
+
+/** Herkese açık kova; ayarsızsa `null` ve yükleme atlanır, ekran görselsiz devam eder. */
+export function getR2(): R2Service | null {
+  return serviceFor('public', process.env.R2_BUCKET_NAME);
+}
+
+/** Gizli kova; kimlik bilgisi herkese açık kovayla aynıdır, ayrışan yalnız kova adıdır (`R2_PRIVATE_BUCKET_NAME`). */
+export function getR2Private(): R2Service | null {
+  return serviceFor('private', process.env.R2_PRIVATE_BUCKET_NAME);
 }
 
 /**
- * Ayarsızsa `null`: yerelde ek olmadan da çalışılır, ekran fotoğrafsız çizer, çökmez. Kimlik bilgisi
- * public kovayla AYNIDIR, ayrışan tek şey kova adıdır (`R2_PRIVATE_BUCKET_NAME`) — ikinci bir API
- * jetonu gerekmez, istenirse yalnız env değişir.
+ * Kimlik bilgisi R2'de geçiyor mu: olmayan bir nesneye HEAD atılır, "yok" cevabı anahtarın kabul edildiği demektir. Ağ hatası
+ * fırlatılır ki "geçmedi" ile "ulaşılamadı" ayrı kalsın.
  */
-export function getR2Private(): R2Service | null {
-  if (cachedPrivate !== undefined) return cachedPrivate;
-
-  const base = baseConfig();
-  const bucket = process.env.R2_PRIVATE_BUCKET_NAME;
-  cachedPrivate = base && bucket ? new R2Service({ ...base, bucket }) : null;
-  return cachedPrivate;
+export async function probeR2Credentials(credentials: {
+  accessKeyId: string;
+  secretAccessKey: string;
+}): Promise<'ok' | 'rejected' | 'unconfigured'> {
+  const endpoint = process.env.R2_ENDPOINT;
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!endpoint || !bucket) return 'unconfigured';
+  try {
+    await new R2Service({ endpoint, bucket, ...credentials }).fileEtag('__baglanti-sinamasi__');
+    return 'ok';
+  } catch (err) {
+    const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+    if (status === 401 || status === 403) return 'rejected';
+    throw err;
+  }
 }
