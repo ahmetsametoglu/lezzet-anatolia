@@ -185,6 +185,8 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
   open" der.
 - Canlıda ilk iş: gün başlangıç saatinin gece yarısı olduğu ekrandan doğrulanır; ilk gerçek satıştan önce kaydı
   olmayan bir gün API'den kapatılıp cevabı ölçülür.
+- Kapanmış satışa, günü kapanmadan sonraki gün eklenen ödeme satırının Z'de satışın gününe mi eklendiği güne mi sayıldığı
+  ölçülmedi (demoda gün kapanmıyor); ayna o ödemeye eklendiği anı yazar. Canlıda ilk gece yarısı geçişinde bakılır.
 - Ters yüklemenin `E` kodu 2027 e-fatura / e-reporting için yeterli mi, Faz 4'te bakılacak.
 - Çağrı sınırı: yeni fiş başına 8 çağrı (arama, açma, iki okuma, iki ayar, ödeme, kapatma) + kalem
   başına 1 (bölünen ya da KDV'si değişen kalem 1 daha), toplu uç yok. Ayda 600 siparişte 8 kalemle ~9.600
