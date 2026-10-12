@@ -1,6 +1,6 @@
 # Teslim kodu — kapıda imza ve fotoğraf yerine kod
 
-> **Statü: YAYINDA, WhatsApp ayağı Meta onayını bekliyor (12.10.2026).** İlk karar 30.08.2026'da yazıldı ("Kapıda kimlik: WhatsApp OTP — imzanın yerine"), gövdesi
+> **Statü: YAYINDA; WhatsApp ayağı kapalı, Meta şablon oluşturmayı reddediyor (12.10.2026).** İlk karar 30.08.2026'da yazıldı ("Kapıda kimlik: WhatsApp OTP — imzanın yerine"), gövdesi
 > 15.09'daki doküman birleştirmesinde düşmüştü; asıl metin `42b3ccd8` commit'inde. Kararlar 12.10.2026'da kullanıcıyla verildi.
 
 ## 1. Neden
@@ -44,8 +44,8 @@ WhatsApp'ta "yolda" mesajının içine konamaz, ardından ayrı mesajla gider.
 
 ## 5. Açık
 
-- `delivery_code` şablonu Meta'da açılıp onaylanana ve sunucuya `META_PHONE_NUMBER_ID` girene kadar kod e-postayla gider; API ile
-  başvuru uygulamanın WhatsApp izinleri yüzünden reddedildi, iş sosyal şeritte (KALAN K.77).
+- `delivery_code` şablonu Meta'da açılıp onaylanana ve sunucuya `META_PHONE_NUMBER_ID` girene kadar kod e-postayla gider; WhatsApp
+  hesabı şablon oluşturmayı hem API'de hem WhatsApp Manager'da reddediyor, iş sosyal şeritte (KALAN K.77).
 - Mevcut `order_out_for_delivery` şablonunun üçüncü değişkeni "Teslimat aralığı"; sistemde saat aralığı verisi yok
   (`durak-sirasi.md` §"zaman penceresi"), şablon ayrıca olmayan bir varış bildirimini vaat ediyor. Kullanıcı kararı bekliyor.
 - Öteki sipariş şablonlarının WhatsApp'tan açılması ücret çalışmasına bağlı (`whatsapp-bildirimleri.md`); karar kullanıcıda.
