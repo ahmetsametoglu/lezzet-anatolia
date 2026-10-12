@@ -93,8 +93,6 @@ export interface CourierStop {
   settledAt: string | null;
   /** Kuryenin sonuca yazdığı serbest sebep; aynı geçişin notu. */
   outcomeNote: string | null;
-  /** Kutu okutması sayılmaz: onu sunucu kurar, kapıda kimse imzalamaz. */
-  hasProof: boolean;
   /** Kapı kodunun hâli; kodun kendisi kuryeye gelmez, çünkü gelirse doğrulama anlamsızlaşır. `null` = bu durakta kod yok. */
   doorCode: { sentVia: DoorCodeVia | null; locked: boolean } | null;
   /** Ulaşılamayan durak listede kalır ve yeniden denenir. */
@@ -238,7 +236,6 @@ export async function listCourierDay(
       /* Saat ve sebep aynı kayıttan: ikisi aynı olayın iki yüzü. */
       settledAt: settled?.createdAt ?? null,
       outcomeNote: settled?.note ?? null,
-      hasProof: hasVisualProof(order),
       doorCode: doorCodeView(doorCodes, order.id, maxCodeAttempts),
       attempts,
       boxes: allBoxes
@@ -713,16 +710,6 @@ function settlementLog(
 function doorCodeView(codes: readonly OrderDeliveryCode[], orderId: string, maxAttempts: number): CourierStop['doorCode'] {
   const row = codes.find((code) => code.orderId === orderId);
   return row ? { sentVia: row.sentVia, locked: doorCodeLocked({ failedAttempts: row.failedAttempts, maxAttempts }) } : null;
-}
-
-/**
- * Kutu okutması sayılmaz: onu sunucu kurar ve ihtilafta kuryenin arkasında duracak bir kanıt değildir. Tanınmayan şekil `false`
- * döner.
- */
-function hasVisualProof(order: Order): boolean {
-  // BEKLEYEN(K.76): imza ve fotoğraf artık yazılmıyor; alan kurye gün listesindeki "imza var" etiketiyle birlikte sökülür.
-  const kind = order.deliveryProof?.['kind'];
-  return kind === 'signature' || kind === 'photo';
 }
 
 /**

@@ -81,7 +81,6 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
        hâlin tanımı. Sonuçlanmış durağı kuran test üçünü `outcome` ile birlikte verir. */
     settledAt: null,
     outcomeNote: null,
-    hasProof: false,
     /* Varsayılan kod sorulmayan durak; kapı kodunu ölçen test onu `overrides` ile verir. */
     doorCode: null,
     attempts: 0,

@@ -13,7 +13,7 @@ import {
 
 /**
  * Kurye sözleşme şemaları: mobil `/api/v1/courier/*` uçlarının ve kurye ekranlarının ortak dili; alanlar `@lezzet/application` kurye kapılarının döndürdüğü şeklin aynasıdır.
- * `courierId` hiçbir istek gövdesinde yoktur, çünkü kimlik jetondan gelir; olumsuz sonuçlar (`stale`, `proof_required`) hata değil cevabın kendisi olduğu için ayrımlı birleşimdir.
+ * `courierId` hiçbir istek gövdesinde yoktur, çünkü kimlik jetondan gelir; olumsuz sonuçlar (`stale`, `boxes_missing`) hata değil cevabın kendisi olduğu için ayrımlı birleşimdir.
  */
 
 /**
@@ -107,11 +107,6 @@ export const CourierStopSchema = z.object({
    * Serbest metin kalır, çünkü sebebi standartlaştırmak sahada "yanlış ama düzgün" veri üretir.
    */
   outcomeNote: z.string().nullable(),
-  /**
-   * Kapıda görselli kanıt (imza ya da fotoğraf) alındı mı; kutu okutması sayılmaz, çünkü o kaydı sunucu kendisi kurar ve ihtilafta dayanılacak kanıt değildir.
-   * Görselin kendisi taşınmaz: liste satırının sorusu "kanıt var mı".
-   */
-  hasProof: z.boolean(),
   /** Kapı kodunun hâli; kodun kendisi kuryeye gelmez. `null` = bu durakta kod yok. */
   doorCode: z.object({ sentVia: DoorCodeViaEnum.nullable(), locked: z.boolean() }).nullable(),
   /** Kaç kez yola çıkılıp dönüldü — ulaşılamayan durak listede kaybolmaz. */

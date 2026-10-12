@@ -245,8 +245,7 @@ describe('K1 · günün seferi', () => {
 
     await renderDay();
 
-    /* v3'te tutar "CEPTE" etiketiyle iki satır (özet kartının sağ ucu): para bir sayı değil bir
-       DURUM ve etiketi olmadan cümlenin içinde kayboluyordu. */
+    /* Tutar "CEPTE" etiketiyle iki satırda durur: para bir sayı değil bir durumdur ve etiketsiz cümlenin içinde kaybolur. */
     await waitFor(() => expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/CEPTE/));
     expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/52,00 €/);
   });
@@ -258,7 +257,7 @@ describe('K1 · günün seferi', () => {
       dayCloseDraft(),
       startResult(),
       [
-        // Az önce kapatılan rota: ikinci tur veride yasak (K3), kart pasif.
+        // Az önce kapatılan rota: rota ve gün başına tek sefer olduğu için kart pasif.
         courierRoute({ run: takenRouteRun({ closed: true }) }),
         courierRoute({ zoneId: '00000000-0000-4000-8000-000000000802', zoneName: 'Güney rotası' }),
       ],
@@ -353,9 +352,7 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByTestId('courier-day-progress')).toBeOnTheScreen();
     /* Sayaç sonuçlanmış durağı sayar, teslim edileni değil; niteliği çubuk söyler: yeşil teslim, kırmızı takılı. */
     expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/3\/3 durak/);
-    /* BAŞLIK KOŞULSUZ "SEFERE GÖRE" (v3:14 — düz metin), sağ uç TAKILI durak sayısını taşır
-       (ulaşılamadı + kabul etmedi = 2). Sayı başlıktan çıktı: grup başlığı artık tek seferde de
-       çizildiği için aynı sayı iki kez yazılıyordu. */
+    /* Başlık koşulsuz "sefere göre", sağ uç takılı durak sayısını taşır (ulaşılamadı + kabul etmedi = 2). */
     expect(screen.getByText('DURAKLAR · SEFERE GÖRE')).toBeOnTheScreen();
     expect(screen.getByTestId('courier-day-stuck')).toHaveTextContent('2 takılı');
   });
@@ -369,12 +366,11 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).not.toHaveTextContent(':');
   });
 
-  it('teslim edilmiş durağın alt satırı ALINAN PARAYI, kanıdı ve kalan borcu söyler', async () => {
+  it('teslim edilmiş durağın alt satırı ALINAN PARAYI ve kalan borcu söyler', async () => {
     mockDay(
       courierDay([
         courierStop(1, {
           outcome: 'delivered',
-          hasProof: true,
           payment: { dueAmountCents: 4200, pricesIncludeVat: true, expectedMethod: 'cash', collectedAtDoorCents: 8500 },
         }),
       ]),
@@ -383,7 +379,7 @@ describe('K1 · günün seferi', () => {
     await renderDay();
 
     await waitFor(() =>
-      expect(screen.getByText('2 kalem · nakit 85,00 € alındı · imza var · kalan borç 42,00 €')).toBeOnTheScreen(),
+      expect(screen.getByText('2 kalem · nakit 85,00 € alındı · kalan borç 42,00 €')).toBeOnTheScreen(),
     );
   });
 
@@ -412,8 +408,7 @@ describe('K1 · günün seferi', () => {
     await renderDay();
 
     await waitFor(() => expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).toHaveTextContent('KISMİ TESLİM'));
-    /* Metin İYELİK EKİ TAŞIMIYOR ("2'si" / "3'ü" sayıya göre değişir ve şablon bunu yapamaz) —
-       v3'ün cümlesi ekliydi, buradaki hâli ekten kaçınıyor ve aynı şeyi söylüyor. */
+    /* Metin iyelik eki taşımaz, çünkü "2'si" / "3'ü" sayıya göre değişir ve şablon bunu yapamaz. */
     expect(screen.getByText('3 adetten 2 adet bırakıldı · 1 adet araçta — iade depoya')).toBeOnTheScreen();
   });
 
@@ -646,8 +641,7 @@ describe('araçtaki seferler (31.08)', () => {
     );
     await renderDay();
 
-    /* Grup başlığı ADI ve KÜNYE+HÂLİ birlikte taşıyor (v3:15 `grupMeta`): iki grup arasındaki
-       fark "hangisi sürülüyor" ancak böyle okunuyor. */
+    /* Grup başlığı adı, künyeyi ve hâli birlikte taşır; iki grup arasındaki "hangisi sürülüyor" farkı ancak böyle okunur. */
     const group = screen.getByTestId(`courier-day-group-${ikinci.runId}`);
     expect(group).toHaveTextContent(/Dağ rotası/);
     expect(group).toHaveTextContent(/sürülüyor/);

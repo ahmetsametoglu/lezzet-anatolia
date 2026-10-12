@@ -174,7 +174,6 @@
       "cancelledBoxes": "{n} kutu araçta — depoya geri getir",
       "tagAt": "{tag} · {time}",
       "collected": "{method} {amount} alındı",
-      "proof": "imza var",
       "partialLine": "{total} adetten {done} adet bırakıldı",
       "leftInVanQty": "{n} adet araçta — iade depoya",
       "leftInVanItems": "{n} kalem araçta kaldı",
