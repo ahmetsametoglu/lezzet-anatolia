@@ -105,10 +105,6 @@ const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TR
   decl: (r) => <DeclarationMarks product={r} />,
   ship: (r) => <ShipCell product={r} />,
   status: (r) => <StatusBadge status={r.status} />,
-  // Açma düğmesi hücrenin KENDİSİNDE durur ve tıklaması satıra sızmaz: satır tıklaması seçimdir
-  // (önizleme panelini değiştirir), çift tıklaması düzenlemedir. Üçüncü anlam ayrı bir hedefe
-  // bağlanmak zorunda, yoksa operatör kırılımı açmak isterken seçimi değiştirirdi.
-  expand: () => null,
 });
 
 // "+ durum" — süzgeç çipi. Davranış 05.08'de KİTE taşındı (`ui/filter-chip`): burada elle
