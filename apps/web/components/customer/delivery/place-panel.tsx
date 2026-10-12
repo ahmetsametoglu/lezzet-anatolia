@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import placeCopy from '@lezzet/i18n/customer/place';
+import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
 import { FormInputField } from '@/components/customer/form/form-input-field';
@@ -55,6 +57,9 @@ export function PlacePanel({ locale }: PlacePanelProps) {
               >
                 {t.promptSkip}
               </button>
+              <Link href="/delivery-zones" className="mt-1.5 w-max cursor-pointer font-sans text-control text-olive-dark hover:underline">
+                {placeCopy[locale].placeNotice.zones}
+              </Link>
             </div>
             {account ? (
               <AddressCards

@@ -27,7 +27,8 @@
       "faq": "SSS",
       "imprint": "Yasal bilgiler ve iletişim",
       "help": "Yardım",
-      "writeUs": "Bize yazın"
+      "writeUs": "Bize yazın",
+      "zones": "Teslimat bölgeleri"
     },
     "legal": {
       "terms": "Yasal bilgiler",
@@ -74,7 +75,8 @@
       "faq": "FAQ",
       "imprint": "Mentions légales et contact",
       "help": "Aide",
-      "writeUs": "Nous écrire"
+      "writeUs": "Nous écrire",
+      "zones": "Zones de livraison"
     },
     "legal": {
       "terms": "Mentions légales",
@@ -121,7 +123,8 @@
       "faq": "FAQ",
       "imprint": "Impressum und Kontakt",
       "help": "Hilfe",
-      "writeUs": "Schreiben Sie uns"
+      "writeUs": "Schreiben Sie uns",
+      "zones": "Liefergebiete"
     },
     "legal": {
       "terms": "Impressum",

@@ -180,9 +180,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
   ekrandan çıkınca ya da uygulama kapanınca kayboluyor; kısmi kayıttan sonra tamamlanan satır boş açılıyor ve kayıt silinmiş
   sanılıyor (sahada ölçüldü, test sunucusu).
 
-- [ ] (K.72) [hedef: web] **Teslimat bölgeleri sayfasının masaüstü tasarımı yok** — sayfa telefon için kuruldu (14a + 14f,
-  `design/07-kesif/Kesif - Teslimat Bolgeleri.dc.html`); masaüstünde bağlantısı yok, adresle açılırsa telefon düzeni dar sütunda
-  çiziliyor. Neden: `design/01-musteri/Musteri Web.dc.html`'de bu sayfanın karşılığı yok, masaüstü düzeni tasarımda verilmeden kurulmaz.
 - [x] (21.6) **Katalog okuma uçları:** `GET /api/v1/categories` (tek tur) + `GET /api/v1/products` (keyset imleç + arama/kategori/sıralama) + `GET /api/v1/products/:slug` (çeşit/aile/benzer) — oturumsuz gezilebilir (public), depo süzgeci ve fiyat kuralı WEB İLE AYNI çekirdekten; web lib'inde kalan orkestrasyon varsa YENİDEN YAZILMAZ, terfi raporlanır (tüzük §3.1).
   - Görev kapandı; koddaki `BEKLEYEN(21.6)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [x] (21.7) **Katalog ekranı — ilk gerçek ekran:** v3 tasarımından birebir; kategori çipleri + 2 sütun kare kart ızgarası (`ProductPhotoCard`) + keyset sonsuz kaydırma + iskelet/boş/hata durumları; ekran başına messages (fr/de/tr, cihaz dili eşlemesi); fiyat cihazda biçimlenir. Ticari bağlamın uca bağlanmasıyla (21.6 kapanışı) aynı turda, iki ajan paralel.

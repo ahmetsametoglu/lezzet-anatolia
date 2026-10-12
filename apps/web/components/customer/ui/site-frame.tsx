@@ -207,6 +207,7 @@ export function SiteFrame({
                 { label: t.nav.catalog, href: '/catalog' },
                 { label: t.nav.packages, href: '/packages' },
                 { label: t.nav.recipes, href: '/recipes' },
+                { label: t.footer.zones, href: '/delivery-zones' },
               ]}
             />
             <FooterColumn
