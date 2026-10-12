@@ -13,10 +13,11 @@ const answering = (status: number, body: unknown) =>
 
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
+  delete process.env.PENNYLANE_MODE;
 });
 
-// Sağlayıcının reddi ile ağ hatası karışırsa, yalnız gönderim yetkili Resend anahtarı geçersiz sayılırsa ya da eksik anahtarla
-// sağlayıcıya gidilirse kırmızıya döner.
+// Sağlayıcının reddi ile ağ hatası karışırsa, yalnız gönderim yetkili Resend anahtarı geçersiz sayılırsa, eksik anahtarla sağlayıcıya
+// gidilirse ya da kipin şirketine ait olmayan Pennylane anahtarı çalışıyor sayılırsa kırmızıya döner.
 describe('anahtar sınaması', () => {
   it('yetkisiz cevap reddir, ağ hatası ulaşılamazlıktır', async () => {
     const lookup = values({ anthropic_api_key: 'sk-ant-yanlis' });
@@ -41,6 +42,15 @@ describe('anahtar sınaması', () => {
     const result = await checkIntegrationKey('hiboutik_api_key', values({ hiboutik_account: 'lezzet', hiboutik_api_key: 'k' }), network);
     expect(result).toEqual({ status: 'incomplete', missing: ['hiboutik_user'] });
     expect(network).not.toHaveBeenCalled();
+  });
+
+  it('Pennylane anahtarı kipin şirketine ait değilse reddedilir', async () => {
+    process.env.PENNYLANE_MODE = 'sandbox';
+    const lookup = values({ pennylane_api_token: 'pl_anahtar' });
+    const live = answering(200, { company: { id: 1, name: 'Canlı şirket', reg_no: '912345678' } });
+    expect((await checkIntegrationKey('pennylane_api_token', lookup, live)).status).toBe('rejected');
+    const sandbox = answering(200, { company: { id: 2, name: 'Test şirketi', reg_no: 'sandbox-912345678' } });
+    expect(await checkIntegrationKey('pennylane_api_token', lookup, sandbox)).toEqual({ status: 'ok' });
   });
 
   it('Revolut imza alanına API anahtarı yapıştırılırsa reddedilir', async () => {

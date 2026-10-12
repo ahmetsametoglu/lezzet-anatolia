@@ -79,6 +79,15 @@ export async function pennylaneFromSecrets(db: Db): Promise<PennylanePort | null
   return pennylanePort({ token, mode: mode.data });
 }
 
+/** Anahtarın şirketi kiple uyuşmuyorsa sebebi, uyuşuyorsa `null`; istemci de Bağlantılar sınaması da bu kuralı kullanır. */
+export function companyModeMismatch(company: { name: string; reg_no: string }, mode: PennylaneMode): string | null {
+  const sandbox = company.reg_no.startsWith('sandbox-');
+  if (sandbox === (mode === 'sandbox')) return null;
+  return sandbox
+    ? `Pennylane canlı kipte ama anahtar test şirketinin (${company.name}) — PENNYLANE_MODE ya da anahtar yanlış`
+    : `Pennylane test kipinde ama anahtar canlı şirketin (${company.name}) — PENNYLANE_MODE ya da anahtar yanlış`;
+}
+
 /** Muhasebe portunun Pennylane uyarlaması; anahtarın şirketi ilk istekte bir kez okunur ve kiple karşılaştırılır. */
 export function pennylanePort(config: PennylaneConfig): PennylanePort {
   const clock = config.clock ?? realClock;
@@ -128,15 +137,8 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     company ??= get('/me')
       .then((body) => parse(PennylaneApiMeSchema, body, 'şirket').company)
       .then(({ id, name, reg_no }) => {
-        const sandbox = reg_no.startsWith('sandbox-');
-        if (sandbox !== (config.mode === 'sandbox')) {
-          throw new PennylaneError({
-            code: 'company_mismatch',
-            message: sandbox
-              ? `Pennylane canlı kipte ama anahtar test şirketinin (${name}) — PENNYLANE_MODE ya da anahtar yanlış`
-              : `Pennylane test kipinde ama anahtar canlı şirketin (${name}) — PENNYLANE_MODE ya da anahtar yanlış`,
-          });
-        }
+        const mismatch = companyModeMismatch({ name, reg_no }, config.mode);
+        if (mismatch) throw new PennylaneError({ code: 'company_mismatch', message: mismatch });
         return { id, name, regNo: reg_no, mode: config.mode };
       })
       .catch((err: unknown) => {

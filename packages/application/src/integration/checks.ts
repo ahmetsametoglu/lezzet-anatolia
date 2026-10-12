@@ -1,7 +1,8 @@
 import { createECDH } from 'node:crypto';
 import { isSendcloudError, listShipments } from '@lezzet/sendcloud';
 import { probeR2Credentials } from '@lezzet/storage';
-import { RevolutModeEnum, type IntegrationSecretName } from '@lezzet/types';
+import { PennylaneApiMeSchema, PennylaneModeEnum, RevolutModeEnum, type IntegrationSecretName } from '@lezzet/types';
+import { companyModeMismatch } from '../accounting/pennylane/client';
 import { RevolutError, revolutClient } from '../order/revolut';
 import { hiboutikRegister } from '../register/hiboutik/client';
 import { HiboutikError } from '../register/hiboutik/errors';
@@ -80,13 +81,22 @@ const revolutWebhook: Probe = {
   },
 };
 
+/** Geçerli bir anahtar da kipin şirketine ait değilse işe yaramaz: istemci o anahtarla hiçbir istek göndermez. */
 const pennylane: Probe = {
   needs: ['pennylane_api_token'],
-  run: async (value, fetchImpl) =>
-    judge(
-      await get(fetchImpl, 'https://app.pennylane.com/api/external/v2/me', { Authorization: `Bearer ${value('pennylane_api_token')}` }),
-      'Pennylane',
-    ),
+  async run(value, fetchImpl) {
+    const mode = PennylaneModeEnum.safeParse(process.env.PENNYLANE_MODE);
+    if (!mode.success)
+      return { status: 'unverifiable', detail: 'PENNYLANE_MODE ortamda yok; anahtarın hangi şirkete ait olması gerektiği bilinmiyor' };
+    const res = await get(fetchImpl, 'https://app.pennylane.com/api/external/v2/me', {
+      Authorization: `Bearer ${value('pennylane_api_token')}`,
+    });
+    if (!res.ok) return judge(res, 'Pennylane');
+    const me = PennylaneApiMeSchema.safeParse(await res.json().catch(() => null));
+    if (!me.success) return unreachable('Pennylane şirket bilgisini beklenen biçimde vermedi');
+    const mismatch = companyModeMismatch(me.data.company, mode.data);
+    return mismatch ? rejected(mismatch) : { status: 'ok' };
+  },
 };
 
 const hiboutik: Probe = {

@@ -35,6 +35,8 @@
 - **Ölçülemeyen değer sıfır değildir:** `null` dön, okuyan taraf "bilinmiyor" göstersin.
 - **Log'a kimlik yazılır, içerik yazılmaz;** kimliksiz yolda `maskEmail`/`maskPhone`
   (`@lezzet/observability/mask`). OTP kodu hiçbir hâlde, maskeli bile yazılmaz.
+- **Dış servis anahtarı çağrı anında okunur:** Bağlantılar'da (Vault) yazılan değer süreç ortamına dakikada bir
+  biner (`loadIntegrationSecrets`); anahtarla kurulan istemci modül düzeyinde saklanmaz. Yeni anahtar → `INTEGRATIONS.md`.
 - **Depo bir DEĞİŞMEZDİR:** stok/rezervasyon/sipariş/kabul deposuz yazılmaz, okuma depo süzgeçsiz
   yapılmaz; varsayılan depo yok (adresin posta kodundan ya da personelin deposundan gelir).
   `available_stock_total` yalnız "hiç var mı" sorusunundur.

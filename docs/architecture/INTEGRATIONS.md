@@ -13,7 +13,25 @@ değerleri kendi belleğindeki ortama yükler ve dakikada bir tazeler (`loadInte
 böylece görür, disk üzerindeki ortam dosyasına yazılmaz. Burada yazılmamış anahtar için ortam dosyasındaki değer okunur. Ekrana
 değer gelmez: anahtar kaynağıyla (Vault ya da ortam) ve maskeli görünür (16 karakterden uzunsa son dört hanesiyle); tam değer
 yöneticinin kopyala düğmesiyle o an sunucudan istenir ve kopyalama deftere kimlik ve anahtar adıyla düşer. Kip değişkenleri (`*_MODE`),
-veritabanı adresi, servis anahtarı ve Vault'un ana anahtarı ortamda kalır.
+veritabanı adresi, servis anahtarı ve Vault'un ana anahtarı ortamda kalır. Kip sunucunun test mi canlı dünyaya mı bağlandığını söyler ve
+yalnız canlıya geçişte değişir; o yüzden ekrandan değişmez.
+
+**Anahtarı okuyan kod.** Anahtar çağrı anında okunur: ortamdan (`process.env`) ya da `integrationSecrets` okuyucusundan. Anahtarla kurulan
+istemci modül düzeyinde saklanmaz; saklanacaksa anahtar değişince yeniden kurulur (`storage/src/r2.service.ts`), yoksa Bağlantılar'dan
+yenilenen anahtar süreç yeniden başlayana kadar görülmez. Betikler (`scripts/`) Vault'u yüklemez, yalnız ortam dosyasını okur. Değer
+loga, hata metnine ve ekran verisine yazılmaz.
+
+**Yeni anahtar eklemek.**
+
+1. Ad `IntegrationSecretNameEnum`'a (`types/src/entities/integration-secret.schema.ts`) ve migration'daki `integration_secret` ad kısıtına
+   yazılır; iki listeyi `application/src/integration/secrets.test.ts` karşılaştırır.
+2. Ortam adı `ENV_NAME`'e (`application/src/integration/secrets.ts`) yazılır; Vault'ta değer yokken ortam dosyasındaki okunur.
+3. Sınaması `checks.ts` → `PROBES`'a yazılır: ücretsiz, salt okuyan bir çağrı; 400/401/403 ret, başka hata ulaşılamazlık. Sağlayıcıda
+   sınanamayan değer (imza anahtarı, doğrulama dizesi) `unverifiable` döner, biçimi denetlenebiliyorsa denetlenir.
+4. Kartı `apps/web/…/settings/integration-keys-layout.ts`'e yazılır; etiket, sağlayıcının anahtarı verdiği sayfadaki addır. Her adın tam
+   bir kartta durduğunu `integration-keys-layout.test.ts` denetler.
+
+2 ve 3 eksikse derleme düşer; 1 ve 4 eksikse test düşer.
 
 ---
 

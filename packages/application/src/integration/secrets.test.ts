@@ -1,6 +1,23 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { IntegrationSecretName } from '@lezzet/types';
+import { IntegrationSecretNameEnum, type IntegrationSecretName } from '@lezzet/types';
 import { maskSecret, resolveSecret, secretCache } from './secrets';
+
+const MIGRATIONS = new URL('../../../../supabase/migrations/', import.meta.url).pathname;
+
+/** Migration'lardaki son `integration_secret` ad kısıtının listesi; kısıt sonradan değişirse en yeni tanım geçerlidir. */
+function constrainedNames(): string[] {
+  let last: string | null = null;
+  for (const file of readdirSync(MIGRATIONS)
+    .filter((name) => name.endsWith('.sql'))
+    .sort()) {
+    for (const match of readFileSync(`${MIGRATIONS}${file}`, 'utf8').matchAll(/integration_secret\b[^;]*?check \(name in \(([^)]*)\)/g)) {
+      last = match[1]!;
+    }
+  }
+  if (!last) throw new Error("integration_secret ad kısıtı migration'larda bulunamadı — kısıt taşındıysa bu test güncellenmeli");
+  return [...last.matchAll(/'([a-z0-9_]+)'/g)].map((match) => match[1]!);
+}
 
 const vault = (entries: Array<[IntegrationSecretName, string]>) => {
   const calls = { count: 0 };
@@ -60,6 +77,13 @@ describe('entegrasyon anahtarı okuyucusu', () => {
     await expect(cache.lookup(0)).rejects.toThrow('veritabanına ulaşılamadı');
     fail = false;
     expect((await cache.lookup(1))('hiboutik_api_key')).toBe('v2');
+  });
+});
+
+// Tipe eklenen anahtar veritabanı kısıtına eklenmezse (ilk kayıtta düşer) ya da kısıttan çıkan ad tipte kalırsa kırmızıya döner.
+describe('anahtar adları', () => {
+  it('tipteki ad listesi veritabanı kısıtıyla aynı', () => {
+    expect(constrainedNames().sort()).toEqual([...IntegrationSecretNameEnum.options].sort());
   });
 });
 
