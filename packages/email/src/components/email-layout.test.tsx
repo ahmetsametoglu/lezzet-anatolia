@@ -1,31 +1,11 @@
+import { Fragment, createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { render } from '@react-email/render';
-import { HeaderCard, InfoBlock, ItemsCard, MessageCard, NoticeCard, QuoteCard, StatusBlock, Timeline } from './email-layout';
+import { EmailLayout, HeaderCard, InfoBlock, ItemsCard, MessageCard, NoticeCard, QuoteCard, StatusBlock, Timeline } from './email-layout';
 
 /**
- * BLOKLARIN SOL HİZASI — sekiz blok, tek kenar (21.102 · MB-40).
- *
- * ── NEDEN TEST, NEDEN GÖZ DEĞİL ─────────────────────────────────────────────
- * Arıza *"metnin sol kenarı bloktan bloğa zıplıyor"*du ve sayfa kenarından ölçülünce BEŞ ayrı
- * değer çıkmıştı (46 · 54 · 55 · 57 · 59). Kimse bunu hata olarak bildirmedi; *"kartlar farklı
- * genişlikte"* diye, yani YANLIŞ ADLA bildirildi — kutular zaten aynı genişlikteydi.
- *
- * Düzeltme hizayı türetilir yaptı (`TEXT_INSET` tek yerde, `innerX(kenarlık, şerit)` her bloğun iç
- * dolgusunu ondan hesaplar). Geriye gidiş de aynı sessizlikte olur: yeni blok yazan biri
- * `padding: '18px 24px'` yazar, hiçbir şey patlamaz, kenar yeniden zıplar.
- *
- * ── ÖLÇÜM KAYNAĞI TEKRAR ETMEZ ──────────────────────────────────────────────
- * Testin ilk taslağı her blok için kenarlık ve şerit kalınlığını ELLE yazıyordu ve iki bloğu YANLIŞ
- * yazdım (QuoteCard'ın 2 px'i şerit değil `border-left`, StatusBlock'un 4 px'i kenarlık değil ayrı
- * bir hücre). Kaynağı tekrar eden bir test, kaynakla birlikte yanılır.
- *
- * Bu yüzden hiza **render edilmiş HTML'den TOPLANIYOR**: satır dolgusu + soldaki kenarlıklar +
- * varsa şerit hücresinin genişliği + içerik hücresinin sol dolgusu. Bu toplam müşterinin gözünde
- * metnin başladığı yerdir ve sekiz bloğun sekizinde de aynı olmak zorundadır. `innerX` dışarı
- * açılmadı, açılmamalı da — sınanan şey aritmetiği değil, SONUCU.
- *
- * **İlk sondada SAHTE YEŞİL yaşandı** (21.102 künyesi): ölçülen küme boş kaldı ve iddia boşluğa
- * geçti. O yüzden aşağıda önce kümenin dolu olduğu iddia ediliyor.
+ * Blokların metni sayfa kenarından aynı uzaklıkta başlamalı. Uzaklık render edilmiş HTML'den toplanır, çünkü kaynağın aritmetiğini
+ * tekrar eden bir test kaynakla birlikte yanılır.
  */
 
 /** Şablonun satır dolgusu — hizanın değişmeyen tabanı (`ROW_INSET`, `email-layout.tsx`). */
@@ -41,26 +21,19 @@ function leftOf(shorthand: string | undefined): number {
 }
 
 /**
- * Bir bloğun HTML'inde metnin sayfa kenarından uzaklığı.
- *
- * Sıra belgenin kendi sırası: ilk dolgu satırın (`Row`), ikincisi metni taşıyan hücrenin. Aradaki
- * her şey — tablonun kenarlığı, vurgu şeridi — metni sağa iter ve toplama girer.
+ * Bir bloğun HTML'inde metnin sayfa kenarından uzaklığı: ilk dolgu satırın (`Row`), ikincisi metni taşıyan hücrenin. Aradaki
+ * kenarlık ve vurgu şeridi metni sağa iter ve toplama girer.
  */
 async function textInset(node: React.ReactElement): Promise<number> {
   const html = await render(node);
 
   const paddings = [...html.matchAll(/padding:\s*([^;"]+)/g)];
-  // Sahte yeşile karşı: render bir şey üretmediyse aşağıdaki toplam `NaN` olur ve iddia anlamsız
-  // bir sayıyla kıyaslanırdı. Kümeyi ÖNCE doğruluyoruz.
+  // Render bir şey üretmezse toplam `NaN` olur ve iddia boşluğa geçer; küme önce doğrulanır.
   expect(paddings.length).toBeGreaterThanOrEqual(2);
   const [satir, icerik] = paddings;
   expect(leftOf(satir?.[1])).toBe(ROW_INSET);
 
-  /* SAYIM İÇERİK HÜCRESİNE KADAR — ilk taslak bütün HTML'i tarıyordu ve `ItemsCard`ta 167 çıktı:
-     tablonun İÇİNDEKİ sütun genişlikleri (`<td width="110">`) de toplama giriyordu. Oysa metnin sol
-     kenarını yalnız ONDAN ÖNCE gelen şeyler iter — içerideki her şey zaten o kenarın sağında.
-     Bu yüzden önek, içerik hücresinin açılış etiketinin SONUNA kadar alınıyor: ata düğümler ve
-     önceki kardeşler girer, kendi içeriği girmez. */
+  // Metnin sol kenarını yalnız içerik hücresinden önce gelenler iter; tablonun içindeki sütun genişlikleri sayılmaz.
   const onek = html.slice(0, html.indexOf('>', icerik?.index ?? 0));
 
   // Kenarlık: `border: 1px …` dört kenara birden yazar, yani soldaki de odur; `border-left` zaten
@@ -103,8 +76,7 @@ describe('blokların sol hizası', () => {
   });
 
   it('SEKİZ BLOK TEK KENARDA buluşuyor — arızanın kendisi beş ayrı değerdi', async () => {
-    // Tek tek doğru olmak yetmez: arıza "hangi blok yanlış" değil, "kaç farklı kenar var"dı.
-    // Küme tek elemanlı olmalı; iki elemanlı olduğu an sürüklenme geri gelmiş demektir.
+    // Tek tek doğru olmak yetmez; iki ayrı kenar varsa metin okurken zıplar.
     const kenarlar = new Set<number>();
     for (const [, node] of bloklar) kenarlar.add(await textInset(node));
 
@@ -112,12 +84,40 @@ describe('blokların sol hizası', () => {
   });
 
   it('şeritli blok da şeritsizle AYNI kenarda — şerit metni sağa itmez, iç dolgudan düşülür', async () => {
-    // Kırılgan olan tam bu: `StatusBlock`un 4 px'lik vurgu şeridi ayrı bir HÜCRE, kenarlık değil.
-    // Şeridi `innerX`e bildirmeyi unutan bir yazım metni tam 4 px sağa kaydırır ve gözle ancak
-    // komşu blokla yan yana görünür (ölçüldü 21.102: 59 ↔ 57).
+    // `StatusBlock`un 4 px'lik vurgu şeridi kenarlık değil ayrı bir hücredir; `innerX`e bildirilmezse metin 4 px sağa kayar.
     const seritli = await textInset(StatusBlock({ tone: 'red', headline: 'İptal', detail: 'Ödeme alınamadı.' }));
     const seritsiz = await textInset(NoticeCard({ title: 'Bilgi', text: 'Kısa not.' }));
 
     expect(seritli).toBe(seritsiz);
+  });
+});
+
+describe('dar ekran kuralı', () => {
+  it('telefonda kap ekrana sığar ve her satırın yatay dolgusu daralır', async () => {
+    // Kural yoksa 600 px'lik kap telefonda taşar ve Gmail uygulaması e-postayı sığdırırken tabloların genişliğini bozar.
+    const html = await render(
+      EmailLayout({
+        preview: 'Önizleme',
+        locale: 'fr',
+        brandName: 'Lezzet Anatolie',
+        region: 'Strasbourg',
+        footer: { address: 'Adres', notice: 'Bilgi.', preferencesLabel: 'Tercihler', preferencesUrl: 'https://example.test' },
+        children: bloklar.map(([ad, node]) => createElement(Fragment, { key: ad }, node)),
+      }),
+    );
+    const media = /@media[^{]*\(max-width:\s*(\d+)px\)\s*\{(.*)\}\s*<\/style>/s.exec(html);
+    expect(Number(media?.[1])).toBeGreaterThan(600);
+    const kurallar = new Map<string, string>();
+    for (const m of (media?.[2] ?? '').matchAll(/\.([\w-]+)\{([^}]*)\}/g)) kurallar.set(m[1] ?? '', m[2] ?? '');
+    const kurali = (etiket: string) => kurallar.get(/class="([^"]+)"/.exec(etiket)?.[1] ?? '') ?? '';
+
+    expect(kurali(/<table[^>]*width="600"[^>]*>/.exec(html)?.[0] ?? '')).toMatch(/width:100%/);
+
+    const satirlar = [...html.matchAll(/<td[^>]*>/g)]
+      .map((m) => m[0])
+      .filter((etiket) => new RegExp(`padding:\\S+ ${ROW_INSET}px`).test(etiket));
+    // Başlık, sekiz blok ve alt bilgi; küme boş kalırsa iddia boşluğa geçer.
+    expect(satirlar.length).toBeGreaterThanOrEqual(bloklar.length + 2);
+    for (const etiket of satirlar) expect(Number(/padding-left:(\d+)px/.exec(kurali(etiket))?.[1])).toBeLessThan(ROW_INSET);
   });
 });

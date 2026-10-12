@@ -6,66 +6,30 @@ import type { NotificationLine, NotificationStep, NotificationTotal, PreferredLa
 void React;
 
 /**
- * TÜM e-postaların ortak iskeleti ve blokları — `design/project/Email - *.html` birebir.
- *
- * Sipariş mailleri (onay / yolda / teslim / iptal / iade / eksik) ve talep mailleri aynı gövdeyi
- * paylaşır; farkları doldurdukları bloklardır. Ortak iskelet olmasaydı başlık ve alt bilgi her
- * şablonda ayrı dururdu — biri değişince ötekiler eskirdi. **Talep mailinin ayrı bir çizimi yok**
- * (`design/project`'te `Email - Talep` yok); marka iskeleti aynen kullanılır, uydurulmaz.
- *
- * **Tasarımın iki bağlayıcı kararı burada uygulanır:**
- * - **Web fontu yok.** Lora yerine Georgia, Karla yerine Arial. Mail istemcileri web fontu
- *   yüklemez; hiyerarşi ölçü ve ağırlıkla korunur.
- * - **Tablo düzeni + inline stil.** Outlook flexbox/grid bilmez; `<div>` ile kurulan kart orada
- *   dağılır. Bu yüzden `role="presentation"` tablolar — sunum tablosu, veri tablosu değil.
+ * Bütün e-postaların ortak iskeleti ve blokları; tasarım `design/08-export/Email - *.html`. Mail istemcileri web fontu yüklemediği
+ * ve Outlook flexbox bilmediği için yazı sistem fontuyla, düzen satır içi stilli sunum tablolarıyla kurulur.
  */
 
 const SERIF = "Georgia,'Times New Roman',serif";
 const SANS = 'Arial,Helvetica,sans-serif';
 
-/*
-  METNİN HİZASI — TEK SAYI, YEDİ BLOK (MB-40, ölçüldü 24.08).
-
-  ── ARIZA NEYDİ ─────────────────────────────────────────────────────────────
-  Arka-uç şeridi talep mailinde *"üç kartın üç farklı genişliği"* diye bir bulgu bırakmış ve
-  ölçümünü bize devretmişti. Ölçünce izlenim doğru, ADI yanlış çıktı: **kartların kutuları AYNI
-  genişlikte** (600 − 2×32 = 536 px). Farklı olan, metnin nerede BAŞLADIĞI — ve sayfa kenarından
-  ölçüldüğünde bugün beş ayrı değer vardı:
-
-      QuoteCard 46 · InfoBlock 54 · NoticeCard 55 · HeaderCard/Timeline/Card 57 · StatusBlock 59
-
-  Yani maili aşağı okurken metnin sol kenarı zıplıyordu. Hiçbiri hata vermez, hiçbiri testte
-  görünmez; yalnız mail derli toplu durmaz.
-
-  ── NEDEN TEK SABİT, BLOK BLOK DÜZELTME DEĞİL ───────────────────────────────
-  Değerler elle yazılmıştı ve her blok kendi iç boşluğunu kendi biliyordu; sekizinci blok yazılan
-  gün altıncı bir değer doğardı. Hiza artık TÜRETİLİYOR: ortak hedef tek yerde durur, her blok
-  kendi kenarlığını/şeridini ondan düşer. Yeni blok yazan kişi bir sayı seçmez, `innerX`i çağırır.
-
-  ── SÜRÜKLENME TALEP MAİLİNE ÖZEL DEĞİLDİ ───────────────────────────────────
-  Bulgu talep mailinden geldi ama beş değerin dördü sipariş/geri bildirim maillerinde de duruyor;
-  yalnız talep mailinin üç bloğunu hizalamak, aynı arızayı öteki maillerde bırakmak olurdu.
-*/
-
-/** Gövde satırının yatay dolgusu — `Row`ın tek yatay ölçüsü. */
+/** Gövde satırının yatay dolgusu; `Row`, başlık ve alt bilgi aynı değeri kullanır. */
 const ROW_INSET = 32;
 
 /**
- * Metnin SAYFA KENARINDAN uzaklığı — bütün blokların ortak hizası.
- *
- * 57 seçildi çünkü bugün ÇOĞUNLUK oydu (`HeaderCard` · `Timeline` · `Card`): en az bloğu oynatan
- * değer, yani en az görsel risk taşıyan. Keyfî bir sayı değil, mevcut tasarımın kendi kararı.
+ * Tasarımın dar ekran kuralı: kap ekrana sığar, satır dolgusu daralır. Kural yoksa 600 px'lik kap telefonda taşar ve Gmail
+ * uygulaması e-postayı kendisi sığdırırken tabloların genişliğini bozar.
  */
+const NARROW_SCREEN_CSS =
+  '@media only screen and (max-width:620px){.wrap{width:100% !important;}.pad{padding-left:20px !important;padding-right:20px !important;}}';
+
+/** Metnin sayfa kenarından uzaklığı; bütün bloklar metni bu tek kenardan başlatır, yoksa okurken sol kenar bloktan bloğa zıplar. */
 const TEXT_INSET = 57;
 
-/**
- * Bir bloğun iç YATAY boşluğu: ortak hizadan satır dolgusu, bloğun kendi kenarlığı ve (varsa) sol
- * vurgu şeridi düşülür. Kenarlığı olmayan blok (`InfoBlock`) 0 geçer — 1 px'lik fark bile metni
- * komşusundan kaydırıyordu ve tam olarak bu yüzden elle hesaplanmamalı.
- */
+/** Bir bloğun iç yatay dolgusu: ortak hizadan satır dolgusu, bloğun kenarlığı ve varsa sol vurgu şeridi düşülür. */
 const innerX = (border: number, stripe = 0): number => TEXT_INSET - ROW_INSET - border - stripe;
 
-/** Tasarım paleti (`design/project/Email - *.html`) — mailde CSS değişkeni çalışmaz, sabit gerekir. */
+/** Tasarım paleti; mailde CSS değişkeni çalışmadığı için sabittir. */
 const C = {
   page: '#e9e6df',
   card: '#faf6ec',
@@ -107,7 +71,10 @@ interface EmailLayoutProps {
 export function EmailLayout({ preview, locale, brandName, region, footer, children }: EmailLayoutProps) {
   return (
     <Html lang={locale}>
-      <Head />
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>{NARROW_SCREEN_CSS}</style>
+      </Head>
       <Preview>{preview}</Preview>
       <body style={{ margin: 0, padding: 0, backgroundColor: C.page }}>
         <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.page }}>
@@ -115,6 +82,7 @@ export function EmailLayout({ preview, locale, brandName, region, footer, childr
             <tr>
               <td align="center" style={{ padding: '36px 16px' }}>
                 <table
+                  className="wrap"
                   role="presentation"
                   width={600}
                   cellPadding={0}
@@ -124,7 +92,7 @@ export function EmailLayout({ preview, locale, brandName, region, footer, childr
                 >
                   <tbody>
                     <tr>
-                      <td style={{ padding: '22px 32px', borderBottom: `1px solid ${C.border}` }}>
+                      <td className="pad" style={{ padding: `22px ${ROW_INSET}px`, borderBottom: `1px solid ${C.border}` }}>
                         <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%' }}>
                           <tbody>
                             <tr>
@@ -151,9 +119,16 @@ export function EmailLayout({ preview, locale, brandName, region, footer, childr
 
                     <tr>
                       <td
+                        className="pad"
                         style={{
-                          backgroundColor: C.cream, padding: '22px 32px', borderTop: `1px solid ${C.border}`,
-                          borderRadius: '0 0 20px 20px', fontFamily: SANS, fontSize: 11.5, lineHeight: '19px', color: C.footerText,
+                          backgroundColor: C.cream,
+                          padding: `22px ${ROW_INSET}px`,
+                          borderTop: `1px solid ${C.border}`,
+                          borderRadius: '0 0 20px 20px',
+                          fontFamily: SANS,
+                          fontSize: 11.5,
+                          lineHeight: '19px',
+                          color: C.footerText,
                         }}
                       >
                         {footer.address}
@@ -177,21 +152,17 @@ export function EmailLayout({ preview, locale, brandName, region, footer, childr
 
 /** Gövde satırı — iskeletin `children`'ı hep `<tr>` olmalı; dolgu tek yerden verilir. */
 function Row({ children, top, bottom }: { children: React.ReactNode; top: number; bottom: number }) {
-  /* YATAY dolgu prop DEĞİL: on iki çağıranın on ikisi de aynı 32'yi yazıyordu ve `ROW_INSET`
-     yalnız `innerX`in içinde yaşadığı sürece SABİT YALAN SÖYLERDİ — biri onu değiştirse satırlar
-     yerinde kalır, hiza sessizce bozulurdu. Dikey dolgu bloktan bloğa gerçekten değişiyor
-     (ritim), o yüzden o prop kaldı. */
+  // Yatay dolgu prop değildir, çünkü blokların hizası ondan türetilir; dikey dolgu bloğun ritmidir.
   return (
     <tr>
-      <td style={{ padding: `${top}px ${ROW_INSET}px ${bottom}px` }}>{children}</td>
+      <td className="pad" style={{ padding: `${top}px ${ROW_INSET}px ${bottom}px` }}>
+        {children}
+      </td>
     </tr>
   );
 }
 
-/**
- * Durum tonu. Akış bildirimleri yeşildir; **istisna bildirimleri kendi rengini taşır** — iptal
- * kiremit, eksik karşılanma amber. Renk bir süs değil, mailin ilk yarım saniyede okunan hâlidir.
- */
+/** Durum tonu: akış bildirimleri yeşil, istisna bildirimleri kendi renginde (iptal kiremit, eksik karşılanma amber), çünkü mailin ilk okunan hâli renktir. */
 type StatusTone = 'green' | 'red' | 'amber';
 
 const TONE: Record<StatusTone, { soft: string; ink: string; border: string }> = {
@@ -234,8 +205,7 @@ export function StatusBlock({ tone, headline, detail }: { tone: StatusTone; head
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${colors.border}`, borderRadius: 16 }}>
         <tbody>
           <tr>
-            {/* Sol vurgu şeridi de hizaya dahil: 4 px'i `innerX`e bildiriliyor, yoksa bu bloğun
-                metni komşularından tam o kadar sağda başlardı (ölçüldü: 59 ↔ 57). */}
+            {/* Şeridin 4 px'i `innerX`e bildirilir, yoksa bu bloğun metni komşularından o kadar sağda başlar. */}
             <td width={4} style={{ width: 4, backgroundColor: colors.ink, fontSize: 0, lineHeight: 0 }}>
               &nbsp;
             </td>
@@ -264,37 +234,35 @@ export function Headline({ title, intro }: { title: string; intro: React.ReactNo
   );
 }
 
+/** Künyenin soluk ikincil satırı. */
+const META_TEXT = { fontFamily: SANS, fontSize: 12.5, lineHeight: '18px', color: C.faint } as const;
+
 /**
- * **Künye SATIRI** — kartın kutusuz kardeşi (09.08, kullanıcı gözlemi telefondan).
- *
- * Neden var: künye bir HABER değil, bir etikettir ("hangi kayıt, ne zaman"). Kart olarak çizilince
- * mailin en üstünde, asıl haberin ÖNÜNDE tam yükseklikte bir blok kaplıyordu ve dar bir telefon
- * ekranında müşteri cevabı görmek için kaydırmak zorunda kalıyordu (ölçüldü: iki satırlık içerik,
- * altı dikey blok). Kutusu alınınca blok sayısı düşer, sıralama serbest kalır.
- *
- * **Durum hapı YOK** ve bu bilinçli: durumu üstteki `StatusPill` zaten söylüyor. Kartlı sürümde iki
- * kez yazılıyordu (`✉ Ouverte` … `Autre · Ouverte le 9 août · Ouverte`) — aynı bilgiyi iki kez
- * okutmak, okuyanın ikisinin farklı şeyler olduğunu sanmasına yol açar.
- *
- * Kartlı `HeaderCard` DURUYOR: sipariş mailleri onu kullanıyor ve orada künye gerçekten haberin
- * kendisidir (referans no + tutar + durum bir arada okunur).
+ * Künye satırı, kartın kutusuz kardeşi: künye haber değil etikettir ve dar ekranda asıl haberin önünde tam bir blok kaplamamalı.
+ * Durum hapı yoktur, çünkü durumu üstteki `StatusPill` söyler.
  */
 export function MetaLine({ text }: { text: string }) {
   return (
     <Row top={0} bottom={20}>
-      <div style={{ fontFamily: SANS, fontSize: 12.5, lineHeight: '18px', color: C.faint }}>{text}</div>
+      <div style={META_TEXT}>{text}</div>
     </Row>
   );
 }
 
-/**
- * Künye kartı: kalın başlık + soluk ikincil satır + sağda durum hapı.
- *
- * Siparişte "LZA-2451 · 22 Temmuz · Onaylandı", talepte "Eksik ürün · 22 Temmuz'da açıldı ·
- * İnceleniyor". İki mailde aynı kutu, çünkü müşteri için ikisi de aynı soruyu cevaplıyor:
- * *hangi kayıt, ne zaman, şu an ne durumda*.
- */
-export function HeaderCard({ title, meta, statusLabel }: { title: string; meta: string; statusLabel: string }) {
+
+/** Künye kartı: başlık, soluk ikincil satır ve sağda durum hapı; "hangi kayıt, ne zaman, şu an ne durumda" sorusunu cevaplar. */
+export function HeaderCard({
+  title,
+  meta,
+  statusLabel,
+  metaBelow = false,
+}: {
+  title: string;
+  meta: string;
+  statusLabel: string;
+  /** İkincil satır başlığın altında; uzun başlık hapı sıkıştırmasın diye. */
+  metaBelow?: boolean;
+}) {
   return (
     <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${C.innerBorder}`, borderRadius: 16 }}>
@@ -306,7 +274,11 @@ export function HeaderCard({ title, meta, statusLabel }: { title: string; meta: 
                   <tr>
                     <td valign="middle" style={{ fontFamily: SERIF, fontSize: 22, lineHeight: '28px', color: C.ink }}>
                       {title}
-                      <span style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 'normal', color: C.faint }}>{`\u00A0\u00A0${meta}`}</span>
+                      {metaBelow ? (
+                        <div style={META_TEXT}>{meta}</div>
+                      ) : (
+                        <span style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 'normal', color: C.faint }}>{`\u00A0\u00A0${meta}`}</span>
+                      )}
                     </td>
                     <td valign="middle" align="right">
                       <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
@@ -600,19 +572,9 @@ export function SummaryCard({
 }
 
 /**
- * Yazışma balonu — personelin cevabı (14.7). Beyaz kart, üstte kim yazdı satırı, altta metnin
- * KENDİSİ.
- *
- * **Metin kırpılmaz:** personelin cevabı müşteriye aynen görünür (DOMAIN §15 — iç not yoktur).
- * Kırpsaydık müşteri cevabı okumak için tıklamak zorunda kalırdı; oysa mail zaten cevabı taşımak
- * için gidiyor. Satır sonları korunur (`whiteSpace: 'pre-line'`) — operatörün kurduğu paragraf
- * düzeni tek bir bloğa çökmesin.
+ * Yazışma kartı: personelin cevabı kırpılmadan ve satır sonlarıyla çizilir, çünkü mail cevabı taşımak için gider. Başlık art arda
+ * gelen kartlarda yalnız ilkinde yazılır (`null`); gövde, biçimli metin çizilebilsin diye düğümdür.
  */
-// `title` NULL OLABİLİR (17.08): art arda gelen kartlarda başlığı tekrarlamak ("Cevabımız ·
-// Cevabımız · Cevabımız") bilgi değil gürültüdür — ilki söyler, ötekiler sürdürür.
-// `body` DÜĞÜM (06.09): metin biçimli çizilebilsin diye — ajan cevabını `*kalın*`/`•` madde ile
-// yazıyor ve HTML mail bunu çizebiliyor. Kart yine metnin ne olduğunu bilmiyor; çizimi çağıran
-// getirir. Dize hâlâ geçerli bir düğüm, yani çağıran taraflar aynen çalışır.
 export function MessageCard({ title, meta, body }: { title: string | null; meta: string | null; body: React.ReactNode }) {
   return (
     <Card title={title}>
@@ -633,20 +595,8 @@ export interface EmailQuote {
 }
 
 /**
- * Alıntılanan yazışma (16.4) — mailin KONUSU olan mesajın altında duran bağlam.
- *
- * Ayrı bir çizimi yok; `MessageCard`ın soluklaştırılmış hâlidir ve alıntı olduğunu üç işaretle
- * söyler: sol çizgi, küçük punto, soluk renk. Yeni mesajla aynı ağırlıkta çizilseydi müşteri
- * hangisinin bugünkü haber olduğunu ayırt edemezdi — mailin tek işi o farkı göstermek.
- *
- * Sıra **en yeniden eskiye**: e-posta alıntı geleneği bu, ve müşterinin aradığı şey en son ne
- * konuşulduğu.
- *
- * ── KUTUSU KALKTI (09.08 · referans proje `support-reply.tsx`) ───────────────
- * Beyaz kart içindeydi ve dar ekranda mailin üçüncü tam yükseklikli bloğuydu. Ama alıntı bir KART
- * değil bir DİPNOTTUR: sol çizgi + soluk renk zaten "bu eski" diyor, kutu bunun üstüne bir de
- * "bu ayrı bir bölüm" diyordu. Referans projede aynı blok kutusuz — yalnız `borderLeft` ve soluk
- * metin. Kutunun kalkması kartlı blok sayısını üçten BİRE indirdi (yalnız haberin kendisi kart).
+ * Alıntılanan yazışma: mailin konusu olan mesajın altındaki bağlam; kutusuzdur ve sol çizgi, küçük punto, soluk renkle yeni
+ * mesajdan ayrılır. Sıra en yeniden eskiye, çünkü müşteri en son ne konuşulduğunu arar.
  */
 export function QuoteCard({ title, entries }: { title: string; entries: readonly EmailQuote[] }) {
   return (
@@ -664,10 +614,7 @@ export function QuoteCard({ title, entries }: { title: string; entries: readonly
         >
           <tbody>
             <tr>
-              {/* Alıntı bir KART DEĞİL, şeritle işaretli bir liste — kutusu yok, o yüzden hizayı
-                  kendi şeridinden (2 px) türetiyor. Bugüne dek metni 46 px'te başlıyordu, yani
-                  kartların 11 px SOLUNDA: alıntı normalde daha içeride durur, burada dışarıda
-                  duruyordu ve göz sütunu kaybediyordu. */}
+              {/* Alıntının kutusu yok; hizayı kendi 2 px'lik şeridinden türetir. */}
               <td
                 style={{
                   padding: index === 0 ? `0 0 12px ${innerX(2)}px` : `12px 0 12px ${innerX(2)}px`,
@@ -711,9 +658,8 @@ export function CtaButton({ label, url }: { label: string; url: string }) {
 }
 
 /**
- * Krem ikincil kart: serif başlık + açıklama + metin bağlantısı ("Bir sorun mu var?").
- * Beyaz kartlardan tonuyla ayrılır — bu bir bilgi değil, bir DAVETtir; birincil eylemle yarışmaz.
- * Bağlantı verilmezse yalnız bilgi kutusu olur (iade mailindeki "kapıda ödemede…" notu gibi).
+ * Krem ikincil kart: serif başlık, açıklama ve isteğe bağlı bağlantı ("Bir sorun mu var?"). Beyaz kartlardan tonuyla ayrılır,
+ * çünkü bilgi değil davettir ve birincil eylemle yarışmaz.
  */
 export function NoticeCard({ title, text, linkLabel, linkUrl }: { title: string; text: string; linkLabel?: string | null; linkUrl?: string | null }) {
   return (
