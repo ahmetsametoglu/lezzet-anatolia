@@ -31,9 +31,9 @@ güncellenmez, yeniden derlenir. **Veritabanı ORTAKTIR** (`db:refresh` ikisini 
 ### İKİ SENARYO 3001'DE KOŞAMAZ — ve bu bir arıza değil
 
 `checkout-otp` ve `checkout-steps` misafir OTP'sinden geçiyor; sabit doğrulama kodu
-(`OTP_TEST_CODE`) ise `NODE_ENV === 'production'` iken **bilerek kapalı** (`application/auth/otp.ts`
-— iki kilidin biri, `DEV_AUTH_BYPASS` emsali). 3001 bir production derlemesi olduğu için kod
-rastgele doğar ve maille gider; test onu okuyamaz.
+(`OTP_TEST_CODE`) ise `NODE_ENV === 'production'` iken ya da süreç yerel olmayan veritabanına
+bağlıyken **bilerek kapalı** (`application/auth/otp.ts`, iki bağımsız kilit). 3001 bir production
+derlemesi olduğu için kod rastgele doğar ve maille gider; test onu okuyamaz.
 
 O ikisi **dev'e karşı koşulur** ve orada yeşildir (ölçüldü 20.08: 59,8 sn · 17,6 sn):
 

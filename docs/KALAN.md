@@ -156,7 +156,8 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (18.10) **Paket sınırı aracı son kontrolü:** `apps/*` sipariş/stok/para yazımını yalnız domain-core üzerinden yapıyor; database servislerini doğrudan import edemiyor (00'da kurulan kural üretimde sağlam mı).
 - [~] (18.11) **Süreç emniyet ağı + cron kabuğu testi** (denetim G2 · T4).
 - [~] (18.12) **GDPR: kişisel verinin silinmesi ve maskelenmesi — arka uç motoru.**
-- [ ] (18.13) **`OTP_TEST_CODE` kapısı üretime çıkmadan SÖKÜLECEK** (kullanıcı kararı 15.08: *"şimdilik kalsın ama ileride kaldırılması gereken bir özellik"*).
+- [x] (18.13) ~~**`OTP_TEST_CODE` kapısı üretime çıkmadan SÖKÜLECEK**~~ **SÖKÜLMEYECEK — testler için kalır; canlıda iki bağımsız kilit kapatır: üretim kipi ve yerel olmayan veritabanı** *(kullanıcı kararı 12.10)*
+  - Görev kapandı; koddaki `BEKLEYEN(18.13)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 
 ## 19 · Çok Depo (Depo Ağı)
 

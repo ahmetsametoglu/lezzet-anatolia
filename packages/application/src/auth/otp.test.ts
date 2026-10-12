@@ -1,31 +1,21 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { requestOtpCode, verifyOtpCode } from './otp';
+import { devOtpCode, requestOtpCode, verifyOtpCode } from './otp';
 
 /**
- * OTP orkestrasyonunun DB'ye vuran testleri (entegrasyon kökü). Kod `OTP_TEST_CODE` kapısıyla
- * sabitlenir — mail HİÇ gitmez, sınanan şey akışın tamamıdır (hash, cooldown, sayaç, tek-kullanım,
- * generateLink → trigger → profil, dil tohumu).
- *
- * Paylaşılan-DB disiplini (CLAUDE §4b): e-posta DAMGALI (yalnız bu koşunun satırları), env
- * "önce oku sonra geri koy", teardown `purgeTestData` (elle silme yok — sıra tek yerde).
+ * Kodlu girişin akışı uçtan uca (hash, bekleme süresi, sayaç, tek kullanım, profil, dil tohumu); kod test kapısıyla sabitlenir ve
+ * mail gitmez. E-posta damgalıdır, ortam değişkeni okunup geri konur, temizlik `purgeTestData` ile.
  */
-// Kod KOŞU-BAŞINA türetilir, sabit değil: `token_hash` GLOBAL TEKİL ve hash yalnız koddan
-// çıkıyor — sabit kod, tabloda aynı hash'li herhangi bir satır (başka şeridin testi, e2e'nin
-// sabit 123456'sı, düşmüş bir koşunun artığı) dururken kısıt ihlaline çarpar (BEKLEYEN(08.22)
-// e2e fikstüründe aynı gerekçeyle yazılı). Damgadan türeyen kod her koşuda ayrı hash üretir.
+// Kod koşu başına türetilir: `token_hash` küresel tekil, sabit kod tabloda kalmış aynı hash'li bir satıra çarpar.
 const TEST_CODE = String(100000 + (Date.now() % 900000));
 const WRONG_CODE = TEST_CODE === '999999' ? '111111' : '999999';
 const email = `otp-app-${Date.now()}@example.com`;
 const db = serviceDb();
 
 /**
- * Kapının İKİNCİ kilidi: `OTP_TEST_CODE` tam altı RAKAM değilse sessizce yok sayılır. Bu kilit
- * bozulursa hiçbir şey patlamaz — yarım yazılmış bir env "kod sabitlendi" sanılır ve tahmin
- * edilebilir bir OTP gerçek akışa sızar. Sessiz kilit, koşulmayan testin en tehlikeli hâlidir.
- * Her vaka KENDİ damgalı adresini kullanır: cooldown (60 sn) ve rate-limit (5/saat) e-posta
- * başınadır, tek adresi paylaşan üç istek ikinciden itibaren `cooldown`'a düşerdi.
+ * Kapının biçim kilidi: altı rakam olmayan değer yok sayılmazsa tahmin edilebilir bir kod gerçek akışa sızar. Her vaka kendi
+ * adresini kullanır, çünkü bekleme süresi ve sayaç adres başınadır.
  */
 const GATE_STAMP = Date.now();
 const INVALID_GATE_CASES = [
@@ -43,7 +33,7 @@ beforeAll(() => {
 });
 
 afterAll(async () => {
-  // Env eski hâline: "boşa çek" de bir varsayımdır ve bir gün yanlış olur (CLAUDE §4b).
+  // Eski değer aynen geri konur; boşaltmak da bir varsayımdır.
   if (prevTestCode === undefined) delete process.env.OTP_TEST_CODE;
   else process.env.OTP_TEST_CODE = prevTestCode;
   await purgeTestData(db, {
@@ -79,8 +69,7 @@ describe('requestOtpCode + verifyOtpCode (OTP_TEST_CODE kapısıyla)', () => {
     expect(result.knownBefore).toBe(false);
     authUserId = result.userId;
 
-    // Trigger profili açtı, tohum dili YAZDI: kolonun DB varsayılanı 'fr' — 'tr' okunuyorsa
-    // değer tohumdan gelmiştir, varsayılandan değil.
+    // Kolonun varsayılanı 'fr'; 'tr' okunuyorsa değer tohumdan gelmiştir.
     const profile = await new UserProfileService(db).findByEmail(email);
     expect(profile?.authUserId).toBe(result.userId);
     expect(profile?.preferredLanguage).toBe('tr');
@@ -95,17 +84,13 @@ describe('OTP_TEST_CODE bozuksa kapı devreye GİRMEZ', () => {
   let prevResendKey: string | undefined;
 
   beforeAll(() => {
-    // Kapı kapalıyken GERÇEK mail yolu işler. Ortamda `RESEND_API_KEY` varsa her tam koşu
-    // example.com'a üç gerçek gönderim denemesi olurdu — kota, gürültü, kontrolsüz alıcı; yani
-    // test kapısının var oluş gerekçesinin ta kendisi. Anahtar bu blok boyunca kaldırılır:
-    // `sendEmail` istemcisiz dalına düşer (`{ error: null }`), akış bloklanmaz, mail gitmez.
+    // Kapı kapalıyken gerçek mail yolu işler; anahtar bu blok boyunca kaldırılır ki her tam koşu gerçek gönderim denemesi üretmesin.
     prevResendKey = process.env.RESEND_API_KEY;
     delete process.env.RESEND_API_KEY;
   });
 
   afterAll(() => {
-    // Değiştirdiğimiz İKİ env de aynen geri (CLAUDE §4b): anahtar dışarıdan geldiği hâliyle,
-    // test kodu ise dosyanın geri kalanının dayandığı geçerli değere.
+    // İki değişken de geri konur: anahtar dışarıdan geldiği hâliyle, test kodu dosyanın dayandığı değere.
     if (prevResendKey === undefined) delete process.env.RESEND_API_KEY;
     else process.env.RESEND_API_KEY = prevResendKey;
     process.env.OTP_TEST_CODE = TEST_CODE;
@@ -116,10 +101,22 @@ describe('OTP_TEST_CODE bozuksa kapı devreye GİRMEZ', () => {
 
     expect(await requestOtpCode(db, { email: gateEmail, locale: 'fr' })).toEqual({ status: 'ok' });
 
-    // TEK sonuç üç ihtimali birden ayırır — testin gücü burada:
-    //   • kapı yanlışlıkla AÇILSAYDI  → saklanan hash sha256(raw) olurdu → 'ok'
-    //   • istek RPC'ye HİÇ gitmeseydi → ortada aktif kod olmazdı      → 'no_active_code'
-    //   • doğru davranış: rastgele üretilmiş bir kod saklandı          → 'invalid_code'
+    // Tek sonuç üç ihtimali ayırır: kapı yanlışlıkla açılsaydı 'ok', istek RPC'ye gitmeseydi 'no_active_code', doğrusu 'invalid_code'.
     expect(await verifyOtpCode(db, { email: gateEmail, code: raw, locale: 'fr' })).toEqual({ status: 'invalid_code' });
+  });
+});
+
+// Test kodu yerel olmayan (test ya da canlı) veritabanına bağlı süreçte açılırsa kırmızıya döner.
+describe('veritabanı yerel değilse kapı devreye GİRMEZ', () => {
+  it('geçerli test kodu olsa da kod sabitlenmez', () => {
+    expect(devOtpCode()).toBe(TEST_CODE);
+    const prevUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://ornek.supabase.co';
+    try {
+      expect(devOtpCode()).toBeNull();
+    } finally {
+      if (prevUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      else process.env.NEXT_PUBLIC_SUPABASE_URL = prevUrl;
+    }
   });
 });

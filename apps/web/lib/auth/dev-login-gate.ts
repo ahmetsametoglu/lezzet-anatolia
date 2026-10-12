@@ -1,33 +1,15 @@
 import 'server-only';
 
-/*
-  HIZLI GİRİŞ KAPISININ KİLİDİ VE HESAPLARI — tek kaynak (kullanıcı isteği 15.08).
-
-  İki tüketicisi var ve ikisi de aynı cevabı vermek ZORUNDA: rotanın kendisi
-  (`app/auth/dev-login/route.ts`) ve giriş ekranındaki düğme şeridi. Kilit iki yere ayrı ayrı
-  yazılsaydı biri bir gün ötekinden ayrılırdı — ekranın "kapalı" sanıp düğmeyi çizmediği ama
-  rotanın açık kaldığı hâl, ya da tersi: çizilen ama 404 veren düğme.
-
-  Kapının NE OLDUĞU, neden bypass'ın seçilmediği ve üç kilidin gerekçesi rotanın künyesinde.
-  Burada yalnız KARAR var, anlatı orada.
-*/
+import { isLocalHost, isLocalUrl } from '@lezzet/helper';
 
 /**
- * Düğme şeridinin hesapları — SIRA düğme sırasıdır, mobil kapının (`apps/mobile/src/lib/auth/
- * dev-login.ts`) listesiyle bilerek AYNI.
- *
- * **Adresler `scripts/seed/people.ts`in malıdır** ve buradaki kopya ona bağlıdır: seed'de adres
- * değişirse burası da değişmeli. Tek kaynağa indirmenin yolu bugün yok — `scripts/` bir paket
- * değil, web ondan import edemez; adresleri `packages/types`a taşımak ise geliştirme verisini
- * sözleşme paketine sokmak olurdu. Bilinçli, dar ve künyeli bir tekrar.
- *
- * ── MÜŞTERİ DÜĞMESİ DE SEED'İN OLDU (kullanıcı kararı 19.08) ─────────────────
- * Bu düğme kullanıcının KENDİ adresine (`yamansehzade@gmail.com`) basıyordu ve o adres bir müşteri
- * değil: `auth.users`ın en eski satırı olduğu için `0002`nin *"hiç admin yoksa ilk hesap admin
- * olur"* açılışı onu ADMİN yapmıştı. Yani "Müşteri" yazan düğme operasyona giriyordu (kullanıcı
- * bulgusu 19.08). 21.32 aynı arızayı personel düğmelerinde ölçüp çözmüştü — adresi seed'e taşımak;
- * bu, o kuralın uygulanmadığı son düğmeydi. Seed artık `claire.weber@example.fr`e giriş hesabı
- * açıyor (`seedStaffLogins` künyesi) — siparişli, adresli, puanlı bir müşteri.
+ * Hızlı giriş kapısının kilidi ve hesapları tek yerde: rota ve giriş ekranındaki düğme şeridi aynı cevabı vermek zorunda, ayrı
+ * yazılsalar biri ötekinden ayrılır. Kapının gerekçesi rotanın künyesinde.
+ */
+
+/**
+ * Düğme şeridinin hesapları; sıra mobil kapının listesiyle aynıdır ki aynı düğme iki yüzeyde aynı hesabı açsın. Adresler
+ * `scripts/seed/people.ts`in malıdır; web `scripts/`ten içe aktaramadığı için bu kopya bilinçli ve dardır.
  */
 export const DEV_LOGIN_ACCOUNTS = [
   { label: 'Müşteri', email: 'claire.weber@example.fr', operations: false },
@@ -35,36 +17,13 @@ export const DEV_LOGIN_ACCOUNTS = [
   { label: 'Depo', email: 'depo@lezzetanatolie.com', operations: true },
   { label: 'Kurye', email: 'kurye@lezzetanatolie.com', operations: true },
   { label: 'Muhasebe', email: 'muhasebe@lezzetanatolie.com', operations: true },
-  /* Dört operasyon bölümünü de gören hesap (kullanıcı isteği 30.08) — liste mobille AYNI sırada ve
-     aynı adreslerde kalmalı; biri değişip öteki kalırsa aynı düğme iki yüzeyde başka hesap açar. */
   { label: 'Hepsi', email: 'hepsi@lezzetanatolie.com', operations: true },
 ] as const;
 
-/** Yerel sayılan host adları — port ayrılır, `[::1]` köşeli parantezle gelir. */
-function isLocalHost(host: string): boolean {
-  const name = host.replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase();
-  return name === 'localhost' || name === '127.0.0.1' || name === '::1';
-}
-
 /**
- * Sunucunun KENDİ yapılandırması yerel mi — kilit 2 ve asıl dayanak. İstek başlığına bakmaz,
- * bu yüzden uydurulamaz. Adres okunamıyorsa kapı KAPALI sayılır: belirsizlik açık kapıya
- * yorulmaz.
- */
-function siteUrlIsLocal(): boolean {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!raw) return false;
-  try {
-    return isLocalHost(new URL(raw).host);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Kapı açık mı — üç kilit birden. `host` isteğin gördüğü host'tur (`x-forwarded-host` ?? `host`);
- * çağıran onu kendi bağlamından çözer, çünkü rota `Request`e, ekran `headers()`e sahip.
+ * Kapı açık mı — üç kilit birden: açık beyan, sunucunun kendi adresinin yerel olması (istek başlığına bakmadığı için uydurulamaz)
+ * ve isteğin yerel adrese gelmesi. `host`u çağıran çözer, çünkü rota `Request`e, ekran `headers()`e sahip.
  */
 export function devLoginOpen(host: string): boolean {
-  return process.env.DEV_LOGIN_ENABLED === 'true' && siteUrlIsLocal() && isLocalHost(host);
+  return process.env.DEV_LOGIN_ENABLED === 'true' && isLocalUrl(process.env.NEXT_PUBLIC_SITE_URL) && isLocalHost(host);
 }

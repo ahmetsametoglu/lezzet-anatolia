@@ -8,6 +8,7 @@ export * from './delivery-terms';
 export * from './discover';
 export * from './format';
 export * from './home-copy';
+export * from './host';
 export * from './identity';
 export * from './money';
 export * from './opening-hours';
