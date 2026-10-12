@@ -589,7 +589,8 @@ Yalnızca siparişin **doğrudan** (o sipariş yüzünden var olan) giderleri d�
 
 - **Malın maliyeti (COGS):** tüketilen partilerin alış fiyatı (`Stock.purchase_price`). Hazırlıkta yazılan kalem–parti kaydından (`OrderItemBatch`, §4) hesaplanır — gerçek maliyet, ortalama değil.
 - **Teslimat maliyeti:** kargoda gerçek ücret; rota-içinde sipariş başına dağıtılmış birim maliyet (parametrik).
-- **Ödeme komisyonu:** online ve kapıda kart (Revolut) oranı; nakit 0.
+- **Ödeme komisyonu:** online ve kapıda kart (Revolut) komisyonu ödeme başına sağlayıcıdan okunur; nakit ve havalede 0. Kartla
+  ödenmiş siparişin komisyonu gelene kadar kârı hesaplanmaz, "fiyatlanmamış" durur.
 - **Paketleme:** soğuk zincir (jel/kutu) sipariş/kalem başına maliyet (parametrik).
 
 Ürün kârı = karşılanan satış − bu doğrudan giderler. **Kanal ve ürün bazında** toplanır. Bu doğrudan gider kalemleri **sipariş anında** yazılır — geçmiş kârın rakamı sonradan değişen oran/maliyetten etkilenmesin (fiyat sabitleme ile aynı mantık); kâr satış anından itibaren görünür. Mal maliyeti parti seçilmeden deponun son alış fiyatıyla **tahmin** edilir ve hazırlıkta çıkan partilerin fiyatıyla kesinleşir; iade edilip stoğa dönen malın maliyeti düşer, imha edilenin kalır. Kargo maliyeti sipariş anında seçilen servisin teklif fiyatıyla yazılır ve koli taşıyıcıya bildirilince gerçek kolilerin teklifiyle düzelir. Hazırlık kesinleşmeden satış, borçla aynı kuralla sipariş edilen adetten okunur ve kâr "tahmini" gösterilir; iptal edilen siparişte mal, teslimat ve paketleme gider değildir, yalnız sağlayıcının aldığı komisyon giderdir. **Bilinmeyen maliyet sıfır sayılmaz:** o siparişin kârı gösterilmez, raporda "fiyatlanmamış" durur.

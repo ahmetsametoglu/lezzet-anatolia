@@ -18,7 +18,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 8 | Gece yarısına sarkan kasa yazımı iki günde kalıcı fark bırakıyor | Orta | Yapıldı |
 | 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Açıklandı |
 | 10 | Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor | Düşük | Yapıldı |
-| 11 | Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor | Düşük | Konuşulacak |
+| 11 | Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor | Düşük | Yapıldı |
 | 12 | İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor | Düşük | Konuşulacak |
 | 13 | Hediye siparişin değeri aktarıma 0 € gidiyor | Düşük | Konuşulacak |
 | 14 | Revolut'a giden iade anahtarı kırpılıyor | Düşük | Yapıldı |
@@ -282,7 +282,7 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 11. Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor
 
-**Durum:** Konuşulacak · **Ağırlık:** düşük
+**Durum:** Yapıldı (12.10) · **Ağırlık:** düşük
 
 - **Mevcut durum:** Kapıda kart ödemesinde komisyon yazılmaz; nakitte de alan boş kalır. Kâr hesabı boş komisyonu sıfır sayar ve
   siparişi "maliyeti bilinen" gösterir.
@@ -290,6 +290,10 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
   aykırıdır.
 - **Olması gereken:** Nakitte komisyon 0 yazılır; kapıda kartta bilinmiyorsa sipariş "maliyeti eksik" görünür. Tap to Pay
   komisyonu canlıda ölçülecek (`kasa-muhasebe.md` §6).
+- **Çözüm (12.10, B):** Kartla ya da online ödenmiş siparişin komisyonu kayıtlı değilse kârı hesaplanmaz, sipariş raporda
+  "fiyatlanmamış" durur ve sipariş sayfası sebebini yazar; komisyon yazılınca kâr hesaplanır. Nakitte ve havalede komisyon 0'dır.
+  Kapıda kart ödemesi Revolut'a bağlı olmadığı için (Tap to Pay açık iş) komisyonu kendiliğinden gelmez; bu siparişler o bağ
+  kurulana kadar fiyatlanmamış kalır.
 - **Kanıt:** `packages/domain-core/src/accounting/profit.ts:98-106` · `packages/application/src/courier/delivery.ts:149-161`.
 
 ## 12. İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor

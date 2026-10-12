@@ -1,9 +1,7 @@
 import type { ReportTab } from './reports-url';
 
-// Raporlar ekranının SÖZLÜĞÜ. Tasarım §6'nın yasağı burada zorlanıyor: **"COGS", "katkı payı",
-// "snapshot", "contribution margin" gibi terimler arayüzde ham kullanılmaz** — "malın maliyeti",
-// "doğrudan giderler sonrası kâr" gibi insan dili. Sözlüğün tek dosyada durması bunu denetlenebilir
-// kılıyor: yeni bir satır eklerken adı buraya yazan kişi, ham terimi de burada görür.
+// Raporlar ekranının sözlüğü: "COGS", "katkı payı", "contribution margin" gibi ham terimler arayüzde kullanılmaz (tasarım §6),
+// yerine "malın maliyeti" gibi insan dili. Sözlük tek dosyada durur ki yeni satırı yazan ham terimi de burada görsün.
 
 export const TAB_LABEL: Record<ReportTab, string> = {
   urun: 'Ürün kârlılığı',
@@ -13,12 +11,8 @@ export const TAB_LABEL: Record<ReportTab, string> = {
 };
 
 /**
- * Doğrudan gider kalemleri — tasarımın istediği kırılım.
- *
- * **"COGS" değil "malın maliyeti"** ve altında bir cümle daha var: bu sayı *fiilen çıkan partilerin
- * gerçek alış fiyatından* geliyor, teorik alıştan ya da ortalamadan değil. Fark önemli çünkü aynı
- * ürün iki partide iki fiyata girmiş olabilir ve raporun cevabı "ne kazandım" ise, sayı fiilen
- * ödediğimiz para olmalı.
+ * Doğrudan gider kalemleri, tasarımın kırılımıyla. Malın maliyeti fiilen çıkan partilerin alış fiyatıdır, ortalama değil, çünkü aynı
+ * ürün iki partide iki fiyata girmiş olabilir.
  */
 export const COST_LABEL = {
   cogs: 'Malın maliyeti',
@@ -28,11 +22,8 @@ export const COST_LABEL = {
 } as const;
 
 /**
- * Şirket kârı tablosunun satırları — SIRA bir hesap sırasıdır, liste değil.
- *
- * Yukarıdan aşağı okununca hesabın kendisi görünüyor: gelirden doğrudan giderler düşülür (ürün
- * kârı), fire düşülür, genel gider düşülür, kalan şirket kârıdır. Sıra bozulsaydı satırlar
- * birbirinden bağımsız ölçüler gibi okunur ve "neden bu sayı bu" sorusunun cevabı kaybolurdu.
+ * Şirket kârı tablosunun satırları; sıra hesabın sırasıdır: gelirden doğrudan giderler, fire ve genel gider düşülür, kalan şirket
+ * kârıdır. Sıra bozulsaydı satırlar birbirinden bağımsız ölçüler gibi okunurdu.
  */
 export const PNL_ROWS = [
   { key: 'revenue', label: 'Satış geliri', kind: 'plus' },
@@ -54,7 +45,7 @@ export const NOTES = {
     'Malın maliyeti fiilen çıkan partilerin gerçek alış fiyatından gelir, ortalamadan değil. Sipariş kapanışında sabitlenir; geçmiş rakam sonradan değişmez.',
   /** Tasarım §4 — kesinleşen ile bekleyen karışmasın. */
   unpriced:
-    'Maliyeti henüz kesinleşmemiş sipariş var: parti seçilmemiş ya da alış fiyatı boş. Bu siparişlerin kârı hesaba KATILMADI — sıfır sayılsaydı kâr olduğundan büyük görünürdü.',
+    'Maliyeti henüz kesinleşmemiş sipariş var: parti seçilmemiş, alış fiyatı boş ya da kart komisyonu gelmedi. Bu siparişlerin kârı hesaba KATILMADI — sıfır sayılsaydı kâr olduğundan büyük görünürdü.',
   emptyPeriod: 'Bu dönemde kapanmış satış yok. Rapor, sipariş teslim edilip kapandıkça dolar.',
   /** Tasarım §2 — hediye siparişin dışlanması sessiz olmamalı. */
   giftExcluded:

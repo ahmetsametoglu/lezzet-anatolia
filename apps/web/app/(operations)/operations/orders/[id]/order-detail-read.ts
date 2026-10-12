@@ -50,6 +50,7 @@ import {
   isZeroRated,
   officeTransitions,
   orderContribution,
+  paymentFeeCentsOf,
   refundSourcesOf,
   skippedBetween,
   vatByRate,
@@ -350,6 +351,7 @@ function financeOf(order: Order, items: readonly OrderItem[]): OrderFinanceView 
       pricesIncludeVat: order.pricesIncludeVat,
       shippingFeeCents: order.shippingFeeCents,
       isGiftOrder: order.isGiftOrder,
+      paymentMethod: order.paymentMethod,
       cogsAmountCents: order.cogsAmountCents,
       deliveryCostCents: order.deliveryCostCents,
       paymentFeeCents: order.paymentFeeCents,
@@ -391,6 +393,7 @@ function costNoteOf(order: Order, estimate: boolean): string | null {
   if (order.cogsAmountCents === null) return 'Mal maliyeti bilinmiyor: ürünün bu depoda alış fiyatı kayıtlı partisi yok.';
   if (order.deliveryCostCents === null) return 'Kargo maliyeti koli taşıyıcıya bildirilince yazılır; kâr o zaman hesaplanır.';
   if (order.packagingCostCents === null) return 'Ambalaj maliyeti bu siparişe yazılmamış; kâr hesaplanamıyor.';
+  if (paymentFeeCentsOf(order) === null) return 'Kart komisyonu henüz kayıtlı değil; kâr komisyon yazılınca hesaplanır.';
   if (estimate) return 'Hazırlık bitmedi: satış sipariş edilen adetten, mal maliyeti son alış fiyatından; ikisi hazırlıkta kesinleşir.';
   if (order.cogsIsEstimate) return 'Mal maliyeti son alış fiyatıyla tahmini; hazırlıkta çıkan partinin fiyatıyla kesinleşir.';
   return null;

@@ -30,7 +30,7 @@ export interface OrderContribution {
   contribution: number | null;
   /** Katkı payının ciroya oranı (%). Ciro 0 ya da maliyet eksikse `null`. */
   marginPct: number | null;
-  /** Mal, teslimat ve paketleme maliyeti biliniyor mu; `false` ise kâr hesaplanmaz, ciro "fiyatlanmamış" durur. */
+  /** Mal, teslimat, paketleme ve ödeme komisyonu biliniyor mu; `false` ise kâr hesaplanmaz, ciro "fiyatlanmamış" durur. */
   costsKnown: boolean;
   /** Hazırlık kesinleşmedi: ciro sipariş edilen adetten okunur, kâr tahminidir. */
   estimate: boolean;
@@ -100,6 +100,7 @@ export type ContributionInput = SaleVatBasis &
     | 'channel'
     | 'status'
     | 'isGiftOrder'
+    | 'paymentMethod'
     | 'cogsAmountCents'
     | 'deliveryCostCents'
     | 'paymentFeeCents'
@@ -107,9 +108,17 @@ export type ContributionInput = SaleVatBasis &
   >;
 
 /**
- * Bir siparişin katkı payı; maliyetler sipariş anında yazılmış değerlerdir, sonradan değişen ayar onları oynatmaz. Ciro maliyetle aynı
- * adetten okunur: hazırlık kesinleşmeden sipariş edilen, sonra teslim edilen. İptalde mal depoya döner ve araç, ambalaj kullanılmaz;
- * sağlayıcının aldığı komisyon ise gerçek giderdir.
+ * Siparişin ödeme komisyonu (cent): kartta ve online ödemede sağlayıcıdan okunana kadar bilinmez, nakitte ve havalede yoktur; ödemesi
+ * olmayan siparişte de yoktur.
+ */
+export function paymentFeeCentsOf(sale: Pick<OrderSale, 'paymentFeeCents' | 'paymentMethod'>): number | null {
+  if (sale.paymentFeeCents !== null) return sale.paymentFeeCents;
+  return sale.paymentMethod === 'card' || sale.paymentMethod === 'online' ? null : 0;
+}
+
+/**
+ * Maliyetler sipariş anında yazılmış değerlerdir ve ciro maliyetle aynı adetten okunur: hazırlık kesinleşmeden sipariş edilen, sonra
+ * teslim edilen. İptalde mal depoya döner, araç ve ambalaj kullanılmaz; sağlayıcının aldığı komisyon ise gerçek giderdir.
  */
 export function orderContribution(sale: ContributionInput, items: readonly AccountingLine[]): OrderContribution {
   const cancelled = sale.status === 'cancelled';
@@ -118,14 +127,15 @@ export function orderContribution(sale: ContributionInput, items: readonly Accou
   const cogsCents = cancelled ? 0 : sale.cogsAmountCents;
   const deliveryCents = cancelled ? 0 : sale.deliveryCostCents;
   const packagingCents = cancelled ? 0 : sale.packagingCostCents;
-  const costsKnown = cogsCents !== null && deliveryCents !== null && packagingCents !== null;
+  const feeCents = paymentFeeCentsOf(sale);
+  const costsKnown = cogsCents !== null && deliveryCents !== null && packagingCents !== null && feeCents !== null;
 
   // Toplam cent üstünden alınır; kalemleri tek tek euro'ya çevirmek yuvarlama biriktirirdi.
-  const costCents = (cogsCents ?? 0) + (deliveryCents ?? 0) + (sale.paymentFeeCents ?? 0) + (packagingCents ?? 0);
+  const costCents = (cogsCents ?? 0) + (deliveryCents ?? 0) + (feeCents ?? 0) + (packagingCents ?? 0);
   const costs: DirectCosts = {
     cogs: fromCents(cogsCents ?? 0),
     delivery: fromCents(deliveryCents ?? 0),
-    paymentFee: fromCents(sale.paymentFeeCents ?? 0),
+    paymentFee: fromCents(feeCents ?? 0),
     packaging: fromCents(packagingCents ?? 0),
   };
   const contributionCents = revenue - costCents;

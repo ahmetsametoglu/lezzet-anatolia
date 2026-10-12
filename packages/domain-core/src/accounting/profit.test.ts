@@ -201,6 +201,22 @@ describe('eksik maliyet 0 SAYILMAZ', () => {
     expect(result.contribution).toBeNull();
   });
 
+  it('kartla ödenmiş siparişin komisyonu gelmeden kârı hesaplanmaz; nakitte ve havalede komisyon yoktur', () => {
+    const items = [line({ unitPriceCents: 2110 })];
+    const waiting = {
+      status: 'delivered' as const,
+      cogsAmountCents: 800,
+      deliveryCostCents: 0,
+      packagingCostCents: 0,
+      paymentFeeCents: null,
+    };
+
+    expect(orderContribution(sale({ ...waiting, paymentMethod: 'card' }), items).costsKnown).toBe(false);
+    expect(orderContribution(sale({ ...waiting, paymentMethod: 'online' }), items).costsKnown).toBe(false);
+    expect(orderContribution(sale({ ...waiting, paymentMethod: 'cash' }), items)).toMatchObject({ costsKnown: true, contribution: 12 });
+    expect(orderContribution(sale({ ...waiting, paymentMethod: 'bank_transfer' }), items).costsKnown).toBe(true);
+  });
+
   it('şirket P&L fiyatlanmamışı kârdan düşer ama SAYI ve CİRO olarak gösterir', () => {
     const pnl = companyProfit({ from: '2026-03-01', to: '2026-03-31' }, [
       orderContribution(closed({ cogsAmountCents: 800 }), [line({ unitPriceCents: 2110 })]),
