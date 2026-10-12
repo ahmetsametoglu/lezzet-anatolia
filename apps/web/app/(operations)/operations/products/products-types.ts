@@ -18,7 +18,7 @@ import type { PriceRow } from '@/lib/pricing/price-rows';
 import type { StockWarehouseSplit } from '@/lib/stock/level-rows';
 import { resolveLocalizedText } from '@lezzet/types';
 import { slugify } from '@lezzet/helper';
-import { LOCALES, type Locale } from '@lezzet/i18n';
+import { LOCALES } from '@lezzet/i18n';
 import type { ImageFrameSources } from '@lezzet/application';
 import type { ProductTab } from './products-paths';
 
@@ -125,11 +125,6 @@ export function sizeLabel(variant: ProductVariant): string {
   const label = resolveLocalizedText(variant.label);
   if (label) return label;
   return variant.netQuantity != null && variant.netUnit ? `${variant.netQuantity} ${variant.netUnit}` : '—';
-}
-
-/** Adı DOLU olan içerik dilleri — "diller" göstergesi. */
-export function filledContentLangs(name: LocalizedText): Locale[] {
-  return LOCALES.filter((l) => name[l]?.trim());
 }
 
 /**

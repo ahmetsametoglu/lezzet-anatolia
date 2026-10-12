@@ -7,7 +7,7 @@ import type { VariantRowDetail } from '../../products-types';
 import { marginAfterWrite } from './price-math';
 
 /**
- * Seçili ürünün BOY AYRINTISI: barkod · depo dağılımı · en yakın parti · kanal fiyatları.
+ * AÇILAN SATIRIN boy ayrıntısı: barkod · depo dağılımı · en yakın parti · kanal fiyatları.
  * Listeyle gelmeyen dört şey; tek turda okunur ve okunduğu üründe önbellekte kalır.
  *
  * Önbellek bilinçli: operatör iki ürün arasında gidip gelirken her dönüşte aynı turu ödemek ve
@@ -19,7 +19,7 @@ export interface RowDetailState {
   error: string | null;
 }
 
-export function useRowDetail(productId: string | null, enabled: boolean) {
+export function useRowDetail(productId: string | null) {
   const [cache, setCache] = useState<Record<string, RowDetailState>>({});
   /**
    * "İstendi" kümesi REF'te durur, state'te değil — ölçülmüş bir arızanın düzeltmesi: küme
@@ -30,7 +30,7 @@ export function useRowDetail(productId: string | null, enabled: boolean) {
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
-    if (!enabled || productId === null || requested.current.has(productId)) return;
+    if (productId === null || requested.current.has(productId)) return;
     requested.current.add(productId);
     let alive = true;
     // Yalnız HİÇ veri yokken iskelete düşülür: yenilemede kartlar yerinde kalır, ekran oynamaz.
@@ -42,7 +42,7 @@ export function useRowDetail(productId: string | null, enabled: boolean) {
     return () => {
       alive = false;
     };
-  }, [productId, enabled, reloadToken]);
+  }, [productId, reloadToken]);
 
   /** Yeniden okur (düşen istek ya da tam formdan dönüş) — mevcut kartlar silinmez. */
   const refresh = useCallback((id: string) => {

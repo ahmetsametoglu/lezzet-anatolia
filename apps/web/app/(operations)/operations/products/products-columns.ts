@@ -28,11 +28,11 @@ import type { ColumnTrack } from '@/components/operation/ui/table-columns';
  * Ölçüldü: gövde 957 px, içerik 1130 px. Geniş ekranda kolonlar yine açılır.
  */
 export const PRODUCTS_COLUMN_TRACKS: ColumnTrack[] = [
-  { key: 'name', header: 'Ürün', width: 'minmax(160px,1.7fr)' },
-  { key: 'variants', header: 'Boylar', width: 'minmax(110px,1fr)' },
-  { key: 'stock', header: 'Stok', width: '104px', align: 'right' },
-  { key: 'price', header: 'Fiyat · marj', width: '134px', align: 'right' },
-  { key: 'decl', header: 'Beyan', width: '112px', align: 'center' },
-  { key: 'ship', header: 'Sevk', width: '92px' },
-  { key: 'status', header: 'Durum', width: '84px', align: 'right' },
+  { key: 'name', header: 'Ürün', width: 'minmax(200px,1.7fr)' },
+  { key: 'variants', header: 'Boylar', width: 'minmax(130px,1fr)' },
+  { key: 'stock', header: 'Stok', width: '118px', align: 'right' },
+  { key: 'price', header: 'Fiyat · marj', width: '158px', align: 'right' },
+  { key: 'decl', header: 'Beyan', width: '126px', align: 'center' },
+  { key: 'ship', header: 'Sevk', width: '108px' },
+  { key: 'status', header: 'Durum', width: '94px', align: 'right' },
 ];

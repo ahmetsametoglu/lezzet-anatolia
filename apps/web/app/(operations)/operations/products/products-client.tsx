@@ -201,7 +201,9 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,
-    selectedId: selected?.id ?? null,
+    // AÇIK SATIR ham durumdan gelir, `selected` türevinden DEĞİL: türevin "hiçbiri" hâli listenin
+    // ilk satırına düşüyor ve kırılımı kapatmak onu yeniden açıyordu (dev modda ölçüldü).
+    selectedId: selectedId || null,
     onSelect,
     creating,
     openCreate: () => setCreatingIntent(true),

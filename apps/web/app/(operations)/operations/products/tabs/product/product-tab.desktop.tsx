@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { PRODUCTS_COLUMN_TRACKS } from '../../products-columns';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
@@ -10,8 +11,9 @@ import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { money, percent } from '@/components/operation/ui/format';
 import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import { DeclarationMarks } from './declaration-marks';
-import { ProductPreview } from './product-preview';
 import { StatusBadge } from './status-badge';
+import { useRowDetail } from './use-row-detail.hook';
+import { VariantBreakdown } from './variant-breakdown';
 import {
   sizeLabel,
   type ProductPriceSummary,
@@ -138,14 +140,29 @@ export function ProductsTab(props: ProductsViewProps) {
     openEdit,
   } = props;
   const { hasMore, loadingMore, onLoadMore } = props;
-  // Seçili kayıt GÖRÜNEN listeden çözülür (eklenen sayfalar dahil); listede yoksa sunucunun
-  // HEDEFLİ okuması (`data.pinned`, `?p=` bağlantısı sayfa 2+'daki ürünü gösterdiğinde).
-  const selected =
-    products.find((p) => p.id === selectedId) ?? (data.pinned?.id === selectedId ? data.pinned : null) ?? null;
   const missingCount = data.counts.incomplete;
 
-  // Boylar listede DEĞİL, panelde (kullanıcı kararı): satırın altında açılan kırılım listeyi aşağı
-  // itiyor, göz hizasını bozuyordu. Böylece satırın tek anlamı kaldı — seçmek.
+  /**
+   * AÇIK SATIR adreste yaşar (`?p=`, eski "seçili ürün" parametresi): yenilemede açık kalır ve
+   * bağlantı paylaşılabilir. Tıklama haritası kullanıcı kararıdır — satıra TEK TIK kırılımı açar
+   * ve kapatır, ÇİFT TIK ürün formunu açar; ayrı bir açma düğmesi yoktur.
+   */
+  const openId = selectedId;
+  const detail = useRowDetail(openId);
+
+  /**
+   * Tek tık ile çift tık AYNI öğede yaşıyor: çift tık tarayıcıda önce İKİ tık olayı üretir, yani
+   * açma/kapama iki kez koşup kırılımı hiç açmamış gibi bırakır ve form da yanlış kayıtla açılırdı
+   * (dev modda ölçüldü). Bu yüzden tek tık kısa süre bekletilir; o sürede çift tık gelirse iptal
+   * edilir. Gecikme çift tık eşiğinin altında (220 ms) — elde hissedilen bir duraksama değil.
+   */
+  const clickTimer = useRef<number | null>(null);
+  const cancelPendingClick = () => {
+    if (clickTimer.current === null) return;
+    window.clearTimeout(clickTimer.current);
+    clickTimer.current = null;
+  };
+  useEffect(() => cancelPendingClick, []);
 
   return (
     <>
@@ -173,36 +190,46 @@ export function ProductsTab(props: ProductsViewProps) {
         ) : null}
       </div>
 
-      {/* Liste + seçili panel */}
-      {/* Panel SABİT genişlikte, tablo kalanı alır. Oranlı düzen (1.95fr/1fr) kolonlar artınca
-          paneli eziyordu: başlık iki satıra kırılıyor, rozetler sıkışıyordu (dev modda ölçüldü). */}
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px] overflow-hidden">
-        <div className="flex min-h-0 flex-col border-r border-ops-line">
-          <Table
-            busy={props.navPending}
-            columns={COLUMNS}
-            rows={products}
-            rowKey={(r) => r.id}
-            onRowClick={(r) => onSelect(r.id)}
-            onRowDoubleClick={(r) => {
-              onSelect(r.id);
-              openEdit();
-            }}
-            isRowActive={(r) => r.id === selectedId}
-            empty={
-              <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-ops-base text-ops-faint">
-                Bu süzgeçte ürün yok.
-              </div>
-            }
-            footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
-          />
-        </div>
-        <ProductPreview
-          product={selected}
-          onEdit={openEdit}
-          families={data.families}
-          onSelectProduct={onSelect}
-          onLocalPrice={props.onLocalPrice}
+      {/* Liste TAM GENİŞLİK (tasarım 6a): seçili ürün paneli kalktı — satırın tek anlamı kırılımı
+          açmak, ürünün özeti de düzenleme formunda. Kırılım böylece bütün genişliği kullanıyor. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Table
+          busy={props.navPending}
+          columns={COLUMNS}
+          rows={products}
+          rowKey={(r) => r.id}
+          onRowClick={(r) => {
+            cancelPendingClick();
+            clickTimer.current = window.setTimeout(() => {
+              clickTimer.current = null;
+              onSelect(r.id === openId ? '' : r.id);
+            }, 220);
+          }}
+          onRowDoubleClick={(r) => {
+            cancelPendingClick();
+            onSelect(r.id);
+            openEdit();
+          }}
+          isRowActive={(r) => r.id === openId}
+          renderSubRow={(r) =>
+            r.id === openId ? (
+              <VariantBreakdown
+                product={r}
+                state={detail.state}
+                onRefresh={() => detail.refresh(r.id)}
+                onSaved={(variantId, channel, amountCents, row) => {
+                  detail.applyPrice(r.id, variantId, channel, amountCents);
+                  props.onLocalPrice(r.id, variantId, channel, amountCents, row);
+                }}
+              />
+            ) : null
+          }
+          empty={
+            <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-ops-base text-ops-faint">
+              Bu süzgeçte ürün yok.
+            </div>
+          }
+          footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
         />
       </div>
     </>
