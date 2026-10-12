@@ -1,5 +1,7 @@
 import { BUSINESS_LABELS, BusinessEnum, SYSTEM_ACCOUNT_IDS } from '@lezzet/types';
 import {
+  AUTO_PRICE_STEP_DEFAULT,
+  AUTO_PRICE_STEP_KEY,
   BANK_FEED_QUIET_DAYS_DEFAULT,
   BANK_FEED_QUIET_DAYS_KEY,
   CONVERSATION_DEFAULT_HANDLER_FALLBACK,
@@ -527,6 +529,18 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     min: 0,
     exceptionScopes: NONE,
     fallback: 0,
+  },
+  {
+    key: AUTO_PRICE_STEP_KEY,
+    label: 'Otomatik fiyat yuvarlama adımı',
+    help: 'Otomatik fiyatlı ürünün fiyatı bu adıma yukarı yuvarlanır; 0,50 € ya da 1,00 € nakit ödemede küsuratı önler.',
+    section: 'cost',
+    kind: 'money',
+    min: 1,
+    limitReason: 'Adım en az bir sent olmalı; sıfır adımla fiyat yuvarlanamaz.',
+    impact: 'Otomatik fiyatlar bir sonraki hizalamada (mal kabul, fiyat penceresi ya da toplu hizalama) bu adımla yeniden yazılır.',
+    exceptionScopes: NONE,
+    fallback: AUTO_PRICE_STEP_DEFAULT,
   },
 
   ...DISTANCE_SALE_SETTING_DEFS,

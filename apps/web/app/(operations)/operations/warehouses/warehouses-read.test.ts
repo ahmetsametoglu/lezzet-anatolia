@@ -21,6 +21,7 @@ const WAREHOUSE = {
   lat: null,
   lng: null,
   shipsTo: [] as Country[],
+  shipCountries: [],
   shipsOnline: false,
   pickupEnabled: false,
   isActive: true,

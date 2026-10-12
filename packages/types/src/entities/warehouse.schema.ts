@@ -95,15 +95,18 @@ export const WarehouseShipCountryInsertSchema = WarehouseShipCountrySchema.omit(
 });
 export type WarehouseShipCountryInsert = z.infer<typeof WarehouseShipCountryInsertSchema>;
 
+/** Bir gönderim ülkesi ve teslim noktası; depo okuması bunu verir, diyalog aynı şekli geri yazar. */
+export const WarehouseShipCountryEntrySchema = WarehouseShipCountrySchema.pick({ country: true, handover: true });
+export type WarehouseShipCountryEntry = z.infer<typeof WarehouseShipCountryEntrySchema>;
+
 /** Depo satırı gönderim ülkeleriyle tek turda okunur (gömülü seçim). */
 export const WarehouseWithShipCountriesSchema = WarehouseSchema.extend({
-  shipCountries: z.array(WarehouseShipCountrySchema.pick({ country: true })),
+  shipCountries: z.array(WarehouseShipCountryEntrySchema),
 });
 export type WarehouseWithShipCountries = z.infer<typeof WarehouseWithShipCountriesSchema>;
 
-/** Depo okumasının görünümü: `shipsOnline` gönderim ülkelerinden türer, ayrı bir doğruluk değildir. */
-export type WarehouseWithShipping = Warehouse & { shipsTo: Country[]; shipsOnline: boolean };
-
+/** Depo okumasının görünümü: `shipsTo` ve `shipsOnline` gönderim ülkesi satırlarından türer, ayrı bir doğruluk değildir. */
+export type WarehouseWithShipping = WarehouseWithShipCountries & { shipsTo: Country[]; shipsOnline: boolean };
 
 // ── Depo bazlı asgari stok eşiği ────────────────────────────────────────────
 // Varyanttaki `minStockQty` varsayılandır; bu satır yalnız istisnayı yazar, satır yoksa genel eşik işler.

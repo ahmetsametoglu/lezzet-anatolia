@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { UserProfileService } from './user-profile.service';
 import { PriceService } from './price.service';
@@ -29,11 +30,8 @@ beforeAll(async () => {
   CUSTOMER_ID = (await profiles.insert({ name: `Fiyat müşterisi ${Date.now()}` })).id;
 });
 
-// Test kendi zeminini toplar; varyant ve fiyat satırları ürüne CASCADE bağlı.
 afterAll(async () => {
-  await products.delete(productId).catch(() => {});
-  await categories.delete(categoryId).catch(() => {});
-  await db.from('user_profiles').delete().eq('id', CUSTOMER_ID);
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [CUSTOMER_ID] });
 });
 
 describe('PriceService — satır getirme', () => {
@@ -68,10 +66,6 @@ describe('PriceService — satır getirme', () => {
   });
 });
 
-/**
- * Para servis sınırında çevriliyor mu (STACK §8): cent yazıp cent okuyan test aynı yanlış sabitle çarpılsa da geçerdi, bu yüzden ham
- * kolon okunur.
- */
 /** Ülke satırı genel okumaya karışsaydı Fransa'daki müşteri Almanya fiyatını görürdü; müşteriye özel fiyat ülkeden bağımsızdır. */
 describe('PriceService — ülke satırı', () => {
   it('daha yeni ülke satırı genel kanal okumasına karışmaz', async () => {
@@ -86,8 +80,50 @@ describe('PriceService — ülke satırı', () => {
       prices.setPrice({ variantId, channel: 'b2c', amountCents: 1500, customerId: CUSTOMER_ID, country: 'DE' }),
     ).rejects.toThrow(/price_customer_no_country/);
   });
+
+  it('ülkeli okuma ülke satırını daha yeni genel satıra rağmen önceler; satırı olmayan ülke genel satırı okur', async () => {
+    await prices.setPrice({ variantId, channel: 'b2c', amountCents: 1790 });
+
+    const ulkeli = (country: 'DE' | 'FR') => prices.findApplicableMap([variantId], 'b2c', CUSTOMER_ID, new Date(), country);
+    expect((await ulkeli('DE')).get(variantId)).toMatchObject({
+      channelPrice: { amountCents: 2290, country: 'DE' },
+      customerPrice: { amountCents: 1400 },
+    });
+    expect((await ulkeli('FR')).get(variantId)?.channelPrice).toMatchObject({ amountCents: 1790, country: null });
+    expect((await prices.findApplicableMap([variantId], 'b2c')).get(variantId)?.channelPrice?.amountCents).toBe(1790);
+  });
+
+  it('operasyon okuması genel ve ülke satırını ayrı verir; fiyatı olmayan varyant boş döner', async () => {
+    const fiyatsiz = crypto.randomUUID();
+    const map = await prices.findListPricesMap([variantId, fiyatsiz], 'b2c');
+
+    expect(map.get(variantId)).toMatchObject({ general: { amountCents: 1790 }, byCountry: { DE: { amountCents: 2290 } } });
+    expect(map.get(fiyatsiz)).toEqual({ general: null, byCountry: {} });
+  });
+
+  it('ülke fiyatı geçmişiyle kaldırılır; genel satır ve öbür kanalın ülke satırı kalır', async () => {
+    const dun = new Date(Date.now() - 86_400_000).toISOString();
+    await prices.setPrice({ variantId, channel: 'b2c', amountCents: 2190, country: 'DE', validFrom: dun });
+    await prices.setPrice({ variantId, channel: 'b2b', amountCents: 3000, country: 'DE' });
+
+    await prices.removeCountryPrice(variantId, 'b2c', 'DE');
+
+    expect((await prices.findListPricesMap([variantId], 'b2c')).get(variantId)).toMatchObject({
+      general: { amountCents: 1790 },
+      byCountry: {},
+    });
+    expect((await prices.findApplicableMap([variantId], 'b2c', null, new Date(), 'DE')).get(variantId)?.channelPrice).toMatchObject({
+      amountCents: 1790,
+      country: null,
+    });
+    expect((await prices.findListPricesMap([variantId], 'b2b')).get(variantId)?.byCountry.DE?.amountCents).toBe(3000);
+  });
 });
 
+/**
+ * Para servis sınırında çevriliyor mu (STACK §8): cent yazıp cent okuyan test aynı yanlış sabitle çarpılsa da geçerdi, bu yüzden ham
+ * kolon okunur.
+ */
 describe('PriceService — euro↔cent sınırı', () => {
   it('cent yazılır, kolon euro tutar, cent okunur (gidiş-dönüş)', async () => {
     const yazilan = 1234; // 12,34 €

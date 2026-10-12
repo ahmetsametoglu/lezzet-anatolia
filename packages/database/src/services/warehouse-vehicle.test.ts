@@ -20,7 +20,6 @@ let aracId: string;
 let categoryId: string;
 let productId: string;
 let variantId: string;
-const zoneIds: string[] = [];
 
 beforeAll(async () => {
   tesisId = (await createTestWarehouse(db, { label: 'TESIS' })).id;
@@ -40,7 +39,7 @@ beforeAll(async () => {
 afterAll(async () => {
   // Parti sırasıyla gider: önce hareket defteri, sonra parti.
   await purgeVariantStock(db, [variantId]);
-  if (zoneIds.length > 0) await db.from('delivery_zone').delete().in('id', zoneIds);
+  // Tesisin bölgesini de `purgeTestData` siler (depoya bağlı bölgeler).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -59,12 +58,14 @@ describe('araç deposu — türün üç kuralı VERİDE', () => {
   /** Kargo çıkışı bir adrestir, taşıyıcı oraya gelir; kural gönderim ülkesi satırının tetikleyicisinde (`warehouse_ship_country_guard`). */
   it('araç gönderim ülkesi alamaz; tesis alır', async () => {
     const depolar = new WarehouseService(db);
-    await expect(depolar.setShipsTo(aracId, ['DE'])).rejects.toThrow(/araç ve QUALITE deposu gönderim ülkesi alamaz/);
+    await expect(depolar.setShipCountries(aracId, [{ country: 'DE', handover: null }])).rejects.toThrow(
+      /araç ve QUALITE deposu gönderim ülkesi alamaz/,
+    );
 
     // Pasif tesis: kural türe bakar, ülke başına tek aktif kargo deposu kuralına takılmadan sınanır.
     const kapaliTesis = await createTestWarehouse(db, { label: 'KTESIS', isActive: false });
     try {
-      await depolar.setShipsTo(kapaliTesis.id, ['DE']);
+      await depolar.setShipCountries(kapaliTesis.id, [{ country: 'DE', handover: null }]);
       expect((await depolar.list({ warehouseIds: [kapaliTesis.id] }))[0]?.shipsTo).toEqual(['DE']);
     } finally {
       await purgeTestData(db, { warehouseIds: [kapaliTesis.id] });
@@ -84,7 +85,6 @@ describe('araç deposu — türün üç kuralı VERİDE', () => {
       warehouseId: tesisId,
       weekdays: [1],
     });
-    zoneIds.push(bolge.id);
     expect(bolge.warehouseId).toBe(tesisId);
   });
 
@@ -93,21 +93,21 @@ describe('araç deposu — türün üç kuralı VERİDE', () => {
    * çünkü kurye arabasında ne olduğunu görmek zorunda.
    */
   it('araç stoğu depo-ÜSTÜ toplama girmez ama depo bazlı okumada GÖRÜNÜR', async () => {
-    const toplam = async () => {
-      const { data } = await db.from('available_stock_total').select('physical_qty').eq('variant_id', variantId).maybeSingle();
-      return Number(data?.physical_qty ?? 0);
-    };
+    const stocks = new StockService(db);
+    // Toplam işe göredir: öteki işin her aktif tesisi aynı varyanta ayrı satır açar, okuma test depolarının işiyle süzülür.
+    const { business } = (await new WarehouseService(db).getById(tesisId))!;
+    const toplam = async () => (await stocks.getNetworkAvailabilityMap([variantId], business)).get(variantId)?.physicalQty;
     const depoda = async (warehouseId: string) => {
-      const { data } = await db
+      const { data, error } = await db
         .from('available_stock')
         .select('physical_qty')
         .eq('variant_id', variantId)
         .eq('warehouse_id', warehouseId)
-        .maybeSingle();
-      return Number(data?.physical_qty ?? 0);
+        .single();
+      if (error) throw error;
+      return Number(data.physical_qty);
     };
 
-    const stocks = new StockService(db);
     const gun = new Date(Date.now() + 120 * 86_400_000).toISOString().slice(0, 10);
 
     // Önce tesise 10: her zaman 0 dönen bir görünüm "araç sayılmıyor" testini sahte yeşil yapardı.

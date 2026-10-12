@@ -81,7 +81,7 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       sortOrder: 1,
     });
     strId = str.id;
-    await warehouses.setShipsTo(strId, ['FR']);
+    await warehouses.setShipCountries(strId, [{ country: 'FR', handover: null }]);
     console.log(`  ✓ ${str.code} · ${str.name} · kargo deposu (FR)`);
   }
   if (!kehlId) {

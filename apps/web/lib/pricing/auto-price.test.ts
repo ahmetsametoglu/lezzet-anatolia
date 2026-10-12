@@ -1,20 +1,20 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, mustDelete, purgeVariantStock, settingsSnapshot } from '@lezzet/database/testing';
+import { AUTO_PRICE_STEP_KEY } from '@lezzet/domain-core';
 import { repriceAllAuto, repriceProduct, repriceVariants } from './auto-price';
 
 /**
- * Otomatik fiyatın KABLOSU (09.5). Motorun hesabı ayrı test edildi (`domain-core/auto-price`);
- * burada sınanan, o hesabın doğru satırlara ve YALNIZ onlara uygulanması:
- * otomatik olmayan ürüne dokunulmaması, kapalı kanalın açılmaması, değişmemiş fiyatın
- * geçmişi kopyalarla şişirmemesi.
+ * Otomatik fiyatın kablosu: motorun hesabı `domain-core/auto-price`ta sınanır, burada o hesabın doğru satırlara ve yalnız onlara
+ * uygulanması (otomatik olmayan ürün, kapalı kanal, değişmeyen fiyatın geçmişi) ve adımın ayardan okunması sınanır.
  */
 const db = serviceDb();
 const prices = new PriceService(db);
+const settings = settingsSnapshot(db);
 const stamp = Date.now();
 
 let categoryId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti deposuz yazılamaz; testin kendi deposu.
 let warehouseId: string;
 let autoProductId: string;
 let autoVariantId: string;
@@ -32,12 +32,10 @@ async function priceRowCount(variantId: string): Promise<number> {
 }
 
 /**
- * Alış geçmişini kurar — **en eskiden en yeniye** verilir, taban sonuncusudur (yenileme maliyeti).
- * Tek fiyat verilirse karşılaştıracak geçmiş yoktur ve fren devreye girmez.
+ * Alış geçmişini kurar; fiyatlar en eskiden en yeniye verilir, taban sonuncusudur (yenileme maliyeti). Tek fiyat verilirse
+ * karşılaştıracak geçmiş yoktur ve fren devreye girmez.
  */
 async function setCostHistory(variantId: string, ...purchasePricesCents: number[]) {
-  // `purgeVariantStock`: silme sırası tek yerde durur ve hata FIRLAR — `delete()` onu yutuyordu
-  // (06.14 · künye `packages/application/src/courier/day.test.ts`te).
   await purgeVariantStock(db, [variantId]);
   const stocks = new StockService(db);
   for (const purchasePriceCents of purchasePricesCents) {
@@ -52,6 +50,8 @@ async function setCostHistory(variantId: string, ...purchasePricesCents: number[
 }
 
 beforeAll(async () => {
+  // Adım fabrika değerine sabitlenir: beklenen fiyatlar 50 sentlik adımla yazıldı, ayar sonunda okunan değere geri konur.
+  await settings.override(AUTO_PRICE_STEP_KEY, 50);
   warehouseId = (await createTestWarehouse(db)).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Otomatik fiyat ${stamp}` } })).id;
   const products = new ProductService(db);
@@ -82,6 +82,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  await settings.restore();
   await mustDelete(db, 'price', (q) => q.in('variant_id', [autoVariantId, manualVariantId]));
   await purgeVariantStock(db, [autoVariantId, manualVariantId]);
   await purgeTestData(db, { productIds: [autoProductId, manualProductId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
@@ -96,9 +97,25 @@ describe('hedefe çekme', () => {
     const outcome = await repriceVariants(db, [autoVariantId]);
 
     expect(outcome.changes).toHaveLength(2);
-    // 10 € maliyet, %40 hedef → 14 € HT; b2c'ye %5,5 KDV eklenir ve 5 kuruşa yukarı yuvarlanır.
+    // 10 € maliyet, %40 hedef → 14 € HT; b2c'ye %5,5 KDV eklenir (14,77) ve 50 sente yukarı yuvarlanır.
     expect(await currentCents(autoVariantId, 'b2b')).toBe(1400);
-    expect(await currentCents(autoVariantId, 'b2c')).toBe(1480);
+    expect(await currentCents(autoVariantId, 'b2c')).toBe(1500);
+  });
+
+  it('yuvarlama adımı ayardan okunur', async () => {
+    // 10,20 € maliyet, %40 hedef → 14,28 € HT: 50 sentlik adımda 14,50, tam euroda 15,00.
+    await setCostHistory(autoVariantId, 1020);
+    await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
+    await repriceVariants(db, [autoVariantId]);
+    expect(await currentCents(autoVariantId, 'b2b')).toBe(1450);
+
+    await settings.override(AUTO_PRICE_STEP_KEY, 100);
+    try {
+      await repriceVariants(db, [autoVariantId]);
+      expect(await currentCents(autoVariantId, 'b2b')).toBe(1500);
+    } finally {
+      await settings.override(AUTO_PRICE_STEP_KEY, 50);
+    }
   });
 
   it('maliyet ARTINCA fiyat yükselir, DÜŞÜNCE iner — otomatik iki yönlüdür', async () => {
@@ -119,9 +136,7 @@ describe('hedefe çekme', () => {
   });
 
   it('MALİYET SIÇRARSA fiyat oynamaz — karar admin\'e bırakılır', async () => {
-    // Geçmiş 2,10 civarında oturmuş, son alış 4,50 (yereldeki gerçek sıçrama). Bu yorum eskiden
-    // YANLIŞTI: alan euro'ydu, yani sayılar 210 € ve 450 € demekti; oran aynı olduğu için test yine
-    // geçiyordu. Alan cent olunca yorum ile veri aynı şeyi söylüyor (02.9).
+    // Geçmiş 2,10 € civarında oturmuş, son alış 4,50 €.
     await setCostHistory(autoVariantId, 210, 210, 450);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 30000, customerId: null });
 
@@ -141,16 +156,8 @@ describe('hedefe çekme', () => {
   });
 
   /**
-   * ⚠ **Bu test KATALOĞUN TAMAMINA yazıyor ve yazdığını geri almak zorunda** (ölçüldü 19.08).
-   *
-   * `repriceAllAuto` üretimde doğru olanı yapıyor: `auto_price` işaretli HER ürünü hedefe çekiyor.
-   * Ama paylaşılan veritabanında bu, testin kendi fikstürünün dışına taşan bir yazma demek —
-   * ölçüldü: seed 358 fiyat satırı yazarken tabloda 415 satır vardı ve fazladan 57'si bu testten
-   * kalmıştı, **29 seedli varyantta**. Kullanıcı bunu ekranda gördü: Çilekli Artisan Kek'in fiyatı
-   * seed'in yazdığı 11,43 € değil, bu testin bıraktığı 9,70 € görünüyordu.
-   *
-   * Sayı yanlış değildi — testin bıraktığı bir sayının seed'in sayısı gibi okunması yanlıştı.
-   * Fonksiyon `changes` içinde neye dokunduğunu zaten söylüyor; geri alma o listeden yürüyor.
+   * Bu test kataloğun tamamına yazar, çünkü `repriceAllAuto` işaretli her ürünü hedefe çeker; paylaşılan veritabanında fikstür dışındaki
+   * yazım beslemenin fiyatı gibi okunurdu. Geri alma fonksiyonun döndüğü `changes` listesinden yürür.
    */
   it('katalog geneli hizalama otomatik ürünü bulur', async () => {
     await setCostHistory(autoVariantId, 1000);
@@ -159,8 +166,7 @@ describe('hedefe çekme', () => {
     const startedAt = new Date().toISOString();
     const { changes, truncated } = await repriceAllAuto(db);
 
-    // Fikstür DIŞINDA kalan her satır geri alınır. Ölçüt `created_at`: hizalama yeni bir satır
-    // yazıyor (geçmiş korunuyor), o yüzden silinecek olan da yalnız bu koşuda doğan satır.
+    // Fikstür dışındaki satır geri alınır; hizalama yeni satır yazdığı için ölçüt bu koşuda doğan satırdır (`created_at`).
     const foreign = [...new Set(changes.map((c) => c.variantId))].filter((id) => id !== autoVariantId);
     if (foreign.length > 0) {
       await mustDelete(db, 'price', (q) => q.in('variant_id', foreign).gte('created_at', startedAt));

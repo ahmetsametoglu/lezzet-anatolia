@@ -8,8 +8,9 @@ import { vatBaseOf } from './vat-base';
  * Yuvarlama yukarı, çünkü aşağı yuvarlanan fiyat hedefi kılpayı ıskalar ve ürün kendi marj-altı uyarısına düşer.
  */
 
-/** Yuvarlama adımı (kuruş). 5 = perakende alışkanlığı; çağıran değiştirebilir. */
-export const AUTO_PRICE_STEP_CENTS = 5;
+/** Yuvarlama adımının ayarı (cent); nakit ödemede küsurattan kaçınmak için fabrika değeri 50 sent. */
+export const AUTO_PRICE_STEP_KEY = 'auto_price_step_cents';
+export const AUTO_PRICE_STEP_DEFAULT = 50;
 
 export interface AutoPriceInput {
   channel: Channel;
@@ -18,14 +19,15 @@ export interface AutoPriceInput {
   /** Hedef marj — maliyet üzerine markup yüzdesi. */
   targetMarginPercent: number;
   vatRate: number;
-  stepCents?: number;
+  /** Yuvarlama adımı (cent), ayardan (`AUTO_PRICE_STEP_KEY`); çağıran okur ki ekran ve yazım aynı adımı kullansın. */
+  stepCents: number;
 }
 
 /**
  * Hedef marjı sağlayan, o kanalda saklanacak fiyat (kuruş); maliyet yoksa `null`, çünkü maliyetsiz hesap fiyat uydurur.
  */
 export function autoPriceCents(input: AutoPriceInput): number | null {
-  const { channel, costCents, targetMarginPercent, vatRate, stepCents = AUTO_PRICE_STEP_CENTS } = input;
+  const { channel, costCents, targetMarginPercent, vatRate, stepCents } = input;
   if (costCents <= 0) return null;
 
   // Eşik `priceForMargin` gibi YUVARLANMAZ, yukarı alınır: o fonksiyon uyarı eşiğidir ve kuruşun

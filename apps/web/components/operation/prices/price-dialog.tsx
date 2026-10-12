@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { autoPriceCents, markupPercent, priceForMargin, targetMarginFor, vatBaseOf } from '@lezzet/domain-core';
+import { AUTO_PRICE_STEP_DEFAULT, autoPriceCents, markupPercent, priceForMargin, targetMarginFor, vatBaseOf } from '@lezzet/domain-core';
 import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
@@ -84,7 +84,13 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
             // Kanalın KENDİ hedefi (15.08) — motorun yazacağı fiyatla birebir aynı çözüm.
             const channelTarget = targetMarginFor(channel, target, targetB2b);
             if (channelTarget === null) return null;
-            const next = autoPriceCents({ channel, costCents: cost, targetMarginPercent: channelTarget, vatRate: row.vatRate });
+            const next = autoPriceCents({
+              channel,
+              costCents: cost,
+              targetMarginPercent: channelTarget,
+              vatRate: row.vatRate,
+              stepCents: AUTO_PRICE_STEP_DEFAULT,
+            });
             return next === null ? null : `${channel.toUpperCase()} ${money(next)}`;
           })
           .filter(Boolean)

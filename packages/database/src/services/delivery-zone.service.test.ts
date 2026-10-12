@@ -87,7 +87,9 @@ describe('işe göre bölge', () => {
 
   it('QUALITE deposu gönderim ülkesi alamaz', async () => {
     const qualite = await depo('qualite', 'DE');
-    await expect(warehouses.setShipsTo(qualite.id, ['DE'])).rejects.toThrow(/QUALITE deposu gönderim ülkesi alamaz/);
+    await expect(warehouses.setShipCountries(qualite.id, [{ country: 'DE', handover: null }])).rejects.toThrow(
+      /QUALITE deposu gönderim ülkesi alamaz/,
+    );
   });
 
   it("gönderim ülkesi olan depo QUALITE'ye geçemez", async () => {

@@ -54,7 +54,12 @@ export async function createTestWarehouse(db: SupabaseClient, opts: TestWarehous
     pickupEnabled: opts.pickupEnabled ?? false,
     isActive: opts.isActive ?? true,
   });
-  if (opts.shipsTo?.length) await warehouses.setShipsTo(warehouse.id, opts.shipsTo);
+  if (opts.shipsTo?.length) {
+    await warehouses.setShipCountries(
+      warehouse.id,
+      opts.shipsTo.map((country) => ({ country, handover: null })),
+    );
+  }
   return warehouse;
 }
 

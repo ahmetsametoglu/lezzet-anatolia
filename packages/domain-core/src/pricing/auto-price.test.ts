@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isBelowTargetMargin, markupPercent } from './margin';
-import { AUTO_PRICE_STEP_CENTS, autoPriceCents, channelPriceForMargin, revenueHtOf } from './auto-price';
+import { autoPriceCents, channelPriceForMargin, revenueHtOf } from './auto-price';
 
 /**
  * Otomatik fiyatın tek sözü var: yazdığı fiyat hedef marjı SAĞLAR. Testlerin çoğu bu sözü
@@ -8,32 +8,45 @@ import { AUTO_PRICE_STEP_CENTS, autoPriceCents, channelPriceForMargin, revenueHt
  * ürünü kendi uyarısına düşürebilecek yerler.
  */
 
+/** Ayarın fabrika değeri: 50 sent. */
+const ADIM = 50;
+
 describe('kanal tabanı', () => {
   it('b2b HT saklar — hedef marj doğrudan fiyattır', () => {
-    // 10 € maliyet, %40 hedef → 14 € HT; adım 5 kuruş, tam bölünüyor.
-    expect(autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 40, vatRate: 5.5 })).toBe(1400);
+    // 10 € maliyet, %40 hedef → 14 € HT; 50 sentlik adıma tam bölünüyor.
+    expect(autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 40, vatRate: 5.5, stepCents: ADIM })).toBe(1400);
   });
 
   it('b2c TTC saklar — aynı hedefe KDV eklenir', () => {
-    // 14 € HT + %5,5 = 14,77 → yukarı yuvarlama 14,80.
-    expect(autoPriceCents({ channel: 'b2c', costCents: 1000, targetMarginPercent: 40, vatRate: 5.5 })).toBe(1480);
+    // 14 € HT + %5,5 = 14,77 → 50 sente yukarı 15,00.
+    expect(autoPriceCents({ channel: 'b2c', costCents: 1000, targetMarginPercent: 40, vatRate: 5.5, stepCents: ADIM })).toBe(1500);
   });
 
   it('KDV oranı değişince b2c fiyatı değişir, b2b değişmez', () => {
-    const b2c20 = autoPriceCents({ channel: 'b2c', costCents: 1000, targetMarginPercent: 40, vatRate: 20 });
-    const b2b20 = autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 40, vatRate: 20 });
-    expect(b2c20).toBe(1680);
+    const b2c20 = autoPriceCents({ channel: 'b2c', costCents: 1000, targetMarginPercent: 40, vatRate: 20, stepCents: ADIM });
+    const b2b20 = autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 40, vatRate: 20, stepCents: ADIM });
+    expect(b2c20).toBe(1700);
     expect(b2b20).toBe(1400);
+  });
+});
+
+describe('adım çağırandan gelir', () => {
+  it('fiyat adımın katına yukarı yuvarlanır: 50 sent ya da tam euro', () => {
+    // 10 € maliyet, %45 → 14,50 HT + %5,5 = 15,30 → 15,50 ya da 16,00.
+    const fiyat = (stepCents: number) =>
+      autoPriceCents({ channel: 'b2c', costCents: 1000, targetMarginPercent: 45, vatRate: 5.5, stepCents });
+    expect(fiyat(50)).toBe(1550);
+    expect(fiyat(100)).toBe(1600);
   });
 });
 
 describe('yuvarlama hedefi ISKALAMAZ', () => {
   it('yukarı yuvarlar — aşağı yuvarlamak marjı hedefin altına düşürürdü', () => {
-    // 3,33 € maliyet, %35 → 4,4955 € HT → 4,50 (4,45 hedefin altında kalırdı).
-    expect(autoPriceCents({ channel: 'b2b', costCents: 333, targetMarginPercent: 35, vatRate: 0 })).toBe(450);
+    // 3,33 € maliyet, %35 → 4,4955 € HT → 5 sentlik adımda 4,50 (4,45 hedefin altında kalırdı).
+    expect(autoPriceCents({ channel: 'b2b', costCents: 333, targetMarginPercent: 35, vatRate: 0, stepCents: 5 })).toBe(450);
   });
 
-  it('geniş bir maliyet aralığında gerçekleşen marj HEP hedefin üstünde', () => {
+  it('geniş bir maliyet aralığında, her adımda gerçekleşen marj HEP hedefin üstünde', () => {
     for (let cost = 50; cost <= 5000; cost += 37) {
       for (const target of [20, 35, 41, 47]) {
         for (const [channel, vat] of [
@@ -41,9 +54,11 @@ describe('yuvarlama hedefi ISKALAMAZ', () => {
           ['b2c', 20],
           ['b2b', 5.5],
         ] as const) {
-          const price = autoPriceCents({ channel, costCents: cost, targetMarginPercent: target, vatRate: vat })!;
-          const achieved = markupPercent(revenueHtOf(channel, price, vat), cost)!;
-          expect(achieved).toBeGreaterThanOrEqual(target);
+          for (const stepCents of [1, 5, 50, 100]) {
+            const price = autoPriceCents({ channel, costCents: cost, targetMarginPercent: target, vatRate: vat, stepCents })!;
+            const achieved = markupPercent(revenueHtOf(channel, price, vat), cost)!;
+            expect(achieved).toBeGreaterThanOrEqual(target);
+          }
         }
       }
     }
@@ -54,12 +69,11 @@ describe('yuvarlama hedefi ISKALAMAZ', () => {
     // 10,01 € × 1,40 = 14,014 → 14,02. `priceForMargin` burada 14,01 derdi (uyarı eşiği yuvarlar),
     // otomatik fiyat o kuruşu veremez: verirse ürün kendi hedefinin altında kalırdı.
     expect(autoPriceCents({ channel: 'b2b', costCents: 1001, targetMarginPercent: 40, vatRate: 0, stepCents: 1 })).toBe(1402);
-    expect(AUTO_PRICE_STEP_CENTS).toBe(5);
   });
 
   it('yazdığı fiyat ekranın marj-altı uyarısını TETİKLEMEZ', () => {
     for (let cost = 61; cost <= 4000; cost += 53) {
-      const price = autoPriceCents({ channel: 'b2c', costCents: cost, targetMarginPercent: 41, vatRate: 5.5 })!;
+      const price = autoPriceCents({ channel: 'b2c', costCents: cost, targetMarginPercent: 41, vatRate: 5.5, stepCents: ADIM })!;
       expect(isBelowTargetMargin(revenueHtOf('b2c', price, 5.5), cost, 41)).toBe(false);
     }
   });
@@ -67,12 +81,12 @@ describe('yuvarlama hedefi ISKALAMAZ', () => {
 
 describe('maliyet yoksa karar da yok', () => {
   it('maliyet 0/negatifse null — fiyat UYDURULMAZ', () => {
-    expect(autoPriceCents({ channel: 'b2c', costCents: 0, targetMarginPercent: 40, vatRate: 5.5 })).toBeNull();
-    expect(autoPriceCents({ channel: 'b2b', costCents: -1, targetMarginPercent: 40, vatRate: 5.5 })).toBeNull();
+    expect(autoPriceCents({ channel: 'b2c', costCents: 0, targetMarginPercent: 40, vatRate: 5.5, stepCents: ADIM })).toBeNull();
+    expect(autoPriceCents({ channel: 'b2b', costCents: -1, targetMarginPercent: 40, vatRate: 5.5, stepCents: ADIM })).toBeNull();
   });
 
   it('hedef marj 0 ise fiyat maliyete eşitlenir — sıfır değil', () => {
-    expect(autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 0, vatRate: 0 })).toBe(1000);
+    expect(autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 0, vatRate: 0, stepCents: ADIM })).toBe(1000);
   });
 });
 

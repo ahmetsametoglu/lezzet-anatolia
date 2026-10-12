@@ -155,9 +155,8 @@ export const ProductSchema = z.object({
   nutrition: NutritionSchema.nullable(),
   storageInstructions: LocalizedTextSchema.nullable(),
   /**
-   * Hazırlama adımları — sıralı kısa cümleler; sıra dizinin kendisidir, ayrı bir numara alanı tutulmaz.
-   * Saklama metninden ayrı: o koşulun beyanı, bu numaralanarak çizilen yol tarifi. Yasal beyan değil,
-   * `missingDeclarations` buna bakmaz; boş dizi "adım girilmedi".
+   * Hazırlama adımları, sıralı kısa cümleler; sıra dizinin kendisidir ve saklama metninden ayrıdır (o koşulun beyanı, bu yol tarifi).
+   * Yasal beyan değildir, `missingDeclarations` buna bakmaz; boş dizi "adım girilmedi" demektir.
    */
   preparationSteps: z.array(LocalizedTextSchema),
   /** Alerjen beyanı — `null` girilmedi, boş liste "alerjen içermez"; satıştaki üründe veri kısıtıyla zorunlu. */
@@ -284,6 +283,8 @@ export type ProductUpdate = z.infer<typeof ProductUpdateSchema>;
 export const ProductWithRelationsSchema = ProductSchema.extend({
   variants: z.array(ProductVariantSchema),
   collections: z.array(z.object({ collectionId: z.string().uuid() })),
+  /** Satıcının ülkesi dışındaki oranlar; ürün böylece `applicableVatRate` ve `sellableIn` girdisi olur. */
+  countryRates: z.array(ProductVatRateSchema.pick({ country: true, vatRate: true })),
 });
 export type ProductWithRelations = z.infer<typeof ProductWithRelationsSchema>;
 

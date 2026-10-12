@@ -4,15 +4,22 @@ import {
   PriceInsertSchema,
   PriceUpdateSchema,
   type Channel,
+  type Country,
   type Price,
   type PriceInsert,
   type PriceUpdate,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
+/** Bir kanal listesinin genel ve ülke satırları ayrı; ülkenin satırı yoksa anahtarı da yoktur ve o ülkede genel satır geçer. */
+export interface ChannelListPrices {
+  general: Price | null;
+  byCountry: Partial<Record<Country, Price>>;
+}
+
 /**
  * Fiyat okuma ve yazma; satır getirir, "bu müşteri bu varyantı kaça alır" kararı saf motordadır (`resolvePrice`, STACK §4). Tarihli
- * geçerlilikte geçmiş ve en yeni satır kazanır; kanal okumaları yalnız genel satırı (ülkesiz) okur, ülke satırı motora ayrıca verilir.
+ * geçerlilikte geçmiş ve en yeni satır kazanır; ülkesiz okuma yalnız genel satırı görür.
  */
 export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate> {
   /** `price.amount` euro `numeric`; app tarafı cent (STACK §8) — dönüşüm taban sınıfta. */
@@ -36,7 +43,7 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
       { variantId, channel },
       {
         isNullFields: ['customer_id', 'country'],
-        rangeFilters: [{ field: 'valid_from', operator: 'lte', value: at.toISOString() }],
+        rangeFilters: validUntil(at),
         orderBy: 'validFrom',
         orderDirection: 'desc',
         limit: 1,
@@ -55,7 +62,7 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
     const rows = await this.getAll(
       { variantId, channel, customerId },
       {
-        rangeFilters: [{ field: 'valid_from', operator: 'lte', value: at.toISOString() }],
+        rangeFilters: validUntil(at),
         orderBy: 'validFrom',
         orderDirection: 'desc',
         limit: 1,
@@ -79,48 +86,75 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
   }
 
   /**
-   * `findApplicable`'ın toplu hâli: varyant başına sorgu yerine iki sorgu (kanal ve müşteriye özel). Her varyantın en yeni geçerli
-   * satırı kazanır; `limit` varyant başına değil tüm sonuca uygulandığı için azalan sıradaki ilk satır alınır.
+   * `findApplicable`'ın toplu hâli: varyant başına sorgu yerine iki sorgu (kanal ve müşteriye özel). `country` verilirse kanal fiyatı o
+   * ülkenin satırıdır, yoksa genel satır; ülke satırı tarihine bakılmadan genel satırın yerine geçer, motordaki kuralla aynı.
    */
   async findApplicableMap(
     variantIds: string[],
     channel: Channel,
     customerId?: string | null,
     at: Date = new Date(),
+    country: Country | null = null,
   ): Promise<Map<string, { channelPrice: Price | null; customerPrice: Price | null }>> {
     const result = new Map<string, { channelPrice: Price | null; customerPrice: Price | null }>();
     if (!variantIds.length) return result;
 
-    const validUntilNow = [{ field: 'valid_from', operator: 'lte' as const, value: at.toISOString() }];
-    const [channelRows, customerRows] = await Promise.all([
-      this.getAll(
-        { variantId: variantIds, channel },
-        { isNullFields: ['customer_id', 'country'], rangeFilters: validUntilNow, orderBy: 'validFrom', orderDirection: 'desc' },
-      ),
+    const [lists, customerRows] = await Promise.all([
+      this.listPrices(variantIds, channel, at, country),
       customerId
         ? this.getAll(
             { variantId: variantIds, channel, customerId },
-            { rangeFilters: validUntilNow, orderBy: 'validFrom', orderDirection: 'desc' },
+            { rangeFilters: validUntil(at), orderBy: 'validFrom', orderDirection: 'desc' },
           )
         : Promise.resolve([] as Price[]),
     ]);
-
-    // Sıra azalan olduğu için varyantın İLK görülen satırı en yenisidir.
-    const newestByVariant = (rows: Price[]): Map<string, Price> => {
-      const map = new Map<string, Price>();
-      for (const row of rows) if (!map.has(row.variantId)) map.set(row.variantId, row);
-      return map;
-    };
-    const channelMap = newestByVariant(channelRows);
-    const customerMap = newestByVariant(customerRows);
+    const customerMap = new Map<string, Price>();
+    for (const row of customerRows) if (!customerMap.has(row.variantId)) customerMap.set(row.variantId, row);
 
     for (const variantId of variantIds) {
+      const list = lists.get(variantId);
       result.set(variantId, {
-        channelPrice: channelMap.get(variantId) ?? null,
+        channelPrice: (country ? list?.byCountry[country] : undefined) ?? list?.general ?? null,
         customerPrice: customerMap.get(variantId) ?? null,
       });
     }
     return result;
+  }
+
+  /** Kanal listesinin genel ve ülke satırları ayrı, her varyant için; operasyon hücresi ülke satırı yokken genel fiyatı gösterir. */
+  async findListPricesMap(variantIds: readonly string[], channel: Channel, at: Date = new Date()): Promise<Map<string, ChannelListPrices>> {
+    const lists = await this.listPrices(variantIds, channel, at);
+    return new Map(variantIds.map((variantId) => [variantId, lists.get(variantId) ?? { general: null, byCountry: {} }]));
+  }
+
+  /**
+   * Varyantların geçerli liste satırları, varyant başına genel ve ülke ayrı en yenisi; `country` yoksa bütün ülkeler, `null` yalnız genel
+   * satır. Sıra azalan olduğu için ilk görülen satır en yenisidir.
+   */
+  private async listPrices(
+    variantIds: readonly string[],
+    channel: Channel,
+    at: Date,
+    country?: Country | null,
+  ): Promise<Map<string, ChannelListPrices>> {
+    const rows = await this.getAll(
+      { variantId: [...variantIds], channel },
+      {
+        isNullFields: country === null ? ['customer_id', 'country'] : ['customer_id'],
+        orFilters: country ? [`country.is.null,country.eq.${country}`] : undefined,
+        rangeFilters: validUntil(at),
+        orderBy: 'validFrom',
+        orderDirection: 'desc',
+      },
+    );
+    const lists = new Map<string, ChannelListPrices>();
+    for (const row of rows) {
+      const list = lists.get(row.variantId) ?? { general: null, byCountry: {} };
+      if (row.country === null) list.general ??= row;
+      else list.byCountry[row.country] ??= row;
+      lists.set(row.variantId, list);
+    }
+    return lists;
   }
 
   /**
@@ -140,6 +174,11 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
     await this.deleteWhere({ variantId, channel, customerId });
   }
 
+  /** Ülke fiyatını kaldırır: (varyant, kanal, ülke) üçlüsünün tüm satırları gider, yoksa altındaki eski ülke fiyatı yürürlüğe girerdi. */
+  async removeCountryPrice(variantId: string, channel: Channel, country: Country): Promise<void> {
+    await this.deleteWhere({ variantId, channel, country });
+  }
+
   /**
    * Şu an geçerli müşteriye özel fiyatlar, (varyant, kanal, müşteri) başına en yeni satır; tablo geçmiş taşıdığı için tekilleştirilir.
    * Sayfalanmaz, çünkü küme veriyle değil yöneticinin pazarlıklarıyla büyür (CLAUDE.md §1).
@@ -149,7 +188,7 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
       {},
       {
         isNotNullFields: ['customer_id'],
-        rangeFilters: [{ field: 'valid_from', operator: 'lte', value: at.toISOString() }],
+        rangeFilters: validUntil(at),
         orderBy: 'validFrom',
         orderDirection: 'desc',
       },
@@ -161,4 +200,8 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
     }
     return [...newest.values()];
   }
+}
+
+function validUntil(at: Date) {
+  return [{ field: 'valid_from', operator: 'lte' as const, value: at.toISOString() }];
 }

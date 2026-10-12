@@ -31,13 +31,14 @@ export {
   type ProductListingScope,
 } from './services/product.service';
 export { ProductVariantService } from './services/product-variant.service';
+export { ProductVatRateService } from './services/product-vat-rate.service';
 export { ProductImageService } from './services/product-image.service';
 export { SiteImageService } from './services/site-image.service';
 export { BundleService, type CreateBundleInput } from './services/bundle.service';
 export { BundleItemService } from './services/bundle-item.service';
 export { RecipeService, type CreateRecipeInput } from './services/recipe.service';
 export { RecipeItemService } from './services/recipe-item.service';
-export { PriceService } from './services/price.service';
+export { PriceService, type ChannelListPrices } from './services/price.service';
 export { PriceGroupService } from './services/price-group.service';
 export { DiscountService, type DiscountUsage } from './services/discount.service';
 export { DiscountCodeService } from './services/discount-code.service';
@@ -97,7 +98,7 @@ export {
   type LedgerFilter,
   type PeriodTotal,
 } from './services/money.service';
-export { OrderSaleService } from './services/accounting.service';
+export { OrderSaleService, TreatmentOrderService, type TreatmentOrder } from './services/accounting.service';
 export {
   RegisterCashOpService,
   RegisterPaymentService,

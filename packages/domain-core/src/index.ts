@@ -80,6 +80,7 @@ export * from './money/pinpoint';
 export * from './money/document-terms';
 export * from './money/document-file';
 export * from './accounting/export';
+export * from './accounting/oss-summary';
 export * from './accounting/movement-export';
 export * from './accounting/line';
 export * from './accounting/sales-invoice';

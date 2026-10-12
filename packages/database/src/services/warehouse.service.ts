@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   WarehouseSchema,
   WarehouseInsertSchema,
+  WarehouseShipCountryEntrySchema,
   WarehouseShipCountryInsertSchema,
   WarehouseShipCountrySchema,
   WarehouseUpdateSchema,
@@ -9,8 +10,10 @@ import {
   type Business,
   type Country,
   type Warehouse,
+  type WarehouseAddress,
   type WarehouseInsert,
   type WarehouseShipCountry,
+  type WarehouseShipCountryEntry,
   type WarehouseShipCountryInsert,
   type WarehouseUpdate,
   type WarehouseWithShipCountries,
@@ -59,7 +62,7 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
     if (opts.vehicleId) filters.vehicleId = opts.vehicleId;
     if (opts.warehouseIds) filters.id = [...opts.warehouseIds];
     const rows = await this.getAllAs(WarehouseWithShipCountriesSchema, Object.keys(filters).length > 0 ? filters : undefined, {
-      select: '*, shipCountries:warehouse_ship_country(country)',
+      select: '*, shipCountries:warehouse_ship_country(country, handover)',
       orderBy: 'sort_order',
     });
     return rows.map(withShipping);
@@ -87,15 +90,20 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   }
 
   /**
-   * Deponun gönderim ülkelerini verilen kümeye eşitler; kalan satırın teslim noktası korunur. Önce eklenir, sonra silinir, çünkü ülke
-   * çakışmasında reddedilen ekleme deponun eski kümesine dokunmamalı.
+   * Deponun gönderim ülkelerini teslim noktalarıyla verilen kümeye eşitler. Adresler yazımdan önce doğrulanır; sonra eklenir, kalanın
+   * noktası yazılır, en son silinir, çünkü ülke çakışmasında reddedilen ekleme deponun eski kümesine dokunmamalı.
    */
-  async setShipsTo(warehouseId: string, countries: readonly Country[]): Promise<void> {
+  async setShipCountries(warehouseId: string, entries: readonly WarehouseShipCountryEntry[]): Promise<void> {
+    const valid = entries.map((entry) => WarehouseShipCountryEntrySchema.parse(entry));
     const rows = new WarehouseShipCountryService(this.supabase);
-    const current = (await rows.listForWarehouse(warehouseId)).map((row) => row.country);
-    const next = new Set(countries);
-    await rows.add(warehouseId, [...next].filter((country) => !current.includes(country)));
-    await rows.remove(warehouseId, current.filter((country) => !next.has(country)));
+    const current = new Map((await rows.listForWarehouse(warehouseId)).map((row) => [row.country, row.handover]));
+    const next = new Map(valid.map((entry) => [entry.country, entry]));
+    await rows.add(warehouseId, [...next.values()].filter((entry) => !current.has(entry.country)));
+    for (const entry of next.values()) {
+      const handover = current.get(entry.country);
+      if (handover !== undefined && !sameAddress(handover, entry.handover)) await rows.setHandover(warehouseId, entry);
+    }
+    await rows.remove(warehouseId, [...current.keys()].filter((country) => !next.has(country)));
   }
 
   /**
@@ -112,10 +120,16 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   }
 }
 
-/** Gömülü satırlar düz ülke listesine iner; `shipsOnline` yalnız burada türer ki iki doğruluk ayrışmasın. */
-function withShipping({ shipCountries, ...warehouse }: WarehouseWithShipCountries): WarehouseWithShipping {
-  const shipsTo = shipCountries.map((row) => row.country).sort();
-  return { ...warehouse, shipsTo, shipsOnline: shipsTo.length > 0 };
+/** Ülke listesi ve `shipsOnline` gömülü satırlardan yalnız burada türer ki iki doğruluk ayrışmasın. */
+function withShipping(warehouse: WarehouseWithShipCountries): WarehouseWithShipping {
+  const shipCountries = [...warehouse.shipCountries].sort((a, b) => a.country.localeCompare(b.country));
+  const shipsTo = shipCountries.map((row) => row.country);
+  return { ...warehouse, shipCountries, shipsTo, shipsOnline: shipsTo.length > 0 };
+}
+
+function sameAddress(a: WarehouseAddress | null, b: WarehouseAddress | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.line1 === b.line1 && a.postalCode === b.postalCode && a.city === b.city;
 }
 
 /**
@@ -142,8 +156,12 @@ class WarehouseShipCountryService extends BaseDbService<
   }
 
   /** Tek ifadeyle yazılır ki ülke çakışmasında hiçbir satır yazılmasın. */
-  async add(warehouseId: string, countries: readonly Country[]): Promise<void> {
-    await this.bulkInsert(countries.map((country) => ({ warehouseId, country })));
+  async add(warehouseId: string, entries: readonly WarehouseShipCountryEntry[]): Promise<void> {
+    await this.bulkInsert(entries.map((entry) => ({ warehouseId, ...entry })));
+  }
+
+  async setHandover(warehouseId: string, entry: WarehouseShipCountryEntry): Promise<void> {
+    await this.upsert({ warehouseId, ...entry }, 'warehouse_id,country');
   }
 
   async remove(warehouseId: string, countries: readonly Country[]): Promise<void> {

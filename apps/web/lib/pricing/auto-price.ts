@@ -1,6 +1,6 @@
 import 'server-only';
-import { PriceService, ProductService, ProductVariantService, type Db } from '@lezzet/database';
-import { autoPriceCents, targetMarginFor } from '@lezzet/domain-core';
+import { PriceService, ProductService, ProductVariantService, SettingsService, type Db } from '@lezzet/database';
+import { AUTO_PRICE_STEP_DEFAULT, AUTO_PRICE_STEP_KEY, autoPriceCents, targetMarginFor } from '@lezzet/domain-core';
 import { readCostBasis } from '@lezzet/application';
 import type { Channel } from '@lezzet/types';
 
@@ -57,10 +57,11 @@ export async function repriceVariants(db: Db, variantIds: readonly string[]): Pr
 
   const targetIds = targets.map((v) => v.id);
   const priceSvc = new PriceService(db);
-  const [costs, b2cMap, b2bMap] = await Promise.all([
+  const [costs, b2cMap, b2bMap, stepCents] = await Promise.all([
     readCostBasis(db, targetIds),
     priceSvc.findApplicableMap(targetIds, 'b2c'),
     priceSvc.findApplicableMap(targetIds, 'b2b'),
+    new SettingsService(db).getNumber(AUTO_PRICE_STEP_KEY, AUTO_PRICE_STEP_DEFAULT),
   ]);
   const currentOf = (channel: Channel) => (channel === 'b2c' ? b2cMap : b2bMap);
 
@@ -90,6 +91,7 @@ export async function repriceVariants(db: Db, variantIds: readonly string[]): Pr
         costCents: basis.costCents,
         targetMarginPercent: channelTarget,
         vatRate: product.vatRate,
+        stepCents,
       });
       const currentCents = current.amountCents;
       if (next === null || next === currentCents) continue;

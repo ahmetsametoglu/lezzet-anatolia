@@ -52,7 +52,7 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
 
     if (id) {
       // Kapanan anahtarın satırları künyeden önce kalkar, çünkü gönderim ülkesi olan depo QUALITE'ye geçemez.
-      if (!shipsOnline) await svc.setShipsTo(id, []);
+      if (!shipsOnline) await svc.setShipCountries(id, []);
       const row = await svc.update({ id, ...fields, address, ...point });
       if (shipsOnline) await keepShipping(svc, row);
       revalidatePath(WAREHOUSES_PATH);
@@ -79,7 +79,7 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
 /** Formun kargo anahtarı açıkken kargo yapmayan depo kendi ülkesine kargo yapar; yazılmış gönderim ülkeleri olduğu gibi korunur. */
 async function keepShipping(svc: WarehouseService, row: Pick<Warehouse, 'id' | 'countryCode'>): Promise<void> {
   const current = (await svc.list({ warehouseIds: [row.id] }))[0]?.shipsTo ?? [];
-  if (current.length === 0) await svc.setShipsTo(row.id, [row.countryCode]);
+  if (current.length === 0) await svc.setShipCountries(row.id, [{ country: row.countryCode, handover: null }]);
 }
 
 /**

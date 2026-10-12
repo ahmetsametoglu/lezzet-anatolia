@@ -81,6 +81,8 @@ insert into public.settings (key, value, description) values
   ('route_delivery_unit_cost_cents','250',   'Rota teslimat birim maliyeti (cent) — kâr hesabı.'),
   ('packaging_unit_cost_cents',    '120',    'Paketleme (soğuk zincir) birim maliyeti (cent) — kâr hesabı.'),
   ('door_packaging_unit_cost_cents','0',     'Kapı önü satışta paketleme birim maliyeti (cent). Varsayılan 0: mal elden gidiyor, soğuk zincir paketi yok.'),
+  -- Otomatik fiyat bu adıma yukarı yuvarlanır, nakit ödemede küsurattan kaçınmak için (docs/feature/ulke-pazari.md, 7. karar).
+  ('auto_price_step_cents',        '50',     'Otomatik fiyatın yukarı yuvarlandığı adım (cent): 50 = 50 sent, 100 = tam euro.'),
   -- Gel-al siparişinde randevu sistem dışıdır (telefon); ayrılmış mal süresiz bekleyemez, süre dolunca ofis görür ve karar verir.
   ('pickup_wait_days',             '7',      'Gel-al siparişinin hazır bekleyebileceği süre (gün); dolunca ofis listesine düşer, iptal kararı ofisin.'),
   -- Banka hareketi Pennylane'e gecikmeli gelir; hafta sonuyla birlikte dört günlük sessizlik bağlantının düştüğünü gösterir.
