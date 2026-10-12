@@ -1,12 +1,10 @@
 import { z } from 'zod';
 import { DeliveryRunCloseSchema } from '../entities/delivery-run.schema';
-import { FulfillmentAdjustmentSchema } from '../entities/order.schema';
 import {
   ChannelEnum,
   DoorCheckEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
-  PaymentStatusEnum,
   StopOrderMetricEnum,
   StopOrderPrecisionEnum,
   StopOrderSourceEnum,
@@ -25,8 +23,8 @@ export const StopOutcomeEnum = z.enum(['pending', 'delivered', 'unreachable', 'r
 export type StopOutcomeContract = z.infer<typeof StopOutcomeEnum>;
 
 /**
- * Kapıdaki durak (K1). **Kurye para GÖRÜR ama yalnız bir tanesini:** tahsil edeceği tutarı —
- * maliyet, kâr, marj, müşterinin borcu bu şemada YOKTUR ve olmayacak (tasarım §6).
+ * Kapıdaki durak. **Kurye para GÖRÜR ama yalnız bir tanesini:** tahsil edeceği tutarı —
+ * maliyet, kâr, marj, müşterinin borcu bu şemada YOKTUR ve olmayacak.
  */
 export const CourierStopSchema = z.object({
   orderId: z.string().uuid(),
@@ -241,6 +239,18 @@ export type DoorCollectionMethods = z.infer<typeof DoorCollectionMethodsSchema>;
 /** Yöntemin hesabı ayarlı değil; hesap yazımdan önce çözüldüğü için hiçbir kayıt yazılmadı. */
 export const DoorCollectionUnavailableSchema = z.object({ status: z.literal('collection_unavailable'), method: DoorMethodEnum });
 
+/**
+ * Kapıda tahsilat. Paranın hesabını istemci göndermez, sunucu yöntemin ayarından çözer: nakit çekmeceye, kart kart hesabına yazılır.
+ */
+export const DoorCollectionInputSchema = z.object({
+  method: DoorMethodEnum,
+  /** **Cent**. */
+  amountCents: z.number().int().positive(),
+  /** İsteğin kimliği, durağın değil: anahtar istemcide üretilir ki yeniden deneme parayı iki kez yazmasın (sınırı `order/payment.ts`te). */
+  idempotencyKey: z.string().min(1).nullish(),
+});
+export type DoorCollectionInputContract = z.infer<typeof DoorCollectionInputSchema>;
+
 /** `GET /courier/day` yanıtı. Gün ZORUNLU döner: istemci "hangi günü gösteriyorum" sorusunu sormaz. */
 export const CourierDayResponseSchema = z.object({
   date: z.string(),
@@ -292,121 +302,6 @@ export const StartCourierDayRequestSchema = z.object({
   depart: z.boolean().optional(),
 });
 export type StartCourierDayRequest = z.infer<typeof StartCourierDayRequestSchema>;
-
-/**
- * Kuryenin seçebileceği araçlar: yalnız kendi deposuna künyeli olanlar.
- * Ad kimliğin yanındadır; `label` boşsa plaka adın kendisidir.
- */
-export const CourierVehicleSchema = z.object({
-  vehicleId: z.string().uuid(),
-  plate: z.string(),
-  /** Okunur ad ("Frigo kamyonet"); `null` = adı yok, ekran plakayı yazar. */
-  label: z.string().nullable(),
-});
-export type CourierVehicle = z.infer<typeof CourierVehicleSchema>;
-
-export const CourierVehiclesResponseSchema = z.object({ vehicles: z.array(CourierVehicleSchema) });
-export type CourierVehiclesResponse = z.infer<typeof CourierVehiclesResponseSchema>;
-
-/**
- * Araca serbest ürün: sipariş dışı, kapıda satılabilecek mal; kutudan farklı olarak gerçek stok hareketidir (depodan aracın stoğuna).
- * Kalem varyant düzeyindedir, parti seçimi (FEFO) kapının işidir.
- */
-export const CourierVanStockLineSchema = z.object({
-  variantId: z.string().uuid(),
-  name: z.string(),
-  /** Boy etiketi ("450 g") — addan AYRI, çünkü ekran ikisini farklı ağırlıkta yazıyor (v3:19). */
-  variantLabel: z.string(),
-  /**
-   * Ürün kapağının public URL'i; `null` = kapaksız ürün, satır monogram çizer.
-   * Rampada kurye ürünü adından çok görünüşünden tanır.
-   */
-  imageUrl: z.string().nullable(),
-  qty: z.number().int(),
-  /** Çıkış deposunda kalan kullanılabilir adet — "Alındıktan sonra depoda N kalır." cümlesi. */
-  available: z.number().int(),
-});
-export type CourierVanStockLine = z.infer<typeof CourierVanStockLineSchema>;
-
-/** Depoda alınabilir kalem ("sık koyulanlar" bölümü); `available` = stok eksi rezerve. */
-export const CourierVanCandidateSchema = z.object({
-  variantId: z.string().uuid(),
-  name: z.string(),
-  /** Boy etiketi ("450 g") — kartın ince yarısı. */
-  variantLabel: z.string(),
-  /** Ürün kapağı; `null` = monogram (aynı gerekçe: rampada ürün görünüşünden tanınır). */
-  imageUrl: z.string().nullable(),
-  available: z.number().int(),
-  /** Bu varyanttan ARAÇTA kaç tane var — kart "araçta 3" diyebilsin diye (v3:19 `h.rozet`). */
-  onVan: z.number().int(),
-});
-export type CourierVanCandidate = z.infer<typeof CourierVanCandidateSchema>;
-
-export const CourierVanStockResponseSchema = z.object({
-  /** `null` = kuryenin araç deposu yok → ekran sebebini söyler, boş liste göstermez. */
-  vehicleWarehouseId: z.string().uuid().nullable(),
-  onVan: z.array(CourierVanStockLineSchema),
-  candidates: z.array(CourierVanCandidateSchema),
-});
-export type CourierVanStockResponse = z.infer<typeof CourierVanStockResponseSchema>;
-
-/**
- * Araçtaki adedi yaz: fark değil hedef gider ("şu kadar olsun"), çünkü tekrar eden istek hedefte zararsızdır, farkta malı ikinci kez araca bindirir.
- * `observedQty` kuryenin ekranda gördüğü sayıdır; sunucu kendi ölçtüğüyle tutmazsa hiçbir şey yazmaz ve `stale` döner.
- */
-export const CourierVanStockSetRequestSchema = z.object({
-  variantId: z.string().uuid(),
-  /** Araçta OLMASI istenen adet. Fark değil hedef; yönü sunucu ölçerek bulur. */
-  targetQty: z.number().int().min(0),
-  /** İstemcinin O ANDA gördüğü araç adedi — künyesi yukarıda. */
-  observedQty: z.number().int().min(0),
-  /**
-   * Yazımın kimliği: hedef ve taban ardışık tekrarı çözer, aynı anda gelen iki eş isteği ise ancak veritabanının tekil anahtarı durdurur.
-   * `nullish`: anahtarsız istek yalnız hedef ve tabanla korunur; üretimi istemcinin işidir (`lib/request-key.ts`).
-   */
-  idempotencyKey: z.string().min(1).max(64).nullish(),
-});
-export type CourierVanStockSetRequest = z.infer<typeof CourierVanStockSetRequestSchema>;
-
-/** Okutma ayrı bir kapı: okutan istemci kodun hangi varyant olduğunu bilmez, bu yüzden hedef ve taban veremez; adet daima 1'dir. */
-export const CourierVanStockScanRequestSchema = z.object({
-  /** Okutulan barkod / SKU / tedarikçi kodu — uç `variant_barcode` üzerinden çözer. */
-  code: z.string().trim().min(1).max(64),
-});
-export type CourierVanStockScanRequest = z.infer<typeof CourierVanStockScanRequestSchema>;
-
-export const CourierVanStockMoveResponseSchema = z.discriminatedUnion('status', [
-  z.object({
-    status: z.literal('ok'),
-    variantId: z.string().uuid(),
-    /**
-     * İşaretli: `+` araca alındı, `−` depoya devredildi, `0` hiçbir hareket yazılmadı.
-     * Sonuncusu tekrar eden isteğin cevabıdır; ekran "zaten yazılmıştı" diyebilsin.
-     */
-    delta: z.number().int(),
-    /** Hareketten SONRA araçta kalan — ÖLÇÜLMÜŞ değerdir, hedefin kopyası değil. */
-    vanQty: z.number().int(),
-  }),
-  /**
-   * Taban tutmadı: istemcinin gördüğü adet ile aracın gerçeği ayrışmış ve hiçbir şey yazılmadı; `failed`ten farkı bu garantidir.
-   * `vanQty` gerçeği taşır ki ekran satırı yerinde düzeltebilsin.
-   */
-  z.object({ status: z.literal('stale'), variantId: z.string().uuid(), vanQty: z.number().int() }),
-  /** Depoda o kadar KULLANILABİLİR yok; sayı dönüyor ki ekran "şu kadar var" diyebilsin. */
-  z.object({ status: z.literal('not_enough'), available: z.number().int() }),
-  /**
-   * Okutulan kod HİÇBİR varyanta bağlı değil (v3:19'un okutma dalı). Sessiz bir "olmadı" burada
-   * en kötü cevaptır: kurye kodu okuttuğunu sanır, mal araca hiç binmez ve akşam sayım tutmaz.
-   */
-  z.object({ status: z.literal('unknown_code') }),
-  z.object({ status: z.literal('no_vehicle') }),
-  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
-  /** Sevk yazıldı, kabul düştü — mal transferde asılı. Kimlik dönüyor ki depodan çözülebilsin. */
-  z.object({ status: z.literal('stuck'), transferId: z.string().uuid() }),
-  z.object({ status: z.literal('failed'), message: z.string() }),
-]);
-export type CourierVanStockMoveResponse = z.infer<typeof CourierVanStockMoveResponseSchema>;
-
 
 /**
  * Kutulu sipariş: bütün kutuları binene kadar "yolda" yazılmaz.
@@ -574,128 +469,6 @@ export const LoadBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('unknown_code') }),
 ]);
 export type LoadBoxResponse = z.infer<typeof LoadBoxResponseSchema>;
-
-/**
- * **Ulaşılamadı / reddedildi** isteği (K5). İki ayrı işaret, iki ayrı akıbet — tek düğmeye
- * sıkıştırılmaz: `unreachable` malı araçta bırakır (`ready`), `refused` depoya döndürür (`returned`).
- */
-export const MarkUndeliveredRequestSchema = z.object({
-  outcome: z.enum(['unreachable', 'refused']),
-  /** Kısa ve SERBEST ("zil bozuk"): sebebi standartlaştırmak sahada yanlış-ama-düzgün veri üretir. */
-  note: z.string().nullish(),
-});
-export type MarkUndeliveredRequest = z.infer<typeof MarkUndeliveredRequestSchema>;
-
-export const MarkUndeliveredResponseSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('ok'), outcome: z.enum(['unreachable', 'refused']), currentStatus: OrderStatusEnum }),
-  z.object({
-    status: z.literal('forbidden'),
-    reason: z.enum(['not_assigned', 'same_status', 'terminal', 'not_allowed']),
-  }),
-  /** Araya biri girdi: sipariş artık o durumda değil. Ekran bunu GÖSTERİR, yutmaz. */
-  z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
-  z.object({ status: z.literal('not_found') }),
-]);
-export type MarkUndeliveredResponse = z.infer<typeof MarkUndeliveredResponseSchema>;
-
-/**
- * Teslim kanıtı girdisi: imza ve fotoğraf görsel olarak saklanır.
- * `box_scan` istemciden gelmez, o kaydı sunucu okutulan kodlardan kurar; girdi bu yüzden kayıt şemasından dardır.
- */
-export const DeliveryProofInputSchema = z.object({
-  kind: z.enum(['signature', 'photo']),
-  imageKey: z.string().min(1),
-  /** Kapıda teslim alan kişi — B2B'de "kim imzaladı" ihtilafın cevabıdır. */
-  receivedBy: z.string().nullish(),
-});
-export type DeliveryProofInputContract = z.infer<typeof DeliveryProofInputSchema>;
-
-/**
- * Kapıda tahsilat. Paranın hesabını istemci göndermez, sunucu yöntemin ayarından çözer: nakit çekmeceye, kart kart hesabına yazılır.
- */
-export const DoorCollectionInputSchema = z.object({
-  method: DoorMethodEnum,
-  /** **Cent**. */
-  amountCents: z.number().int().positive(),
-  /**
-   * **Kuyruk yeniden-denemesi parayı iki kez yazmasın.** Anahtar İSTEMCİDE üretilir ve isteğin
-   * kimliğidir (durağın değil): çevrimdışı kuyruk aynı isteği tekrar gönderdiğinde aynı anahtarla
-   * gelir. Sunucu tarafındaki sınırı `application/src/order/payment.ts` künyesinde yazılı.
-   */
-  idempotencyKey: z.string().min(1).nullish(),
-});
-export type DoorCollectionInputContract = z.infer<typeof DoorCollectionInputSchema>;
-
-/**
- * Kapıda teslim isteği: sıra sunucuda sabittir (kanıt → mal → teslim → para), istemci tek istek gönderir ki yarısı yazılmış teslimat kalmasın.
- */
-export const ConfirmDoorDeliveryRequestSchema = z.object({
-  /**
-   * `fulfilledQty` hedef değerdir (kalan adet), fark değil.
-   * Akıbet (`returnDisposition`) kuryede yoktur, çünkü malın satılabilir olup olmadığını depoda bakan kişi beyan eder; `note` kalır.
-   */
-  adjustments: z.array(FulfillmentAdjustmentSchema.omit({ returnDisposition: true })).optional(),
-  proof: DeliveryProofInputSchema.nullish(),
-  collection: DoorCollectionInputSchema.nullish(),
-  /**
-   * Kapıda okutulan kutu kodları: kutulu siparişte teslimin ön koşuludur, eksik kutuda `boxes_missing` döner ve hiçbir yazım yapılmaz.
-   */
-  scannedBoxCodes: z.array(z.string()).optional(),
-});
-export type ConfirmDoorDeliveryRequest = z.infer<typeof ConfirmDoorDeliveryRequestSchema>;
-
-export const ConfirmDoorDeliveryResponseSchema = z.discriminatedUnion('status', [
-  z.object({
-    status: z.literal('ok'),
-    /** Fiilen yazılan tahsilat (**cent**); tahsilat yoksa 0. */
-    collectedCents: z.number().int(),
-    /** Teslim sonrası kalan borç (**cent**). */
-    amountDueCents: z.number().int(),
-    paymentStatus: PaymentStatusEnum,
-    /** Nakit yasal sınırı aşıldı mı. **Engel DEĞİL, bilgi** — karar sahadadır (DOMAIN §7). */
-    cashLimitExceeded: z.boolean(),
-    adjustedLines: z.number().int(),
-    /** Tahsilat bu istekte yazılmadı; aynı anahtarla zaten yazılmıştı (K4). */
-    collectionDeduped: z.literal(true).optional(),
-  }),
-  /** Kanıt zorunlu ama gelmedi — HİÇBİR yazım yapılmadı, sipariş hâlâ yolda. */
-  z.object({ status: z.literal('proof_required'), channel: ChannelEnum }),
-  /**
-   * Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI (etüt 2.5: tüm kutular okutulmadan
-   * tamamlanmaz). Kalan kutuların numarası döner: ekran "Kutu 2 ve 3 okutulmadı" der.
-   */
-  z.object({ status: z.literal('boxes_missing'), remainingBoxNos: z.array(z.number().int()) }),
-  DoorCollectionUnavailableSchema,
-  z.object({ status: z.literal('forbidden'), reason: z.literal('not_assigned') }),
-  z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
-  z.object({ status: z.literal('not_found') }),
-]);
-export type ConfirmDoorDeliveryResponse = z.infer<typeof ConfirmDoorDeliveryResponseSchema>;
-
-/**
- * Kanıt yükleme izni isteği: dosya sunucudan geçmez, cihaz doğrudan kovaya yükler.
- * Sunucu yetkiyi doğrular, anahtarı seçer ve kısa ömürlü izin yazar.
- */
-export const DeliveryProofUploadRequestSchema = z.object({
-  filename: z.string().min(1),
-  /** Bu teslimat için daha önce kaç kanıt istendiği — tavan kontrolü (imza + birkaç fotoğraf). */
-  alreadyRequested: z.number().int().nonnegative().optional(),
-});
-export type DeliveryProofUploadRequest = z.infer<typeof DeliveryProofUploadRequestSchema>;
-
-export const DeliveryProofUploadResponseSchema = z.discriminatedUnion('ok', [
-  z.object({ ok: z.literal(true), key: z.string(), uploadUrl: z.string() }),
-  z.object({
-    ok: z.literal(false),
-    /**
-     * `not_found` "yok" ile "senin değil"in ORTAK cevabıdır (bilerek): ayrı cevap verilseydi kimlik
-     * deneyerek hangi siparişlerin var olduğu haritalanabilirdi.
-     * `storage_unavailable` kova yapılandırılmamış — "yüklendi" demekle karıştırılmaz.
-     */
-    reason: z.enum(['unsupported_type', 'too_many', 'not_found', 'storage_unavailable']),
-  }),
-]);
-export type DeliveryProofUploadResponse = z.infer<typeof DeliveryProofUploadResponseSchema>;
 
 /**
  * Sefer kapanışı taslağı: seferin resmi ve beklenen tahsilat.

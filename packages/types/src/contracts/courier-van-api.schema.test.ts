@@ -1,21 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { CourierVanStockScanRequestSchema, CourierVanStockSetRequestSchema } from './courier-api.schema';
+import { CourierVanStockScanRequestSchema, CourierVanStockSetRequestSchema } from './courier-van-api.schema';
 
 /**
- * **RAMPANIN İKİ İSTEĞİ** (21.263 · kullanıcı kararı 04.09).
- *
- * 05.09'a kadar tek şema vardı (`CourierVanStockMoveRequestSchema`) ve tek RED kuralı taşıyordu:
- * *"gövde ya varyant kimliği ya BARKOD taşır — biri, yalnız biri"*. O şema iki farklı NİYETİ tek
- * şekle sıkıştırdığı için `refine` ile ayrılmak zorundaydı; ayrıca FARK taşıyordu (`qty`) ve farkı
- * istemcinin bayat tabanından hesaplattığı için ölçülen çift yazımın kaynağıydı.
- *
- * Şimdi iki şema var ve her biri kendi kuralını kendi şeklinde taşıyor — `refine` gerekmiyor:
- *   · `set`  → varyant biliniyor, hedef ve GÖRÜLEN taban veriliyor.
- *   · `scan` → varyant BİLİNMİYOR (kod çözülecek), o yüzden hedef de taban da yok; adet daima 1.
- *
- * Sınanan şey iki şemanın REDDETTİKLERİ: bir alanın isteğe bağlı kalması burada sessiz bir açık
- * olurdu — koruma tam da en sık yolda (alanı yazmayan istemci) atlanırdı.
+ * Araçtaki adedi yazan istek (`set`) varyantı, hedefi ve görülen tabanı zorunlu taşır; okutma isteği (`scan`) yalnız kodu taşır ve adet daima 1'dir.
+ * Sınanan şey reddettikleridir, çünkü isteğe bağlı kalan bir alan korumayı tam da onu yazmayan istemcide atlatırdı.
  */
 describe('araçtaki adedi yaz (`set`) — hedef ve taban ZORUNLU', () => {
   const variantId = '00000000-0000-4000-8000-000000000901';
@@ -34,9 +23,7 @@ describe('araçtaki adedi yaz (`set`) — hedef ve taban ZORUNLU', () => {
   });
 
   it('TABAN yazılmadan çağrılamaz — korumanın atlanacağı tek yol buydu', () => {
-    /* `observedQty` isteğe bağlı olsaydı sunucu "verilmediyse kontrol etme" demek zorunda kalırdı ve
-       taban kontrolü tam da onu yazmayı unutan istemcide çalışmazdı. Eksiklik burada GÖRÜNÜR
-       reddediliyor (400), sessizce korumasız yazıma dönüşmüyor. */
+    // Taban isteğe bağlı olsaydı sunucu onu yazmayan istemcide kontrolü atlardı; eksiklik burada görünür biçimde reddedilir.
     expect(CourierVanStockSetRequestSchema.safeParse({ variantId, targetQty: 5 }).success).toBe(false);
     expect(CourierVanStockSetRequestSchema.safeParse({ variantId, observedQty: 3 }).success).toBe(false);
   });
@@ -48,7 +35,6 @@ describe('araçtaki adedi yaz (`set`) — hedef ve taban ZORUNLU', () => {
   });
 
   it('KOD bu kapıdan geçmez — okutmanın kendi kapısı var', () => {
-    // Eski birleşik şemada kimlik iki dallıydı; ayrım artık şeklin kendisinde.
     expect(CourierVanStockSetRequestSchema.safeParse({ code: '8690000000001', targetQty: 1, observedQty: 0 }).success).toBe(false);
   });
 
