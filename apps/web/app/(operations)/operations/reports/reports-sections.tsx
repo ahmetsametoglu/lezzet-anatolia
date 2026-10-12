@@ -1,17 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { BUSINESS_LABELS } from '@lezzet/types';
+import Link from 'next/link';
+import { BUSINESS_LABELS, COUNTRY_LABELS } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { amount, money, num, percent, shortDate } from '@/components/operation/ui/format';
 import { Input } from '@/components/operation/form/input';
+import { vatRateLabel } from '@/components/operation/form/document-form/labels';
 import type { BusinessFilter } from '@/lib/business-filter';
+import { settingsLink } from '../settings/settings-url';
 import { generateExportAction, generateMovementExportAction, matchInvoiceAction } from './actions';
+import { ossFootnote, thresholdBadge, thresholdNote } from './distance-sale-labels';
 import { COST_LABEL, NOTES } from './reports-labels';
-import type { ChannelCard, ExportView, InvoiceQueueRow, MetricView, PnlRow, VariantProfitRow } from './reports-types';
-import { monthLabel } from './reports-url';
+import type { ChannelCard, DistanceSaleView, ExportView, InvoiceQueueRow, MetricView, PnlRow, VariantProfitRow } from './reports-types';
+import { monthLabel, quarterLabel } from './reports-url';
 
 // Raporlar ekranının blokları — masaüstü ve mobil ikisi de buradan besleniyor. Cihaz farkı
 // `stacked` PROP'uyla taşınıyor, `md:` ile DEĞİL (CLAUDE.md §2 · ADR Sapma 3).
@@ -207,6 +211,7 @@ export function ChannelCards({ cards, stacked = false }: { cards: ChannelCard[];
 
 export function ExportPanel({
   view,
+  distanceSale,
   queue,
   ym,
   business,
@@ -214,6 +219,7 @@ export function ExportPanel({
   stacked = false,
 }: {
   view: ExportView;
+  distanceSale: DistanceSaleView | null;
   queue: InvoiceQueueRow[];
   ym: string;
   /** Dosyaların işi; başlık onu söyler ki indirilen dosyanın kapsamı ekranda görünsün. */
@@ -303,13 +309,14 @@ export function ExportPanel({
 
       {view.byVatRate.length > 0 ? (
         <div className="flex flex-col gap-1.5">
-          <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.06em] text-ops-faint">
-            KDV oranına göre
-          </span>
+          <span className={SECTION_LABEL}>KDV oranına göre</span>
           <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-surface">
             {view.byVatRate.map((line) => (
               <div key={line.rate} className="flex items-center justify-between border-b border-ops-line-soft px-4 py-2.5 last:border-b-0">
-                <span className="font-ops-body text-ops-sm text-ops-muted">%{line.rate}</span>
+                <span className="font-ops-body text-ops-sm text-ops-muted">
+                  %{line.rate}
+                  {line.country ? ` · ${COUNTRY_LABELS[line.country]}` : ''}
+                </span>
                 <span className="font-ops-mono text-ops-sm text-ops-ink">
                   {money(line.netCents)} + {money(line.vatCents)} KDV
                 </span>
@@ -319,7 +326,166 @@ export function ExportPanel({
         </div>
       ) : null}
 
+      {distanceSale ? <DistanceSaleSection view={distanceSale} business={business} /> : null}
+
       <InvoiceQueue rows={queue} onChanged={onChanged} />
+    </div>
+  );
+}
+
+const SECTION_LABEL = 'font-ops-display text-ops-micro font-semibold uppercase tracking-[0.06em] text-ops-faint';
+
+const NOTE_TONE = {
+  blue: 'border-ops-blue-line bg-ops-blue-bg text-ops-blue-dark',
+  amber: 'border-ops-amber-line bg-ops-amber-bg text-ops-amber-dark',
+} as const;
+
+interface DistanceSaleSectionProps {
+  view: DistanceSaleView;
+  business: BusinessFilter;
+}
+
+/** Uzaktan satış eşiği ve OSS özeti; ikisi de şirketin tamamıdır, iş süzgeci onlara uygulanmaz ve başlık bunu söyler. */
+function DistanceSaleSection({ view, business }: DistanceSaleSectionProps) {
+  const { status, warningPercents } = view;
+  const badge = thresholdBadge(status, warningPercents);
+  const note = thresholdNote(status);
+  const footnote = ossFootnote(view.oss);
+  const scope = business === 'all' ? '' : ' · şirketin tamamı';
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <span className={SECTION_LABEL}>
+          AB uzaktan satış — {status.year}
+          {scope}
+        </span>
+        <div className="flex flex-col gap-3 rounded-ops-card border border-ops-line bg-ops-surface px-4 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">AB’ye uzaktan satış eşiği</span>
+            {badge ? <Badge tone={badge.tone}>{badge.text}</Badge> : null}
+            <Link
+              href={settingsLink({ tab: 'money' })}
+              className="ml-auto cursor-pointer font-ops-display text-ops-sm font-semibold text-ops-olive-dark hover:underline"
+            >
+              Eşik ve açılış tutarı Ayarlar’da →
+            </Link>
+          </div>
+          <ThresholdBar
+            year={status.year}
+            totalCents={status.yearTotalCents}
+            thresholdCents={status.thresholdCents}
+            marks={warningPercents}
+            fill={status.warning === 'exceeded' ? 'bg-ops-blue' : status.warning === 'none' ? 'bg-ops-olive' : 'bg-ops-amber'}
+          />
+          <ThresholdBar
+            year={status.year - 1}
+            totalCents={status.previousYearTotalCents}
+            thresholdCents={status.thresholdCents}
+            marks={null}
+            fill={status.sincePreviousYear ? 'bg-ops-blue' : 'bg-ops-gray-400'}
+          />
+          <span className="font-ops-body text-ops-xs text-ops-body">
+            Toplam sistemdeki satış ve açılış ayarıdır · KDV hariç, iade düşülmüş, iptal sayılmaz
+          </span>
+          {note ? (
+            <p className={['rounded-ops-btn border px-3 py-2 font-ops-body text-ops-xs leading-relaxed', NOTE_TONE[note.tone]].join(' ')}>
+              {note.text}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className={SECTION_LABEL}>OSS özeti — {quarterLabel(view.quarter.year, view.quarter.quarter)}</span>
+        {view.oss.lines.length > 0 ? <OssTable view={view} /> : null}
+        {footnote ? <p className="font-ops-body text-ops-xs leading-relaxed text-ops-body">{footnote}</p> : null}
+      </div>
+    </>
+  );
+}
+
+interface ThresholdBarProps {
+  year: number;
+  totalCents: number;
+  thresholdCents: number;
+  /** Uyarı yüzdeleri; çubuğun üstünde işaret, altında tutar. */
+  marks: readonly number[] | null;
+  fill: string;
+}
+
+/** Yılın toplamı eşiğe göre; eşiği geçen toplam çubuğu doldurur ve tutar sağda yazar, çubuk taşmaz. */
+function ThresholdBar({ year, totalCents, thresholdCents, marks, fill }: ThresholdBarProps) {
+  const ratio = thresholdCents > 0 ? Math.min(1, totalCents / thresholdCents) : 0;
+  return (
+    <div className="grid grid-cols-[48px_minmax(0,1fr)_220px] items-start gap-x-4">
+      <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">{year}</span>
+      <div className="flex flex-col gap-1 pt-1.5">
+        <div className="relative h-2 rounded-full bg-ops-surface-sunken">
+          <div className={`h-2 rounded-full ${fill}`} style={{ width: `${ratio * 100}%` }} />
+          {marks?.map((mark) => (
+            <span key={mark} className="absolute -top-1 h-4 w-px bg-ops-line-strong" style={{ left: `${mark}%` }} />
+          ))}
+        </div>
+        {marks ? (
+          <div className="relative h-4">
+            {marks.map((mark) => (
+              <span
+                key={mark}
+                className="absolute -translate-x-full whitespace-nowrap pr-1 font-ops-mono text-ops-micro text-ops-muted"
+                style={{ left: `${mark}%` }}
+              >
+                %{mark} · {money(Math.round((thresholdCents * mark) / 100))}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <span className="text-right font-ops-mono">
+        <span className="text-ops-base font-semibold text-ops-ink">{money(totalCents)}</span>
+        {marks ? <span className="text-ops-sm text-ops-muted"> / {money(thresholdCents)}</span> : null}
+      </span>
+    </div>
+  );
+}
+
+const OSS_GRID = 'grid grid-cols-[minmax(0,1fr)_80px_130px_120px] items-center gap-x-4 px-4';
+
+interface OssTableProps {
+  view: DistanceSaleView;
+}
+
+/** OSS beyanının satırları: ülke ve oran başına KDV hariç satış ve KDV; toplam muhasebecinin beyanla kıyasladığı satırdır. */
+function OssTable({ view }: OssTableProps) {
+  const total = view.oss.lines.reduce((sum, line) => ({ net: sum.net + line.netCents, vat: sum.vat + line.vatCents }), { net: 0, vat: 0 });
+  return (
+    <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-surface">
+      <div
+        className={`${OSS_GRID} border-b border-ops-line bg-ops-surface-sunken py-2 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted`}
+      >
+        <span>Ülke</span>
+        <span className="text-right">Oran</span>
+        <span className="text-right" title="KDV hariç tutar">
+          Satış
+        </span>
+        <span className="text-right">KDV</span>
+      </div>
+      {view.oss.lines.map((line) => (
+        <div
+          key={`${line.country}-${line.vatRate}`}
+          className={`${OSS_GRID} border-b border-ops-line-soft py-2.5 font-ops-body text-ops-sm text-ops-ink last:border-b-0`}
+        >
+          <span>{COUNTRY_LABELS[line.country]}</span>
+          <span className="text-right font-ops-mono">{vatRateLabel(line.vatRate)}</span>
+          <span className="text-right font-ops-mono">{money(line.netCents)}</span>
+          <span className="text-right font-ops-mono">{money(line.vatCents)}</span>
+        </div>
+      ))}
+      <div className={`${OSS_GRID} border-t border-ops-line py-2.5 font-ops-body text-ops-sm font-semibold text-ops-ink`}>
+        <span>Toplam</span>
+        <span />
+        <span className="text-right font-ops-mono">{money(total.net)}</span>
+        <span className="text-right font-ops-mono">{money(total.vat)}</span>
+      </div>
     </div>
   );
 }

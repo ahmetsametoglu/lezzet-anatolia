@@ -5,12 +5,13 @@ import { z } from 'zod';
 import { StorageAreaService, TemperatureLogService, VehicleService, WarehousePrinterService, WarehouseService, serviceDb, ShippingBoxService } from '@lezzet/database';
 import { geocoder } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
-import type { Country, Warehouse } from '@lezzet/types';
+import type { Country } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
 import type { ActionResult } from '@/lib/error';
 import { isUnusualReading } from './measure-read';
 import type { TemperatureDeviation } from './measure-rules';
+import { shipCountryEntries } from './ship-countries';
 import { WAREHOUSES_PATH } from './warehouses-url';
 import { ShippingBoxFormSchema } from './warehouses-types';
 import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema, WarehousePrinterFormSchema } from './warehouses-types';
@@ -21,7 +22,7 @@ import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema, Warehous
 /** İnsan diline çevrilmiş kısıt ihlalleri. Ad → cümle; adı bilinmeyen hata olduğu gibi geçer. */
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   warehouse_ship_country_single_active:
-    'Bu ülkeye kargoyu zaten başka bir aktif depo yapıyor — ülke başına en fazla bir tane olabilir. Önce o depodan kaldırın.',
+    'Bu ülkeye başka bir depo kargo yapıyor. Bir ülkeye tek aktif depo kargo yapar; önce o deponun künyesinden kaldırın.',
   warehouse_code_key: 'Bu kod başka bir depoda kullanılıyor. Kod belge önekidir; iki tesis aynı öneki taşıyamaz.',
   delivery_zone_postal_code_pkey:
     'Bu deponun bölgelerindeki posta kodlarından biri seçilen işin başka bir bölgesinde tanımlı. Önce o kodları bölgeden çıkarın.',
@@ -36,31 +37,31 @@ const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT
 // ── Künye ───────────────────────────────────────────────────────────────────
 
 /**
- * Depo ekle / künyeyi düzenle.
- *
- * `sortOrder` yalnız YENİ depoda verilir (listenin sonuna): sıra listeden sürüklenerek yönetiliyor
- * ve formun onu da yazması, iki kapıdan yönetilen bir alan demekti.
+ * Depo ekle / künyeyi düzenle. `sortOrder` yalnız yeni depoda verilir (listenin sonuna), çünkü sıra listeden sürüklenerek yönetilir ve
+ * formun onu da yazması iki kapıdan yönetilen bir alan demekti.
  */
 export async function saveWarehouseAction(input: unknown): Promise<ActionResult<{ id: string; code: string }>> {
   try {
     await requireAdmin();
     const parsed = WarehouseFormSchema.extend({ id: z.string().uuid().optional() }).parse(input);
-    const { id, address, lat: latText, lng: lngText, shipsOnline, ...fields } = parsed;
+    const { id, address, lat: latText, lng: lngText, shipCountries, ...fields } = parsed;
+    const ship = shipCountryEntries(shipCountries, fields.countryCode);
+    if (ship.error !== null) return { data: null, error: ship.error };
 
     const svc = new WarehouseService(serviceDb());
     const point = await resolveWarehousePoint({ latText, lngText, address, country: fields.countryCode });
 
     if (id) {
-      // Kapanan anahtarın satırları künyeden önce kalkar, çünkü gönderim ülkesi olan depo QUALITE'ye geçemez.
-      if (!shipsOnline) await svc.setShipCountries(id, []);
+      // Boşalan küme künyeden önce yazılır, çünkü gönderim ülkesi olan depo QUALITE'ye geçemez; dolu küme künyeden sonra, çünkü ülke
+      // ve iş değişikliği satırların kuralına girer.
+      if (ship.entries.length === 0) await svc.setShipCountries(id, []);
       const row = await svc.update({ id, ...fields, address, ...point });
-      if (shipsOnline) await keepShipping(svc, row);
+      if (ship.entries.length > 0) await svc.setShipCountries(row.id, ship.entries);
       revalidatePath(WAREHOUSES_PATH);
       return { data: { id: row.id, code: row.code }, error: null };
     }
 
-    // Yeni tesis listenin SONUNA girer. Sıra operatörün kararıdır ve yeni bir depoyu araya sokmak
-    // ona ait; kod ya da ada göre otomatik yerleştirmek o kararı elinden alırdı.
+    // Yeni tesis listenin sonuna girer; sıra operatörün kararıdır ve kod ya da ada göre yerleştirmek o kararı elinden alırdı.
     const existing = await svc.list();
     const row = await svc.insert({
       ...fields,
@@ -68,18 +69,12 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
       ...point,
       sortOrder: existing.reduce((max, w) => Math.max(max, w.sortOrder), 0) + 1,
     });
-    if (shipsOnline) await keepShipping(svc, row);
+    if (ship.entries.length > 0) await svc.setShipCountries(row.id, ship.entries);
     revalidatePath(WAREHOUSES_PATH);
     return { data: { id: row.id, code: row.code }, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };
   }
-}
-
-/** Formun kargo anahtarı açıkken kargo yapmayan depo kendi ülkesine kargo yapar; yazılmış gönderim ülkeleri olduğu gibi korunur. */
-async function keepShipping(svc: WarehouseService, row: Pick<Warehouse, 'id' | 'countryCode'>): Promise<void> {
-  const current = (await svc.list({ warehouseIds: [row.id] }))[0]?.shipsTo ?? [];
-  if (current.length === 0) await svc.setShipCountries(row.id, [{ country: row.countryCode, handover: null }]);
 }
 
 /**

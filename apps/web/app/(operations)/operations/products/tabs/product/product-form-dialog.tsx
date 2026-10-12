@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
+import { COUNTRY_LABELS, PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
+import { FieldShell } from '@/components/operation/form/field-shell';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
+import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/components/operation/form/product-form';
 import { ProductPhotos } from '@/components/operation/form/product-form/photos';
@@ -15,7 +17,9 @@ import type { ProductFormTab } from '@/components/operation/form/product-form/ty
 // Yazan kapılar ortak (`lib/catalog`): aynı form asistan kuyruğunda da açılıp kaydediliyor.
 import { createProductAction, updateProductAction } from '@/lib/catalog/product-actions';
 import { uploadProductImageAction } from '@/lib/catalog/product-photo-actions';
+import { setProductCountryVatAction } from '../../actions/country-vat';
 import { bundlesUsingVariants, type BundleView, type CategoryView, type ProductView } from '../../products-types';
+import { VAT_COUNTRIES, choiceOf, countryVatOptions, countryVatWrite, type VatCountry } from './country-vat';
 
 // Ürün oluştur/düzenle kabı: form durumu, action'lar, dialog kabuğu ve alt bar burada; alanlar ortak gövdeden.
 
@@ -44,6 +48,12 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
   });
   const { control, handleSubmit, formState } = form;
 
+  // Ülke oranları ürün formunun şemasında değil, ayrı kapıdan yazılır; kuyruk bu alanı göstermez.
+  const savedRate = (country: VatCountry) => product?.countryRates.find((row) => row.country === country)?.vatRate ?? null;
+  const [vatChoices, setVatChoices] = useState(
+    () => new Map(VAT_COUNTRIES.map((country) => [country, choiceOf(editing ? savedRate(country) : null)])),
+  );
+
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     const payload = toActionPayload(values);
@@ -51,6 +61,17 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     if (actionError) {
       setError(actionError);
       return;
+    }
+    if (editing) {
+      for (const country of VAT_COUNTRIES) {
+        const write = countryVatWrite(savedRate(country), vatChoices.get(country) ?? '');
+        if (write === null) continue;
+        const { error: vatError } = await setProductCountryVatAction(product.id, country, write.rate);
+        if (vatError) {
+          setError(vatError);
+          return;
+        }
+      }
     }
     router.refresh();
     onClose();
@@ -69,11 +90,24 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     />
   );
 
+  const countryVatField = VAT_COUNTRIES.map((country) => (
+    // Sağ ray dar: açıklama seçeneklerin ipucundadır, yeni üründe yalnız neden kapalı olduğu yazar.
+    <FieldShell key={country} label={`${COUNTRY_LABELS[country]} KDV`} labelAside={editing ? undefined : 'kayıttan sonra'}>
+      <MultiToggle
+        label={`${COUNTRY_LABELS[country]} KDV`}
+        value={vatChoices.get(country) ?? ''}
+        options={countryVatOptions(country, editing ? savedRate(country) : null, !editing)}
+        onChange={(choice) => setVatChoices((prev) => new Map(prev).set(country, choice))}
+      />
+    </FieldShell>
+  ));
+
   const fields = useProductFormFields({
     control,
     watch: form.watch,
     categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
     photosSlot: imageField,
+    countryVatSlot: countryVatField,
   });
 
   // Paket ancak tüm kalemleri satılabilirse satılabilir: ürünü satıştan çıkarmak onu içeren paketleri

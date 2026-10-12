@@ -1,13 +1,11 @@
 import { toCents } from '@lezzet/helper';
-import type { ChannelProfit, CompanyProfit, VariantProfit } from '@lezzet/domain-core';
+import type { ChannelProfit, CompanyProfit, OssSummaryLine, VariantProfit } from '@lezzet/domain-core';
+import type { Country } from '@lezzet/types';
 import { PNL_ROWS, profitTone } from './reports-labels';
-import type { ChannelCard, MetricView, PnlRow, VariantProfitRow } from './reports-types';
+import type { ChannelCard, ExportView, MetricView, PnlRow, VariantProfitRow } from './reports-types';
 
-// Raporlar ekranının SAF indirgemeleri — kapı çıktısı → görünüm satırı.
-//
-// **Tek işleri euro→cent çevirisi ve etiketleme.** Hiçbir kâr hesabı burada yapılmıyor: kâr
-// motorun (`domain-core/accounting/profit`), ekran yalnız onu okuyor. İkinci bir hesap yazsaydık
-// aynı sayı iki yerde türetilir ve bir gün ayrışırdı — para konuşurken.
+// Raporlar ekranının saf indirgemeleri, kapı çıktısından görünüm satırına: euro→cent çevirisi ve etiketleme. Kâr hesabı motordadır
+// (`domain-core/accounting/profit`); ikinci bir hesap aynı sayıyı iki yerde türetir ve bir gün ayrışırdı.
 
 /** Kapılar euro döndürüyor (`fromCents` sınırda uygulanmış); ekran cent konuşuyor (STACK §8). */
 const c = (euros: number): number => toCents(euros);
@@ -30,11 +28,8 @@ export function toVariantRows(profits: readonly VariantProfit[], titles: Readonl
 }
 
 /**
- * Ürün sekmesinin üst şeridi — tasarımın üç ölçüsü.
- *
- * Ölçüler VARYANT satırlarından toplanıyor, `companyPnl`den değil ve bu bilinçli: şerit altındaki
- * tablonun toplamı olmalı. Şirket rakamından okunsaydı şerit ile tablo birbirini tutmazdı (şirket
- * kârı fire ve genel gideri de içeriyor) ve okuyan kişi farkı bir hata sanardı.
+ * Ürün sekmesinin üst şeridi, tasarımın üç ölçüsü; varyant satırlarından toplanır, çünkü şerit altındaki tablonun toplamıdır. Şirket
+ * rakamından okunsaydı (fire ve genel gider dahil) şerit ile tablo birbirini tutmaz, fark hata sanılırdı.
  */
 export function toProductMetrics(rows: readonly VariantProfitRow[]): MetricView[] {
   const revenue = rows.reduce((sum, row) => sum + row.revenueCents, 0);
@@ -49,11 +44,8 @@ export function toProductMetrics(rows: readonly VariantProfitRow[]): MetricView[
 }
 
 /**
- * Şirket kâr-zarar tablosu — `PNL_ROWS` sırasıyla.
- *
- * Sıra sözlükten geliyor, burada yeniden yazılmıyor: satırların sırası bir HESAP sırasıdır
- * (gelirden düşe düşe kâra inilir) ve iki yerde tutulsaydı biri değişince tablo bir hesap olmaktan
- * çıkıp bağımsız ölçüler listesine dönerdi.
+ * Şirket kâr-zarar tablosu, `PNL_ROWS` sırasıyla; sıra bir hesap sırasıdır (gelirden düşe düşe kâra inilir) ve iki yerde tutulsaydı
+ * tablo bağımsız ölçüler listesine dönerdi.
  */
 export function toPnlRows(pnl: CompanyProfit, previous: CompanyProfit | null): PnlRow[] {
   return PNL_ROWS.map((row) => ({
@@ -74,4 +66,19 @@ export function toChannelCards(channels: readonly ChannelProfit[]): ChannelCard[
     contributionCents: c(channel.contribution),
     marginPct: channel.marginPct,
   }));
+}
+
+/**
+ * KDV tablosunda oran satırının ülkesi: aynı oranın OSS satırları satırın tamamını tek ülkeden karşılıyorsa o ülke. Satıcının satışıyla
+ * karışan ya da iş süzgeci yüzünden tutmayan satır etiketsiz kalır, çünkü etiket satırın bir kısmını yanlış adlandırırdı.
+ */
+export function vatLineCountry(
+  line: Pick<ExportView['byVatRate'][number], 'rate' | 'netCents' | 'vatCents'>,
+  ossLines: readonly OssSummaryLine[],
+): Country | null {
+  const same = ossLines.filter((oss) => oss.vatRate === line.rate);
+  const countries = new Set(same.map((oss) => oss.country));
+  const netCents = same.reduce((sum, oss) => sum + oss.netCents, 0);
+  const vatCents = same.reduce((sum, oss) => sum + oss.vatCents, 0);
+  return countries.size === 1 && netCents === line.netCents && vatCents === line.vatCents ? [...countries][0]! : null;
 }

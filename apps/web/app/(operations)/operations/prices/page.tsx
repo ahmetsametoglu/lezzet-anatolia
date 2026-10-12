@@ -13,15 +13,15 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { costOf, needsExpiryAttention } from '@lezzet/domain-core';
-import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
+import { AUTO_PRICE_STEP_DEFAULT, AUTO_PRICE_STEP_KEY, costOf, needsExpiryAttention } from '@lezzet/domain-core';
+import { resolveLocalizedText } from '@lezzet/types';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readCostBasis } from '@lezzet/application';
 import { guarded, requireAdmin } from '@/lib/guard';
+import { readChannelPage } from './channel-read';
 import { PricesClient } from './prices-client';
 import { toCustomerPriceRows, toDiscountRows, toPriceRuleCustomerRows } from './prices-read';
-import { toChannelMaps, toPriceRows } from '@/lib/pricing/price-rows';
-import { parsePricesUrl, toPriceFilters } from './prices-url';
+import { parsePricesUrl } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
 import {
   type CustomerPriceRow,
@@ -73,6 +73,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
         collections: coupons?.collections ?? [],
         hiddenFromStorefront: channels?.hidden ?? null,
+        autoPriceStepCents: channels?.stepCents ?? null,
       }}
       urlState={urlState}
     />
@@ -82,37 +83,18 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
 
 type Db = ReturnType<typeof serviceDb>;
 
-/**
- * Kanal fiyatları sekmesi — üç okuma, hiçbiri satır sayısıyla ÇARPMAZ (N+1 yok):
- * dar ürün sayfası (keyset) · sayfadaki boyların iki kanal fiyatı · aynı boyların birim maliyeti.
- *
- * Fiyat ve maliyet okumaları SAYFAYA bağlıdır: katalogun tamamının fiyatını taşımanın gerekçesi yok,
- * ekran otuz satır gösteriyor.
- */
+/** Kanal fiyatları sekmesi: listenin ilk sayfası, vitrinden düşen ürün sayısı ve fiyat penceresinin yuvarlama adımı. */
 async function readChannelTab(
   db: Db,
   urlState: ReturnType<typeof parsePricesUrl>,
   categoryNames: Map<string, string>,
-): Promise<{ rows: PriceRow[]; nextCursor: KeysetCursor | null; hidden: HiddenFromStorefront }> {
-  const page = await new ProductService(db).listPriceRows({
-    filters: toPriceFilters(urlState),
-    limit: DEFAULT_PAGE_SIZE,
-  });
-  const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
-
-  const priceSvc = new PriceService(db);
-  const [b2cMap, b2bMap, costs, hidden] = await Promise.all([
-    priceSvc.findApplicableMap(variantIds, 'b2c'),
-    priceSvc.findApplicableMap(variantIds, 'b2b'),
-    readCostBasis(db, variantIds),
+): Promise<{ rows: PriceRow[]; nextCursor: KeysetCursor | null; hidden: HiddenFromStorefront; stepCents: number }> {
+  const [page, hidden, stepCents] = await Promise.all([
+    readChannelPage(db, { urlState, categoryNames }),
     countHiddenFromStorefront(db),
+    new SettingsService(db).getNumber(AUTO_PRICE_STEP_KEY, AUTO_PRICE_STEP_DEFAULT),
   ]);
-
-  return {
-    rows: toPriceRows({ products: page.rows, prices: toChannelMaps(b2cMap, b2bMap), costs, categoryNames }),
-    nextCursor: page.nextCursor,
-    hidden,
-  };
+  return { ...page, hidden, stepCents };
 }
 
 /**

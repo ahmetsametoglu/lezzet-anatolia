@@ -13,11 +13,12 @@ import { FormInput } from '@/components/operation/form/form-input';
 import { FormSelect } from '@/components/operation/form/form-select';
 import { FormSwitch } from '@/components/operation/form/form-switch';
 import { saveWarehouseAction } from './actions';
+import { orderedShipCountries, shipConflicts, shipCountryFields } from './ship-countries';
 import { WarehouseFormSchema, type WarehouseFormInput, type WarehouseRowView } from './warehouses-types';
 
 /**
  * Depo künyesi, ekleme ve düzenleme: nadir ve sonuçları ağır bir kurulum işi olduğu için form kodun belge parçası olduğunu, yeni ülkede
- * ilk deponun vergi modelini değiştirdiğini ve kargo çıkışının ülke başına tek olduğunu söyler. Aktiflik burada yok, çünkü kapatma dört
+ * ilk deponun vergi modelini değiştirdiğini ve bir ülkeye tek deponun kargo yaptığını söyler. Aktiflik burada yok, çünkü kapatma dört
  * sonucu olan ayrı bir karardır ve kendi penceresinde onaylanır.
  */
 const FORM_ID = 'warehouse-form';
@@ -27,7 +28,7 @@ interface WarehouseDialogProps {
   editing: WarehouseRowView | null;
   /** Aktif deposu olan ülkeler — "yeni ülkede ilk depo" mali uyarısı bundan türer. */
   countriesWithWarehouse: readonly Country[];
-  /** Kargo çıkış rolünü BUGÜN taşıyan aktif depolar — reddi gerekçesiyle anlatmak için. */
+  /** Bugün kargo yapan aktif depolar; ülke çakışmasını kaydetmeden önce söylemek için. */
   shippingTakenBy: readonly WarehouseRowView[];
   onClose: () => void;
   onSaved: (code: string) => void;
@@ -55,7 +56,7 @@ export function WarehouseDialog({
       // Varsayılan ülke YOK sayılmaz: bugün hizmet verdiğimiz ilk ülke Fransa ve yeni tesisin
       // oradan doğması olağan hâl. Ülke değişince mali uyarı zaten belirir.
       countryCode: editing?.countryCode ?? 'FR',
-      shipsOnline: editing?.shipsOnline ?? false,
+      shipCountries: shipCountryFields(editing),
       pickupEnabled: editing?.pickupEnabled ?? false,
       address: {
         line1: editing?.address?.line1 ?? '',
@@ -70,12 +71,12 @@ export function WarehouseDialog({
   });
 
   const country = useWatch({ control: form.control, name: 'countryCode' });
-  const shipsOnline = useWatch({ control: form.control, name: 'shipsOnline' });
+  const shipFields = useWatch({ control: form.control, name: 'shipCountries' });
   const business = useWatch({ control: form.control, name: 'business' });
 
-  // Rolü BUGÜN taşıyan depo (kendisi hariç). Kural veritabanında; buradaki okuma yalnız cümle kurmak
-  // için — kayıt yine de kısıta çarpar ve action onu okunur bir hataya çevirir.
-  const holder = shippingTakenBy.find((w) => w.shipsTo.includes(country) && w.id !== editing?.id) ?? null;
+  // Kural veritabanındadır ve kayıt yine kısıta çarpar; buradaki okuma reddi kaydetmeden önce söylemek içindir.
+  const conflicts = shipConflicts(shipFields, shippingTakenBy, editing?.id ?? null);
+  const shipping = shipFields.some((field) => field.enabled);
   const firstInCountry = !countriesWithWarehouse.includes(country) && editing?.countryCode !== country;
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -177,33 +178,74 @@ export function WarehouseDialog({
         {/* Gel-al noktası: müşteriye adresi gösterilen tek yer (DOMAIN §17'nin bilinçli istisnası); yalnız izinli müşteri görür. */}
         <FormSwitch control={form.control} name="pickupEnabled" label="Gel-al noktası — izinli müşteri hazır siparişini buradan alır" />
 
-        <div className="flex flex-col gap-2">
-          <FormSwitch control={form.control} name="shipsOnline" label="Kargo çıkış deposu" />
-          {/* Rol DOLU ise reddi ÖNCEDEN söylüyoruz: kaydedip hata almak yerine, devretmenin yolunu
-              gösteren bir cümle. Kural yine de veritabanında — bu blok onun yerine geçmez. */}
-          {shipsOnline && business === 'qualite' ? (
-            <Notice tone="red">
-              <strong>QUALITE kargo göndermez.</strong> Kargo çıkış deposu yalnız Lezzet deposu olabilir — kural veritabanındadır.
-            </Notice>
-          ) : shipsOnline && holder ? (
-            <Notice tone="red">
-              <strong>
-                {COUNTRY_LABELS[country]}'da bu rolü {holder.name} ({holder.code}) taşıyor.
-              </strong>{' '}
-              Ülke başına en fazla bir kargo çıkış deposu olabilir — kural veritabanındadır. Devretmek istiyorsanız önce{' '}
-              {holder.code} künyesinden kaldırın.
-            </Notice>
-          ) : (
-            <span className="font-ops-body text-ops-xs leading-relaxed text-ops-muted">
-              Bölge dışı müşterilere ve rota müşterilerinin kargo dolgusuna hizmet eden depo.{' '}
-              {holder ? `${COUNTRY_LABELS[country]}'da bu rol şu an ${holder.code}'de.` : `${COUNTRY_LABELS[country]}'da henüz kargo deposu yok — işaretlenebilir.`}
-            </span>
-          )}
-        </div>
+        {editing?.kind === 'vehicle' ? null : (
+          <div className="flex flex-col gap-2">
+            <span className="font-ops-body text-ops-xs text-ops-body">Kargo ülkeleri</span>
+            {orderedShipCountries(
+              shipFields.map((field, index) => ({ ...field, index })),
+              country,
+            ).map((field) => {
+              const holder = conflicts.get(field.country);
+              return (
+                <div key={field.country} className="flex flex-col gap-2">
+                  <FormSwitch control={form.control} name={`shipCountries.${field.index}.enabled`} label={COUNTRY_LABELS[field.country]} />
+                  {/* Deponun kendi ülkesinde paket depodan verilir; teslim noktası yalnız öteki ülkede sorulur. */}
+                  {field.enabled && field.country !== country ? (
+                    <div className="flex flex-col gap-2 border-l-2 border-ops-line pl-3">
+                      <span className="font-ops-body text-ops-xs leading-relaxed text-ops-muted">
+                        <strong className="font-semibold text-ops-body">Teslim noktası</strong>, paketin taşıyıcıya verildiği adrestir. Boş
+                        bırakılırsa paket depodan verilir.
+                      </span>
+                      <FormInput
+                        control={form.control}
+                        name={`shipCountries.${field.index}.handover.line1`}
+                        label="Adres"
+                        placeholder="Rheinstraße 10"
+                      />
+                      <div className="grid grid-cols-[130px_minmax(0,1fr)] gap-3">
+                        <FormInput
+                          control={form.control}
+                          name={`shipCountries.${field.index}.handover.postalCode`}
+                          label="Posta kodu"
+                          mono
+                          placeholder="77694"
+                        />
+                        <FormInput
+                          control={form.control}
+                          name={`shipCountries.${field.index}.handover.city`}
+                          label="Şehir"
+                          placeholder="Kehl"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  {holder ? (
+                    <Notice tone="red">
+                      <strong>
+                        Bu ülkeye başka bir depo kargo yapıyor: {holder.name} ({holder.code}).
+                      </strong>{' '}
+                      Bir ülkeye tek aktif depo kargo yapar — kural veritabanındadır. Devretmek için önce {holder.code} künyesinden
+                      kaldırın.
+                    </Notice>
+                  ) : null}
+                </div>
+              );
+            })}
+            {shipping && business === 'qualite' ? (
+              <Notice tone="red">
+                <strong>QUALITE kargo göndermez.</strong> Kargo ülkesi yalnız Lezzet deposuna verilir — kural veritabanındadır.
+              </Notice>
+            ) : (
+              <span className="font-ops-body text-ops-xs leading-relaxed text-ops-muted">
+                Bölge dışı müşterilere ve rota müşterilerinin kargo dolgusuna hizmet eder. Bir ülkeye tek aktif depo kargo yapar.
+              </span>
+            )}
+          </div>
+        )}
 
         {!editing ? (
           <Notice tone="neutral">
-            Yeni depo <strong>kurulumu eksik</strong> doğar: bağlı bölgesi ve kargo çıkışı olmayan tesis hiçbir siparişi
+            Yeni depo <strong>kurulumu eksik</strong> doğar: bağlı bölgesi ve kargo ülkesi olmayan tesis hiçbir siparişi
             alamaz, kapsamlı personeli olmayan depoda mal kabul edilemez. Sıradaki adımlar kaydedince açılan kartta:
             hizmet alanına bölge bağlayın, Ayarlar'dan personel kapsamı verin.
           </Notice>

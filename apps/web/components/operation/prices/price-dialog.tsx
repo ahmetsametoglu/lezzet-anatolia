@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AUTO_PRICE_STEP_DEFAULT, autoPriceCents, markupPercent, priceForMargin, targetMarginFor, vatBaseOf } from '@lezzet/domain-core';
+import { autoPriceCents, markupPercent, priceForMargin, targetMarginFor, vatBaseOf } from '@lezzet/domain-core';
 import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
+import type { Country } from '@lezzet/types';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Toggle } from '@/components/operation/form/toggle';
@@ -12,43 +13,30 @@ import { MoneyField, PercentField } from '@/components/operation/form/money-inpu
 import { money, percent } from '@/components/operation/ui/format';
 import { Metric } from '@/components/operation/ui/metric';
 import { setAutoPriceAction, setChannelPriceAction } from '@/lib/prices/price-actions';
+import { countryColumnLabel } from './country-prices';
 import type { PriceRow } from '@/lib/pricing/price-rows';
 
-// Fiyat düzenleme diyaloğu — iki kanalın liste fiyatı + otomatik fiyat anahtarı + hedef marj.
-//
-// İKİ YÜZEYİN ORTAK DİYALOĞU (16.08, kullanıcı kararı): fiyat ekranı satırdan, ürünler önizlemesi
-// fiyat bakışındaki boydan açar. Sayfa klasöründen buraya taşındı (kardeş sayfadan yalnız `*-url`
-// import edilir, STACK §7); eylemleri de birlikte taşındı (`lib/prices/price-actions`).
-//
-// TABAN FARKI EKRANDA YAZILI: B2C fiyatı KDV DAHİL, B2B hariç (DOMAIN §5). İki kutu yan yana durunca
-// aynı tabandaymış gibi okunur; etiket bunu söylemezse operatör toptan fiyatı perakendeye göre
-// ayarlar ve marj sessizce kayar.
-//
-// MARJ KUTUSU FİYATIN İKİNCİ YAZIMIDIR (teklif diyaloğundaki desen): yüzde girilince fiyat dolar.
-// Hesap motordan gelir (`priceForMargin`) — aynı marj iki formülle hesaplanırsa ekranla uyarı ayrışır.
-//
-// auto_price AÇIKKEN fiyat alanları KİLİTLİ: tasarımın kuralı ("otomatik üründe hedef marj değişir,
-// fiyat elle değil"). Kilit bir engel değil bir açıklamadır — elle yazılan fiyatın bir sonraki
-// otomatik hesapta silineceğini önceden söyler.
+// Genel fiyat penceresi: iki kanalın liste fiyatı, otomatik fiyat anahtarı ve hedef marj; Fiyatlar ve Ürünler aynı pencereyi açar. B2C KDV
+// dahil, B2B hariç yazılır ve etiket bunu söyler, yoksa toptan fiyat perakendeye göre ayarlanır ve marj sessizce kayar.
 
 interface PriceDialogProps {
-  row: PriceRow;
+  /** `marginCountry` doluysa en dar marj o ülkenin fiyatındadır (Fiyatlar listesi). */
+  row: PriceRow & { marginCountry?: Country | null };
+  /** Otomatik fiyatın yuvarlama adımı (cent), ayardan; açan sayfa okur ki önizleme yazımla aynı adımı kullansın. */
+  stepCents: number;
   onClose: () => void;
 }
 
-export function PriceDialog({ row, onClose }: PriceDialogProps) {
+export function PriceDialog({ row, stepCents, onClose }: PriceDialogProps) {
   const router = useRouter();
 
   const [b2c, setB2c] = useState<number | null>(row.b2c.amountCents === null ? null : fromCents(row.b2c.amountCents));
   const [b2b, setB2b] = useState<number | null>(row.b2b.amountCents === null ? null : fromCents(row.b2b.amountCents));
   const [autoPrice, setAutoPrice] = useState(row.autoPrice);
-  // Boş = "şimdi geçerli". İleri tarih, zammı bugünden hazırlamak için (05.4 baştan destekliyordu,
-  // ekranı yoktu): o güne kadar eski fiyat satılmaya devam eder.
+  // Boş = şimdi geçerli; ileri tarih zammı bugünden hazırlar ve o güne kadar eski fiyat satılır.
   const [effectiveFrom, setEffectiveFrom] = useState('');
   const [target, setTarget] = useState<number | null>(row.targetMarginPercent);
-  // B2B'ye ÖZEL hedef (15.08, kullanıcı kararı): toptan marjı perakendeden farklı kurulabilir.
-  // Boş = ortak hedef B2B'de de geçerli; çözüm motorda (`targetMarginFor`) — önizleme, otomatik
-  // fiyat ve marj-altı uyarısı aynı fonksiyonu okur.
+  // B2B'ye özel hedef; boşsa ortak hedef geçer. Çözüm motordadır (`targetMarginFor`) ki önizleme, otomatik fiyat ve uyarı ayrışmasın.
   const [targetB2b, setTargetB2b] = useState<number | null>(row.targetMarginB2bPercent);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -81,7 +69,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
       : (['b2c', 'b2b'] as const)
           .filter((channel) => row[channel].amountCents !== null)
           .map((channel) => {
-            // Kanalın KENDİ hedefi (15.08) — motorun yazacağı fiyatla birebir aynı çözüm.
+            // Kanalın kendi hedefi; motorun yazacağı fiyatla aynı çözüm.
             const channelTarget = targetMarginFor(channel, target, targetB2b);
             if (channelTarget === null) return null;
             const next = autoPriceCents({
@@ -89,7 +77,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
               costCents: cost,
               targetMarginPercent: channelTarget,
               vatRate: row.vatRate,
-              stepCents: AUTO_PRICE_STEP_DEFAULT,
+              stepCents,
             });
             return next === null ? null : `${channel.toUpperCase()} ${money(next)}`;
           })
@@ -112,8 +100,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
     // YALNIZ DEĞİŞENLER yazılır: `setPrice` her çağrıda yeni satır ekler (fiyat geçmişi). Değişmemiş
     // fiyatı yeniden yazmak, geçmişi aynı tutarın kopyalarıyla şişirirdi.
     const writes: Array<Promise<{ error: string | null }>> = [];
-    // Tarih GÜN başı olarak yazılır: "1 Ağustos'tan itibaren" diyen operatör o günün başını
-    // kasteder. Boşsa `undefined` → servis "şimdi" yazar.
+    // Tarih gün başı olarak yazılır: "1 Ağustos'tan itibaren" diyen operatör o günün başını kasteder. Boşsa `null`, servis "şimdi" yazar.
     const startsAt = effectiveFrom ? new Date(`${effectiveFrom}T00:00:00`).toISOString() : null;
     if (!autoPrice && b2c !== null && toCents(b2c) !== row.b2c.amountCents) {
       writes.push(setChannelPriceAction(row.variantId, 'b2c', toCents(b2c), startsAt));
@@ -133,9 +120,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
     onClose();
   };
 
-  // Boşaltılan fiyat kutusu SESSİZCE YUTULMAZ: "bu kanalı kapatayım" diye kutuyu silen operatör
-  // Kaydet'e basınca pencere kapanıyor, fiyat aynı kalıyordu. `null` tutar bugün desteklenmiyor
-  // (kanal kapatma ayrı bir iş) — o zaman ekran REDDEDER, yutmaz.
+  // Boşaltılan kutu reddedilir: kanal kapatma ayrı bir iştir ve kutu sessizce yutulsa operatör kanalı kapattığını sanırdı.
   const emptied =
     !autoPrice && ((b2c === null && row.b2c.amountCents !== null) || (b2b === null && row.b2b.amountCents !== null));
 
@@ -146,8 +131,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
       : null;
 
   return (
-    // Genişlik kitin varsayılanı (640): 520'ye sıkıştırmak iki sütunlu alanlarda etiketleri
-    // sardırıyor ve alanları kaydırıyordu (kullanıcı bildirimi 15.08 — "çok sıkışık, kaymalar var").
+    // Genişlik kitin varsayılanıdır (640); daha dar pencerede iki sütunlu alanların etiketleri sarar ve alanlar kayar.
     <Dialog
       open
       onClose={onClose}
@@ -177,7 +161,11 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
           label="Marj (şimdi)"
           value={row.marginPercent === null ? '—' : percent(row.marginPercent)}
           tone={row.belowTarget === true || (row.marginPercent ?? 0) < 0 ? 'red' : undefined}
-          hint={row.marginChannel === null ? 'Fiyat yok' : `En dar: ${row.marginChannel === 'b2b' ? 'B2B' : 'B2C'}`}
+          hint={
+            row.marginChannel === null
+              ? 'Fiyat yok'
+              : `En dar: ${row.marginCountry ? countryColumnLabel(row.marginChannel, row.marginCountry) : row.marginChannel.toUpperCase()}`
+          }
         />
         <Metric
           label="Hedef marj"
@@ -192,6 +180,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
         />
       </div>
 
+      {/* Otomatik fiyatta kutular kilitlidir, çünkü elle yazılan fiyat bir sonraki otomatik hesapta silinirdi. */}
       <div className="grid grid-cols-2 gap-3">
         <MoneyField
           label="B2C liste fiyatı (€)"
@@ -277,9 +266,8 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
             onChange={setTarget}
             placeholder="ör. 42"
           />
-          {/* Toptan marjı perakendeden farklı kurulabilir (15.08). Boş bırakmak bir karar:
-              ortak hedef B2B'de de geçerli — kutu bunu placeholder'ıyla söyler. Etiket ve kenar
-              notu KISA: yarım sütunda sarınca alan aşağı kayıyordu (15.08 bildirimi). */}
+          {/* Boş bırakmak ortak hedefi B2B'de de geçerli kılar ve kutu bunu yer tutucusuyla söyler. Etiket kısadır, yarım sütunda sarsa
+              alan kayardı. */}
           <PercentField
             label="B2B hedefi (%)"
             labelAside="boş = ortak"
@@ -319,8 +307,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
         )}
       </div>
 
-      {/* Tek kısa satır (15.08): "verilmiş siparişleri etkilemez" zaten footer'da yazıyor — burada
-          tekrarı metin yoğunluğuydu. Kalan iki bilgi başka hiçbir yerde söylenmiyor. */}
+      {/* "Verilmiş siparişleri etkilemez" alt şeritte yazar; burada yalnız başka yerde söylenmeyen iki bilgi kalır. */}
       <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
         Her değişiklik yeni fiyat satırı yazar (geçmiş korunur); müşteriye özel fiyatlar bu listeden bağımsızdır.
       </span>

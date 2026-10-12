@@ -14,6 +14,7 @@ import {
   type serviceDb,
 } from '@lezzet/database';
 import { countOverduePickups, readFacilityVanSummary, REGISTER_CHECK_JOB } from '@lezzet/application';
+import { readDistanceSaleThreshold } from '@lezzet/application/accounting/distance-sale-threshold';
 import { PICKUP_WAIT_DAYS_DEFAULT, PICKUP_WAIT_DAYS_KEY } from '@lezzet/domain-core';
 import { addDays, BUSINESS_TIME_ZONE, parisDateOf, parisMinutesOf } from '@lezzet/helper';
 import { RegisterDayCheckSchema, type Order, type OrderStatus, type TicketStatus } from '@lezzet/types';
@@ -21,6 +22,7 @@ import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/conte
 import { stockLink } from './stock/stock-url';
 import { settingsLink } from './settings/settings-url';
 import { financeUrl, parseFinanceUrl } from './finance/finance-url';
+import { parseReportsUrl, reportsUrl } from './reports/reports-url';
 import { DAY_HOUR_FALLBACK, DAY_HOUR_KEYS, type DayHourKey } from '@/lib/settings/day-hours';
 import { money, num } from '@/components/operation/ui/format';
 import { toOrderRows } from './orders/orders-read';
@@ -39,6 +41,7 @@ import {
   type RouteFlowFact,
   type StopFact,
 } from './dashboard-read';
+import { distanceSaleFact } from './dashboard-distance-sale';
 import { salesInvoiceFact } from './dashboard-sales-invoice';
 import type { DashboardData, DeliveryRouteView, VanLoadBandView } from './dashboard-types';
 
@@ -104,6 +107,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     proposalCount,
     checkRun,
     awaitingInvoices,
+    distanceSale,
   ] = await Promise.all([
     readThresholds(settings, zoneRefs),
     orderSvc.counts({ deliveryFrom: today, deliveryTo: today, warehouseIds }),
@@ -119,6 +123,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     new AssistantProposalService(db).countPending(),
     readRegisterCheck(db),
     new SalesInvoiceService(db).listByStatus('awaiting_approval'),
+    readDistanceSaleThreshold(db, now),
   ]);
 
   const dayOrders = dayPage.rows.filter((o) => !OUT_OF_DAY.has(o.status));
@@ -138,8 +143,8 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   });
   const overdue = openRows.filter((r) => r.payment.overdue);
 
-  // Durum kaydı TEK turda iki soruya cevap veriyor: kapıdan dönen sipariş (11.4) ve teslim edilmiş
-  // durağın GERÇEK saati. İkisi de aynı satırlardan çıkıyor, iki okuma yapmanın karşılığı yok.
+  // Durum kaydı tek turda iki soruya cevap verir, kapıdan dönen sipariş ve teslim edilmiş durağın gerçek saati; ikisi de aynı satırlardan
+  // çıkar, iki okumanın karşılığı yok.
   const dayLog = await readDayLog(
     db,
     dayOrders.map((o) => o.id),
@@ -153,10 +158,12 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     today,
     href: financeUrl({ ...parseFinanceUrl({}), tab: 'documents', toIssue: true }),
   });
+  const threshold = distanceSaleFact(distanceSale, reportsUrl({ ...parseReportsUrl({}, now), tab: 'export' }, now));
   const queue = buildQueue([
     ...queueFacts({ overdue, openTickets: ticketCounts }),
     ...(registerCheck ? [registerCheck] : []),
     ...(salesInvoice ? [salesInvoice] : []),
+    ...(threshold ? [threshold] : []),
   ]);
   // Süresi dolan gel-al: eşik ayardan, sayı kapıdan (`countOverduePickups`) — kapsam personelin depolarıdır.
   const overduePickups = await countOverduePickups(db, {

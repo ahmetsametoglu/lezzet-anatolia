@@ -1,19 +1,12 @@
 import type { ReactNode } from 'react';
 
-// Ürün formunun sunum sözleşmesi. Kendi dosyasında: kap (ürün diyaloğu · asistan kuyruğu) düzenleri
-// import eder, düzenler de bu tipi — tip kapta kalsa döngüsel bağımlılık olurdu (no-circular).
-//
-// GALERİ TİPİ BURADA DEĞİL (22.14): `ProductPhotoView` bir tur bu dosyadaydı, ama form ortak
-// komponente taşınırken geride kaldı — galeri formun alanı değil, kabın verdiği bir slot ve canlı
-// yazıyor. Tipi de onu kullananların yanında durur (`photos-types`).
+// Ürün formunun sunum sözleşmesi kendi dosyasındadır: kap (ürün diyaloğu, asistan kuyruğu) düzenleri, düzenler de bu tipi okur ve tip
+// kapta kalsa döngüsel bağımlılık olurdu.
 
-/**
- * Kurulmuş alan elemanları — sunum düzenleri bunları yalnız YERLEŞTİRİR (tek kaynak).
- * Çok dilli içerik tek dil kartında (`content`).
- */
-/** Form sekmeleri — uzun form tek kolonda duvara döndüğü için ikiye bölündü (05.10). */
+/** Form sekmeleri; uzun form tek kolonda duvara döndüğü için ikiye bölünür. */
 export type ProductFormTab = 'product' | 'declaration';
 
+/** Kurulmuş alan elemanları; sunum düzenleri bunları yalnız yerleştirir. Çok dilli içerik tek dil kartındadır (`content`). */
 export interface ProductFormFields {
   image: ReactNode;
   /** Yasal beyan (INCO) alanları — kendi sekmesinde. */
@@ -25,19 +18,18 @@ export interface ProductFormFields {
   content: ReactNode;
   category: ReactNode;
   vat: ReactNode;
+  /** Öteki ülkelerin KDV oranları; formun şemasında değil, ürün ekranının verdiği slottur (kuyrukta `null`). */
+  countryVat: ReactNode;
   dateType: ReactNode;
   shelfLife: ReactNode;
   allergens: ReactNode;
   variants: ReactNode;
   shippable: ReactNode;
-  /** Saklama rejimi — soğuk zincirin kendisi (16.08); kargo izninin yanında ama ondan ayrı. */
+  /** Saklama rejimi, soğuk zincirin kendisi; kargo izninin yanında ama ondan ayrı. */
   storage: ReactNode;
   autoPrice: ReactNode;
   margin: ReactNode;
 }
 
-// SATIŞ DURUMU (Satışta · Pasif · Aday) BU SÖZLEŞMEDE YOK ve bilinçli (kullanıcı kararı 11.08).
-// Bir tur ortak alan yapılmıştı — kuyruğun formu da ürünü yayına alabilsin diye. Kullanıcı geri
-// aldırdı: **kuyruk ürünün İÇERİĞİNİ yazar, satış eksenine dokunmaz.** Seçici ürün ekranının alt
-// barında elle kurulu kalıyor; oradaki kap zaten paket bağını da (o ürünü içeren aktif paketler)
-// aynı satırda gösteriyor — karar oraya ait.
+// Satış durumu bu sözleşmede yoktur: kuyruk ürünün içeriğini yazar, satış eksenine dokunmaz. Seçici ürün ekranının alt barındadır ve
+// paket bağını aynı satırda gösterir.

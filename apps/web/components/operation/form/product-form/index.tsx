@@ -34,6 +34,8 @@ interface ProductFormFieldsOptions {
   categories: Array<{ id: string; name: string }>;
   /** Kapak + galeri bloğu — canlı yazdığı için slot. */
   photosSlot?: ReactNode;
+  /** Öteki ülkelerin KDV oranları; ayrı kapıdan yazıldığı için slot, kuyrukta verilmez. */
+  countryVatSlot?: ReactNode;
   /**
    * Asistanın dokunduğu alanlar — kutunun başlığında işaretlenir.
    * Kuyrukta form ürünün bugünkü hâline öneri yazılmış olarak açılır; işaret olmasa operatör öneriyi kendi kaydından ayıramazdı.
@@ -50,19 +52,13 @@ export function useProductFormFields({
   watch,
   categories,
   photosSlot,
+  countryVatSlot,
   filled,
 }: ProductFormFieldsOptions): ProductFormFields {
   // Alerjen listesi İKİ alanda birden kullanılır (içerdikleri + çapraz bulaşma) → tek yerde kurulur.
   const allergenOptions = ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a]) }));
 
-  /**
-   * Asistanın yazdığı alan mor zemine oturur (`AssistantField`).
-   *
-   * **On üç alanın on üçü de işaretlenir** ve bu bir düzeltmedir: işaret bir tur yalnız altı alanda
-   * vardı (ad · açıklama · içindekiler · saklama · alerjen · iz), oysa dilekçe besin künyesini,
-   * kategoriyi, tarih türünü, raf ömrünü, kargo iznini, saklama rejimini ve boyları da yazıyor.
-   * İşaretsiz gelen yedi alan operatöre kendi kaydı gibi görünüyordu.
-   */
+  // Asistanın yazdığı her alan mor zemine oturur (`AssistantField`); işaretsiz alan operatöre kendi kaydı gibi görünürdü.
   const byAssistant = (key: keyof ProductFormValues, node: ReactNode): ReactNode => (
     <AssistantField on={filled?.has(key) ?? false}>{node}</AssistantField>
   );
@@ -103,6 +99,7 @@ export function useProductFormFields({
         options={categories.map((c) => ({ value: c.id, label: c.name }))}
       />,
     ),
+    countryVat: countryVatSlot ?? null,
     vat: (
       <FormMultiToggle
         control={control}
@@ -132,8 +129,7 @@ export function useProductFormFields({
       'shelfLifeDays',
       <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
     ),
-    // Kutunun kendi açıklaması artık HER ZAMAN görünür: işaret `labelAside`i işgal ettiği için
-    // asistan yazdığında "ürünün İÇERDİKLERİ" kayboluyordu ve alerjen ile iz listesi ayırt edilemez oluyordu.
+    // Kutunun açıklaması her zaman görünür; işaret `labelAside`e otursaydı asistan yazdığında alerjen ile iz listesi ayırt edilemezdi.
     allergens: byAssistant('allergens', <AllergenField control={control} options={allergenOptions} labelAside="ürünün İÇERDİKLERİ" />),
     traces: byAssistant(
       'traces',
@@ -148,8 +144,8 @@ export function useProductFormFields({
       />,
     ),
     nutrition: byAssistant('nutrition', <FormNutrition control={control} name="nutrition" />),
-    // İçindekiler + saklama TEK dil kartında (ad/açıklama ile aynı desen): ikisi de çok dilli, dil bir
-    // kez seçilir. Ayrı ayrı sekme taşımaları hem üç sekme barı hem iki AI düğmesi doğuruyordu.
+    // İçindekiler ve saklama tek dil kartındadır: ikisi de çok dilli ve dil bir kez seçilir; ayrı kartlar üç sekme barı ve iki yapay
+    // zekâ düğmesi doğururdu.
     declarationTexts: (
       <LocaleCard title="Beyan metinleri" completenessOf={watch('ingredients') ?? undefined}>
         {(lang) => (

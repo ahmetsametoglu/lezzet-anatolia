@@ -24,9 +24,6 @@ import {
   type StatusFilter,
 } from '../../products-types';
 
-// Ürünler sekmesi (masaüstü): liste + seçili önizleme paneli (1.95fr / 1fr). Süzgeçler
-// (arama · kategori · durum · beyan eksik) İŞLEVSEL — hepsi listeyi gerçekten daraltır.
-
 const STATUS_ORDER: ProductStatus[] = ['active', 'passive', 'candidate'];
 
 /** Okunmamış değer "—"dır: sıfır stok ile okunmamış stok aynı şey değildir (CLAUDE §1). */
@@ -70,10 +67,7 @@ function PriceCell({ price }: { price: ProductPriceSummary | null }) {
   );
 }
 
-/**
- * Sevk hazırlığı: kargo izni açık olsa bile ÖLÇÜSÜ girilmemiş boy varsa o boya canlı kargo teklifi
- * alınamaz (`packed_weight_g` + mm). Bu çelişki bugüne dek hiçbir listede görünmüyordu.
- */
+/** Kargo izni açık olsa bile ölçüsü girilmemiş boya canlı kargo teklifi alınamaz (`packed_weight_g` + mm). */
 function ShipCell({ product }: { product: ProductView }) {
   if (!product.shippable) return <Badge tone="neutral">kargo kapalı</Badge>;
   const missingDims = product.variants.some(
@@ -83,9 +77,7 @@ function ShipCell({ product }: { product: ProductView }) {
 }
 
 const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TRACKS, {
-  // Görsel SATIRDA (16.08, kullanıcı isteği — stok listesinin deseni, aynı 36px): operatör ürünü
-  // adından önce fotoğrafından tanır. Görselsiz üründe `Thumbnail` yer tutucu çizer — kayan bir
-  // sütun, tarama düzenini görselin varlığına bağlardı.
+  // Operatör ürünü adından önce fotoğrafından tanır; görselsiz üründe yer tutucu çizilir, yoksa kolon görselin varlığına göre kayardı.
   name: (r) => (
     <div className="flex min-w-0 items-center gap-2.5">
       <Thumbnail src={r.thumbUrl} alt="" size={36} />
@@ -109,9 +101,7 @@ const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TR
   status: (r) => <StatusBadge status={r.status} />,
 });
 
-// "+ durum" — süzgeç çipi. Davranış 05.08'de KİTE taşındı (`ui/filter-chip`): burada elle
-// yazılmıştı ve Para ekranı aynı şeridi kurarken form kontrolüne (`Select`) uzanmak zorunda kalmıştı;
-// sonuç iki ekranda iki ayrı süzgeç davranışıydı. Doğru olanı çoğaltmak yerine ortaklaştırıldı.
+// Süzgeç çipinin davranışı kittedir (`ui/filter-chip`), Para ekranı da aynısını kullanır ki iki ekranda iki ayrı süzgeç davranışı olmasın.
 function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: (s: StatusFilter) => void }) {
   return (
     <FilterChip
@@ -143,18 +133,15 @@ export function ProductsTab(props: ProductsViewProps) {
   const missingCount = data.counts.incomplete;
 
   /**
-   * AÇIK SATIR adreste yaşar (`?p=`, eski "seçili ürün" parametresi): yenilemede açık kalır ve
-   * bağlantı paylaşılabilir. Tıklama haritası kullanıcı kararıdır — satıra TEK TIK kırılımı açar
-   * ve kapatır, ÇİFT TIK ürün formunu açar; ayrı bir açma düğmesi yoktur.
+   * Açık satır adreste yaşar (`?p=`): yenilemede açık kalır ve bağlantı paylaşılabilir. Satıra tek tık kırılımı açar ve kapatır,
+   * çift tık ürün formunu açar.
    */
   const openId = selectedId;
   const detail = useRowDetail(openId);
 
   /**
-   * Tek tık ile çift tık AYNI öğede yaşıyor: çift tık tarayıcıda önce İKİ tık olayı üretir, yani
-   * açma/kapama iki kez koşup kırılımı hiç açmamış gibi bırakır ve form da yanlış kayıtla açılırdı
-   * (dev modda ölçüldü). Bu yüzden tek tık kısa süre bekletilir; o sürede çift tık gelirse iptal
-   * edilir. Gecikme çift tık eşiğinin altında (220 ms) — elde hissedilen bir duraksama değil.
+   * Çift tık tarayıcıda önce iki tık üretir; açma/kapama iki kez koşar ve form yanlış kayıtla açılırdı. Tek tık bu yüzden çift tık
+   * eşiğinin altında (220 ms) bekletilir ve o sürede çift tık gelirse iptal edilir.
    */
   const clickTimer = useRef<number | null>(null);
   const cancelPendingClick = () => {
@@ -166,7 +153,6 @@ export function ProductsTab(props: ProductsViewProps) {
 
   return (
     <>
-      {/* Süzgeç çipleri (İşlevsel) */}
       <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft px-6 py-2.5">
         <Chip active={catFilter === 'all'} onClick={() => onCatFilter('all')}>
           Tümü
@@ -190,8 +176,7 @@ export function ProductsTab(props: ProductsViewProps) {
         ) : null}
       </div>
 
-      {/* Liste TAM GENİŞLİK (tasarım 6a): seçili ürün paneli kalktı — satırın tek anlamı kırılımı
-          açmak, ürünün özeti de düzenleme formunda. Kırılım böylece bütün genişliği kullanıyor. */}
+      {/* Liste tam genişliktir (tasarım 6a): satırın tek anlamı kırılımı açmak, kırılım da bütün genişliği kullanır. */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <Table
           busy={props.navPending}
@@ -221,6 +206,9 @@ export function ProductsTab(props: ProductsViewProps) {
                   detail.applyPrice(r.id, variantId, channel, amountCents);
                   props.onLocalPrice(r.id, variantId, channel, amountCents, row);
                 }}
+                onCountrySaved={(variantId, country, channel, amountCents) =>
+                  detail.applyCountryPrice(r.id, variantId, country, channel, amountCents)
+                }
               />
             ) : null
           }

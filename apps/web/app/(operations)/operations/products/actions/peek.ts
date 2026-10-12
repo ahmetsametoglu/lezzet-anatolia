@@ -1,6 +1,7 @@
 'use server';
 
 import { PriceService, ProductService, SettingsService, StockService, serviceDb } from '@lezzet/database';
+import { AUTO_PRICE_STEP_DEFAULT, AUTO_PRICE_STEP_KEY } from '@lezzet/domain-core';
 import { requireAdmin, requireWarehouseScope } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readCostBasis } from '@lezzet/application';
@@ -57,11 +58,17 @@ export async function loadProductStockPeekAction(productId: string): Promise<Act
   }
 }
 
+export interface ProductPricesPeek {
+  rows: PriceRow[];
+  /** Otomatik fiyatın yuvarlama adımı (cent); bakıştan açılan fiyat penceresinin önizlemesi yazımla aynı adımı kullansın. */
+  autoPriceStepCents: number;
+}
+
 /**
  * Ürünün fiyat bakışı; satırlar fiyat ekranıyla aynı kurulumdan (`toPriceRows`) gelir ki marj tanımı ayrışmasın.
  * Yalnız admin, çünkü depo ve kurye maliyet görmez.
  */
-export async function loadProductPricesPeekAction(productId: string): Promise<ActionResult<PriceRow[]>> {
+export async function loadProductPricesPeekAction(productId: string): Promise<ActionResult<ProductPricesPeek>> {
   try {
     await requireAdmin();
     const db = serviceDb();
@@ -70,15 +77,19 @@ export async function loadProductPricesPeekAction(productId: string): Promise<Ac
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
 
     const priceSvc = new PriceService(db);
-    const [b2c, b2b, costs] = await Promise.all([
+    const [b2c, b2b, costs, autoPriceStepCents] = await Promise.all([
       priceSvc.findApplicableMap(variantIds, 'b2c'),
       priceSvc.findApplicableMap(variantIds, 'b2b'),
       readCostBasis(db, variantIds),
+      new SettingsService(db).getNumber(AUTO_PRICE_STEP_KEY, AUTO_PRICE_STEP_DEFAULT),
     ]);
 
     // Kategori adı diyalogda çizilmiyor — boş harita bilinçli (satır kurulumu alanı boş bırakır).
     return {
-      data: toPriceRows({ products: page.rows, prices: toChannelMaps(b2c, b2b), costs, categoryNames: new Map() }),
+      data: {
+        rows: toPriceRows({ products: page.rows, prices: toChannelMaps(b2c, b2b), costs, categoryNames: new Map() }),
+        autoPriceStepCents,
+      },
       error: null,
     };
   } catch (err) {

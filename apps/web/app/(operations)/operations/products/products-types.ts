@@ -1,7 +1,5 @@
-// Ürünler ekranı view-model'leri — RSC (page.tsx) DB'den okur, serileştirilebilir bu tiplere indirger;
-// client yalnız bunları görür. TİPLER ŞEMADAN TÜRETİLİR: ProductView = Product & {türetilen}; alanlar
-// yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
-// yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
+// Ürünler ekranının view-model'leri: RSC okur ve bu serileştirilebilir tiplere indirger, istemci yalnız bunları görür. Tipler şemadan
+// türer (`ProductView = Product & {türetilen}`), alan yeniden yazılmaz.
 import type {
   BarcodeKind,
   Category,
@@ -12,6 +10,7 @@ import type {
   Product,
   ProductStatus,
   ProductVariant,
+  ProductWithRelations,
 } from '@lezzet/types';
 import type { BatchView } from '@lezzet/application';
 import type { PriceRow } from '@/lib/pricing/price-rows';
@@ -22,14 +21,12 @@ import { LOCALES } from '@lezzet/i18n';
 import type { ImageFrameSources } from '@lezzet/application';
 import type { ProductTab } from './products-paths';
 
-// Durum tipi ve türetimi `@lezzet/types`'ta (servis de aynı türetimi süzgeç olarak sorguya çeviriyor)
-// — burada yalnız yeniden dışa verilir ki sayfa dosyaları tek yerden (products-types) alsın.
+// Durum tipi `@lezzet/types`'tadır; sayfa dosyaları tek yerden alsın diye burada yeniden dışa verilir.
 export { type ProductStatus } from '@lezzet/types';
 
 /**
- * Satırın STOK özeti — boyların toplamı. Parti ayrıntısı (son tarih, parti numarası) burada YOK:
- * onu okumak partileri çekmek demek ve liste bunu satır başına ödeyemez — satır açılınca gelir.
- * `null` "okunmadı" demektir (ölçülemeyen değer sıfır değildir, CLAUDE §1).
+ * Satırın stok özeti, boyların toplamı. Parti ayrıntısı yok, çünkü liste satır başına parti okumasını ödeyemez; `null` okunmadı
+ * demektir, sıfır değil.
  */
 export interface ProductStockSummary {
   /** Kapsamdaki depolarda kullanılabilir toplam (fiili eksi ayrılmış). */
@@ -41,9 +38,8 @@ export interface ProductStockSummary {
 }
 
 /**
- * Satırın FİYAT özeti — birincil boyun (ilk aktif boy) satırı. Marj ve hedef karşılaştırması
- * `toPriceRows`tan gelir; fiyat ekranı ile ürünler ekranı aynı marjı iki ayrı formülle hesaplamaz.
- * `null` yalnız yöneticide dolar: fiyat ve maliyet başka role çizilmez.
+ * Satırın fiyat özeti, birincil boyun (ilk aktif boy) satırı; marj `toPriceRows`tan gelir ki iki ekran aynı marjı iki formülle
+ * hesaplamasın. Yalnız yöneticide dolar, çünkü fiyat ve maliyet başka role çizilmez.
  */
 export interface ProductPriceSummary {
   /** Tutarların geldiği boy — fiyat yazıldığında satırın değişip değişmeyeceği buna bakar. */
@@ -59,9 +55,8 @@ export interface ProductPriceSummary {
 }
 
 /**
- * AÇILAN SATIRIN boy ayrıntısı — yalnız listeye gelmeyen alanlar. Boy adı, SKU, net miktar,
- * porsiyon ve ambalaj ölçüsü burada YOK: onlar `ProductView.variants` ile zaten gelmiştir ve
- * kırılım açılır açılmaz dolu çizilir. Buradakiler ise sunucudan tek turda istenir.
+ * Açılan satırın boy ayrıntısı, yalnız listeye gelmeyen alanlar; boy adı, SKU ve ölçüler `ProductView.variants` ile zaten gelir ve
+ * kırılım açılır açılmaz dolu çizilir.
  */
 export interface VariantRowDetail {
   variantId: string;
@@ -70,48 +65,35 @@ export interface VariantRowDetail {
   /** Malı olan depolar — stok ekranının kırılımıyla aynı şekil. */
   warehouses: StockWarehouseSplit[];
   availableQty: number;
-  /** En yakın son tarihli parti; cümlesini ekran kurar (`expiryLine`), sunucu biçimlendirme yapmaz. */
+  /** En yakın son tarihli parti; cümlesini ekran kurar (`expiryParts`), sunucu biçimlendirme yapmaz. */
   nearest: BatchView | null;
-  /**
-   * Boyun fiyat satırı — fiyat ekranınınkiyle AYNI şekil. Parçalayıp taşımak yerine olduğu gibi
-   * geçiyor, çünkü iki tüketeni var: kırılımın hücreleri (tutar, maliyet, marj) ve çift tıkla
-   * açılan tam form (`PriceDialog` tam bu satırı bekler).
-   */
+  /** Boyun fiyat satırı, fiyat ekranınınkiyle aynı şekil, çünkü kırılımın hücreleri ve çift tıkla açılan tam form aynı satırı okur. */
   price: PriceRow | null;
 }
 
 /** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */
 export type ProductView = Product & {
-  imageUrl: string | null; // R2 public okuma URL'i, `?v=` sürüm damgalı (yoksa placeholder) — ÖZGÜN dosya, düzenleme formu bununla
-  thumbUrl: string | null; // liste/önizleme küçük resmi — CDN kare@200, operatörün kadrajıyla (05.37 · `thumbnailImageUrl`)
+  imageUrl: string | null; // R2 public okuma URL'i, `?v=` sürüm damgalı (yoksa placeholder) — özgün dosya, düzenleme formu bununla
+  thumbUrl: string | null; // liste/önizleme küçük resmi — CDN kare@200, operatörün kadrajıyla (`thumbnailImageUrl`)
   categoryName: string; // çözülmüş kategori adı ya da '—' (join)
   variants: ProductVariant[]; // ürünün varyantları
+  countryRates: ProductWithRelations['countryRates']; // ürünün öteki ülkelerdeki KDV oranları (ürün formu okur)
   collectionNames: string[]; // girdiği koleksiyon adları (join)
   stock: ProductStockSummary | null; // depo kapsamındaki toplam (okunmadıysa null)
   price: ProductPriceSummary | null; // birincil boyun fiyat/marj özeti (yalnız yöneticide)
 };
 
-// Kategori view-model — `count` bu kategorideki ürün sayısı; `imageUrl` görselin public okuma URL'i
-// (kategori görseli anasayfa şeridinde görünür: masaüstü web 3:2 kart, mobil webde daire).
-// `frames` liste hücresinin CDN çerçeveleri (05.37) — `imageUrl` düzenleme formunun özgün dosyası olarak kalır.
+// Kategori view-model'i: `count` kategorideki ürün sayısı, `frames` liste hücresinin CDN çerçeveleri; `imageUrl` düzenleme formunun
+// özgün dosyasıdır.
 export type CategoryView = Category & { count: number; imageUrl: string | null; frames: ImageFrameSources | null };
-// Koleksiyon = adı olan ürün listesi (DOMAIN §13) → üyelik id'leri view-model'in parçası (vitrin
-// sırasında); üyelik dialogu bunlarla ön-dolar. `count` bağımsız sayaç DEĞİL, productIds.length'ten
-// türer (RSC'de bir kez); katalog tablosunun ortak alanı olduğu için ayrıca taşınır. `imageUrl` kapak
-// görselinin public okuma URL'i (imageKey ham anahtar; URL `publicImageUrl` ile kurulur).
+// Koleksiyon adı olan ürün listesidir (DOMAIN §13); üyelik kimlikleri vitrin sırasındadır ve üyelik penceresini ön-doldurur. `count`
+// bağımsız sayaç değil, `productIds.length`ten türer ve katalog tablosunun ortak alanı olduğu için ayrıca taşınır.
 export type CollectionView = Collection & { count: number; productIds: string[]; imageUrl: string | null; frames: ImageFrameSources | null };
 
 /** Katalog satırı — kategori ve koleksiyon aynı alanları taşır; tek tablo/dialog bunu tüketir. */
 export type CatalogRow = CategoryView | CollectionView;
 
-/**
- * ── PAKET FORMUNUN TİPLERİ ARTIK FORMUN YANINDA (22.18) ─────────────────────
- * `BundleView` ve `VariantOption` buradan `components/operation/form/bundle-form/types.ts`e taşındı,
- * çünkü paket formu ortak alana çıktı: onu artık ürün sayfası da asistan kuyruğu da kullanıyor ve
- * bir komponentin sayfa klasöründen tip okuması ters yönlü bir bağımlılıktır (`docs:check §3e`).
- *
- * Buradan yeniden ihraç ediliyorlar ki SAYFA KODU değişmesin — tanım tek, adres iki değil.
- */
+// Paket formunun tipleri formun yanındadır (paket formu ortak alanda); sayfa kodu değişmesin diye buradan yeniden dışa verilir.
 import type { BundleView } from '@/components/operation/form/bundle-form/types';
 
 export type { BundleView } from '@/components/operation/form/bundle-form/types';
@@ -128,13 +110,8 @@ export function sizeLabel(variant: ProductVariant): string {
 }
 
 /**
- * Katalog satırı arama terimine uyuyor mu — kategori/koleksiyon araması CLIENT'ta süzülür, çünkü bu
- * listeler sayfalı değil, bütün hâlinde geliyor (küçük ve sürükle-sıralanabilir). Ürün araması ise
- * sunucuda kalır: orası keyset paginasyonlu.
- *
- * Eşleşme `slugify` üzerinden: aksan ve Türkçe harf farkı yutulur ("boregi" → "su-boregi" bulur) ve
- * ÜÇ dilin adı birden taranır — operatör FR adını yazsa da kaydı bulur. Yeni bir normalleştirici
- * yazılmadı; slug üreticisi zaten bu işi tek yerde yapıyor.
+ * Katalog satırı arama terimine uyuyor mu; kategori ve koleksiyon listeleri bütün hâlinde geldiği için istemcide süzülür. Eşleşme
+ * `slugify` üzerinden, üç dilin adı birden taranır, ki aksan ve Türkçe harf farkı yutulsun.
  */
 export function matchesCatalogFilter(row: { name: LocalizedText; slug: string }, term: string): boolean {
   const needle = slugify(term);
@@ -144,10 +121,8 @@ export function matchesCatalogFilter(row: { name: LocalizedText; slug: string },
 }
 
 /**
- * Bu ürünün kalemi olduğu paketler. Ürünü pasife almak paketi doğrudan bozar (paket ancak tüm
- * kalemleri satılabilirse satılabilir), ama ilişki ekranda hiç görünmüyordu: operatör ürünü kapatıp
- * paketin sessizce vitrinden düştüğünü sonradan öğreniyordu. Türetme saf ve client'ta — paketler
- * kalemleriyle birlikte zaten gelmiş durumda (ek sorgu yok).
+ * Bu ürünün kalemi olduğu paketler; ürünü pasife almak paketi de satılamaz kılar ve ilişki görünmezse paket sessizce vitrinden düşer.
+ * Türetme istemcide, çünkü paketler kalemleriyle zaten gelmiştir.
  */
 export function bundlesUsingVariants(bundles: BundleView[], variantIds: string[]): BundleView[] {
   if (variantIds.length === 0) return [];
@@ -174,9 +149,8 @@ export interface ProductsData {
   /** Paketler TAM gelir ama ÖZET olarak — kalemler diyalog açılınca okunur. */
   bundles: BundleView[];
   /**
-   * Aileler ÜYELERİYLE BİRLİKTE tam gelir (`CLAUDE §1`): aile operatörün elle kurduğu, doğal tavanı
-   * olan bir küme — sayfalanmaz, tek turda okunur. Üyeler burada çünkü sağ raydaki "öteki çeşitler"
-   * bloğu da aynı veriden besleniyor; ikinci bir okuma iki ayrı gerçek doğururdu.
+   * Aileler üyeleriyle tam gelir, çünkü operatörün elle kurduğu tavanlı bir kümedir. Sağ raydaki "öteki çeşitler" de aynı veriden
+   * beslenir, ikinci okuma iki ayrı gerçek doğururdu.
    */
   families: FamilyView[];
 }
@@ -196,10 +170,8 @@ export interface FamilyMemberView {
   /** Ürünün kendi adı ("Limonlu kek") — operasyon tek dilli. */
   productName: string;
   /**
-   * Aile içi etiket ("Limonlu") — ÜÇ DİLLİ ve müşteriye görünen budur.
-   *
-   * Ürün adından türetilemez: ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi"nde bozulur. Bu yüzden
-   * ayrı alan ve `family_id` doluyken veri kısıtı zorunlu kılıyor.
+   * Aile içi etiket ("Limonlu"), üç dilli ve müşteriye görünen budur. Ürün adından türetilemez, çünkü ortak eki kırpmak "Çilekli Kek"
+   * ile "Kek Dilimi"nde bozulur.
    */
   label: LocalizedText;
   imageUrl: string | null;
@@ -216,11 +188,8 @@ export type CatalogKind = 'category' | 'collection';
 export type StatusFilter = ProductStatus | 'all';
 
 /**
- * products-client'ın tuttuğu durum + eylemler; masaüstü görünümü bunu tüketir.
- *
- * Süzgeçler artık SUNUCUDA uygulanıyor (STACK §6): `visibleProducts` diye ayrı bir client-süzülmüş
- * liste YOK — `products` zaten süzülmüş gelir, kullanıcı süzgeci değiştirince URL yazılır ve RSC
- * yeniden okur. Liste sayfa sayfa büyür (`onLoadMore`).
+ * products-client'ın tuttuğu durum ve eylemler; masaüstü görünümü bunu tüketir. Süzgeçler sunucudadır: `products` süzülmüş gelir ve
+ * liste sayfa sayfa büyür (`onLoadMore`).
  */
 export interface ProductsViewProps {
   data: ProductsData;
@@ -256,9 +225,6 @@ export interface ProductsViewProps {
   openCreate: () => void;
   closeCreate: () => void;
   openEdit: () => void;
-  /**
-   * Fiyat yazıldı — satırın özeti YERİNDE düzeltilir, liste yeniden OKUNMAZ (kullanıcı kararı:
-   * yazma sırasında ekran oynamaz). Yalnız BİRİNCİL boyun fiyatı satırı değiştirir.
-   */
+  /** Fiyat yazıldı; satırın özeti yerinde düzelir ve liste yeniden okunmaz, çünkü yazarken ekran oynamamalı. */
   onLocalPrice: (productId: string, variantId: string, channel: Channel, amountCents: number, row: PriceRow) => void;
 }

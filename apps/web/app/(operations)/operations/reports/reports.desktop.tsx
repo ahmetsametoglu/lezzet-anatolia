@@ -17,9 +17,8 @@ import type { ReportsViewProps } from './reports-types';
 export function ReportsDesktop({ data, urlState, months, canSeeProfit, onFilter }: ReportsViewProps) {
   const router = useRouter();
 
-  // Kâr sekmeleri yalnız yöneticiye. Muhasebeci sekmeyi HİÇ GÖRMÜYOR: kapalı ama görünür bir sekme
-  // burada yanlış olurdu — kapalı seçenek bir kuralı öğretir, bu ise bir yetki sınırıdır ve
-  // muhasebeciye "göremediğin bir kâr var" demenin bir faydası yok.
+  // Kâr sekmeleri yalnız yöneticiye ve muhasebeci onları hiç görmez: kapalı ama görünür sekme bir kural öğretirdi, bu ise yetki
+  // sınırıdır.
   const tabs: readonly ReportTab[] = canSeeProfit ? REPORT_TABS : ['export'];
   const active: ReportTab = tabs.includes(urlState.tab) ? urlState.tab : 'export';
 
@@ -79,6 +78,7 @@ export function ReportsDesktop({ data, urlState, months, canSeeProfit, onFilter 
       ) : (
         <ExportPanel
           view={data.export}
+          distanceSale={data.distanceSale}
           queue={data.invoiceQueue}
           ym={urlState.ym}
           business={urlState.business}

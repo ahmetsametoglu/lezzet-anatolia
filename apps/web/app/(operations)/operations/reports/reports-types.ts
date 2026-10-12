@@ -1,6 +1,8 @@
-import type { Channel } from '@lezzet/types';
+import type { DistanceSaleThresholdStatus } from '@lezzet/application/accounting/distance-sale-threshold';
+import type { OssSummary } from '@lezzet/domain-core';
+import type { Channel, Country } from '@lezzet/types';
 import type { PnlRowKey } from './reports-labels';
-import type { ReportsUrlState } from './reports-url';
+import type { Quarter, ReportsUrlState } from './reports-url';
 
 // Raporlar ekranının görünüm modeli; her tutar cent'tir. Kâr ve aktarım kapıları euro döndürür, çeviri okuma katmanında bir kez
 // yapılır, çünkü görünüme sızan euro aynı sayıyı bir blokta yüz kat büyük yazardı.
@@ -65,10 +67,20 @@ export interface ExportView {
   excludedGiftCount: number;
   excludedGiftCostCents: number | null;
   excludedGiftListCents: number | null;
-  byVatRate: { rate: number; netCents: number; vatCents: number }[];
+  /** Oran başına toplam; satırın tamamı bir ülkenin varış KDV'siyse `country` o ülkedir, satıcının satışıyla karışıksa `null`. */
+  byVatRate: { rate: number; netCents: number; vatCents: number; country: Country | null }[];
   /** Hareket dökümünün dönemi: kaç hareket, kaçı izahsız — dosyaya girmeden görünsün. */
   movementCount: number;
   unexplainedMovementCount: number;
+}
+
+/** Uzaktan satış eşiğinin bugünkü durumu ve seçili ayın çeyreğinin OSS özeti; tutarlar KDV hariç cent. */
+export interface DistanceSaleView {
+  status: DistanceSaleThresholdStatus;
+  /** Çubuğun uyarı işaretleri, ayardan (yüzde). */
+  warningPercents: readonly [number, number];
+  quarter: { year: number; quarter: Quarter };
+  oss: OssSummary;
 }
 
 export interface ReportsData {
@@ -78,6 +90,8 @@ export interface ReportsData {
   pnl: PnlRow[];
   channels: ChannelCard[];
   export: ExportView;
+  /** Yalnız Muhasebe export sekmesinde okunur. */
+  distanceSale: DistanceSaleView | null;
   invoiceQueue: InvoiceQueueRow[];
   /** Maliyeti kesinleşmemiş siparişlerin sayısı ve cirosu; kâra katılmaz ve ayrı yazılır, sıfır sayılsaydı kâr büyük görünürdü. */
   unpricedCount: number;

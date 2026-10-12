@@ -7,18 +7,10 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { amount, percent } from '@/components/operation/ui/format';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { PriceDialog } from '@/components/operation/prices/price-dialog';
-import { loadProductPricesPeekAction } from '../../actions/peek';
-import type { PriceRow } from '@/lib/pricing/price-rows';
+import { loadProductPricesPeekAction, type ProductPricesPeek } from '../../actions/peek';
 
-// Ürünün FİYAT BAKIŞI — önizleme panelinin "Fiyatlar" düğmesi (16.08, kullanıcı kararı: sayfaya
-// yönlendirme yerine diyalog). Satırlar fiyat ekranıyla AYNI kurulumdan gelir (`toPriceRows`);
-// buradaki tablo yalnız diziliştir, hiçbir marj burada hesaplanmaz.
-//
-// TEK BOYLU ÜRÜNDE TABLO HİÇ GÖRÜNMEZ (16.08, kullanıcı kararı): seçilecek boy yokken araya giren
-// tablo fazladan bir perdeydi — düğme doğrudan fiyat ekranının DÜZENLEME FORMUNU açar
-// (`PriceDialog`, ortak komponent). Çok boylu üründe tablo BOY SEÇİCİ olarak kalır: form tek boyu
-// düzenler, hangi boy sorusunu birinin sorması gerekir. Satıra tıklayınca aynı form açılır;
-// kaydedip kapatınca bakış yeniden okunur ki tablo eski sayıyı göstermesin.
+// Ürünün fiyat bakışı: satırlar fiyat ekranıyla aynı kurulumdan gelir (`toPriceRows`) ve tablo yalnız diziliştir. Tek boylu üründe tablo
+// yoktur, doğrudan fiyat penceresi açılır; çok boylu üründe tablo boy seçicidir ve pencere kapanınca bakış yeniden okunur.
 
 interface PricePeekDialogProps {
   productId: string;
@@ -65,7 +57,7 @@ function PriceFormSkeleton() {
 }
 
 export function PricePeekDialog({ productId, productName, variantCount, onClose }: PricePeekDialogProps) {
-  const [rows, setRows] = useState<PriceRow[] | null>(null);
+  const [peek, setPeek] = useState<ProductPricesPeek | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Düzenlenen boy KİMLİKLE tutulur, satır taze listeden türetilir (fiyat ekranının deseni).
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,13 +69,14 @@ export function PricePeekDialog({ productId, productName, variantCount, onClose 
     void loadProductPricesPeekAction(productId).then(({ data, error: actionError }) => {
       if (!alive) return;
       if (actionError) setError(actionError);
-      else setRows(data);
+      else setPeek(data);
     });
     return () => {
       alive = false;
     };
   }, [productId, reload]);
 
+  const rows = peek?.rows ?? null;
   const editing = rows?.find((r) => r.variantId === editingId) ?? null;
 
   // Bekleme hâli: tek boylu ürün doğrudan forma gidecek — iskelet de formun kabuğunda ve şeklinde
@@ -96,11 +89,10 @@ export function PricePeekDialog({ productId, productName, variantCount, onClose 
     );
   }
 
-  // Tek boy: ara tablo yok, doğrudan düzenleme formu. Kapatınca bakışın tamamı kapanır — geride
-  // dönülecek bir tablo yok. Kaydetme `router.refresh()` ile listeyi zaten tazeler.
-  if (rows !== null && rows.length === 1) {
-    const only = rows[0]!;
-    return <PriceDialog key={only.variantId} row={only} onClose={onClose} />;
+  // Tek boyda kapanış bakışın tamamını kapatır, çünkü dönülecek tablo yoktur; kaydetme listeyi `router.refresh()` ile tazeler.
+  if (peek !== null && peek.rows.length === 1) {
+    const only = peek.rows[0]!;
+    return <PriceDialog key={only.variantId} row={only} stepCents={peek.autoPriceStepCents} onClose={onClose} />;
   }
 
   return (
@@ -181,13 +173,14 @@ export function PricePeekDialog({ productId, productName, variantCount, onClose 
           ) : null}
         </div>
       )}
-      {editing ? (
+      {editing && peek !== null ? (
         <PriceDialog
           key={editing.variantId}
           row={editing}
+          stepCents={peek.autoPriceStepCents}
           onClose={() => {
             setEditingId(null);
-            setRows(null);
+            setPeek(null);
             setReload((n) => n + 1);
           }}
         />

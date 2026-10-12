@@ -1,18 +1,18 @@
 import { targetMarginFor } from '@lezzet/domain-core';
+import { COUNTRY_LABELS, type Channel, type Country } from '@lezzet/types';
+import { countryColumnLabel, FOREIGN_COUNTRIES } from '@/components/operation/prices/country-prices';
 import { percent } from '@/components/operation/ui/format';
 import type { ChipTone } from '@/components/operation/ui/chip';
 import type { OpsTone } from '@/components/operation/ui/tone';
-import type { PricesData, PriceRow } from './prices-types';
+import type { PriceCounts, PricesData, PriceRow } from './prices-types';
 import type { PriceScope, PriceTab } from './prices-url';
 
-// Fiyat ekranının SÖZLÜĞÜ — sayıdan cümleye geçiş tek yerde. Karar burada verilmez (motorun işi);
-// burada yalnız kararın nasıl okunacağı yazar.
+// Fiyat ekranının SÖZLÜĞÜ — sayıdan cümleye geçiş tek yerde. Karar burada verilmez (motorun işi); burada yalnız kararın nasıl
+// okunacağı yazar.
 
 /**
- * Marj rozetinin tonu. Üç hâl var ve üçü de farklı şey söyler:
- *  · hedef yok/maliyet yok → ÖLÇÜ YOK (nötr) — "iyi" demek değil, "bilinmiyor" demek
- *  · hedefin altında       → kayıp riski (kırmızı)
- *  · zarar (negatif marj)  → maliyetin altında satış; hedef yazılmamış olsa bile kırmızı
+ * Marj rozetinin tonu: ölçü yoksa nötr, çünkü "bilinmiyor" "iyi" demek değildir. Hedefin altı da zarar da kırmızıdır; zarar hedef
+ * yazılmamış olsa bile maliyetin altında satıştır.
  */
 export function marginTone(row: PriceRow): OpsTone {
   if (row.marginPercent === null) return 'neutral';
@@ -22,30 +22,46 @@ export function marginTone(row: PriceRow): OpsTone {
   return 'olive';
 }
 
-/** Marj rozetinin metni — bilinmeyen marj TIRE ile yazılır, sıfır sanılmasın. */
+/** Marj rozetinin metni: bilinmeyen marj tire ile yazılır ki sıfır sanılmasın; en dar marj ülke fiyatındaysa ülke kodu eklenir. */
 export function marginText(row: PriceRow): string {
-  return row.marginPercent === null ? '—' : percent(row.marginPercent);
+  if (row.marginPercent === null) return '—';
+  return row.marginCountry === null ? percent(row.marginPercent) : `${percent(row.marginPercent)} ${row.marginCountry}`;
 }
 
 /**
- * Marjın açıklaması (tooltip): hangi kanaldan geldiği ve hedefe göre yeri. Ekranda tek sayı var,
- * ama o sayı iki fiyattan en darı — hangisi olduğu görünmezse operatör yanlış fiyatı düzeltir.
+ * Marjın açıklaması: hangi fiyattan geldiği ve hedefe göre yeri. Rozet dört fiyatın en darıdır; hangi fiyat olduğu görünmezse operatör
+ * yanlış fiyatı düzeltir.
  */
 export function marginHint(row: PriceRow): string {
   if (row.costCents === null) return 'Maliyet bilinmiyor — fiyatlı parti girilmemiş, marj hesaplanamaz.';
-  if (row.marginPercent === null) return 'Hiçbir kanalda fiyat yok — marj hesaplanamaz.';
-  const channel = row.marginChannel === 'b2b' ? 'B2B' : 'B2C';
+  if (row.marginPercent === null || row.marginChannel === null) return 'Hiçbir kanalda fiyat yok — marj hesaplanamaz.';
   // Hedef en dar marjın kanalına göre çözülür; ortak hedefi söylemek yanlış kıyası doğrulamış gibi olurdu.
-  const effective = targetMarginFor(row.marginChannel ?? 'b2c', row.targetMarginPercent, row.targetMarginB2bPercent);
+  const effective = targetMarginFor(row.marginChannel, row.targetMarginPercent, row.targetMarginB2bPercent);
   const b2bNote = row.marginChannel === 'b2b' && row.targetMarginB2bPercent !== null ? ' (B2B’ye özel)' : '';
   const target = effective === null ? 'hedef yazılmamış' : `hedef ${percent(effective)}${b2bNote}`;
-  return `En dar marj ${channel} fiyatından · ${target}`;
+  const price = row.marginCountry === null ? row.marginChannel.toUpperCase() : countryColumnLabel(row.marginChannel, row.marginCountry);
+  return `En dar marj ${price} fiyatından · ${target}`;
 }
 
-/** Kanal hücresinin tonu: fiyatı olmayan kanal AMBER — eksiklik, sıfır değil. */
-export function channelHint(channel: 'b2c' | 'b2b', hasPrice: boolean): string {
-  const base = channel === 'b2c' ? 'Perakende liste fiyatı (KDV dahil)' : 'Toptan liste fiyatı (KDV hariç)';
+const VAT_BASE: Record<Channel, string> = { b2c: 'KDV dahil', b2b: 'KDV hariç' };
+
+/** Kanal hücresinin açıklaması; fiyatı olmayan kanal bir eksikliktir, sıfır değil. */
+export function channelHint(channel: Channel, hasPrice: boolean): string {
+  const base = channel === 'b2c' ? `Perakende liste fiyatı (${VAT_BASE.b2c})` : `Toptan liste fiyatı (${VAT_BASE.b2b})`;
   return hasPrice ? base : `${base} — girilmemiş, bu kanalda satışa kapalı`;
+}
+
+/** Ülke hücresinin açıklaması: kendi fiyatı mı, genel fiyat mı geçiyor, yoksa o ülkenin tüketicisine hiç satılmıyor mu. */
+export function countryHint(
+  channel: Channel,
+  country: Country,
+  cell: { hasPrice: boolean; hasGeneral: boolean; sellable: boolean },
+): string {
+  const name = COUNTRY_LABELS[country];
+  if (!cell.sellable) return `${name} KDV oranı girilmemiş — ${name}’daki tüketiciye satılmaz`;
+  const base = `${name} ${channel === 'b2c' ? 'perakende' : 'toptan'} fiyatı (${VAT_BASE[channel]})`;
+  if (cell.hasPrice) return base;
+  return cell.hasGeneral ? `${base} yazılmamış — genel fiyat geçer` : `${base} yazılmamış, genel fiyat da yok — bu kanalda satışa kapalı`;
 }
 
 /** Satırın durum eki: neden satılmıyor sorusunun cevabı ("ürün pasif", "boy kapalı"). */
@@ -60,12 +76,9 @@ export function rowStateNote(row: PriceRow): string {
   return notes.length ? ` · ${notes.join(' · ')}` : '';
 }
 
-
 /**
- * Süzgeç çipinin TONU — anlam taşır: marj-altı bir KAYIP uyarısıdır (kırmızı), eksik fiyat bir
- * eksikliktir (amber), otomatik fiyat bir davranış işaretidir (zeytin) — hata değil.
- *
- * İki yüzeyde ayrı yazılmıştı; biri harita, öteki ternary'ydi ve `auto` dalı mobilde yoktu.
+ * Süzgeç çipinin tonu anlam taşır: marj-altı bir kayıp uyarısıdır (kırmızı), eksik fiyat bir eksikliktir (amber), otomatik fiyat bir
+ * davranış işaretidir (zeytin), hata değil.
  */
 export const SCOPE_TONE: Record<PriceScope, ChipTone> = {
   all: 'olive',
@@ -78,7 +91,7 @@ export const SCOPE_TONE: Record<PriceScope, ChipTone> = {
  * Sekmenin alt başlığı, masaüstü ve telefon aynı cümleyi kurar ki biri sekmeyi unutmasın. Sayaçlar yüklenmiş sayfaya aittir ve
  * metin bunu söyler.
  */
-export function tabSubtitle(tab: PriceTab, data: PricesData, counts: { rows: number; below: number; missing: number }): string {
+export function tabSubtitle(tab: PriceTab, data: PricesData, counts: PriceCounts): string {
   switch (tab) {
     case 'customers':
       return `${data.customerPrices.length} özel fiyat · ${data.priceRuleCustomers.length} müşteride genel fiyat kuralı`;
@@ -86,7 +99,11 @@ export function tabSubtitle(tab: PriceTab, data: PricesData, counts: { rows: num
       return 'Kupon ve otomatik kampanya — indirim motoruna bağlı';
     case 'offers':
       return `${data.offers.length} parti karar bekliyor · teklif partiye bağlıdır, liste fiyatını değiştirmez`;
-    default:
-      return `${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik`;
+    default: {
+      const countries = FOREIGN_COUNTRIES.map(
+        (country) => ` · ${counts.countryPrices[country] ?? 0} ${COUNTRY_LABELS[country]} fiyatı`,
+      ).join('');
+      return `${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik${countries}`;
+    }
   }
 }

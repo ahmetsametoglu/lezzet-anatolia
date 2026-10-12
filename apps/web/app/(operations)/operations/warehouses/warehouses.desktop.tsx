@@ -6,37 +6,26 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { CopyInline } from '@/components/operation/ui/copy-text';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
 import { SectionHead, SetupGapNote } from '@/components/operation/ui/section-head';
 import { addressForClipboard, addressOneLine, statusLabel, statusTone } from './warehouses-labels';
 import { reorderWarehousesAction } from './actions';
 import { MeasurePoints } from './measure-points';
 import type { ShippingBox } from '@lezzet/types';
-import { FacilityStrip, PrinterCard, Scorecard, ShippingBoxCard, StaffChips, VanLoadRow, ZoneCard } from './warehouses-sections';
+import { shipCountriesLabel } from './ship-countries';
+import {
+  FacilityStrip,
+  PrinterCard,
+  Scorecard,
+  ShipCountriesCard,
+  ShippingBoxCard,
+  StaffChips,
+  VanLoadRow,
+  ZoneCard,
+} from './warehouses-sections';
 import type { MeasurePointView, WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
 
-// Depolar — web. **TEK görünüm** (kullanıcı kararı 16.08): başlık · tesis şeridi · seçili tesisin
-// detayı. Alt alta, hepsi aynı ekranda.
-//
-// ── ÖNCE İKİ GÖRÜNÜMDÜ VE SORUN ORADAYDI ────────────────────────────────────
-// 16.08'e kadar sayfa iki hâl arasında gidip geliyordu: seçim yokken tesis listesi, seçim varken
-// sol ray + kart. İkinci tesise bakmak için önce "tüm depolar"a dönmek gerekiyordu ve aynı nesnenin
-// iki ayrı sayfası varmış gibi duruyordu. Kullanıcının tarifi tek cümleydi: *"başlığın hemen altına
-// depo isimlerini koyalım, seçtiği deponun detayı aşağıdaki bölümde görünsün."*
-//
-// **Liste görünümünün taşıdığı hiçbir şey kaybolmadı:** sıralama şeride geçti (`FacilityStrip`),
-// kargo boşluğu uyarısı ve ağ geneli talep tablosu detayın ALTINDA ayrı bir bölüm oldu — ikisi de
-// tesise değil AĞA ait ve o ayrım metinle söyleniyor.
-//
-// ── BAŞLIK SEÇİLİ TESİSİN ────────────────────────────────────────────────────
-// Tasarım kartı kendi iç başlığıyla çiziyordu (kod + ad + adres + rozetler). O başlık ortak başlık
-// barına (09.19) TAŞINDI: iki bar üst üste dikey alanı ikinci kez öderdi. Rozetler ve "Künyeyi
-// düzenle" barın ekran-işleri yuvasında duruyor; "+ Depo" da orada, çünkü artık liste görünümü yok.
-//
-// ── KABUĞUN DEPO SEÇİCİSİ BU SAYFADA GİZLİ ──────────────────────────────────
-// `hideWarehousePicker` — sayfanın kendi şeridi geldiğinde barda iki seçici yan yana düşüyordu:
-// biri ekranı değiştiriyor, öteki hiçbir şey yapmıyor (sayfa depo bağlamını daraltıcı olarak
-// okumuyor). Gerekçenin tamamı `PageHeader` künyesinde.
+// Depolar tek görünümdür: başlık, tesis şeridi ve seçili tesisin detayı alt alta, ki ikinci tesise bakmak için listeye dönülmesin.
+// Seçili tesisin başlığı ortak başlık barındadır ve kabuğun depo seçicisi gizlidir, çünkü sayfanın kendi tesis şeridi var.
 
 interface WarehousesViewProps {
   data: WarehousesData;
@@ -46,11 +35,11 @@ interface WarehousesViewProps {
   onEditWarehouse: (row: WarehouseRowView) => void;
   onNewZone: () => void;
   onEditZone: (zone: ZoneCardView) => void;
-  /** Ölçüm noktaları (19.28) — ekleme türü düğmeden belli, pencerede tekrar sorulmuyor. */
+  /** Ölçüm noktası ekleme; tür düğmeden bellidir, pencerede yeniden sorulmaz. */
   onAddPoint: (kind: 'area' | 'vehicle') => void;
   onEditPoint: (point: MeasurePointView) => void;
   onTogglePoint: (point: MeasurePointView) => void;
-  /** Etiket yazıcısı penceresi (23.7) — kurulum künyesinin düzenlemesi. */
+  /** Etiket yazıcısı penceresi. */
   onEditPrinter: () => void;
   onAddShippingBox: () => void;
   onEditShippingBox: (box: ShippingBox) => void;
@@ -65,11 +54,8 @@ export function WarehousesDesktop(props: WarehousesViewProps) {
 }
 
 /**
- * Tesis şeridinin sırası — sürükleme anında listeyi yerinde tutar, sunucu cevabı gelince
- * `router.refresh()` gerçeği geri yazar (hata hâlinde şerit sunucunun bildiğine döner).
- *
- * Sıra OPERATÖRÜNDÜR ve sistemdeki **bütün** depo seçicilerinde aynıdır (bağlam seçicisi, tablo
- * süzgeci, transfer hedefi) — bu yüzden liste görünümü kalkarken sıralama da onunla gitmedi.
+ * Tesis şeridinin sırası: sürükleme anında liste yerinde güncellenir, sunucu cevabıyla `router.refresh()` gerçeği geri yazar. Sıra
+ * operatöründür ve bütün depo seçicilerinde aynıdır (bağlam seçicisi, tablo süzgeci, transfer hedefi).
  */
 function useFacilityOrder(rows: readonly WarehouseRowView[]) {
   const router = useRouter();
@@ -122,9 +108,9 @@ function FacilityView({
           row ? (
             <>
               <Badge tone={statusTone(row)}>{statusLabel(row)}</Badge>
-              {row.shipsOnline ? (
+              {row.shipCountries.length > 0 ? (
                 <Badge tone="blue" outline>
-                  Kargo çıkışı · {COUNTRY_LABELS[row.countryCode]}
+                  Kargo · {shipCountriesLabel(row)}
                 </Badge>
               ) : null}
             </>
@@ -132,14 +118,8 @@ function FacilityView({
         }
         subtitle={
           row ? (
-            /**
-             * **Kod ve adres KOPYALANABİLİR** (`design/pages/admin-depolar.md §2/§7`) — ikisi de
-             * sistem dışına elle taşınıyor: kod belge önekidir (`IMH-STR-26-0012`) ve denetmen onu
-             * kâğıda yazar, adres irsaliyeye ve tedarikçi yazışmasına girer. Elle yeniden yazmak
-             * bu iki alanda bir yazım hatası sınıfı açar.
-             *
-             * İkon SESSİZ (`CopyInline`): asıl olan metin, düğme kendini onun önüne koymamalı.
-             */
+            // Kod ve adres kopyalanabilir, çünkü ikisi de sistem dışına elle taşınır: kod belge önekidir, adres irsaliyeye girer. İkon
+            // sessizdir, asıl olan metindir.
             <span className="flex items-center gap-1.5">
               <span className="font-ops-mono font-semibold text-ops-body">{row.code}</span>
               <CopyInline text={row.code} what="Kodu" />
@@ -177,19 +157,7 @@ function FacilityView({
             <SetupGapNote text="Bu tesis kapalı: stoğu kayıtta durur ama satış okumalarında görünmez, hiçbir seçicide ve transfer hedefinde çıkmaz. Künyeden yeniden açabilirsiniz." />
           ) : null}
 
-          {/* ── KÜNYE BÖLÜMÜ KALKTI (17.08, kullanıcının ekran turu) ──────────────────────────
-              Dört karttan üçü başlığın kelimesi kelimesine tekrarıydı: `Kod` alt satırda yazılı,
-              `Ülke` adresin sonunda, `Kargo çıkışı` başlığın rozetinde. Dördüncüsü (`Bağlı
-              personel`) bir SAYIYDI ve hemen altındaki bölüm zaten aynı kişileri ADLARIYLA
-              listeliyor — sayı, listenin özeti olmaktan çok listenin tekrarıydı.
-              Geriye yalnız belge önekleri (`IMH-…` · `TRF-…`) kalıyordu; onlar da belgenin
-              üstünde zaten yazılı, burada bir karara girdi değiller. Bir bölümün tamamı, dört
-              kutu yer kaplayıp tek yeni cümle söylemiyordu. */}
-
-          {/* ── Karne ── sayar, listelemez. **EN ÜSTTE** (kullanıcı kararı 17.08): sayfaya girenin
-              ilk sorusu "bu depo bugün nasıl?" — kurulum (hizmet alanı, noktalar, personel) ise
-              bir kez yapılıp aylarca dönülmeyen iştir. Kurulumu üste koymak, her gün sorulan
-              soruyu her gün kaydırtıyordu. */}
+          {/* Karne en üstte, çünkü sayfaya girenin ilk sorusu "bu depo bugün nasıl"; kurulum bir kez yapılıp aylarca dönülmeyen iştir. */}
           <section className="flex flex-col gap-2.5">
             <SectionHead title="Karne" hint="bugün nasıl durduğu — her sayı Stok'a bu depo bağlamıyla gider" />
             <Scorecard card={card.scorecard} code={row.code} />
@@ -198,7 +166,23 @@ function FacilityView({
             {card.vanLoad && <VanLoadRow load={card.vanLoad} />}
           </section>
 
-          {/* ── Hizmet alanı ── Teslimat'tan buraya taşındı (01.08): kurulum kurulumla durur. */}
+          {/* Kargo yalnız Lezzet tesisinden çıkar (kural veritabanında); araçta ve QUALITE deposunda bölüm söyleyecek bir şey taşımaz. */}
+          {row.kind === 'facility' && row.business === 'lezzet' ? (
+            <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
+              <SectionHead
+                title="Kargo ülkeleri"
+                hint="bu depodan taşıyıcıyla gönderilen ülkeler"
+                aside={
+                  <Button variant="secondary" size="sm" onClick={() => onEditWarehouse(row)}>
+                    Düzenle
+                  </Button>
+                }
+              />
+              <ShipCountriesCard row={row} />
+            </section>
+          ) : null}
+
+          {/* Hizmet alanı: kurulum kurulumla durur. */}
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead
               title="Hizmet alanı"
@@ -224,12 +208,9 @@ function FacilityView({
                 <span className="font-ops-body text-ops-sm leading-snug text-ops-body">Teslimat &amp; Rota'da açılır</span>
               </button>
             </div>
-            {/* ÜÇ KATMANLI YAPIYI ANLATAN PARAGRAF KALKTI (17.08): kurulum ekranı değil, ders
-                metniydi — çakışma reddini ekran zaten kısıt cümlesiyle söylüyor, kod çıkarmanın
-                sonucunu da değişiklik anında yazıyor. Kural `DOMAIN §17` ve migration'da yaşıyor. */}
           </section>
 
-          {/* ── Ölçüm noktaları ── hijyen defterinin zemini (19.28). */}
+          {/* Ölçüm noktaları: hijyen defterinin zemini. */}
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead
               title="Ölçüm noktaları"
@@ -245,9 +226,8 @@ function FacilityView({
             />
           </section>
 
-          {/* ── Etiket yazıcıları ── (23.7 → 07.12) İKİ etiket türü, iki kâğıt: bizim 4×6 kutu
-              etiketimiz ve taşıyıcının A6'sı. Envanter burada; hangisini kullanacağını TELEFON
-              seçer (kullanıcı kararı 29.08). */}
+          {/* İki etiket türü iki kâğıda basılır (4×6 kutu etiketi, taşıyıcının A6'sı); envanter burada, hangisinin kullanılacağını
+              telefon seçer. */}
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead
               title="Etiket yazıcıları"
@@ -256,7 +236,7 @@ function FacilityView({
             <PrinterCard printers={card.printers} onEdit={onEditPrinter} />
           </section>
 
-          {/* ── Kargo kutuları ── (07.12) taşıyıcıya verilen dış kutunun ölçüsü; etiketin ön şartı. */}
+          {/* Kargo kutuları: taşıyıcıya verilen dış kutunun ölçüsü, etiketin ön şartıdır. */}
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead
               title="Kargo kutuları"
@@ -272,28 +252,11 @@ function FacilityView({
             />
           </section>
 
-          {/* ── Bağlı personel ── okunur; kapsam ataması Ayarlar'da. */}
+          {/* Bağlı personel okunur; kapsam ataması Ayarlar'dadır. */}
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead title="Bağlı personel" hint="okunur — kapsam ataması Ayarlar'da" />
             <StaffChips staff={card.staff} />
           </section>
-
-          {/* ── AĞ GENELİ BÖLÜMÜ KALKTI (17.08, kullanıcı kararı) ─────────────────────────────
-              Kendi başlığı zaten "seçili tesise ait değil" diyordu — bir sayfada, o sayfanın
-              sorusuna cevap vermediğini söyleyerek duran bir bölüm.
-
-              İki şey taşıyordu:
-              · **Posta kodu talebi tablosu.** 04.08'de buraya "karar burada veriliyor" diye
-                konmuştu (`19.21`). O gerekçe 07.08'de sona erdi: bölge kurulumu Teslimat & Rota'ya
-                taşındı ve harita geldi. Bugün "nereye açılmalıyız" sorusu haritada, kodun NEREDE
-                olduğu görülerek cevaplanıyor — aynı `postal_code_demand` verisi mor noktalarda,
-                künyesiyle birlikte. Tablo, dayandığı gerekçe kalkınca yerinde kalmıştı.
-              · **"Şu ülkede kargo çıkış deposu yok" uyarısı.** Tek ülkeli bir kurulumda hiç
-                tetiklenmez; ikinci ülke açılırsa bu bir KURULUM kararıdır ve künye penceresinde
-                verilir.
-
-              Kayıt: `19.27` bu kararla kapandı — verinin evi harita, oranlı okuma (`sip./talep`)
-              gerekirse Analitik'in işidir, kurulum sayfasının değil. */}
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-6 py-[18px]">

@@ -26,6 +26,7 @@ export function ProductFormDesktop({ fields }: { fields: ProductFormFields }) {
           {fields.storage}
           {fields.autoPrice}
           {fields.vat}
+          {fields.countryVat}
           {fields.margin}
         </div>
       </div>

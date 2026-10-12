@@ -91,6 +91,22 @@ export function monthLabel(ym: string): string {
   return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
+export type Quarter = 1 | 2 | 3 | 4;
+
+/** Ayın çeyreği ve çeyreğin ilk ve son günü; OSS beyanı çeyrekle verilir. */
+export function quarterOf(ym: string): { year: number; quarter: Quarter; from: string; to: string } {
+  const [year, month] = ym.split('-').map(Number) as [number, number];
+  const quarter = (Math.floor((month - 1) / 3) + 1) as Quarter;
+  const monthOfQuarter = (offset: number) => `${year}-${String((quarter - 1) * 3 + offset).padStart(2, '0')}`;
+  return { year, quarter, from: monthRange(monthOfQuarter(1)).from, to: monthRange(monthOfQuarter(3)).to };
+}
+
+/** "2026 · 4. çeyrek (Eki–Ara)" — OSS özetinin başlığı. */
+export function quarterLabel(year: number, quarter: Quarter): string {
+  const short = (index: number) => MONTH_NAMES[index]!.slice(0, 3);
+  return `${year} · ${quarter}. çeyrek (${short((quarter - 1) * 3)}–${short(quarter * 3 - 1)})`;
+}
+
 /**
  * Seçilebilir aylar, bu aydan geriye bir yıl: gelecek ayın boş raporu işin kötü gittiğini düşündürür. Geriye bir yıl, "geçen yılın
  * aynı ayı" karşılaştırmasını kapsayan en dar penceredir.

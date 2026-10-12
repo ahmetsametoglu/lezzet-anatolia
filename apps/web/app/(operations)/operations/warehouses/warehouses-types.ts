@@ -30,17 +30,19 @@ export type WarehouseAddressView = WarehouseAddress | null;
 
 // ── Künye formu ─────────────────────────────────────────────────────────────
 
+/** Kargo ülkesi alanı: işaretli ülkeye bu depodan kargo çıkar; teslim noktası boş bırakılırsa paket depodan verilir. */
+export const ShipCountryFieldSchema = z.object({ country: CountryEnum, enabled: z.boolean(), handover: WarehouseAddressSchema });
+export type ShipCountryField = z.infer<typeof ShipCountryFieldSchema>;
+
 /**
- * Depo ekleme/düzenleme formu. `WarehouseInsertSchema`'dan türer; `sortOrder` ve `isActive` formda
- * YOK ve bu bilinçli:
- * - sıra listeden sürüklenerek verilir (form alanı olsaydı iki yerden yönetilirdi),
- * - aktiflik bir düğme değil bir KARAR — kapatmanın dört sonucu var ve kendi penceresinde onaylanır.
+ * Depo ekleme/düzenleme formu, `WarehouseInsertSchema`'dan türer. Sıra listeden sürüklenerek verilir ve aktiflik dört sonucu olan ayrı
+ * bir karardır, bu yüzden ikisi de formda yoktur.
  */
 export const WarehouseFormSchema = WarehouseInsertSchema.pick({ code: true, name: true }).extend({
   business: WarehouseSchema.shape.business,
   countryCode: CountryEnum,
-  /** Deponun kendi ülkesine kargo yapması; kapı bunu gönderim ülkesi satırına çevirir. */
-  shipsOnline: z.boolean(),
+  /** Her ülke için bir satır; kapı işaretlileri gönderim ülkesi satırına çevirir (`shipCountryEntries`). */
+  shipCountries: z.array(ShipCountryFieldSchema),
   /** Gel-al noktası: izinli müşteri hazır siparişini buradan alır; adresi müşteriye görünür. */
   pickupEnabled: z.boolean(),
   address: WarehouseAddressSchema,
@@ -55,26 +57,18 @@ export type WarehouseFormInput = z.infer<typeof WarehouseFormSchema>;
 
 // ── Bölge formu ─────────────────────────────────────────────────────────────
 
-/**
- * Posta kodu SEÇİMİ — `(ülke, kod)` ikilisi, çünkü kod tek başına benzersiz değil (`67000` hem
- * Fransa'da hem Almanya'da geçerli). Bölge sınır ötesi olabildiği için ikisi de taşınır.
- */
-/** Rotaya bağlı kod, kartların okuduğu şekil; rota formu Teslimat & Rota ekranındadır, bu ekran yalnız okur. */
+/** Rotaya bağlı kod, `(ülke, kod)` ikilisi, çünkü `67000` iki ülkede geçerlidir; rota formu Teslimat & Rota'dadır, bu ekran yalnız okur. */
 export type PostalCodePick = Pick<DeliveryZonePostalCode, 'country' | 'postalCode'>;
 
 // ── Ölçüm noktası formları ──────────────────────────────────────────────────
+
+/** Günlük beklenen ölçüm; `<select>` metin döndürür ve sıfır geçerli bir cevaptır ("ölçüm beklenmiyor"), boşlukla karışmamalı. */
+const DailyChecksField = z.coerce.number().int().min(0).max(DAILY_CHECKS_MAX);
 
 /**
  * Depo içi alan; `warehouseId` formda yok, çünkü tesis seçili karttan bellidir. Hedef aralık metin olarak alınır: boş bir sayı alanı
  * `0`a düşer ve sıfır derece geçerli bir beklenti olduğu için boşluk sıfırdan ayırt edilemezdi.
  */
-/**
- * Günlük beklenen ölçüm — formda METİN, çünkü `<select>` metin döndürür ve sayıya zorlanan boş bir
- * alan `0`a düşer; sıfır burada GEÇERLİ bir cevap ("bu noktadan ölçüm beklenmiyor"), yani boşlukla
- * karışması ölçülmeyeni ölçülmüş gibi okuturdu (`CLAUDE §1`).
- */
-const DailyChecksField = z.coerce.number().int().min(0).max(DAILY_CHECKS_MAX);
-
 export const StorageAreaFormSchema = StorageAreaInsertSchema.pick({ name: true, kind: true }).extend({
   targetMinC: z.string(),
   targetMaxC: z.string(),
@@ -165,10 +159,6 @@ export interface ScorecardView {
 }
 
 /**
- * Etiket yazıcısı formu: üç alan birlikte dolu ya da birlikte boş, çünkü yarım ayar basım anında depocunun telefonunda patlardı. Üçü boş
- * kaydetmek yazıcıyı kaldırır; depo etiketsiz de çalışır.
- */
-/**
  * Yazıcı envanteri formu: satır eklemek eklemektir, kaldırmak ayrı bir eylemdir ve silme değil kapatmadır, çünkü cihazların seçimi
  * kimliğe bağlı. `name` zorunlu, çünkü iki yazıcı arasında seçim yapan depocu onları yalnız IP adresinden ayırt edemez.
  */
@@ -199,10 +189,7 @@ export interface WarehouseCardView {
    * çünkü aracın karnesi onu zaten sayar.
    */
   vanLoad: VanLoadCardView | null;
-  /**
-   * Takvim okuması tavana çarptı mı (`TemperatureLogService.listRange`). Kesilen bir okumanın boş
-   * günleri "ölçülmemiş" diye boyanırdı — yani altyapı sınırı bir hijyen ihlali gibi görünürdü.
-   */
+  /** Takvim okuması tavana çarptı mı (`TemperatureLogService.listRange`); kesilen okumanın boş günleri hijyen ihlali gibi boyanırdı. */
   measureTruncated: boolean;
 }
 
@@ -238,10 +225,8 @@ export interface MeasurePointView {
   createdAt: string;
   isActive: boolean;
   /**
-   * Bu noktanın son ölçümü **takvim penceresi içinde** (son 3 ay) — `null` = pencerede kayıt yok.
-   *
-   * "Hiç ölçülmemiş" DEĞİL ve ekran da öyle yazmıyor: dört ay önce ölçülmüş bir dolap için "hiç"
-   * yanlış olurdu — ölçemediğimiz bir şeyi yokluk diye göstermek (`CLAUDE §1`).
+   * Takvim penceresindeki (son 3 ay) son ölçüm; `null` pencerede kayıt yok demektir, "hiç ölçülmemiş" değil, çünkü dört ay önce
+   * ölçülmüş dolap için "hiç" yanlış olurdu.
    */
   lastRecordedAt: string | null;
   /** Hijyen takvimi; pencerenin her günü için en eski günden en yeniye bir kayıt. */
@@ -261,10 +246,7 @@ export interface MeasureDayView {
   expected: number;
 }
 
-/**
- * Kapatmanın bir sonucu. Dördü aynı ağırlıkta değil ve tek bir "emin misiniz?" cümlesine sıkışmaz —
- * ağırlık sıralamayı da rengi de belirler.
- */
+/** Kapatmanın bir sonucu; sonuçlar aynı ağırlıkta değil, ağırlık sıralamayı ve rengi belirler. */
 export type ClosureWeight = 'hardest' | 'heavy' | 'pending';
 
 export interface ClosureConsequence {
@@ -292,10 +274,8 @@ export const ShippingBoxFormSchema = ShippingBoxInsertSchema.omit({ warehouseId:
 export type ShippingBoxFormInput = z.infer<typeof ShippingBoxFormSchema>;
 
 /**
- * Ekranın okuduğu hâl: deponun kutuları + HENÜZ BENİMSENMEMİŞ şablonlar.
- *
- * Şablonlar süzülmüş geliyor (benimsenenler listeden düşüyor): operatöre zaten listesinde olan
- * bir kutuyu "ekle" diye sunmak, tıklandığında reddedilen bir davettir (ad depo içinde benzersiz).
+ * Deponun kutuları ve henüz benimsenmemiş şablonlar; benimsenen şablon listeden düşer, çünkü depo içinde benzersiz adlı kutuyu yeniden
+ * sunmak reddedilecek bir davettir.
  */
 export interface ShippingBoxesView {
   boxes: readonly ShippingBox[];

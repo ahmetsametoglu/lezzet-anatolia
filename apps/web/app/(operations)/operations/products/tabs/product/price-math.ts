@@ -5,21 +5,20 @@ import type { PriceRow } from '@/lib/pricing/price-rows';
 
 type MarginBasis = Pick<PriceRow, 'costCents' | 'vatRate'>;
 
-/** Maliyet bilinmiyorsa `null`, çünkü sıfır maliyet varsaymak marjı sonsuz gösterirdi. */
-function marginOfCents(channel: Channel, amountCents: number, row: MarginBasis): number | null {
-  if (row.costCents === null) return null;
-  return markupPercent(revenueHtOf(channel, amountCents, row.vatRate), row.costCents);
+/** Tutarın marjı verilen oranla; tutar ya da maliyet bilinmiyorsa `null`, çünkü sıfır maliyet varsaymak marjı sonsuz gösterirdi. */
+export function marginAt(channel: Channel, amountCents: number | null, basis: MarginBasis): number | null {
+  if (amountCents === null || basis.costCents === null) return null;
+  return markupPercent(revenueHtOf(channel, amountCents, basis.vatRate), basis.costCents);
 }
 
 /** Kutuya yazılan tutarın marjı; B2C KDV dahil girildiği için KDV düşülmeden hesaplansa marj oran kadar şişerdi. */
 export function marginForAmount(channel: Channel, euros: number, row: MarginBasis): number | null {
-  return marginOfCents(channel, toCents(euros), row);
+  return marginAt(channel, toCents(euros), row);
 }
 
 /** Hücrenin kendi marjı; satırın en dar marjını yazmak B2C'nin altına B2B'nin marjını yazmak olurdu. */
 export function cellMargin(row: MarginBasis & Pick<PriceRow, 'b2c' | 'b2b'>, channel: Channel): number | null {
-  const amountCents = row[channel].amountCents;
-  return amountCents === null ? null : marginOfCents(channel, amountCents, row);
+  return marginAt(channel, row[channel].amountCents, row);
 }
 
 /** Yazımdan sonra satırın en dar marjı; liste yeniden okunmadan yerinde düzelir, kural motorda (`tightestMargin`). */

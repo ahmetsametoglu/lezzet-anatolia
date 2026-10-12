@@ -10,14 +10,12 @@ import { PriceGroupDialog } from './price-group-dialog';
 import { DiscountDialog } from './discount-dialog';
 import { PriceDialog } from '@/components/operation/prices/price-dialog';
 import { PricesDesktop } from './prices.desktop';
+import { countCountryPrices } from './channel-rows';
 import { pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
 import type { CustomerPriceRow, DiscountRow, PriceGroupRow, PriceRow, PricesData } from './prices-types';
 
-// Fiyat ekranı client kökü: tek durum ağacı burada, diyaloglar görünümün üstünde. Operasyon web'i
-// masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
-//
-// SEKME GERÇEK gezinmedir (sığ değil): sekmelerin veri ihtiyacı ayrı, okuma sunucuda sekmeye bağlı.
-// Sığ yazsaydık müşteriye özel sekmesi boş açılırdı.
+// Fiyat ekranının istemci kökü: tek durum ağacı burada, diyaloglar görünümün üstünde. Sekme gerçek gezinmedir, çünkü okuma sunucuda
+// sekmeye bağlıdır; sığ gezinmede müşteriye özel sekmesi boş açılırdı.
 
 interface PricesClientProps {
   data: PricesData;
@@ -26,14 +24,8 @@ interface PricesClientProps {
 
 export function PricesClient({ data, urlState }: PricesClientProps) {
   const router = useRouter();
-  /**
-   * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
-   * karşılık yoktu: liste eski satırlarla duruyor, tıklanan çip bile aktifleşmiyordu (aktiflik
-   * `urlState`'ten, yani sunucudan geliyor). Operatör basıp basmadığını anlamıyordu.
-   *
-   * `isPending` iki yere bağlanıyor: çip şeridi (iyimser vurgu) ve tablo gövdesi (`busy` — satır
-   * varsa soluklaşır, yoksa iskelet). Bağımsız ajan denetimi, 30.07.
-   */
+  // Süzgeç ya da sekme turu sürüyor mu: `router.replace` bir RSC okumasıdır ve tablo o sürede soluklaşmazsa operatör tıklamanın işlediğini
+  // anlamaz.
   const [pending, startNav] = useTransition();
 
   const go = (patch: Partial<PricesUrlState>) => {
@@ -52,9 +44,8 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     go({ tab, q: '', scope: 'all', productId: '' });
   };
 
-  // ── Liste: ilk sayfa sunucudan, devamı action ile EKLENİR ──
-  // Sunucu verisi değişince (süzgeç/revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin
-  // satırları yeni listede kalır.
+  // İlk sayfa sunucudan gelir, devamı eylemle eklenir. Sunucu verisi değişince eklenen sayfalar sıfırlanır, yoksa eski süzgecin satırları
+  // yeni listede kalırdı.
   const [extra, setExtra] = useState<PriceRow[]>([]);
   const [cursor, setCursor] = useState(data.nextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -85,6 +76,7 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     priced: all.filter((r) => !r.missingPrice).length,
     below: all.filter((r) => r.belowTarget === true).length,
     missing: all.filter((r) => r.missingPrice).length,
+    countryPrices: countCountryPrices(all),
   };
 
   // Düzenlenen satır KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme
@@ -95,11 +87,8 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     if (editingId && !editing) setEditingId(null);
   }, [editingId, editing]);
 
-  // URL'DEN GELEN ÜRÜNLE DİYALOG AÇIK GELİR (16.08): ürünler önizlemesinin "Fiyatlar →" köprüsü
-  // 26.07'den beri `?productId=` gönderiyordu, sayfa hiç okumuyordu — köprü süzgeçsiz listeye
-  // düşüyordu. Liste sunucuda o ürüne süzülü gelir (`toPriceFilters.ids`), ilk boyun satırı
-  // düzenlemede açılır. `ref` ile TEK SEFER: kapatınca parametre düşene kadar efekt yeniden
-  // açmasın — "kapatılamayan diyalog" tam böyle doğar.
+  // Adresteki ürünün ilk boyu düzenlemede açık gelir; liste sunucuda o ürüne süzülür (`toPriceFilters`). Açılış `ref` ile bir kez yapılır,
+  // yoksa kapatılan diyalog parametre düşene kadar yeniden açılırdı.
   const openedFromUrl = useRef<string | null>(null);
   useEffect(() => {
     if (!urlState.productId || openedFromUrl.current === urlState.productId) return;
@@ -139,7 +128,7 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     if (offerStockId && !offerBatch) setOfferStockId(null);
   }, [offerStockId, offerBatch]);
 
-  // Fiyat grubu diyaloğu (20.08): kapalı · yeni · düzenleme — özel fiyatla aynı desen.
+  // Fiyat grubu diyaloğu: kapalı · yeni · düzenleme, özel fiyatla aynı desen.
   const [groupState, setGroupState] = useState<'closed' | 'new' | string>('closed');
   const editingGroup =
     groupState === 'closed' || groupState === 'new'
@@ -186,7 +175,9 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
   return (
     <>
       <PricesDesktop {...view} />
-      {editing ? <PriceDialog key={editing.variantId} row={editing} onClose={closePriceDialog} /> : null}
+      {editing && data.autoPriceStepCents !== null ? (
+        <PriceDialog key={editing.variantId} row={editing} stepCents={data.autoPriceStepCents} onClose={closePriceDialog} />
+      ) : null}
       {offerBatch ? (
         <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />
       ) : null}

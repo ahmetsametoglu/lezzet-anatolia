@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cellMargin, marginForAmount } from './price-math';
 
-// Satır içi düzenlemede kutuya yazılan tutarın marjı. Hata SESSİZDİR: KDV düşülmezse marj oran
-// kadar şişer ve operatör zararına bir fiyatı kârlı sanarak kaydeder — bu yüzden testi var.
+// Kutuya yazılan tutarın marjı: KDV düşülmezse marj oran kadar şişer ve operatör zararına bir fiyatı kârlı sanarak kaydeder.
 
 describe('marginForAmount', () => {
   it('B2C tutarından KDV düşülür — fiyat KDV DAHİL girilir', () => {

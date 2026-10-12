@@ -6,8 +6,9 @@ import { buildMovementExport } from '@/lib/accounting/movement-export';
 import { companyPnl, productProfits } from '@/lib/accounting/profit';
 import { businessOfFilter } from '@/lib/business-filter';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
+import { readDistanceSaleView } from './distance-sale-read';
 import { ReportsClient } from './reports-client';
-import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows } from './reports-read';
+import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows, vatLineCountry } from './reports-read';
 import type { ReportsData } from './reports-types';
 import { monthRange, parseReportsUrl, previousMonth, selectableMonths } from './reports-url';
 
@@ -37,8 +38,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const canSeeProfit = (await guarded(requireAdmin)).ok;
   const period = monthRange(urlState.ym);
   const business = businessOfFilter(urlState.business);
+  // Muhasebeci yalnız export sekmesini görür; eşik ve OSS okuması yalnız o sekmede ödenir.
+  const exportTab = !canSeeProfit || urlState.tab === 'export';
 
-  const [profits, pnl, prevPnl, exportData, movementData, invoicePage] = await Promise.all([
+  const [profits, pnl, prevPnl, exportData, movementData, invoicePage, distanceSale] = await Promise.all([
     // Kâr okumaları YALNIZ yetkisi olana yapılır — yetkisiz kullanıcıya gösterilmeyecek bir sayıyı
     // hesaplamak hem boşuna iş, hem de bir gün bir sızıntının kaynağı.
     canSeeProfit ? productProfits(period, business) : [],
@@ -48,6 +51,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     // Hareket dökümünün özeti: dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
     buildMovementExport(period, business),
     pendingInvoices({ limit: 30, business }),
+    exportTab ? readDistanceSaleView(serviceDb(), urlState.ym, now) : null,
   ]);
 
   // Satır başlığı ürün adı ve boydur, çünkü boy etiketi gramajdır ("90g") ve üç ayrı ürünün satırı aynı yazılırdı. İki okuma da tek
@@ -89,14 +93,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       excludedGiftCount: exportData.summary.excludedGiftCount,
       excludedGiftCostCents: exportData.summary.excludedGiftCost === null ? null : toCents(exportData.summary.excludedGiftCost),
       excludedGiftListCents: exportData.summary.excludedGiftListValue === null ? null : toCents(exportData.summary.excludedGiftListValue),
-      byVatRate: exportData.summary.byVatRate.map((line) => ({
-        rate: line.vatRate,
-        netCents: toCents(line.net),
-        vatCents: toCents(line.vat),
-      })),
+      byVatRate: exportData.summary.byVatRate.map((line) => {
+        const totals = { rate: line.vatRate, netCents: toCents(line.net), vatCents: toCents(line.vat) };
+        return { ...totals, country: distanceSale ? vatLineCountry(totals, distanceSale.monthOss.lines) : null };
+      }),
       movementCount: movementData.summary.movementCount,
       unexplainedMovementCount: movementData.summary.unexplainedCount,
     },
+    distanceSale: distanceSale?.view ?? null,
     invoiceQueue: invoicePage.rows.map((sale) => ({
       orderId: sale.id,
       referenceNo: sale.referenceNo,

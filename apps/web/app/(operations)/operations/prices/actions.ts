@@ -4,13 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { productIdOfCode, readCostBasis } from '@lezzet/application';
 import { CategoryService, DiscountService, PriceGroupService, PriceService, ProductService, serviceDb } from '@lezzet/database';
 import { costOf } from '@lezzet/domain-core';
-import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type Price } from '@lezzet/types';
+import { resolveLocalizedText, type Channel, type KeysetCursor, type Price } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { repriceAllAuto } from '@/lib/pricing/auto-price';
-import { toPriceRows, type ChannelPriceMaps } from '@/lib/pricing/price-rows';
-import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
+import { readChannelPage } from './channel-read';
+import { parsePricesUrl, PRICES_PATH } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
 import { type PriceRow, type VariantOption } from './prices-types';
 
@@ -156,30 +156,9 @@ export async function loadMorePricesAction(
     const urlState = parsePricesUrl(Object.fromEntries(new URLSearchParams(search)));
 
     const db = serviceDb();
-    const [page, categories] = await Promise.all([
-      new ProductService(db).listPriceRows({ filters: toPriceFilters(urlState), cursor, limit: DEFAULT_PAGE_SIZE }),
-      new CategoryService(db).list(),
-    ]);
-
-    const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
-    const priceSvc = new PriceService(db);
-    const [b2c, b2b, costs] = await Promise.all([
-      priceSvc.findApplicableMap(variantIds, 'b2c'),
-      priceSvc.findApplicableMap(variantIds, 'b2b'),
-      readCostBasis(db, variantIds),
-    ]);
-
-    const pick = (map: Map<string, { channelPrice: Price | null }>): Map<string, Price> =>
-      new Map([...map].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice] as const] : [])));
-    const prices: ChannelPriceMaps = { b2c: pick(b2c), b2b: pick(b2b) };
-
-    const rows = toPriceRows({
-      products: page.rows,
-      prices,
-      costs,
-      categoryNames: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
-    });
-    return { data: { rows, nextCursor: page.nextCursor }, error: null };
+    const categories = await new CategoryService(db).list();
+    const categoryNames = new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)]));
+    return { data: await readChannelPage(db, { urlState, cursor, categoryNames }), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

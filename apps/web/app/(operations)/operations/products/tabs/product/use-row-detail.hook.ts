@@ -1,31 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Channel } from '@lezzet/types';
+import type { Channel, Country } from '@lezzet/types';
 import { loadProductRowDetailAction } from '../../actions/row-detail';
-import type { VariantRowDetail } from '../../products-types';
 import { marginAfterWrite } from './price-math';
+import type { ProductRowDetail } from './row-detail-types';
 
 /**
- * AÇILAN SATIRIN boy ayrıntısı: barkod · depo dağılımı · en yakın parti · kanal fiyatları.
- * Listeyle gelmeyen dört şey; tek turda okunur ve okunduğu üründe önbellekte kalır.
- *
- * Önbellek bilinçli: operatör iki ürün arasında gidip gelirken her dönüşte aynı turu ödemek ve
- * kartları iskelete düşürmek, ekranı sebepsiz oynatırdı.
+ * Açılan satırın ayrıntısı tek turda okunur ve okunduğu üründe önbellekte kalır; iki ürün arasında gidip gelen operatör her dönüşte
+ * aynı turu ödemesin ve kırılım iskelete düşmesin.
  */
 export interface RowDetailState {
-  /** `null` → okuma sürüyor; dizi → geldi. */
-  rows: VariantRowDetail[] | null;
+  /** `null` → okuma sürüyor; okuma düşerse `error` dolar. */
+  detail: ProductRowDetail | null;
   error: string | null;
 }
 
 export function useRowDetail(productId: string | null) {
   const [cache, setCache] = useState<Record<string, RowDetailState>>({});
-  /**
-   * "İstendi" kümesi REF'te durur, state'te değil — ölçülmüş bir arızanın düzeltmesi: küme
-   * `cache`in kendisiyken effect'in bağımlılığı da `cache` oluyor, ilk yazım effect'i yeniden
-   * kurup temizleyiciyi çalıştırıyor ve dönen cevap atılıyordu (hücreler sonsuza kadar iskelet).
-   */
+  /** "İstendi" kümesi ref'te durur: state'te olsaydı ilk yazım effect'i yeniden kurar ve dönen cevap atılırdı. */
   const requested = useRef(new Set<string>());
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -33,43 +26,62 @@ export function useRowDetail(productId: string | null) {
     if (productId === null || requested.current.has(productId)) return;
     requested.current.add(productId);
     let alive = true;
-    // Yalnız HİÇ veri yokken iskelete düşülür: yenilemede kartlar yerinde kalır, ekran oynamaz.
-    setCache((prev) => (prev[productId] ? prev : { ...prev, [productId]: { rows: null, error: null } }));
+    // Yalnız hiç veri yokken iskelete düşülür; yenilemede kırılım yerinde kalır.
+    setCache((prev) => (prev[productId] ? prev : { ...prev, [productId]: { detail: null, error: null } }));
     void loadProductRowDetailAction(productId).then(({ data, error }) => {
       if (!alive) return;
-      setCache((prev) => ({ ...prev, [productId]: { rows: data, error } }));
+      setCache((prev) => ({ ...prev, [productId]: { detail: data, error } }));
     });
     return () => {
       alive = false;
     };
   }, [productId, reloadToken]);
 
-  /** Yeniden okur (düşen istek ya da tam formdan dönüş) — mevcut kartlar silinmez. */
+  /** Yeniden okur (düşen istek ya da tam formdan dönüş); mevcut hücreler silinmez. */
   const refresh = useCallback((id: string) => {
     requested.current.delete(id);
     setReloadToken((token) => token + 1);
   }, []);
 
-  /**
-   * Yazılan fiyatı YERİNDE uygular: sunucu zaten yazdı, ekranın onu yeniden okumasına gerek yok.
-   * Liste ve kartlar aynı anda güncellenir, hiçbir şey yeniden yüklenmez (kullanıcı kararı).
-   */
-  const applyPrice = useCallback((id: string, variantId: string, channel: Channel, amountCents: number) => {
-    setCache((prev) => {
-      const entry = prev[id];
-      if (!entry?.rows) return prev;
-      const rows = entry.rows.map((row) => {
-        if (row.variantId !== variantId || row.price === null) return row;
-        const price = {
-          ...row.price,
-          [channel]: { ...row.price[channel], amountCents },
-          marginPercent: marginAfterWrite(row.price, channel, amountCents),
-        };
-        return { ...row, price };
+  const patchVariant = useCallback(
+    (id: string, variantId: string, patch: (row: ProductRowDetail['variants'][number]) => ProductRowDetail['variants'][number]) => {
+      setCache((prev) => {
+        const entry = prev[id];
+        if (!entry?.detail) return prev;
+        const variants = entry.detail.variants.map((row) => (row.variantId === variantId ? patch(row) : row));
+        return { ...prev, [id]: { ...entry, detail: { ...entry.detail, variants } } };
       });
-      return { ...prev, [id]: { ...entry, rows } };
-    });
-  }, []);
+    },
+    [],
+  );
 
-  return { state: productId === null ? undefined : cache[productId], refresh, applyPrice };
+  /** Yazılan genel fiyat yerinde uygulanır: sunucu zaten yazdı, liste ve kırılım yeniden okunmaz. */
+  const applyPrice = useCallback(
+    (id: string, variantId: string, channel: Channel, amountCents: number) =>
+      patchVariant(id, variantId, (row) =>
+        row.price === null
+          ? row
+          : {
+              ...row,
+              price: {
+                ...row.price,
+                [channel]: { ...row.price[channel], amountCents },
+                marginPercent: marginAfterWrite(row.price, channel, amountCents),
+              },
+            },
+      ),
+    [patchVariant],
+  );
+
+  /** Ülke fiyatı yerinde uygulanır; `null` kaldırıldı demektir ve hücre genel fiyata döner. */
+  const applyCountryPrice = useCallback(
+    (id: string, variantId: string, country: Country, channel: Channel, amountCents: number | null) =>
+      patchVariant(id, variantId, (row) => {
+        const cells = row.countryPrices[country] ?? { b2c: { amountCents: null, validFrom: null }, b2b: { amountCents: null, validFrom: null } };
+        return { ...row, countryPrices: { ...row.countryPrices, [country]: { ...cells, [channel]: { ...cells[channel], amountCents } } } };
+      }),
+    [patchVariant],
+  );
+
+  return { state: productId === null ? undefined : cache[productId], refresh, applyPrice, applyCountryPrice };
 }

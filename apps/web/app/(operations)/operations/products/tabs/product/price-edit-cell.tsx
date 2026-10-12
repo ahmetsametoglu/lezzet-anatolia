@@ -1,74 +1,94 @@
 'use client';
 
 import { useState } from 'react';
-import { fromCents, toCents } from '@lezzet/helper';
-import type { Channel } from '@lezzet/types';
-import { money, percent } from '@/components/operation/ui/format';
-import { setChannelPriceAction } from '@/lib/prices/price-actions';
-import type { PriceRow } from '@/lib/pricing/price-rows';
-import { cellMargin, marginForAmount } from './price-math';
+import { fromCents } from '@lezzet/helper';
+import { money } from '@/components/operation/ui/format';
+import { cellNote, commitOf, type CellNoteTone } from './price-cell-model';
 
 // Satır içi fiyat günlük düzeltmenin yeridir; hedef marj, otomatik anahtar ve ileri tarih tam formun işidir (çift tık). Kutu ve
-// altındaki marj satırı her hâlde aynı yeri kaplar, kutu açılınca ya da hata çıkınca hücre büyüyüp küçülmesin diye.
+// altındaki satır her hâlde aynı yeri kaplar, kutu açılınca ya da hata çıkınca hücre büyüyüp küçülmesin diye.
+
+const NOTE_TONE: Record<CellNoteTone, string> = {
+  error: 'text-ops-red',
+  preview: 'text-ops-olive-dark font-semibold',
+  auto: 'text-ops-olive',
+  warn: 'text-ops-amber',
+  faint: 'text-ops-faint',
+  muted: 'text-ops-muted',
+};
 
 interface PriceEditCellProps {
-  row: PriceRow;
-  channel: Channel;
-  /** Yazıldı — çağıran kendi görünümünü yerinde günceller, liste YENİDEN OKUNMAZ. */
-  onSaved: (amountCents: number) => void;
-  /** Çift tık — tam form; tutarın yanında hedef marj ve tarih de değişebilsin. */
-  onOpenForm: () => void;
+  /** Hücrede görünen tutar; ülke hücresinde ülke fiyatı yoksa genel tutardır (`inherited`). */
+  amountCents: number | null;
+  inherited?: boolean;
+  /** Görünen tutarın marjı, hücrenin kendi kanalı ve uygulanan oranla. */
+  margin: number | null;
+  /** Kutuya yazılan tutarın marjı. */
+  marginFor: (euros: number) => number | null;
+  /** Otomatik fiyatlı üründe tutar hedef marjdan hesaplanır, hücre salt okunur. */
+  locked: boolean;
+  /** O ülkede satılamıyorsa alt satırın sözü. */
+  blocked?: string | null;
+  hint: string;
+  /** Yeni satır yazar; hata metni ya da `null` döner. */
+  write: (cents: number) => Promise<string | null>;
+  /** Ülke fiyatını kaldırır; yalnız yazılmış ülke hücresinde verilir. */
+  remove?: () => Promise<string | null>;
+  /** Yazıldı ya da kaldırıldı (`null`); çağıran görünümünü yerinde günceller, liste yeniden okunmaz. */
+  onChange: (cents: number | null) => void;
+  onOpenForm?: () => void;
 }
 
-export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCellProps) {
-  const cell = channel === 'b2c' ? row.b2c : row.b2b;
+export function PriceEditCell(props: PriceEditCellProps) {
+  const { amountCents, inherited = false, margin, marginFor, locked, blocked = null, hint, write, remove, onChange, onOpenForm } = props;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const parsed = Number(draft.replace(',', '.'));
-  const valid = Number.isFinite(parsed) && parsed > 0;
-  const ownMargin = cellMargin(row, channel);
-  const nextMargin = editing && valid ? marginForAmount(channel, parsed, row) : null;
+  const commit = commitOf(draft, amountCents);
+  const note = cellNote({
+    error,
+    editing,
+    draftChanged: commit?.kind === 'write',
+    nextMargin: editing && commit !== null ? marginFor(Number(draft.replace(',', '.'))) : null,
+    margin,
+    amountCents,
+    inherited,
+    locked,
+    blocked,
+    removable: remove !== undefined,
+  });
 
   const open = () => {
-    if (row.autoPrice) return;
+    if (locked) return;
     setError(null);
     // Ondalık ayırıcı virgül, çünkü ekranın her yerinde tutar "11,43 €" diye yazıyor.
-    setDraft(cell.amountCents === null ? '' : String(fromCents(cell.amountCents)).replace('.', ','));
+    setDraft(amountCents === null ? '' : String(fromCents(amountCents)).replace('.', ','));
     setEditing(true);
   };
 
-  const commit = async () => {
-    if (!valid || busy) return;
-    const cents = toCents(parsed);
-    if (cents === cell.amountCents) {
-      setEditing(false);
-      return;
-    }
+  const run = async (task: () => Promise<string | null>, next: number | null) => {
     setBusy(true);
     setError(null);
-    const result = await setChannelPriceAction(row.variantId, channel, cents);
+    const failure = await task();
     setBusy(false);
-    if (result.error) {
-      setError(result.error);
+    if (failure) {
+      setError(failure);
       return;
     }
     setEditing(false);
-    onSaved(cents);
+    onChange(next);
   };
 
-  // Alt satırın içeriği değişir, varlığı değişmez.
-  const note = error
-    ? { text: error, cls: 'text-ops-red' }
-    : nextMargin !== null
-      ? { text: `${percent(ownMargin)} → ${percent(nextMargin)}`, cls: 'text-ops-olive-dark font-semibold' }
-      : row.autoPrice
-        ? { text: 'otomatik fiyat', cls: 'text-ops-olive' }
-        : cell.amountCents === null
-          ? { text: 'fiyat yok', cls: 'text-ops-amber' }
-          : { text: ownMargin === null ? 'marj bilinmiyor' : `marj ${percent(ownMargin)}`, cls: 'text-ops-muted' };
+  const save = () => {
+    if (busy || commit === null) return;
+    if (commit.kind === 'none') {
+      setEditing(false);
+      return;
+    }
+    void run(() => write(commit.cents), commit.cents);
+  };
 
   return (
     <span className="flex flex-col gap-0.5">
@@ -83,9 +103,9 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
             // Tutar seçili açılır; seçilmeden açılınca yazılan rakam eskisinin sonuna eklenirdi.
             onFocus={(event) => event.target.select()}
             onChange={(event) => setDraft(event.target.value)}
-            onBlur={() => void commit()}
+            onBlur={save}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') void commit();
+              if (event.key === 'Enter') save();
               if (event.key === 'Escape') setEditing(false);
             }}
             className="w-full min-w-0 bg-transparent text-right font-ops-mono text-ops-sm font-semibold text-ops-ink outline-none"
@@ -93,13 +113,9 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
         </span>
       ) : (
         <span
-          role={row.autoPrice ? undefined : 'button'}
-          tabIndex={row.autoPrice ? undefined : 0}
-          title={
-            row.autoPrice
-              ? 'Otomatik fiyat açık — tutar hedef marjdan hesaplanıyor. Çift tık: hedef marjı düzenle.'
-              : 'Tek tık: tutarı düzelt · Çift tık: tam form (hedef marj · otomatik · ileri tarih)'
-          }
+          role={locked ? undefined : 'button'}
+          tabIndex={locked ? undefined : 0}
+          title={hint}
           onClick={open}
           onDoubleClick={onOpenForm}
           onKeyDown={(event) => {
@@ -107,15 +123,28 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
           }}
           className={[
             'flex h-[30px] items-center justify-end rounded-ops-btn px-2 font-ops-mono text-ops-sm font-semibold',
-            row.autoPrice
+            locked
               ? 'cursor-pointer bg-ops-surface-sunken text-ops-body'
-              : 'cursor-pointer border border-dashed border-ops-line-strong bg-ops-white text-ops-ink hover:border-ops-olive',
+              : 'cursor-pointer border border-dashed border-ops-line-strong bg-ops-white hover:border-ops-olive',
+            inherited ? 'text-ops-faint' : locked ? '' : 'text-ops-ink',
           ].join(' ')}
         >
-          {money(cell.amountCents)}
+          {money(amountCents)}
         </span>
       )}
-      <span className={['truncate text-right font-ops-body text-ops-micro', note.cls].join(' ')}>{note.text}</span>
+      {note.remove && remove ? (
+        // Kutudan odak kaçmasın diye fare basışı engellenir; yoksa kutu kapanır ve bağlantı tıklanmadan kaybolur.
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => void run(remove, null)}
+          className="cursor-pointer truncate text-right font-ops-body text-ops-micro font-semibold text-ops-olive underline hover:text-ops-olive-dark"
+        >
+          {note.text}
+        </button>
+      ) : (
+        <span className={['truncate text-right font-ops-body text-ops-micro', NOTE_TONE[note.tone]].join(' ')}>{note.text}</span>
+      )}
     </span>
   );
 }

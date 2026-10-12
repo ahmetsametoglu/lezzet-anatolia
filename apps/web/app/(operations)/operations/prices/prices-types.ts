@@ -1,13 +1,30 @@
 // Fiyat ekranı view-model'leri; kararlar sunucuda verilir ve satırla taşınır ki marjın tanımı tek yerde kalsın.
 // Para cent taşınır (STACK §8); b2c KDV dahil, b2b hariç.
-import type { Channel, CustomerPriceBasis, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, LocalizedText } from '@lezzet/types';
+import type {
+  Channel,
+  Country,
+  CustomerPriceBasis,
+  DiscountScope,
+  DiscountTrigger,
+  DiscountType,
+  KeysetCursor,
+  LocalizedText,
+} from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
+import type { CountryPriceCells, CountryVat } from '@/components/operation/prices/country-prices';
 import type { BatchView } from '@/lib/stock/batch-types';
-import type { PriceRow } from '@/lib/pricing/price-rows';
+import type { PriceRow as ListPriceRow } from '@/lib/pricing/price-rows';
 import type { PriceScope, PriceTab } from './prices-url';
 
-// Fiyat satırı tipleri `lib/pricing/price-rows`ta; buradaki yeniden ihraç sayfanın import yollarını korur.
-export type { PriceRow } from '@/lib/pricing/price-rows';
+/**
+ * Kanal listesinin satırı: genel fiyat satırı ve ülke fiyatları. Marj alanları genel ve ülke fiyatlarının en darıdır (`withCountryPrices`);
+ * en darı bir ülke fiyatındaysa `marginCountry` o ülkedir.
+ */
+export type PriceRow = ListPriceRow & {
+  countryPrices: Partial<Record<Country, CountryPriceCells>>;
+  countryVat: Partial<Record<Country, CountryVat>>;
+  marginCountry: Country | null;
+};
 
 /** Müşteriye özel fiyat satırı — çözüm sırasının en üstündeki basamak. */
 export interface CustomerPriceRow {
@@ -147,6 +164,8 @@ export interface PriceCounts {
   priced: number;
   below: number;
   missing: number;
+  /** Yüklenmiş satırlardaki ülke fiyatı sayısı, ülke başına. */
+  countryPrices: Partial<Record<Country, number>>;
 }
 
 /**
@@ -179,12 +198,14 @@ export interface PricesData {
   collections: CategoryOption[];
   /** Vitrinde görünmeyen ürün sayısı; yalnız kanal sekmesinde dolu. */
   hiddenFromStorefront: HiddenFromStorefront | null;
+  /** Otomatik fiyatın yuvarlama adımı (cent), ayardan; fiyat penceresinin önizlemesi yazımla aynı adımı kullansın. Yalnız kanal sekmesinde dolu. */
+  autoPriceStepCents: number | null;
 }
 
 /** prices-client'ın tuttuğu durum + eylemler; masaüstü görünümü bunu tüketir. */
 export interface PricesViewProps {
   data: PricesData;
-  /** Süzgeçten geçmiş liste (`data.rows` ham ilk sayfadır — sayaçlar ondan çıkar). */
+  /** Süzgeçten geçmiş liste; sayaçlar süzgeçsiz yüklenmiş satırlardan çıkar. */
   rows: PriceRow[];
   counts: PriceCounts;
   tab: PriceTab;

@@ -5,14 +5,14 @@ import {
   monthRange,
   parseReportsUrl,
   previousMonth,
+  quarterLabel,
+  quarterOf,
   reportsUrl,
   selectableMonths,
   type ReportsUrlState,
 } from './reports-url';
 
-// Raporlar URL sözleşmesi — DB'siz, saf. Ay aritmetiği burada çünkü **takvim sessizce yanılır**:
-// yanlış hesaplanan bir ay sonu, o ayın son gününde kesilmiş bir ciro olarak görünür ve rapor
-// hata vermez.
+// Ay aritmetiği takvimde sessizce yanılır: yanlış ay sonu o ayın son gününde kesilmiş bir ciro olarak görünür ve rapor hata vermez.
 
 const NOW = new Date('2026-08-04T10:00:00.000Z');
 const DEFAULTS: ReportsUrlState = { tab: 'urun', ym: '2026-08', cmp: false, business: 'all' };
@@ -104,5 +104,14 @@ describe('monthLabel', () => {
     expect(monthLabel('2026-08')).toBe('Ağustos 2026');
     expect(monthLabel('2026-01')).toBe('Ocak 2026');
     expect(monthLabel('2025-12')).toBe('Aralık 2025');
+  });
+});
+
+// OSS özeti seçili ayın çeyreğini okur; çeyrek sınırı kayarsa beyan dönemine ait satış dışarıda kalır ya da öteki çeyreğe karışır.
+describe('quarterOf', () => {
+  it('ay çeyreğine düşer, çeyrek ilk ayın birinden son ayın son gününe uzanır', () => {
+    expect(quarterOf('2026-11')).toEqual({ year: 2026, quarter: 4, from: '2026-10-01', to: '2026-12-31' });
+    expect(quarterOf('2026-03')).toEqual({ year: 2026, quarter: 1, from: '2026-01-01', to: '2026-03-31' });
+    expect(quarterLabel(2026, 4)).toBe('2026 · 4. çeyrek (Eki–Ara)');
   });
 });

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { cardClass } from '@/components/operation/ui/card';
 import { Button } from '@/components/operation/ui/button';
+import { CopyInline } from '@/components/operation/ui/copy-text';
 import { TrashIcon, WarehouseIcon } from '@/components/operation/ui/icons';
 import { ScoreTile } from '@/components/operation/ui/score-tile';
 import { SortableList } from '@/components/operation/ui/sortable-list';
@@ -14,6 +15,7 @@ import type { Country, ShippingBox } from '@lezzet/types';
 import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
+import { shipCountriesLabel, shipCountryLines } from './ship-countries';
 import { LABEL_SIZE_OPTIONS, postalCodeLabel, weekdayList } from './warehouses-labels';
 import type {
   ScorecardView,
@@ -97,10 +99,54 @@ function FacilityChip({ row, active, onSelect }: { row: WarehouseRowView; active
 function railNote(row: WarehouseRowView): string {
   if (!row.isActive) return 'kapalı';
   if (row.setupGap) return 'kurulumu eksik';
-  // Roller ülkenin yanına dizilir: kargo çıkışı ve gel-al noktası aynı tesiste olabilir.
-  return [COUNTRY_LABELS[row.countryCode], row.shipsOnline ? 'kargo çıkışı' : null, row.pickupEnabled ? 'gel-al' : null]
+  // Roller ülkenin yanına dizilir: kargo ve gel-al noktası aynı tesiste olabilir.
+  return [
+    COUNTRY_LABELS[row.countryCode],
+    row.shipCountries.length > 0 ? `kargo: ${shipCountriesLabel(row)}` : null,
+    row.pickupEnabled ? 'gel-al' : null,
+  ]
     .filter(Boolean)
     .join(' · ');
+}
+
+interface ShipCountriesCardProps {
+  row: WarehouseRowView;
+}
+
+/** Kargo ülkeleri: her ülke, paketin taşıyıcıya verildiği yer ve tarife tek cümlede; "teslim noktası" ilk geçtiği yerde açıklanır. */
+export function ShipCountriesCard({ row }: ShipCountriesCardProps) {
+  const lines = shipCountryLines(row);
+  return (
+    <>
+      <p className="max-w-[980px] font-ops-body text-ops-sm leading-[1.55] text-ops-strong">
+        <strong className="font-semibold text-ops-ink">Teslim noktası</strong>, paketin taşıyıcıya verildiği adrestir. Depodan farklıysa
+        paket depoda hazırlanır, teslim noktasına götürülür ve o ülkenin yurt içi tarifesiyle gönderilir.
+      </p>
+      {lines.length === 0 ? (
+        <span className="font-ops-body text-ops-sm text-ops-muted">Bu depodan kargo çıkmıyor.</span>
+      ) : (
+        <div className={cardClass()}>
+          {lines.map((line) => (
+            <div
+              key={line.country}
+              className="grid grid-cols-[110px_minmax(0,1fr)] items-start gap-x-4 border-b border-ops-line-soft px-4 py-3 last:border-b-0"
+            >
+              <span className="pt-px font-ops-display text-ops-base font-semibold text-ops-ink">{COUNTRY_LABELS[line.country]}</span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-ops-body text-ops-sm font-medium text-ops-ink">{line.sentence}</span>
+                {line.place ? (
+                  <span className="flex items-center gap-1 font-ops-body text-ops-xs text-ops-body">
+                    <span className="truncate">{line.place}</span>
+                    {line.clipboard ? <CopyInline text={line.clipboard} what="Teslim noktasını" /> : null}
+                  </span>
+                ) : null}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
 }
 
 /**
