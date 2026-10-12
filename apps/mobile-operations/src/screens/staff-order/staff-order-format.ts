@@ -17,21 +17,16 @@ import { staffOrderCopy as t } from './copy';
   ekrandaki cümlesi ve gönderilecek isteğin kurulması durur.
 */
 
-/** Formdaki kalem; seçici satırından doğar. Adedi sıfıra inen kalem yerinde kalır ("çıkarıldı") ve gönderilmez. */
-export interface OrderLine {
-  variantId: string;
-  title: string;
-  qty: number;
+/**
+ * Formdaki kalem; seçici satırından doğar, liste fiyatı kesindir çünkü satışa kapalı satır kaleme dönmez. Adedi sıfıra inen kalem
+ * yerinde kalır ("çıkarıldı") ve gönderilmez; `availableQty` stok reddinden ve depo değişince tazelenir.
+ */
+export type OrderLine = Omit<StaffVariantRow, 'listPriceCents'> & {
   listPriceCents: number;
+  qty: number;
   /** Yöneticinin yazdığı birim fiyat; liste fiyatına eşitse pazarlık yoktur ve sunucuya fiyat gitmez. */
   unitPriceCents: number;
-  costCents: number | null;
-  targetMarginPercent: number | null;
-  vatRate: number;
-  /** Siparişin deposundaki kalan; `null` = bilinmiyor. Stok reddinden ve depo değişince tazelenir. */
-  availableQty: number | null;
-  shippable: boolean;
-}
+};
 
 /** Vadeli bir ödeme yöntemi değil siparişin bayrağıdır; ekranda yöntemlerin yanında üçüncü seçenek olarak durur. */
 export type PaymentChoice = 'cash' | 'card' | 'credit';
@@ -39,18 +34,7 @@ export type PaymentChoice = 'cash' | 'card' | 'credit';
 /** Seçici satırından kalem; müşteriye satışa kapalı boy (`listPriceCents === null`) kaleme dönüşmez. */
 export function lineFromRow(row: StaffVariantRow, qty: number): OrderLine | null {
   if (row.listPriceCents === null) return null;
-  return {
-    variantId: row.variantId,
-    title: row.title,
-    qty,
-    listPriceCents: row.listPriceCents,
-    unitPriceCents: row.listPriceCents,
-    costCents: row.costCents,
-    targetMarginPercent: row.targetMarginPercent,
-    vatRate: row.vatRate,
-    availableQty: row.availableQty,
-    shippable: row.shippable,
-  };
+  return { ...row, listPriceCents: row.listPriceCents, qty, unitPriceCents: row.listPriceCents };
 }
 
 /** Ara toplamın tabanı fiyatın kanalından okunur: B2B fiyatı vergisizdir, onay bekleyen şirketinki dahil perakende fiyat KDV dahildir. */

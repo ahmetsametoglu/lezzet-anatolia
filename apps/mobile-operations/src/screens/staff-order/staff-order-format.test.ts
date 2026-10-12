@@ -21,6 +21,7 @@ import {
 const line = (patch: Partial<OrderLine> = {}): OrderLine => ({
   variantId: 'v1',
   title: 'Şöbiyet · 1 kg',
+  imageUrl: null,
   qty: 2,
   listPriceCents: 2980,
   unitPriceCents: 2980,

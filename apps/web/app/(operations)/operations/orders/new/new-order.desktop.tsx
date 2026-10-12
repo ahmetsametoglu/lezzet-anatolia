@@ -11,6 +11,7 @@ import { Combobox } from '@/components/operation/form/combobox';
 import { MoneyInput } from '@/components/operation/form/money-input';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { ToggleField } from '@/components/operation/form/toggle';
 import {
   createManualOrderAction,
@@ -115,6 +116,7 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
       {
         variantId: row.variantId,
         title: row.title,
+        imageUrl: row.imageUrl,
         qty: 1,
         listPriceCents: row.listPriceCents!,
         unitPriceCents: row.listPriceCents!,
@@ -271,6 +273,7 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
               options={variantOptions.map((v) => ({
                 value: v.variantId,
                 label: v.title,
+                thumb: <Thumbnail src={v.imageUrl} alt="" size={30} iconSize={12} className="!rounded-[6px]" />,
                 meta:
                   v.availableQty === null
                     ? 'Adet için önce adres seçin'
@@ -363,6 +366,7 @@ function LineRow({ line, channel, onPatch, onRemove }: LineRowProps) {
 
   return (
     <li className="flex items-center gap-3 rounded-ops-card border border-ops-line-soft bg-ops-card px-3 py-2">
+      <Thumbnail src={line.imageUrl} alt="" size={30} iconSize={12} className="!rounded-[6px]" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{line.title}</p>
         <div className="flex items-center gap-2">

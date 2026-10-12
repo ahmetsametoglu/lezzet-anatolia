@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { isBelowTargetMargin, revenueHtOf } from '@lezzet/domain-core';
 import type { Channel } from '@lezzet/types';
 
+import { OperationsProductThumb } from '@/components/operations/product-thumb';
 import { OperationsStepperGroup, STEPPER_SM_HEIGHT } from '@/components/operations/stepper-group';
 import { centsToAmountText, money, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
@@ -49,6 +50,7 @@ function SubLine({ line, issue, onQty }: OrderLineRowProps) {
 export function OrderLineRow({ line, issue, onQty }: OrderLineRowProps) {
   return (
     <View style={styles.line} testID={`staff-order-line-${line.variantId}`}>
+      <OperationsProductThumb name={line.title} photoUri={line.imageUrl} size="md" />
       <View style={styles.texts}>
         <Text style={[styles.title, line.qty === 0 ? styles.titleRemoved : null]} numberOfLines={1}>
           {line.title}
@@ -74,45 +76,48 @@ export function OrderLineAdminRow({ line, issue, onQty, channel, onPrice }: Orde
 
   return (
     <View style={styles.lineAdmin} testID={`staff-order-line-${line.variantId}`}>
-      <Text style={[styles.title, line.qty === 0 ? styles.titleRemoved : null]} numberOfLines={1}>
-        {line.title}
-      </Text>
-      <View style={styles.controls}>
-        <Text style={[styles.sub, styles.subMuted, styles.grow]} numberOfLines={1}>
-          {line.availableQty === null ? '' : fillCopy(t.page.stock, { n: String(line.availableQty) })}
+      <OperationsProductThumb name={line.title} photoUri={line.imageUrl} size="md" />
+      <View style={styles.adminBody}>
+        <Text style={[styles.title, line.qty === 0 ? styles.titleRemoved : null]} numberOfLines={1}>
+          {line.title}
         </Text>
-        <OperationsStepperGroup value={line.qty} onChange={onQty} label={t.page.qtyLabel} min={0} max={maxOf(line)} size="sm" />
-        <View style={[styles.price, negotiated ? styles.priceNegotiated : null]}>
-          <TextInput
-            value={priceText}
-            onChangeText={(text) => {
-              setPriceText(text);
-              const cents = parseAmountToCents(text);
-              if (cents !== null) onPrice(cents);
-            }}
-            keyboardType="decimal-pad"
-            accessibilityLabel={t.page.priceLabel}
-            style={styles.priceInput}
-            testID={`staff-order-price-${line.variantId}`}
-          />
-          <Text style={styles.priceUnit}>€</Text>
-        </View>
-      </View>
-      <View style={styles.status}>
-        {issue?.kind === 'removed' ? (
-          <SubLine line={line} issue={issue} onQty={onQty} />
-        ) : problem !== null ? (
-          <Text style={[styles.sub, styles.subError]} numberOfLines={1}>
-            {problem}
+        <View style={styles.controls}>
+          <Text style={[styles.sub, styles.subMuted, styles.grow]} numberOfLines={1}>
+            {line.availableQty === null ? '' : fillCopy(t.page.stock, { n: String(line.availableQty) })}
           </Text>
-        ) : negotiated ? (
-          <>
-            <Text style={styles.negotiated}>{fillCopy(t.page.negotiated, { price: money(line.listPriceCents) })}</Text>
-            {below === true ? <Text style={[styles.sub, styles.subError]}>{t.page.belowMargin}</Text> : null}
-          </>
-        ) : (
-          <Text style={[styles.sub, styles.subFaint]}>{t.page.listPrice}</Text>
-        )}
+          <OperationsStepperGroup value={line.qty} onChange={onQty} label={t.page.qtyLabel} min={0} max={maxOf(line)} size="sm" />
+          <View style={[styles.price, negotiated ? styles.priceNegotiated : null]}>
+            <TextInput
+              value={priceText}
+              onChangeText={(text) => {
+                setPriceText(text);
+                const cents = parseAmountToCents(text);
+                if (cents !== null) onPrice(cents);
+              }}
+              keyboardType="decimal-pad"
+              accessibilityLabel={t.page.priceLabel}
+              style={styles.priceInput}
+              testID={`staff-order-price-${line.variantId}`}
+            />
+            <Text style={styles.priceUnit}>€</Text>
+          </View>
+        </View>
+        <View style={styles.status}>
+          {issue?.kind === 'removed' ? (
+            <SubLine line={line} issue={issue} onQty={onQty} />
+          ) : problem !== null ? (
+            <Text style={[styles.sub, styles.subError]} numberOfLines={1}>
+              {problem}
+            </Text>
+          ) : negotiated ? (
+            <>
+              <Text style={styles.negotiated}>{fillCopy(t.page.negotiated, { price: money(line.listPriceCents) })}</Text>
+              {below === true ? <Text style={[styles.sub, styles.subError]}>{t.page.belowMargin}</Text> : null}
+            </>
+          ) : (
+            <Text style={[styles.sub, styles.subFaint]}>{t.page.listPrice}</Text>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -125,7 +130,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: operationsTheme.space.lg,
   },
-  lineAdmin: { gap: operationsTheme.space.xs, paddingVertical: operationsTheme.space.xs },
+  lineAdmin: { flexDirection: 'row', gap: operationsTheme.space.lg, paddingVertical: operationsTheme.space.xs },
+  adminBody: { flex: 1, minWidth: 0, gap: operationsTheme.space.xs },
   texts: { flex: 1, minWidth: 0, gap: operationsTheme.space['2xs'] },
   controls: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.md },
   grow: { flex: 1 },
