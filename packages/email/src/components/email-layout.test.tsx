@@ -92,10 +92,22 @@ describe('blokların sol hizası', () => {
   });
 });
 
+/** Dar ekran kuralının eşiği ve bir etiketin bütün sınıflarına düşen bildirimler. */
+function darEkranKurali(html: string): { esik: number; kurali: (etiket: string) => string } {
+  const media = /@media[^{]*\(max-width:\s*(\d+)px\)\s*\{(.*)\}\s*<\/style>/s.exec(html);
+  const kurallar = new Map<string, string>();
+  for (const m of (media?.[2] ?? '').matchAll(/\.([\w-]+)\{([^}]*)\}/g)) kurallar.set(m[1] ?? '', m[2] ?? '');
+  const kurali = (etiket: string) =>
+    (/class="([^"]+)"/.exec(etiket)?.[1] ?? '')
+      .split(/\s+/)
+      .map((sinif) => kurallar.get(sinif) ?? '')
+      .join('');
+  return { esik: Number(media?.[1]), kurali };
+}
+
 describe('dar ekran kuralı', () => {
-  it('telefonda kap ekrana sığar ve her satırın yatay dolgusu daralır', async () => {
-    // Kural yoksa 600 px'lik kap telefonda taşar ve Gmail uygulaması e-postayı sığdırırken tabloların genişliğini bozar.
-    const html = await render(
+  const eposta = () =>
+    render(
       EmailLayout({
         preview: 'Önizleme',
         locale: 'fr',
@@ -105,11 +117,12 @@ describe('dar ekran kuralı', () => {
         children: bloklar.map(([ad, node]) => createElement(Fragment, { key: ad }, node)),
       }),
     );
-    const media = /@media[^{]*\(max-width:\s*(\d+)px\)\s*\{(.*)\}\s*<\/style>/s.exec(html);
-    expect(Number(media?.[1])).toBeGreaterThan(600);
-    const kurallar = new Map<string, string>();
-    for (const m of (media?.[2] ?? '').matchAll(/\.([\w-]+)\{([^}]*)\}/g)) kurallar.set(m[1] ?? '', m[2] ?? '');
-    const kurali = (etiket: string) => kurallar.get(/class="([^"]+)"/.exec(etiket)?.[1] ?? '') ?? '';
+
+  it('telefonda kap ekrana sığar ve her satırın yatay dolgusu daralır', async () => {
+    // Kural yoksa 600 px'lik kap telefonda taşar ve Gmail uygulaması e-postayı sığdırırken tabloların genişliğini bozar.
+    const html = await eposta();
+    const { esik, kurali } = darEkranKurali(html);
+    expect(esik).toBeGreaterThan(600);
 
     expect(kurali(/<table[^>]*width="600"[^>]*>/.exec(html)?.[0] ?? '')).toMatch(/width:100%/);
 
@@ -119,5 +132,15 @@ describe('dar ekran kuralı', () => {
     // Başlık, sekiz blok ve alt bilgi; küme boş kalırsa iddia boşluğa geçer.
     expect(satirlar.length).toBeGreaterThanOrEqual(bloklar.length + 2);
     for (const etiket of satirlar) expect(Number(/padding-left:(\d+)px/.exec(kurali(etiket))?.[1])).toBeLessThan(ROW_INSET);
+  });
+
+  it('telefonda künye kartının hapı başlığın altına iner', async () => {
+    // Yan yana kalırsa dar ekranda hap iki satıra bölünüyor.
+    const { kurali } = darEkranKurali(await eposta());
+    const kunye = await render(HeaderCard({ title: 'LA-24518', meta: '22 juillet 2026', statusLabel: '● Prête au retrait' }));
+    const hucreler = [...kunye.matchAll(/<td[^>]*valign="middle"[^>]*>/g)].map((m) => m[0]);
+
+    expect(hucreler).toHaveLength(2);
+    for (const etiket of hucreler) expect(kurali(etiket)).toMatch(/display:block/);
   });
 });

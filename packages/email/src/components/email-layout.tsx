@@ -17,11 +17,16 @@ const SANS = 'Arial,Helvetica,sans-serif';
 const ROW_INSET = 32;
 
 /**
- * Tasarımın dar ekran kuralı: kap ekrana sığar, satır dolgusu daralır. Kural yoksa 600 px'lik kap telefonda taşar ve Gmail
- * uygulaması e-postayı kendisi sığdırırken tabloların genişliğini bozar.
+ * Dar ekran kuralı: kap ekrana sığar, satır dolgusu daralır, künye kartında hap başlığın altına iner. Kural yoksa 600 px'lik kap
+ * telefonda taşar ve Gmail uygulaması e-postayı kendisi sığdırırken tabloların genişliğini bozar.
  */
 const NARROW_SCREEN_CSS =
-  '@media only screen and (max-width:620px){.wrap{width:100% !important;}.pad{padding-left:20px !important;padding-right:20px !important;}}';
+  '@media only screen and (max-width:620px){' +
+  '.wrap{width:100% !important;}' +
+  '.pad{padding-left:20px !important;padding-right:20px !important;}' +
+  '.stack{display:block !important;width:auto !important;}' +
+  '.stack-under{padding-top:10px !important;text-align:left !important;}' +
+  '}';
 
 /** Metnin sayfa kenarından uzaklığı; bütün bloklar metni bu tek kenardan başlatır, yoksa okurken sol kenar bloktan bloğa zıplar. */
 const TEXT_INSET = 57;
@@ -249,20 +254,11 @@ export function MetaLine({ text }: { text: string }) {
   );
 }
 
-
-/** Künye kartı: başlık, soluk ikincil satır ve sağda durum hapı; "hangi kayıt, ne zaman, şu an ne durumda" sorusunu cevaplar. */
-export function HeaderCard({
-  title,
-  meta,
-  statusLabel,
-  metaBelow = false,
-}: {
-  title: string;
-  meta: string;
-  statusLabel: string;
-  /** İkincil satır başlığın altında; uzun başlık hapı sıkıştırmasın diye. */
-  metaBelow?: boolean;
-}) {
+/**
+ * Künye kartı: başlık, altında soluk ikincil satır, yanında durum hapı; "hangi kayıt, ne zaman, şu an ne durumda" sorusunu cevaplar.
+ * Telefonda hap alta iner, çünkü dar ekranda başlıkla yan yana sığmayıp iki satıra bölünüyor.
+ */
+export function HeaderCard({ title, meta, statusLabel }: { title: string; meta: string; statusLabel: string }) {
   return (
     <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${C.innerBorder}`, borderRadius: 16 }}>
@@ -272,15 +268,11 @@ export function HeaderCard({
               <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%' }}>
                 <tbody>
                   <tr>
-                    <td valign="middle" style={{ fontFamily: SERIF, fontSize: 22, lineHeight: '28px', color: C.ink }}>
+                    <td className="stack" valign="middle" style={{ fontFamily: SERIF, fontSize: 22, lineHeight: '28px', color: C.ink }}>
                       {title}
-                      {metaBelow ? (
-                        <div style={META_TEXT}>{meta}</div>
-                      ) : (
-                        <span style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 'normal', color: C.faint }}>{`\u00A0\u00A0${meta}`}</span>
-                      )}
+                      <div style={META_TEXT}>{meta}</div>
                     </td>
-                    <td valign="middle" align="right">
+                    <td className="stack stack-under" valign="middle" align="right">
                       <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
                         <tbody>
                           <tr>

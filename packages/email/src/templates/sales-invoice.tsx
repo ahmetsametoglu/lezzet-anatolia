@@ -119,7 +119,7 @@ export function SalesInvoiceEmail({ data, brandName, postalAddress }: SalesInvoi
     >
       <StatusPill label={t.pill} />
       <Headline title={t.title} intro={t.intro} />
-      <HeaderCard title={data.invoiceNumber} meta={t.issued(data.issuedOn)} statusLabel={data.settled ? t.settled : t.open} metaBelow />
+      <HeaderCard title={data.invoiceNumber} meta={t.issued(data.issuedOn)} statusLabel={data.settled ? t.settled : t.open} />
       <TotalsCard
         title={t.totalsTitle}
         totals={[
