@@ -20,9 +20,9 @@ dosya özelliğin tek kaydı olur: kararlar, yol haritası ve açık işler orad
   şema, beş fazlı yol haritası. Tek günlük hâl — turla ilişkisi §6'da, `cok-gunluk-sefer.md`yle
   birlikte okunur.
 - `iki-is.md` — QUALITE (toptan) ve Lezzet (çevrim içi) iki işin bütün kayıtlarının bizim sistemde, zorunlu "iş" alanıyla
-  tutulması: **karar alındı 03.10**, planlama. Pennylane'in yerleşik stok modülü olmaması dayanağı, altı fazlı yol haritası
-  (para, satış, stok, mobil gider fişi, e-fatura okuyucu, fişten otomatik okuma), açık sorular ve ölçülmüş etki analizi;
-  uygulama başlamadı, stok düzeni kararı sonraya kaldı.
+  tutulması: **kararlar alındı 03–04.10**, A (para) ve B (satış ve stok, depo üzerinden) tamamlandı; C (mobil gider fişi),
+  D (e-fatura okuyucu) ve E (fişten otomatik okuma) sırada. Pennylane'in yerleşik stok modülü olmaması dayanağı, beş fazlı yol
+  haritası ve ölçülmüş etki analizi.
 - `kasa-muhasebe.md` — sertifikalı kasa, e-fatura ve KDV yükümlülüklerinin Hiboutik · Pennylane ·
   Revolut ile karşılanması: **kararlar alındı 30.09–01.10**, entegrasyon başlıyor. Yasal zemin
   (BOFiP, DGFiP fişleri), dokuz karar, veri akışı, beş fazlı yol haritası, ölçülecekler, riskler.
