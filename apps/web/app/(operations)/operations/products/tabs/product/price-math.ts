@@ -1,38 +1,32 @@
-import { markupPercent, tightestMargin, vatBaseOf } from '@lezzet/domain-core';
-import { removeVat, toCents } from '@lezzet/helper';
+import { markupPercent, revenueHtOf, tightestMargin } from '@lezzet/domain-core';
+import { toCents } from '@lezzet/helper';
 import type { Channel } from '@lezzet/types';
 import type { PriceRow } from '@/lib/pricing/price-rows';
 
-/** Kanalın kendi tabanındaki tutarı KDV hariç gelire çevirir — marjın tek geçerli tabanı. */
-function revenueHt(channel: Channel, amountCents: number, vatRate: number): number {
-  return vatBaseOf(channel) === 'ttc' ? removeVat(amountCents, vatRate) : amountCents;
-}
+type MarginBasis = Pick<PriceRow, 'costCents' | 'vatRate'>;
 
-/**
- * Satır içi düzenlemede YAZILAN tutarın marjı — kutuya rakam girilirken canlı gösterilir.
- *
- * Taban farkı kritiktir: B2C tutarı KDV DAHİL, B2B hariçtir (DOMAIN §5). KDV düşülmeden hesaplanan
- * marj, oran kadar şişer ve zararına satışı kârlı gösterir. Kararın kendisi motordadır
- * (`markupPercent` · `vatBaseOf`); burada yalnız ikisi birleşir.
- *
- * `null` = maliyet bilinmiyor. Sıfır maliyet varsaymak marjı sonsuz gösterirdi.
- */
-export function marginForAmount(channel: Channel, euros: number, row: Pick<PriceRow, 'costCents' | 'vatRate'>): number | null {
+/** Maliyet bilinmiyorsa `null`, çünkü sıfır maliyet varsaymak marjı sonsuz gösterirdi. */
+function marginOfCents(channel: Channel, amountCents: number, row: MarginBasis): number | null {
   if (row.costCents === null) return null;
-  return markupPercent(revenueHt(channel, toCents(euros), row.vatRate), row.costCents);
+  return markupPercent(revenueHtOf(channel, amountCents, row.vatRate), row.costCents);
 }
 
-/**
- * Fiyat YAZILDIKTAN sonra satırın yeni marjı — liste yeniden okunmadan yerinde düzeltilir.
- *
- * Satırın `marginPercent`i iki kanalın EN DARIDIR (`tightestMargin`): bir kanalı değiştirmek
- * ötekini de ilgilendirir, bu yüzden ikisi birden verilir. Kuralın kendisi motorda; burada yalnız
- * kanal tabanları hazırlanır.
- */
+/** Kutuya yazılan tutarın marjı; B2C KDV dahil girildiği için KDV düşülmeden hesaplansa marj oran kadar şişerdi. */
+export function marginForAmount(channel: Channel, euros: number, row: MarginBasis): number | null {
+  return marginOfCents(channel, toCents(euros), row);
+}
+
+/** Hücrenin kendi marjı; satırın en dar marjını yazmak B2C'nin altına B2B'nin marjını yazmak olurdu. */
+export function cellMargin(row: MarginBasis & Pick<PriceRow, 'b2c' | 'b2b'>, channel: Channel): number | null {
+  const amountCents = row[channel].amountCents;
+  return amountCents === null ? null : marginOfCents(channel, amountCents, row);
+}
+
+/** Yazımdan sonra satırın en dar marjı; liste yeniden okunmadan yerinde düzelir, kural motorda (`tightestMargin`). */
 export function marginAfterWrite(row: PriceRow, channel: Channel, amountCents: number): number | null {
   const amounts = { b2c: row.b2c.amountCents, b2b: row.b2b.amountCents, [channel]: amountCents };
   const entries = (['b2c', 'b2b'] as const)
     .filter((key) => amounts[key] !== null)
-    .map((key) => ({ channel: key, revenueHtCents: revenueHt(key, amounts[key] as number, row.vatRate) }));
+    .map((key) => ({ channel: key, revenueHtCents: revenueHtOf(key, amounts[key] as number, row.vatRate) }));
   return tightestMargin(entries, row.costCents)?.percent ?? null;
 }

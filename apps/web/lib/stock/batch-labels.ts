@@ -2,18 +2,10 @@ import { money, shortDate } from '@/components/operation/ui/format';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { BatchView } from './batch-types';
 
-// Partinin GÖRSEL DİLİ — İKİ ekranın ortak sözlüğü (stok 09.13 · fiyatlar 09.5). Aynı karar
-// (`OfferDecision`) listede rozet, kartta kenar rengi ve diyalogda başlık olarak görünür; her
-// ekranın kendi metnini yazması, biri "imhalık" derken öbürünün hâlâ "yaklaşan tarihli" demesi
-// demekti.
-//
-// RENK BİR ANLAM TAŞIR, süs değil: kırmızı = satılamaz (güvenlik), amber = karar bekliyor,
-// olive = karar verilmiş (teklif açık), nötr = sorun yok.
+// Partinin görsel dili tek yerde, çünkü aynı karar listede rozet, kartta kenar rengi, diyalogda başlık olur ve ayrı metinler
+// birbirini yalanlardı. Renk anlam taşır: kırmızı satılamaz, amber karar bekliyor, olive karar verilmiş, nötr sorun yok.
 
-/**
- * Partinin tarih durumunu KISA söyler: rozetin içine sığan hâli. Yüzde hesaplanamıyorsa (ürünün
- * toplam raf ömrü girilmemiş) yüzde YAZILMAZ — 0 yazmak "bugün bitiyor" demek olurdu.
- */
+/** Raf ömrü girilmemişse yüzde yazılmaz, çünkü 0 yazmak "bugün bitiyor" demek olurdu. */
 export function expiryBadge(batch: BatchView): { text: string; tone: OpsTone } {
   if (batch.decision === 'must_discard') return { text: 'DLC geçti', tone: 'red' };
   if (batch.flag === 'expired_sellable') return { text: 'DDM geçti', tone: 'amber' };
@@ -24,26 +16,28 @@ export function expiryBadge(batch: BatchView): { text: string; tone: OpsTone } {
   return { text, tone: 'neutral' };
 }
 
-/**
- * Kartın tarih satırı — "DLC 26 Tem 2026 · 3 gün" / "DLC 20 Tem 2026'da geçti".
- *
- * Tarih TİPİYLE birlikte yazılır ve bu bilinçli: DLC ile DDM'in sonucu tamamen farklı (biri satışı
- * bitirir, öbürü kaliteyi düşürür). Yalnız tarihi yazmak, operatörden tipi ezberlemesini istemek olurdu.
- */
+/** Kalan günün sözü tek yerde; satır ve iki katlı hücre aynı kelimeyi kullanır. */
+function daysLeftWord(daysLeft: number): string {
+  return daysLeft === 0 ? 'bugün son gün' : `${daysLeft} gün`;
+}
+
+/** Tarih tipiyle yazılır: DLC satışı bitirir, DDM yalnız kaliteyi düşürür ve operatörden tipi ezberlemesi beklenmez. */
 export function expiryLine(batch: BatchView): string {
   const kind = batch.variant.product.dateType;
   const date = shortDate(batch.expiryDate);
   if (batch.daysLeft < 0) return `${kind} ${date}’de geçti`;
-  if (batch.daysLeft === 0) return `${kind} ${date} · bugün son gün`;
-  return `${kind} ${date} · ${batch.daysLeft} gün`;
+  return `${kind} ${date} · ${daysLeftWord(batch.daysLeft)}`;
+}
+
+/** Aynı bilginin dar kolon biçimi: tarih üstte, tip ve kalan gün altta, böylece dar kolonda kesilmez. */
+export function expiryParts(batch: BatchView): { date: string; note: string } {
+  const left = batch.daysLeft < 0 ? 'geçti' : daysLeftWord(batch.daysLeft);
+  return { date: shortDate(batch.expiryDate), note: `${batch.variant.product.dateType} · ${left}` };
 }
 
 /**
- * Partinin karar satırındaki eylem: ne yapılabilir ve düğme ne desin.
- *
- * DLC'si geçmiş partide TEK yol imha ve bu ekrandan başlatılmaz — imha kaydı depo akışının işidir
- * (DOMAIN §4: sayım/imha girişini depo yapar). Burada yalnız yönlendirme var; düğmeyi "İmha başlat"
- * diye koyup depoya çıkarmak, admin ekranında olmayan bir yetkiyi varmış gibi gösterirdi.
+ * DLC'si geçmiş partide tek yol imhadır ve imha kaydı depo akışınındır (DOMAIN §4); burada "İmha başlat" düğmesi, admin
+ * ekranında olmayan bir yetkiyi varmış gibi gösterirdi.
  */
 export function batchAction(batch: BatchView): { label: string; kind: 'offer' | 'edit' | 'discard' } {
   if (batch.decision === 'must_discard') return { label: 'İmha bekliyor', kind: 'discard' };
@@ -51,7 +45,6 @@ export function batchAction(batch: BatchView): { label: string; kind: 'offer' | 
   return { label: 'Teklif aç', kind: 'offer' };
 }
 
-/** Kartın alt satırındaki bir cümlelik özet — sistemin söyleyebildiği en yararlı şey. */
 export function suggestionText(batch: BatchView): string {
   if (batch.decision === 'must_discard') return 'Karar yok — yalnız imha';
   if (batch.offerPriceCents !== null) return 'Teklif açık · fiyatı değiştirebilirsiniz';
@@ -61,30 +54,16 @@ export function suggestionText(batch: BatchView): string {
 }
 
 /**
- * **Risk altındaki tutar** — partide kalan malın alış maliyeti (`kalan × birim alış`).
- *
- * Aciliyeti PARAYLA ölçer: "9 adet kaldı" ile "90 € çöpe gidecek" aynı cümle değildir ve karar
- * sırasını belirleyen ikincisidir. Alış fiyatı girilmemiş partide `null` — sayı uydurulmaz.
- * Satılamaz partide bu tutar artık risk değil GERÇEKLEŞMİŞ zarardır; ekran adını ona göre koyar.
- *
- * Stok ekranının özel sözlüğünden BURAYA taşındı (19.5): Depolar ekranının karnesi aynı tutarı depo
- * başına soruyor. İki yerde hesaplansaydı, biri "kalan × alış", öteki bir gün "giriş × alış" derdi
- * ve iki ekran aynı depo için farklı risk yazardı.
+ * Aciliyeti parayla ölçer, çünkü "9 adet kaldı" ile "90 € çöpe gidecek" aynı cümle değildir. Depolar karnesi de bu tutarı
+ * okur; alış fiyatı girilmemiş partide `null`, sayı uydurulmaz.
  */
 export function riskCentsOf(batch: BatchView): number | null {
   return batch.purchasePriceCents === null ? null : batch.purchasePriceCents * batch.physicalQty;
 }
 
 /**
- * Bir küme partinin toplam riski; ölçülemiyorsa `null` (toplam uydurulmaz).
- *
- * Fiyatı bilinen partiler toplanır, bilinmeyenler ATLANIR — yani dönen sayı bir ALT sınırdır.
- * Sıfıra düşürmek bozuk ölçümü sağlıklı gibi okuturdu (`CLAUDE.md §1`).
- *
- * **Ama kuralın TERSİ de doğru: bilinen sıfır, "bilinmiyor" diye gösterilemez** (ekranda görüldü
- * 17.08 — Depolar karnesi `0 · tutar bilinmiyor` yazıyordu). Boş küme ile "fiyatsız partiler" aynı
- * şey değil: riskli parti YOKSA risk tutarı bilinmez değil, gerçekten sıfırdır. Eski hâl ikisini
- * tek dala topluyordu ve sağlıklı bir depoyu ölçülemeyen bir depo gibi okutuyordu.
+ * Fiyatı bilinmeyen partiler atlanır, dönen sayı bir alt sınırdır; hiçbiri bilinmiyorsa `null`. Boş küme ise gerçekten sıfırdır:
+ * riskli parti yokken "bilinmiyor" yazmak sağlıklı depoyu ölçülemeyen gibi gösterirdi.
  */
 export function totalRiskCents(batches: readonly BatchView[]): number | null {
   if (batches.length === 0) return 0;

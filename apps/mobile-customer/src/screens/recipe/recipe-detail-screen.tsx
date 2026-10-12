@@ -18,6 +18,7 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, addProducts, cartCount, useCart } from '@/screens/customer-kit/cart-store';
+import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 // Metin ortak pakette: web'in telefon tarif detayı aynı sözlüğü okur.
@@ -64,7 +65,8 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
   const { theme } = useUnistyles();
   const locale = useAppLocale();
   const t: Messages = messages[locale];
-  const { status, detail, retry } = useRecipe(slug, locale);
+  const { postalCode, country } = usePurchasePlace();
+  const { status, detail, retry } = useRecipe(slug, locale, postalCode, country);
   /* Abonelik erken çıkışların üstünde, çünkü dallarda atlamak React'in çağrı sırası kuralını kırar. */
   const fabCount = cartCount(useCart());
 

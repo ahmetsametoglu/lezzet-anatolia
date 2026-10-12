@@ -6,17 +6,10 @@ import type { Channel } from '@lezzet/types';
 import { money, percent } from '@/components/operation/ui/format';
 import { setChannelPriceAction } from '@/lib/prices/price-actions';
 import type { PriceRow } from '@/lib/pricing/price-rows';
-import { marginForAmount } from './price-math';
+import { cellMargin, marginForAmount } from './price-math';
 
-// SATIR İÇİ FİYAT — günlük düzeltmenin yeri. Hedef marj, otomatik anahtar ve ileri tarih kararı
-// burada VERİLMEZ: onlar tam formun işi (çift tık).
-//
-// Kaydetmek YENİ FİYAT SATIRI yazar (`setChannelPriceAction`): geçmiş korunur, verilmiş siparişler
-// etkilenmez. Sıfır ve boş tutar eylem tarafından reddedilir; ekran da denemez.
-//
-// YÜKSEKLİK SABİTTİR: tutar kutusu ve altındaki marj satırı her hâlde aynı yeri kaplar — kutu
-// açılınca, yazarken, kaydederken ve hata çıkınca. Marj satırı düzenlemeye GİRİLİNCE belirseydi
-// kart her tıklamada büyüyüp küçülürdü (kullanıcı kararı: ekranda oynama yok).
+// Satır içi fiyat günlük düzeltmenin yeridir; hedef marj, otomatik anahtar ve ileri tarih tam formun işidir (çift tık). Kutu ve
+// altındaki marj satırı her hâlde aynı yeri kaplar, kutu açılınca ya da hata çıkınca hücre büyüyüp küçülmesin diye.
 
 interface PriceEditCellProps {
   row: PriceRow;
@@ -36,13 +29,13 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
 
   const parsed = Number(draft.replace(',', '.'));
   const valid = Number.isFinite(parsed) && parsed > 0;
+  const ownMargin = cellMargin(row, channel);
   const nextMargin = editing && valid ? marginForAmount(channel, parsed, row) : null;
 
   const open = () => {
     if (row.autoPrice) return;
     setError(null);
-    // Ondalık ayırıcı VİRGÜL: kutuya "11.43" düşmesi, operatörün yazdığı biçimden başka bir dil
-    // konuşmak olurdu (ekranın her yerinde "11,43 €").
+    // Ondalık ayırıcı virgül, çünkü ekranın her yerinde tutar "11,43 €" diye yazıyor.
     setDraft(cell.amountCents === null ? '' : String(fromCents(cell.amountCents)).replace('.', ','));
     setEditing(true);
   };
@@ -66,14 +59,16 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
     onSaved(cents);
   };
 
-  // Alt satırın İÇERİĞİ değişir, VARLIĞI değişmez.
+  // Alt satırın içeriği değişir, varlığı değişmez.
   const note = error
     ? { text: error, cls: 'text-ops-red' }
     : nextMargin !== null
-      ? { text: `${percent(row.marginPercent)} → ${percent(nextMargin)}`, cls: 'text-ops-olive-dark font-semibold' }
+      ? { text: `${percent(ownMargin)} → ${percent(nextMargin)}`, cls: 'text-ops-olive-dark font-semibold' }
       : row.autoPrice
         ? { text: 'otomatik fiyat', cls: 'text-ops-olive' }
-        : { text: row.marginPercent === null ? 'marj bilinmiyor' : `marj ${percent(row.marginPercent)}`, cls: 'text-ops-muted' };
+        : cell.amountCents === null
+          ? { text: 'fiyat yok', cls: 'text-ops-amber' }
+          : { text: ownMargin === null ? 'marj bilinmiyor' : `marj ${percent(ownMargin)}`, cls: 'text-ops-muted' };
 
   return (
     <span className="flex flex-col gap-0.5">
@@ -85,8 +80,7 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
             inputMode="decimal"
             value={draft}
             disabled={busy}
-            // Açılışta tutarın TAMAMI seçili gelir: operatör yeni fiyatı yazmaya başlar. Seçilmeden
-            // açıldığında yazılan rakam eskisinin sonuna ekleniyordu (11,43 + 9,90 → 11.439,90).
+            // Tutar seçili açılır; seçilmeden açılınca yazılan rakam eskisinin sonuna eklenirdi.
             onFocus={(event) => event.target.select()}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={() => void commit()}

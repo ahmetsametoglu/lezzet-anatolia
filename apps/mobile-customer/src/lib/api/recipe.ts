@@ -1,32 +1,36 @@
 import type { z } from 'zod';
-import { RecipeDetailSchema, RecipeListSchema } from '@lezzet/types';
+import { RecipeDetailSchema, RecipeListSchema, type Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
+import { apiFetch, queryString, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
-  TARİF OKUMASI — `/api/v1/recipes/:slug`.
-
-  ŞEMA BURADA YAZILMAZ: gövde sözleşmesi `@lezzet/types`ın (`recipe-api.schema.ts`) ve uç da AYNI
-  şemayla üretiyor (02-mimari §3.2 "sözleşme tek kaynak") — alan adı değişirse iki taraf birden
-  derlemede kırılır (katalog istemcisinin kuralı, birebir).
-
-  `locale` zorunlu: uç dilsiz çağrıyı 400'le reddediyor (sessizce Türkçeye düşmesin). Değer
-  UYGULAMANIN DİLİDİR (`lib/i18n/app-locale.ts`), ekranın kendi kararı değil.
+  Gövde şeması `@lezzet/types`tadır ve uç da aynı şemayla üretir, alan adı değişirse iki taraf birden derlemede kırılır.
+  `locale` zorunludur, çünkü uç dilsiz çağrıyı sessizce Türkçeye düşürmek yerine 400'le reddeder.
 */
 
-/** Tarif detayı — sayfanın TAMAMI tek turda (satırlar, evinizden, hazırlanış); bölüm başına çağrı yok. */
-export function fetchRecipeDetail(slug: string, locale: Locale): Promise<ApiResult<z.infer<typeof RecipeDetailSchema>>> {
-  return apiFetch(`/api/v1/recipes/${encodeURIComponent(slug)}?locale=${encodeURIComponent(locale)}`, RecipeDetailSchema);
+/**
+ * Sayfanın tamamı tek turda gelir. Yer de sorulur, çünkü satır fiyatı depoya ve ülkeye bağlıdır; ülke yalnız kodla gider, aynı
+ * kod iki ülkede bulunabilir.
+ */
+export function fetchRecipeDetail(
+  slug: string,
+  locale: Locale,
+  postalCode: string | null = null,
+  country: Country | null = null,
+): Promise<ApiResult<z.infer<typeof RecipeDetailSchema>>> {
+  const code = postalCode?.trim() || undefined;
+  return apiFetch(
+    `/api/v1/recipes/${encodeURIComponent(slug)}${queryString({
+      locale,
+      postalCode: code,
+      country: code === undefined || country === null ? undefined : country,
+    })}`,
+    RecipeDetailSchema,
+  );
 }
 
-/**
- * Tarif listesi — "Fikirler" sekmesinin tarif bölümü.
- *
- * SAYFALAMA/İMLEÇ YOK ve olmaması sözleşmenin kararıdır (`RecipeListSchema` künyesi): tarif kümesi
- * editoryal bir seçkidir, veriyle büyümez → tek turda gelir. `limit` de gönderilmez; sınır uçtadır
- * ve istemcinin büyütebileceği bir sınır, sınır değildir.
- */
+/** Tarif kümesi editoryal bir seçkidir ve veriyle büyümez, bu yüzden imleçsiz tek turda gelir; sınır uçtadır. */
 export function fetchRecipes(locale: Locale): Promise<ApiResult<z.infer<typeof RecipeListSchema>>> {
   return apiFetch(`/api/v1/recipes?locale=${encodeURIComponent(locale)}`, RecipeListSchema);
 }

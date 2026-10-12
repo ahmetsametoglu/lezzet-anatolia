@@ -2,6 +2,7 @@ import { formatPrice } from '@lezzet/helper';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
+import * as onboardingStore from '@/lib/onboarding/onboarding-store';
 import { resetCart, useCart } from '@/screens/customer-kit/cart-store';
 import { RecipeDetailScreen } from './recipe-detail-screen';
 import { recipeDetail, recipeRow } from './recipe-fixture';
@@ -18,6 +19,7 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR
 
 const mockRouter = { back: jest.fn(), push: jest.fn(), setParams: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
+jest.mock('@/lib/onboarding/onboarding-store');
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
@@ -147,5 +149,21 @@ describe('tarif detayı', () => {
     await fireEvent.press(screen.getByTestId('recipe-error-action'));
 
     await waitFor(() => expect(screen.getByRole('header', { name: 'Çıtır Pazar Kahvaltısı' })).toBeOnTheScreen());
+  });
+});
+
+describe('RecipeDetailScreen — yer', () => {
+  /* Satır fiyatı depoya ve ülkeye bağlıdır; ülke gitmezse aynı kodun öteki ülkesindeki fiyat görünürdü. */
+  it('tarif isteği cihazdaki yeri ülkesiyle sorar', async () => {
+    // Anlık durum sabit referans olmalı: `useSyncExternalStore` her çağrıda yeni nesne görürse sonsuz döngüye girer.
+    const saved = { done: true, locale: 'tr', postalCode: '77694', country: 'DE' } as const;
+    const snapshot = jest.spyOn(onboardingStore, 'getOnboardingSnapshot').mockReturnValue(saved);
+
+    await renderRecipe();
+
+    const asked = fetchMock.mock.calls.map(([url]) => String(url)).find((url) => url.includes('/api/v1/recipes/'));
+    expect(asked).toContain('postalCode=77694');
+    expect(asked).toContain('country=DE');
+    snapshot.mockRestore();
   });
 });
