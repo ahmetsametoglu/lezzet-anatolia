@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil).** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil); Faz 4'te fatura açılışı, Pennylane'de kesim, müşteriye e-posta ve Faturalar ekranı tamamlandı, e-fatura ve alacak notu kaldı.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -99,9 +99,9 @@ tek kuralın düzeltilmesi; şema yok) · **S2** eklemeli şema (yeni tablo, kol
 |---|---|---|---|
 | 0 | Zemin onarımı: vadeli işaret sunucuda, peşin havale kalkar, mobilde pazarlık yalnız yönetici — **tamamlandı** | S1 | Dar değişir; meşru akış etkilenmez |
 | 1 | Profesyonel kayıt (SIRET) ve miras — **tamamlandı** (davet bağlantısı sonraya) | S0 + S1 | Değişmez |
-| 2 | Mobilde sipariş girişi | Tasarım + S1 | Web masası ortak katmana taşınır, davranış aynı |
-| 3 | Araçtan profesyonele vadeli satış | S1 + hızlı satış kapısında dar değişiklik | Anonim yerinde satış aynı |
-| 4 | Satış faturası Pennylane'de | S0 + S2 | Değişmez |
+| 2 | Mobilde sipariş girişi — **tamamlandı** | Tasarım + S1 | Web masası ortak katmana taşınır, davranış aynı |
+| 3 | Araçtan profesyonele vadeli satış — **tamamlandı** | S1 + hızlı satış kapısında dar değişiklik | Anonim yerinde satış aynı |
+| 4 | Satış faturası Pennylane'de — **tamamlandı** (kalan: e-fatura, alacak notu) | S0 + S2 | Değişmez |
 | 5 | Tahsilat ve cari: satın alma gibi | S1 + S2 | Havale kuyruğuna yeni hedef |
 
 Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fatura ve havale eşleştirmesi bugünkü gibi elle yürür.
