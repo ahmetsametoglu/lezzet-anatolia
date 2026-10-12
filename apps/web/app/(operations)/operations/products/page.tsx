@@ -5,6 +5,8 @@ import { frameSourcesOf, thumbnailImageUrl } from '@lezzet/application';
 import { ProductsClient } from './products-client';
 import { toBundleViews, toProductViews } from './products-read';
 import { parseProductsUrl, toProductFilters } from './products-url';
+import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
+import { guarded, requireAdmin } from '@/lib/guard';
 import type { CategoryView, CollectionView, FamilyView } from './products-types';
 
 // Admin katalog yönetimi — Ürünler. Okuma burada (RSC) yapılır, DB satırları serileştirilebilir
@@ -23,6 +25,17 @@ interface ProductsPageProps {
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+  // Rol kapısı SAYFADA: layout personeli içeri alır, katalog yönetimi ise personelin bir ALT
+  // KÜMESİNE açıktır — ray da öyle diyor (`ops-nav`: bu bağlantı yalnız yöneticiye çizilir).
+  const access = await guarded(requireAdmin);
+  if (!access.ok)
+    return (
+      <NoAccessPane
+        title="Ürünler"
+        reason="Katalog yönetimi (ürün, beyan, fiyat tanımı) operasyonun geri kalanına kapalıdır. Bir düzeltme gerekiyorsa yöneticinize iletin."
+      />
+    );
+
   const urlState = parseProductsUrl(await searchParams);
   const filters = toProductFilters(urlState);
 

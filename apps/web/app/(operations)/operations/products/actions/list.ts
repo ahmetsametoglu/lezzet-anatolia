@@ -2,7 +2,7 @@
 
 import { CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, KeysetCursorSchema, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
-import { requireStaff } from '@/lib/guard';
+import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { toProductViews } from '../products-read';
 import { parseProductsUrl, toProductFilters } from '../products-url';
@@ -26,7 +26,9 @@ interface ProductPageResult {
  */
 export async function loadMoreProductsAction(search: string, cursor: KeysetCursor): Promise<ActionResult<ProductPageResult>> {
   try {
-    await requireStaff();
+    // Sayfanın kapısı ne ise bu okumanınki de odur: liste admin'e kapalıyken devamını döndüren
+    // eylem açık kalırsa kapı yandan açık kalır.
+    await requireAdmin();
     // İmleç client'tan geliyor → şemadan geçirilir (uydurma değer sorguyu bozmasın).
     const safeCursor = KeysetCursorSchema.parse(cursor);
     const filters = toProductFilters(parseProductsUrl(Object.fromEntries(new URLSearchParams(search))));
