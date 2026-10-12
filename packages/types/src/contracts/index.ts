@@ -18,6 +18,8 @@ export * from './ticket-api.schema';
 // Geri bildirim akışı — davet + oy/yorum/tamamlama; token oturum yerine geçer, kimlik alanları
 // bilerek zarf dışında (gerekçeler dosya başlığında).
 export * from './feedback-api.schema';
+// Ürün yorumları — detaydaki seçki ve sayfalı tüm yorumlar; yazar adı kısaltılmış, metin okuyucunun dilinde.
+export * from './review-api.schema';
 // B2B başvurusu — resmî kayıt okuması + AB vergi doğrulaması + başvurunun yazımı/durumu. Alan
 // denetimi ŞEMADA DEĞİL motorda; bağ uçta derleme kilidiyle kurulur (gerekçe dosya başlığında).
 export * from './b2b-api.schema';

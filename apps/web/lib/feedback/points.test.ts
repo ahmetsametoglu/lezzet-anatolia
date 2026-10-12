@@ -13,11 +13,8 @@ import {
 import { recordVote, submitReview } from './product-feedback';
 
 /**
- * Puan defteri ve kupona çevirme (17.4, 17.5) — uçtan uca.
- *
- * Sınanan şey üç kural: **bakiye türetilir**, **aynı kaynaktan iki kez puan yok**, **ödül asıl
- * işlemi durdurmaz**. Sonuncusu en kolay bozulan: bir gün biri puan yazımını `await` edip hatayı
- * yukarı fırlatırsa, tavana takılan müşterinin yorumu da kaybolur.
+ * Puan defteri ve kupona çevirme uçtan uca: bakiye türetilir, aynı kaynaktan iki kez puan yazılmaz, ödül asıl işlemi durdurmaz.
+ * Sonuncusu en kolay bozulandır: puan yazımı hatayı yukarı fırlatsaydı tavana takılan müşterinin yorumu da kaybolurdu.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -53,9 +50,7 @@ beforeAll(async () => {
   candidateId = candidate.product.id;
   await products.update({ id: candidateId, status: 'candidate' });
 
-  // Çapa damgası ŞART (04.10): puanı harcatmak kapılı üç yetkiden biri ve kapı çapaya bakıyor.
-  // Gerçek hayatta çevirebilen müşterinin çapası zaten var — oturumu posta kutusuna gelen kodla
-  // açılmıştır; damgasız bir kayıt burada motoru değil, kimlik kapısını sınardı.
+  // Puanı harcatmak kapılı bir yetkidir ve kapı kimlik çapasına bakar; damgasız kayıt burada motoru değil kimlik kapısını sınardı.
   const capa = new Date().toISOString();
   b2cId = (await profiles.insert({ name: 'Ayşe Kaya', email: `puan-b2c-${stamp}@example.test`, type: 'individual', emailAnchoredAt: capa })).id;
   b2bId = (await profiles.insert({ name: 'Restoran SARL', email: `puan-b2b-${stamp}@example.test`, type: 'company', emailAnchoredAt: capa })).id;
@@ -112,7 +107,7 @@ describe('bakiye defterden türetilir', () => {
 
 describe('geri bildirim puanı', () => {
   it('yorum yazan müşteri puan kazanır', async () => {
-    await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Harika.' });
+    await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Harika olmuş.' });
     const balance = await getPointsBalance(b2cId);
     expect(balance.balance).toBe(20); // points_review
   });
@@ -147,7 +142,7 @@ describe('geri bildirim puanı', () => {
   });
 
   it('B2B kazanmaz ama yorumu yine de kaydedilir', async () => {
-    const result = await submitReview({ customerId: b2bId, productId, rating: 4, comment: 'Correct.' });
+    const result = await submitReview({ customerId: b2bId, productId, rating: 4, comment: 'Très correct.' });
     // Asıl işlem tamamlandı...
     expect(result.ok).toBe(true);
     // ...ama puan yazılmadı.
@@ -155,22 +150,12 @@ describe('geri bildirim puanı', () => {
   });
 
   /**
-   * ── TAVANIN KAPSAMI DEĞİŞTİ (kullanıcı onayı 11.08) ────────────────────────
-   * Bu test bir tur "tavana takılan yorum yazılmaz" diyordu ve o gün doğruydu. Kural değişti:
-   * **tavan yalnız PARA ÖDENMEDEN yapılabilen eylemleri kapsar** — yorumun arkasında ödenmiş bir
-   * sipariş var, yani tavanı görmüyor. Eski hâlini bırakmak, artık var olmayan bir davranışı
-   * ölçmek olurdu.
-   *
-   * Kapsam kuralının kendisi birim testlerde çivili (`domain-core/feedback/points.test.ts`);
-   * burada sınanan şey KABLO: `awardPoints` sebebi motora geçiriyor ve günlük pencereyi yalnız
-   * tavana tabi sebeplerle sayıyor mu.
-   *
-   * **Elle düzeltme de pencereye girmiyor** ve bu bilinçli: `manual` müşterinin bir eylemi değil,
-   * personelin düzeltmesidir — müşterinin günlük kazanma sınırını doldurmamalı.
+   * Tavan yalnız para ödenmeden yapılabilen eylemleri kapsar; burada sınanan, `awardPoints`in günlük pencereyi yalnız tavana tabi
+   * sebeplerle saymasıdır. Elle düzeltme de pencereye girmez, çünkü müşterinin eylemi değil personelin düzeltmesidir.
    */
   it('parayla gelen ödül tavanı GÖRMEZ — gün dolu görünse bile yorum puanı yazılır', async () => {
     await adjustPointsManually({ customerId: b2cId, points: 95, note: 'tavan zemini', staffId });
-    const result = await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Sığmayan.' });
+    const result = await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Tavana sığmayan.' });
 
     expect(result.ok).toBe(true);
     // 95 (elle) + 20 (yorum): tavan 100 olmasına rağmen ödül tam yazıldı.
@@ -267,15 +252,13 @@ describe('getiren müşteri (17.7)', () => {
     expect(await awardReferralPoints(invited.id)).not.toBeNull();
     // Kaynak YENİ müşteridir: "aynı kişiyi iki kez getiremezsin".
     expect(await awardReferralPoints(invited.id)).toBeNull();
-    // Değer merdiveni (kullanıcı kararı 11.08): getiren 500 — çevirme eşiğinin tamı, yani hesap
-    // ekranının "size de 5 € kupon" sözünü gerçek yapan sayı.
+    // Getiren 500 alır: çevirme eşiğinin tamı, hesap ekranının "size de 5 € kupon" sözünü gerçek yapan sayı.
     expect((await getPointsBalance(b2cId)).balance).toBe(500);
   });
 });
 
 describe('doğrudan puan yazımı', () => {
-  // Sebep `review`: `order` artık KAZANILAMAZ (26.08 — sipariş puanı 11.08'de kalkmıştı, yetim
-  // `points_order` ayarı da söküldü; tip `EarnablePointsReason` yazımı derlemede engelliyor).
+  // Sebep `review`, çünkü `order` kazanılabilir bir sebep değildir; `EarnablePointsReason` onu derlemede engeller.
   it('bilinmeyen müşteriye puan yazılmaz', async () => {
     expect(await awardPoints({ customerId: '00000000-0000-0000-0000-000000000000', reason: 'review', refId: crypto.randomUUID() })).toBeNull();
   });
@@ -287,16 +270,7 @@ describe('doğrudan puan yazımı', () => {
     expect((await getPointsBalance(b2cId)).balance).toBe(20);
   });
 
-  /*
-    Hangi tekillik kuralının geçerli olduğunu SEBEP söyler (`SOURCELESS_POINTS_REASONS`), çağıranın
-    `refId` verip vermemesi değil. Kapı eskiden `refId`nin varlığına bakıyordu; motora bağlandı.
-
-    **Bu bir hata düzeltmesi değildi, sadeleştirmeydi** (düzeltildi 27.08): kusurun doğması için
-    kaynaklı bir sebebi `refId`siz çağıran biri gerekiyor ve öyle bir çağıran yok — yani eski ve
-    yeni kod erişilebilir her girdi için aynı cevabı veriyor. Bu yüzden aşağıdaki test "eskiden
-    bozuktu"yu değil, kuralın BUGÜN nereden geldiğini sabitliyor: sınanamayan bir kusuru sınıyormuş
-    gibi yapan test, yeşilken bile yanıltıcıdır.
-  */
+  // Hangi tekillik kuralının geçerli olduğunu sebep söyler (`SOURCELESS_POINTS_REASONS`), çağıranın `refId` verip vermemesi değil.
   it('kaynaksız sebep (ziyaret) gün indeksiyle tekildir — `refId` beklemez', async () => {
     expect(await awardPoints({ customerId: b2cId, reason: 'visit' })).not.toBeNull();
     expect(await awardPoints({ customerId: b2cId, reason: 'visit' })).toBeNull();

@@ -1,3 +1,4 @@
+import { HEART_PATH } from '@lezzet/design-tokens/icons';
 import type { ReactNode } from 'react';
 
 /**
@@ -208,9 +209,7 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M9 9.5 10.6 4M15 9.5 13.4 4" />
     </>
   ),
-  heart: (
-    <path d="M12 20.5C6 15.5 3 12.3 3 8.8 3 6.2 5 4.5 7.3 4.5c1.8 0 3.4 1 4.7 2.7 1.3-1.7 2.9-2.7 4.7-2.7C19 4.5 21 6.2 21 8.8c0 3.5-3 6.7-9 11.7z" />
-  ),
+  heart: <path d={HEART_PATH} />,
   arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
 };

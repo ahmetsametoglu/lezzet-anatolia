@@ -2,9 +2,13 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { CategoryImageService, CategoryService, serviceDb } from '@lezzet/database';
 import {
+  findActiveProduct,
   getCatalogData,
   getProductDetail,
+  getProductScore,
+  listPublishedReviews,
   pricingViewerFor,
+  reviewSummaryOf,
   toCategory,
   toWireCampaign,
   customerBusiness,
@@ -25,6 +29,11 @@ import {
   DEFAULT_PAGE_SIZE,
   CountryEnum,
   PreferredLanguageEnum,
+  resolveLocalizedText,
+  REVIEW_PAGE_SIZE,
+  REVIEW_PREVIEW_SIZE,
+  ReviewPageSchema,
+  ReviewRatingFilterEnum,
   type Business,
   type Country,
   type UserProfile,
@@ -265,9 +274,22 @@ catalog.get('/products/:slug', async (c) => {
     { ...placeQueryOf(c), pickupWarehouseId: c.req.query('pickupWarehouseId') },
     profile,
   );
-  const detail = await getProductDetail(db, { locale: locale.data, slug: c.req.param('slug'), place, viewer });
+  // Yorumlar ürün satırı bulununca başlar ve detayın fiyat ve stok okumasını beklemez.
+  const listed = findActiveProduct(db, c.req.param('slug'));
+  const reviews = listed.then((product) =>
+    product === null
+      ? null
+      : Promise.all([
+          getProductScore(db, product.id),
+          listPublishedReviews(db, { productId: product.id, viewLanguage: locale.data, limit: REVIEW_PREVIEW_SIZE }),
+        ]),
+  );
+  void reviews.catch(() => undefined);
+  const detail = await getProductDetail(db, { locale: locale.data, slug: c.req.param('slug'), place, viewer, product: listed });
   if (!detail) return fail(c, 'product_not_found', 404);
-  const [seenPlace, seenBy] = await Promise.all([place, viewer]);
+  const [seenPlace, seenBy, read] = await Promise.all([place, viewer, reviews]);
+  if (read === null) return fail(c, 'product_not_found', 404);
+  const [score, preview] = read;
 
   /* Ürün görüntülemesi native'de sunucudan atılır, çünkü detay ucu zaten bu istekte çağrılıyor ve istemci atıcısı aynı olayı ikinci
      kez sayardı. Ülke `null` geçer: `readPlace` yalnız depo döndürür, ülkeyi bilen uç onu doldurur. → BEKLEYEN(21.103) */
@@ -289,6 +311,47 @@ catalog.get('/products/:slug', async (c) => {
     /* Öneri bandı karışık bir listedir ve üstünde kampanyayı söyleyecek başlık yoktur, rozet bu yüzden kartta gider. */
     similar: detail.similar.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale.data) ?? undefined })),
     shareUrl: localizedUrl('/product/[slug]', locale.data, { slug: detail.slug }),
+    reviews: { summary: reviewSummaryOf(score), items: preview.rows },
   };
   return ok(c, CatalogProductDetailSchema.parse(body));
+});
+
+const ReviewQuerySchema = z.object({
+  locale: LocaleSchema,
+  cursor: z.string().min(1).optional(),
+  /** Bozuk süzgeç 400 alır: sessizce tümünü göstermek müşteriye seçtiği yıldızların listesi diye başka bir küme okuturdu. */
+  rating: ReviewRatingFilterEnum.optional(),
+});
+
+/** Ürünün tüm yorumları, en yeni önce ve keyset sayfalı; özet her sayfayla gelir, çünkü ekran bağlantıyla doğrudan da açılabilir. */
+catalog.get('/products/:slug/reviews', async (c) => {
+  const parsed = ReviewQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) {
+    return fail(c, parsed.error.issues[0]?.path[0] === 'locale' ? 'invalid_locale' : 'invalid_query', 400);
+  }
+  const { locale, rating } = parsed.data;
+  const cursor = decodeCursor(parsed.data.cursor);
+
+  const db = serviceDb();
+  const product = await findActiveProduct(db, c.req.param('slug'));
+  if (!product) return fail(c, 'product_not_found', 404);
+  const [score, page] = await Promise.all([
+    getProductScore(db, product.id),
+    listPublishedReviews(db, {
+      productId: product.id,
+      viewLanguage: locale,
+      limit: REVIEW_PAGE_SIZE,
+      ...(cursor === undefined ? {} : { cursor }),
+      ...(rating === undefined ? {} : { rating }),
+    }),
+  ]);
+  return ok(
+    c,
+    ReviewPageSchema.parse({
+      productName: resolveLocalizedText(product.name, locale),
+      summary: reviewSummaryOf(score),
+      rows: page.rows,
+      nextCursor: page.nextCursor ? encodeCursor(page.nextCursor) : null,
+    } satisfies z.input<typeof ReviewPageSchema>),
+  );
 });

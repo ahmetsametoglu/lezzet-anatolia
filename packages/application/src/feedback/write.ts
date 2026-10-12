@@ -117,20 +117,20 @@ export async function voteOnFeedbackInvite(
   return { status: 'ok', feedback: saved };
 }
 
-/**
- * Ürünün yıldızı ve yazılı yorumu. Alt sınırın altındaki yorum kaydedilmez, çünkü yorum puan getirir ve boşlukla ya da tek
- * kelimeyle geçilmemeli.
- */
+/** Yorum ayardaki alt sınırın altında mı; yorum yazan her kapı bunu sorar, çünkü yorum puan getirir ve boşlukla geçilmemeli. */
+export async function reviewCommentTooShort(db: SupabaseClient, comment: string): Promise<boolean> {
+  const minWords = await new SettingsService(db).getNumber(REVIEW_MIN_WORDS_KEY, REVIEW_MIN_WORDS_DEFAULT);
+  return !meetsReviewMinimum(comment, minWords);
+}
+
+/** Ürünün yıldızı ve yazılı yorumu; alt sınırın altındaki yorum kaydedilmez. */
 export async function reviewFeedbackInvite(
   db: SupabaseClient,
   input: { token: string; productId: string; rating?: number | null; comment?: string | null },
 ): Promise<FeedbackWriteOutcome> {
   const comment = input.comment?.trim() || null;
   if (input.rating == null && !comment) return { status: 'empty_review' };
-  if (comment !== null) {
-    const minWords = await new SettingsService(db).getNumber(REVIEW_MIN_WORDS_KEY, REVIEW_MIN_WORDS_DEFAULT);
-    if (!meetsReviewMinimum(comment, minWords)) return { status: 'comment_too_short' };
-  }
+  if (comment !== null && (await reviewCommentTooShort(db, comment))) return { status: 'comment_too_short' };
 
   const invite = await resolveInvite(db, input.token);
   if (!invite) return { status: 'invalid_link' };

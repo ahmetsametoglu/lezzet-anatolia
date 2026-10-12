@@ -30,6 +30,8 @@ interface PhoneProductHeadProps {
   placeMark: ReturnType<typeof phoneHeroMarkOf>;
   /** `undefined`: ürünün kategorisi var ama adı henüz gelmedi; satırın yeri aynı stille boş tutulur. `null`: kategorisi yok. */
   categoryLabel: string | null | undefined;
+  /** Üst satırın puan parçası ("4,4 (5 DEĞERLENDİRME)"); puan yoksa ya da henüz gelmediyse `null`. */
+  ratingLabel: string | null;
   /** Künyenin ilk satırlarından sonra gelenler (kargo çipi, aile, boylar, açıklama); yükleme karesinde yoktur. */
   children?: ReactNode;
 }
@@ -47,6 +49,7 @@ export function PhoneProductHead({
   content,
   placeMark,
   categoryLabel,
+  ratingLabel,
   children,
 }: PhoneProductHeadProps) {
   const copy = productMessages[locale];
@@ -96,7 +99,18 @@ export function PhoneProductHead({
             &nbsp;
           </span>
         ) : (
-          categoryLabel !== null && <span className="font-sans text-eyebrow-xs text-terracotta">{categoryLabel}</span>
+          (categoryLabel !== null || ratingLabel !== null) && (
+            <span className="inline-flex flex-wrap items-center gap-x-1.5 font-sans text-eyebrow-xs text-terracotta">
+              {categoryLabel}
+              {categoryLabel !== null && ratingLabel !== null && <span aria-hidden>·</span>}
+              {ratingLabel !== null && (
+                <span className="inline-flex items-center gap-1">
+                  <Icon name="star" size={11} className="flex-none" />
+                  {ratingLabel}
+                </span>
+              )}
+            </span>
+          )
         )}
         <h1 className="font-serif text-h1-sm text-ink">{name}</h1>
         {content !== null && (

@@ -6,7 +6,7 @@ import { Text } from 'react-native';
 import { resetCart, useCart } from '@/screens/customer-kit/cart-store';
 import { catalogProduct } from '@/screens/catalog/catalog-fixture';
 import { ProductDetailScreen } from './product-detail-screen';
-import { productDetail, productVariant } from './product-fixture';
+import { productDetail, productVariant, publishedReview } from './product-fixture';
 import { rememberProductPreview } from './product-preview';
 
 /*
@@ -389,5 +389,32 @@ describe('kartla açılan ürün sayfası', () => {
     deliver(ok(productDetail({ variants: [productVariant(1, size), productVariant(2)] })));
     await waitFor(() => expect(screen.getByTestId('product-add')).toBeOnTheScreen());
     expect(screen.getByTestId('product-content')).toHaveTextContent('Kutuda 5 adet · toplam 350 g');
+  });
+});
+
+describe('ürün detayı — değerlendirmeler', () => {
+  // Uç yorum taşıdığı hâlde bölüm sabit "henüz yorum yok" çizseydi var olan yorumlar müşteriye hiç görünmezdi.
+  it('yorum varken seçki, tümünün bağlantısı ve başlıktaki puan çizilir; boş cümle yazılmaz', async () => {
+    const reviews = {
+      summary: { average: 4.4, totalCount: 5, commentCount: 5, ratingBreakdown: [0, 0, 1, 1, 3] as [number, number, number, number, number] },
+      items: [publishedReview(0), publishedReview(1, { rating: null, vote: 'like' }), publishedReview(2)],
+    };
+    await renderProduct(productDetail({ reviews }));
+
+    expect(screen.getByTestId('product-rating')).toHaveTextContent('4,4 (5 DEĞERLENDİRME)');
+    expect(screen.getByTestId('product-review-0')).toHaveTextContent(publishedReview(0).comment!, { exact: false });
+    expect(screen.getByTestId('product-review-1-liked')).toHaveTextContent('Beğendi');
+    expect(screen.queryByTestId('product-reviews-empty')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('product-reviews-all'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/reviews/[slug]', params: { slug: 'el-acmasi-kol-boregi' } });
+  });
+
+  it('yorum yokken boş cümle çizilir, başlıkta puan ve tümü bağlantısı olmaz', async () => {
+    await renderProduct();
+
+    expect(screen.getByTestId('product-reviews-empty')).toBeOnTheScreen();
+    expect(screen.queryByTestId('product-rating')).toBeNull();
+    expect(screen.queryByTestId('product-reviews-all')).toBeNull();
   });
 });

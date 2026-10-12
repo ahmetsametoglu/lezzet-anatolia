@@ -232,8 +232,12 @@ export {
 export { completeFeedbackInvite, openFeedbackInvite, readOrderFeedbackInvite } from './feedback/invite';
 export type { OrderFeedbackInvite } from './feedback/invite';
 export type { FeedbackCard, FeedbackCompletion, FeedbackInviteView } from './feedback/invite';
-export { reviewFeedbackInvite, voteOnFeedbackInvite } from './feedback/write';
+export { reviewCommentTooShort, reviewFeedbackInvite, voteOnFeedbackInvite } from './feedback/write';
 export type { FeedbackWriteOutcome } from './feedback/write';
+
+// ── Ürün yorumları: okuyucunun dilinde, yazar adı kısaltılmış; web ve mobil uç aynı okumayı çağırır ──
+export { getProductScore, getProductScores, listPublishedReviews, reviewSummaryOf } from './feedback/reviews';
+
 // `POINTS_DEFAULTS`: ayar satırı yokken geçerli puanlar tek yerde, yoksa ekran ile motor ayrışırdı.
 export { POINTS_DEFAULTS, awardFeedbackPoints, awardPoints, feedbackCompletionPoints, getPointsBalance } from './feedback/points';
 export { scanTrust } from './customer/trust';

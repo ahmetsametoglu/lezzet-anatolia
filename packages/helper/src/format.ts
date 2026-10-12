@@ -22,6 +22,17 @@ export function formatPrice(cents: number, locale: Locale): string {
 export const UNKNOWN_AMOUNT = '—';
 
 /**
+ * Ondalıklı sayı; ayraç dile göre değişir (tr/fr/de: virgül), çünkü `String(value)` besin beyanı gibi yasal bir tabloya okuyanın
+ * alışık olmadığı "0.3"ü basardı. Basamak sayısını çağıran verir (INCO'nun yuvarlama kuralı, puanın tek ondalığı).
+ */
+export function formatDecimal(value: number, locale: Locale, fractionDigits: number): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
+/**
  * Net miktar ("850 g" · "1,25 kg" · "500 ml" · "1,5 L"): 1000 ve üstü üst birime çıkar ve kesir kısaltılmaz, çünkü net miktar
  * ambalajda yazan değerdir; 1250 g'ı "1,3 kg" yazmak 50 g fazla söyler.
  */

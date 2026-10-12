@@ -2,84 +2,65 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import productMessages from '@lezzet/i18n/customer/product';
+import type { PublishedReview } from '@lezzet/types';
 import { Icon } from '@/components/customer/ui/icons';
-import type { PublishedReview } from '@/lib/feedback/product-feedback';
-import { formatRelativeTime } from '@/lib/storefront/format';
 
 /**
- * Telefon yorum kartı — referans `design/01-musteri/Musteri Mobil.dc.html`'in "Değerlendirmeler"
- * bloğu: kum zemin, çerçevesiz, iki satır (künye + metin).
- *
- * Masaüstünün `ReviewCard`ından AYRI bir dosya: müşteri yüzeyinde iki tasarım ayrıldı ve ortak
- * komponent kullanılmıyor; birini değiştirmek ötekini kımıldatmamalı.
+ * Telefon yorum kartı: kum zemin, çerçevesiz, iki satır (ad ve puan, altında metin); tarih yazılmaz (tasarım 18a). Masaüstünün
+ * kartından ayrı dosya, çünkü iki tasarım ayrıldı ve birini değiştirmek ötekini kımıldatmamalı.
  */
 interface PhoneReviewCardProps {
   review: PublishedReview;
   locale: Locale;
-  /** Çeviri bağlantısının iki metni; rozet telefonda çizilmez. */
-  translation: { showOriginal: string; showTranslation: string };
 }
 
-export function PhoneReviewCard({ review, locale, translation }: PhoneReviewCardProps) {
-  /**
-   * Müşteri orijinali görmek istedi mi — varsayılan ÇEVİRİ, çünkü okunabilirlik asıl amaç.
-   *
-   * Orijinal yine de bir tık uzakta: makine çevirisi bir yorumu yumuşatabilir ya da
-   * sertleştirebilir, müşteri gerektiğinde yazarın kendi cümlesine ulaşabilmeli.
-   */
+export function PhoneReviewCard({ review, locale }: PhoneReviewCardProps) {
+  const copy = productMessages[locale].reviews;
+  // Varsayılan çeviridir, çünkü okunabilirlik asıl amaç; makine çevirisi yorumu yumuşatabileceği için orijinal bir dokunuş uzakta.
   const [showingOriginal, setShowingOriginal] = useState(false);
-  // Bağlantı YALNIZ gerçekten çevrilmiş metinde: aynı dilde yazılmış bir yoruma çeviri önermek,
-  // olmayan bir işlemi bildirmek olurdu.
   const translated = review.commentTranslated && review.originalComment !== null;
   const shown = translated && showingOriginal ? review.originalComment : review.comment;
 
   return (
-    // Kum zemin, çerçevesiz (tasarım): kart sayfanın kendi yüzeyinden bir ton koyu durur, çerçeve
-    // eklemek onu komşusu olmayan bir kutuya çevirirdi.
     <article className="flex flex-col gap-2 rounded-card bg-sand-250 px-3.5 py-3">
-      <div className="flex items-baseline gap-2.5">
-        <span className="flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate font-sans text-body-sm font-bold text-ink">{review.authorName}</span>
-          {/* Tarih adın YANINDA, altında değil: referans kart iki satır ve üçüncü bir satır açmak
-              yorumun kendisini aşağı iterdi. */}
-          <span className="flex-none font-sans text-micro text-muted">· {formatRelativeTime(review.createdAt, locale, Date.now())}</span>
-        </span>
-        {review.rating !== null && (
+      <div className="flex items-center gap-2.5">
+        <span className="min-w-0 truncate font-sans text-body-sm font-bold text-ink">{review.authorName}</span>
+        {review.rating !== null ? (
           <span className="ml-auto flex-none">
             <PhoneStars value={review.rating} small />
           </span>
+        ) : (
+          // Yıldızsız yorum değerlendirme akışından gelir ve oyu taşır; beğeni yıldız gibi çizilseydi uydurma bir puan okunurdu.
+          review.vote === 'like' && (
+            <span className="ml-auto inline-flex flex-none items-center gap-1 font-sans text-note font-bold text-olive">
+              <Icon name="heart" size={13} />
+              {copy.liked}
+            </span>
+          )
         )}
       </div>
       {shown && (
-        // `lang` GERÇEK dili söyler: orijinal gösteriliyorsa metnin kendi dili, çeviri
-        // gösteriliyorsa okuyucunun dili. Ekran okuyucuları ve tarayıcı çevirisi buna bakar —
-        // yanlış `lang`, Boşnakça bir cümleyi Fransızca telaffuzla okutur.
+        // `lang` gösterilen metnin gerçek dilidir; ekran okuyucusu ve tarayıcı çevirisi buna bakar.
         <p lang={showingOriginal ? (review.language ?? undefined) : locale} className="font-sans text-body-sm leading-relaxed text-body">
           {shown}
         </p>
       )}
 
-      {/* Rozet YOK, yalnız bağlantı: "Orijinali göster" zaten okunanın çeviri olduğunu söylüyor ve
-          yanına "otomatik çevrildi" rozeti koymak aynı bilgiyi iki kez yazmaktı. */}
       {translated && (
         <button
           type="button"
           onClick={() => setShowingOriginal((v) => !v)}
           className="cursor-pointer self-start font-sans text-micro font-bold text-olive transition-colors hover:text-olive-dark"
         >
-          {showingOriginal ? translation.showTranslation : translation.showOriginal}
+          {showingOriginal ? copy.translation.showTranslation : copy.translation.showOriginal}
         </button>
       )}
     </article>
   );
 }
 
-/**
- * Yıldız satırı — dolu/boş, yarım yıldız yuvarlanmış hâliyle (skor onu zaten yuvarlıyor).
- *
- * Ölçüler referanstakinden bir tık iri: tasarım ★ karakterini yazı olarak basıyor ve o glif kendi
- * kare alanını doldurur, bizim ikon yolumuz 24'lük kutuda kenar boşluğu bırakır.
- */
+/** Yıldız satırı; değer tam yıldıza yuvarlanır, çünkü telefon kartı yarım yıldız çizmez. */
 export function PhoneStars({ value, small = false }: { value: number; small?: boolean }) {
   const full = Math.round(value);
   return (

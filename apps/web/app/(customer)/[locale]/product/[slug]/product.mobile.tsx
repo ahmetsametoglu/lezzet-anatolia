@@ -1,4 +1,4 @@
-import { cardBadgeOf, contentLineOf, formatPrice, productPriceLabel, showsNoShipChip, variantNameOf } from '@lezzet/helper';
+import { cardBadgeOf, contentLineOf, formatPrice, headRatingLabel, productPriceLabel, showsNoShipChip, variantNameOf } from '@lezzet/helper';
 import productMessages from '@lezzet/i18n/customer/product';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { ProductCircleCard } from '@/components/customer/phone-kit/product-circle-card';
@@ -10,11 +10,8 @@ import { PhonePurchaseBar } from './components/phone-purchase-bar';
 import { PhoneReviews } from './components/phone-reviews';
 import type { ProductViewProps } from './product-types';
 
-/**
- * Sıra native ürün detayınınki. Değerlendirmeler web'in gerçek yorumları; beyan `<details>` ile, içerik kapalıyken de
- * sayfada durur (INCO).
- */
-export function ProductMobile({ t, locale, product, selected, onSelect, reviews }: ProductViewProps) {
+/** Sıra native ürün detayınınki; beyan `<details>` ile, içerik kapalıyken de sayfada durur (INCO). */
+export function ProductMobile({ locale, product, selected, onSelect, reviews }: ProductViewProps) {
   const copy = productMessages[locale];
   const { place } = useDeliveryPlace();
   const placeMark = phoneHeroMarkOf(selected, place, locale);
@@ -23,6 +20,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
   // Galeri yoksa tek kapak: ilk öğe zaten kapaktır.
   const heroPhotos = product.gallery.length > 0 ? product.gallery : [product.image];
   const categoryUpper = product.category?.name.toLocaleUpperCase(locale) ?? null;
+  const ratingUpper = headRatingLabel(reviews.score, copy.reviews, locale)?.toLocaleUpperCase(locale) ?? null;
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
@@ -35,6 +33,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
         content={selected === null ? null : contentLineOf(selected, locale)}
         placeMark={placeMark}
         categoryLabel={categoryUpper}
+        ratingLabel={ratingUpper}
       >
         {showsNoShipChip(product.shippable, placeMark?.tone ?? null) && (
           <span className="self-start rounded-badge bg-olive-bg px-2 py-1 font-sans text-micro font-semibold text-olive-dark">{copy.noShip}</span>
@@ -82,7 +81,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
       />
 
       <div className="px-3 pt-2.5">
-        <PhoneReviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />
+        <PhoneReviews locale={locale} productId={product.id} productName={product.name} data={reviews} />
       </div>
 
       {similar.length > 0 && (

@@ -42,7 +42,25 @@
     },
     "reviews": {
       "title": "Değerlendirmeler",
-      "empty": "Henüz yorum yok — bu ürünü satın alırsanız teslimattan sonra ilk yorumu siz bırakabilirsiniz."
+      "empty": "Henüz yorum yok — bu ürünü satın alırsanız teslimattan sonra ilk yorumu siz bırakabilirsiniz.",
+      "all": "{count} yorumun tümü →",
+      "filters": {
+        "all": "Tümü ({count})",
+        "five": "5{star} ({count})",
+        "four": "4{star} ({count})",
+        "low": "3{star} ve altı ({count})"
+      },
+      "translation": {
+        "badge": "otomatik çevrildi",
+        "showOriginal": "Orijinali göster",
+        "showTranslation": "Çeviriyi göster"
+      },
+      "panelEmpty": "Bu üründe henüz yazılı yorum yok.",
+      "retry": "Yorumlar yüklenemedi — yeniden dene",
+      "loading": "Yükleniyor…",
+      "ratingCountOne": "1 değerlendirme",
+      "ratingCount": "{count} değerlendirme",
+      "liked": "Beğendi"
     },
     "related": "Bunları da sevebilirsiniz",
     "cta": {
@@ -125,7 +143,25 @@
     },
     "reviews": {
       "title": "Avis",
-      "empty": "Pas encore d'avis — si vous achetez ce produit, vous pourrez laisser le premier avis après la livraison."
+      "empty": "Pas encore d'avis — si vous achetez ce produit, vous pourrez laisser le premier avis après la livraison.",
+      "all": "Voir tous les avis ({count}) →",
+      "filters": {
+        "all": "Tous ({count})",
+        "five": "5{star} ({count})",
+        "four": "4{star} ({count})",
+        "low": "3{star} et moins ({count})"
+      },
+      "translation": {
+        "badge": "traduit automatiquement",
+        "showOriginal": "Voir l'original",
+        "showTranslation": "Voir la traduction"
+      },
+      "panelEmpty": "Aucun avis écrit pour ce produit pour l'instant.",
+      "retry": "Impossible de charger les avis — réessayer",
+      "loading": "Chargement…",
+      "ratingCountOne": "1 évaluation",
+      "ratingCount": "{count} évaluations",
+      "liked": "Recommande"
     },
     "related": "Vous aimerez aussi",
     "cta": {
@@ -208,7 +244,25 @@
     },
     "reviews": {
       "title": "Bewertungen",
-      "empty": "Noch keine Bewertungen – wenn Sie dieses Produkt kaufen, können Sie nach der Lieferung die erste Bewertung hinterlassen."
+      "empty": "Noch keine Bewertungen – wenn Sie dieses Produkt kaufen, können Sie nach der Lieferung die erste Bewertung hinterlassen.",
+      "all": "Alle Bewertungen ({count}) →",
+      "filters": {
+        "all": "Alle ({count})",
+        "five": "5{star} ({count})",
+        "four": "4{star} ({count})",
+        "low": "3{star} und weniger ({count})"
+      },
+      "translation": {
+        "badge": "automatisch übersetzt",
+        "showOriginal": "Original anzeigen",
+        "showTranslation": "Übersetzung anzeigen"
+      },
+      "panelEmpty": "Für dieses Produkt gibt es noch keine geschriebenen Bewertungen.",
+      "retry": "Bewertungen konnten nicht geladen werden – erneut versuchen",
+      "loading": "Wird geladen…",
+      "ratingCountOne": "1 Bewertung",
+      "ratingCount": "{count} Bewertungen",
+      "liked": "Empfiehlt"
     },
     "related": "Das könnte Ihnen auch schmecken",
     "cta": {

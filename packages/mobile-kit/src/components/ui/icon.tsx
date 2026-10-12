@@ -20,6 +20,8 @@ interface IconProps {
    * dışına çıkardı. Ölçü değil rol seçilir: bu ikon bir eylemin kendisi, satır içi bir işaret değil.
    */
   bold?: boolean;
+  /** İçi rengiyle dolu çizim; puan yıldızı ve beğeni kalbi dolu durur, çünkü boş yıldız "verilmemiş puan" diye okunur. */
+  filled?: boolean;
   testID?: string;
 }
 
@@ -32,7 +34,7 @@ function viewBoxRatio(viewBox: string): number {
   return width === undefined || height === undefined || height === 0 ? 1 : width / height;
 }
 
-export function Icon({ name, size, color, bold = false, testID }: IconProps) {
+export function Icon({ name, size, color, bold = false, filled = false, testID }: IconProps) {
   const { theme } = useUnistyles();
   const geometry: (typeof ICON_PATHS)[IconName] = ICON_PATHS[name];
   const viewBox = 'viewBox' in geometry && geometry.viewBox !== undefined ? geometry.viewBox : DEFAULT_VIEW_BOX;
@@ -50,7 +52,7 @@ export function Icon({ name, size, color, bold = false, testID }: IconProps) {
       width={size * viewBoxRatio(viewBox)}
       height={size}
       viewBox={viewBox}
-      fill="none"
+      fill={filled ? stroke : 'none'}
       stroke={stroke}
       strokeWidth={strokeWidth}
       /* Şablonun her ikonunda yuvarlak uç/köşe var — çizgi ikonlarının imzası budur ve

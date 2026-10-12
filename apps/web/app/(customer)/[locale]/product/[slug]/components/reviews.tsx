@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import productMessages from '@lezzet/i18n/customer/product';
 import { formatDecimal } from '@/lib/storefront/format';
 import { Icon } from '@/components/customer/ui/icons';
 import type { Messages, ReviewsData } from '../product-types';
@@ -10,9 +11,8 @@ import { AllReviews } from './all-reviews';
 import { ReviewCard, Stars } from './review-card';
 
 /**
- * Sayfa yalnız onaylı yorumu gösterir ve kural kapıda yaşar (`listProductReviews`, `getReviewEligibility`), ekran esnetemez. Puan
- * alanı yorum yokken gizlenir ("0,0" kötü ürün demektir), tüm yorumlar bağı ancak üçten fazlası varken çizilir ve "yorum yaz" yalnız
- * satın almış girişli müşteride görünür.
+ * Sayfa yalnız onaylı yorumu gösterir; kural kapıda yaşar (`listPublishedReviews`, `getReviewEligibility`), ekran esnetemez. Puan alanı
+ * yorum yokken gizlenir, çünkü "0,0" kötü ürün demektir.
  */
 interface ReviewsProps {
   t: Messages;
@@ -32,20 +32,17 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
   const [panelOpen, setPanelOpen] = useState(false);
 
   const { score, reviews, total, canReview, alreadyWrote } = data;
+  const copy = productMessages[locale].reviews;
 
   /**
-   * Panel GERİ TUŞUYLA kapanır (tasarımın kuralı) — bu yüzden açılış bir `history` kaydı bırakır.
-   *
-   * `router.push` KULLANILMIYOR çünkü Next'in yönlendiricisi sunucu bileşenini yeniden çalıştırır
-   * ve müşteri galeriyi ile seçtiği boyu kaybederdi; `history.pushState` yalnız adresi değiştirir.
+   * Panel geri tuşuyla kapanır, bu yüzden açılış bir `history` kaydı bırakır. `router.push` sunucu bileşenini yeniden çalıştırır ve
+   * müşteri galeriyi ve seçtiği boyu kaybederdi.
    */
   const openPanel = () => {
     window.history.pushState({ reviews: 1 }, '', `${window.location.pathname}?reviews=1`);
     setPanelOpen(true);
   };
-  // Kapatma da GERİ ile: `history.back()` bıraktığımız kaydı düşürür ve aşağıdaki `popstate`
-  // dinleyicisi paneli kapatır. Doğrudan `setPanelOpen(false)` deseydik adres çubuğunda
-  // `?reviews=1` asılı kalır, yenilemede panel kapalıyken açıkmış gibi görünürdü.
+  // Kapatma da geri ile: doğrudan `setPanelOpen(false)` adres çubuğunda `?reviews=1`i asılı bırakırdı.
   const closePanel = () => window.history.back();
 
   useEffect(() => {
@@ -87,7 +84,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
             onClick={openPanel}
             className="cursor-pointer font-sans text-control font-semibold text-olive underline transition-colors hover:text-olive-dark"
           >
-            {t.reviews.all.replace('{count}', String(total))}
+            {copy.all.replace('{count}', String(total))}
           </button>
         )}
       </div>
@@ -127,7 +124,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
             </div>
           </div>
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={t.reviews.translation} />
+            <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={copy.translation} />
           ))}
           {total > reviews.length && (
             <button
@@ -135,7 +132,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
               onClick={openPanel}
               className="cursor-pointer text-left font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
             >
-              {t.reviews.all.replace('{count}', String(total))}
+              {copy.all.replace('{count}', String(total))}
             </button>
           )}
           {!canReview && <span className="font-sans text-micro leading-relaxed text-muted">{t.reviews.onlyBuyers}</span>}
@@ -145,7 +142,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
            yüksekliğini en uzun kart belirliyor — kısa yorumların altında boşluk kalırdı. */
         <div className="columns-3 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={t.reviews.translation} />
+            <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={copy.translation} />
           ))}
         </div>
       )}
@@ -165,6 +162,3 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
     </section>
   );
 }
-
-// `Stars` ve `initialOf` buradan `review-card.tsx`'e taşındı: panel de aynı kartı ve aynı yıldız
-// satırını çiziyor, iki kopya aynı yorumu iki ekranda farklı gösterirdi (`CLAUDE.md §1`).

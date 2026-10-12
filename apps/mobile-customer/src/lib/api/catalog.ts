@@ -1,5 +1,14 @@
 import type { z } from 'zod';
-import { CatalogCategoryListSchema, CatalogPageSchema, CatalogProductDetailSchema, type CatalogSort, type Country } from '@lezzet/types';
+import {
+  CatalogCategoryListSchema,
+  CatalogPageSchema,
+  CatalogProductDetailSchema,
+  ReviewPageSchema,
+  type CatalogSort,
+  type Country,
+  type ReviewPage,
+  type ReviewRatingFilter,
+} from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
@@ -65,6 +74,18 @@ export function fetchProductDetail(
       ...(pickupWarehouseId ? { pickupWarehouseId } : {}),
     })}`,
     CatalogProductDetailSchema,
+  );
+}
+
+/** Ürünün tüm yorumları; imleç opaktır ve aynen geri verilir, yorumlar herkese açık olduğu için istek kimliksizdir. */
+export function fetchProductReviews(
+  slug: string,
+  locale: Locale,
+  options: { cursor?: string; rating?: ReviewRatingFilter } = {},
+): Promise<ApiResult<ReviewPage>> {
+  return apiFetch(
+    `/api/v1/products/${encodeURIComponent(slug)}/reviews${queryOf({ locale, cursor: options.cursor, rating: options.rating })}`,
+    ReviewPageSchema,
   );
 }
 

@@ -1,5 +1,5 @@
 import { CROP_CENTER } from '@lezzet/types';
-import type { CatalogProductDetail, CatalogVariant } from '@lezzet/types';
+import type { CatalogProductDetail, CatalogVariant, PublishedReview } from '@lezzet/types';
 
 import { catalogProduct } from '@/screens/catalog/catalog-fixture';
 
@@ -79,6 +79,25 @@ export function productDetail(overrides: Partial<CatalogProductDetail> = {}): Ca
       { slug: 'ispanakli-kol-boregi', label: 'Ispanaklı', image: { url: null, crop: CROP_CENTER, frames: null }, fromPriceCents: 950, isCurrent: false },
     ],
     similar: [catalogProduct(21, { slug: 'su-boregi', name: 'Su Böreği' }), catalogProduct(22, { slug: 'sigara-boregi', name: 'Sigara Böreği' })],
+    // Yorumsuz ürün; yorum testleri kendi seçkisini geçer.
+    reviews: { summary: { average: null, totalCount: 0, commentCount: 0, ratingBreakdown: [0, 0, 0, 0, 0] }, items: [] },
+    ...overrides,
+  };
+}
+
+/** Yayınlanmış yorum; varsayılanı beş yıldızlı ve çevrilmemiş. */
+export function publishedReview(index: number, overrides: Partial<PublishedReview> = {}): PublishedReview {
+  const comment = `Yorum ${index + 1}: taze geldi, kutusu özenliydi.`;
+  return {
+    id: uuid(1300 + index),
+    authorName: `Yazar ${index + 1}.`,
+    rating: 5,
+    vote: null,
+    comment,
+    commentTranslated: false,
+    language: 'tr',
+    originalComment: comment,
+    createdAt: '2026-10-01T10:00:00Z',
     ...overrides,
   };
 }

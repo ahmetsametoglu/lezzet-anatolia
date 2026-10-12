@@ -11,9 +11,9 @@ import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
-import { availabilityOf, findActiveProduct, getProductDetail } from '@lezzet/application';
+import { availabilityOf, findActiveProduct, getProductDetail, getProductScore, listPublishedReviews } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
-import { getProductScore, getReviewEligibility, listProductReviews } from '@/lib/feedback/product-feedback';
+import { getReviewEligibility } from '@/lib/feedback/product-feedback';
 import { currentCustomerId } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordEvent } from '@/lib/analytics/record';
@@ -95,9 +95,9 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     (listed) =>
       listed &&
       Promise.all([
-        getProductScore(listed.id),
+        getProductScore(serviceDb(), listed.id),
         // Dil zorunlu: yorumlar okuyucunun dilinde gösterilir, orijinal korunur ve çeviri yanına konur.
-        listProductReviews(listed.id, locale as PreferredLanguage, undefined, REVIEW_PAGE_SIZE),
+        listPublishedReviews(serviceDb(), { productId: listed.id, viewLanguage: locale as PreferredLanguage, limit: REVIEW_PAGE_SIZE }),
         currentCustomerId().then((customerId) => getReviewEligibility(customerId, listed.id)),
       ]),
   );

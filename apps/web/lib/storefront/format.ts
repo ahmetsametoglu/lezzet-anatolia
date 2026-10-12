@@ -1,26 +1,15 @@
-import { UNKNOWN_AMOUNT, formatNetQuantity, formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
+import { UNKNOWN_AMOUNT, formatDecimal, formatNetQuantity, formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
 import { INTL_LOCALE, type Locale } from '@lezzet/i18n';
 
 /**
  * Vitrin biçimleri — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur; ayrı
  * durması aynı değerin masaüstü ve mobil web dosyasında iki kez biçimlendirilmesini önler.
  *
- * `formatPrice`, `formatNetQuantity`, `formatShortDate`, `formatTime` ve `UNKNOWN_AMOUNT` gövdeleri `@lezzet/helper`da, çünkü web
- * dışında da tüketilirler (native uygulama, `@lezzet/application`); buradan yeniden dışa verilirler ki web çağıranları tek yolu kullansın.
+ * `formatPrice`, `formatDecimal`, `formatNetQuantity`, `formatShortDate`, `formatTime` ve `UNKNOWN_AMOUNT` gövdeleri `@lezzet/helper`da,
+ * çünkü web dışında da tüketilirler (native uygulama, `@lezzet/application`); buradan yeniden dışa verilirler ki web çağıranları tek
+ * yolu kullansın.
  */
-export { UNKNOWN_AMOUNT, formatNetQuantity, formatPrice, formatShortDate, formatTime };
-
-/**
- * Ondalıklı sayı — ayraç DİLE göre değişir (tr/fr/de: virgül), çünkü elle `String(value)` yazmak
- * besin beyanı gibi yasal bir tabloya okuyanın alışık olmadığı bir gösterim basar ("0.3").
- * Basamak sayısı çağıran yerde kararlaştırılır (INCO'nun yuvarlama kuralı).
- */
-export function formatDecimal(value: number, locale: Locale, fractionDigits: number): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(value);
-}
+export { UNKNOWN_AMOUNT, formatDecimal, formatNetQuantity, formatPrice, formatShortDate, formatTime };
 
 /**
  * Ağırlık ("4,2 kg" · "850 g") — kilodan küçükse gram kalır. Paket künyesi bunu kullanır: 4200 g
@@ -40,24 +29,6 @@ export function formatDeliveryDate(iso: string, locale: Locale): string {
 }
 
 /**
- * Geçen süre ("3 dk önce" · "2 hafta önce" · "geçen yıl") — bir olayın tazeliğini söyler, gününü değil, çünkü yorum satırında
- * okuyan "ne zamandı" değil "yeni mi" diye bakar.
- */
-export function formatRelativeTime(iso: string, locale: Locale, now: number): string {
-  const at = new Date(iso).getTime();
-  const rtf = new Intl.RelativeTimeFormat(INTL_LOCALE[locale], { numeric: 'auto', style: 'short' });
-  const minutes = Math.round((now - at) / 60_000);
-  if (minutes < 60) return rtf.format(-Math.max(1, minutes), 'minute');
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return rtf.format(-hours, 'hour');
-  const days = Math.round(hours / 24);
-  if (days < 7) return rtf.format(-days, 'day');
-  if (days < 30) return rtf.format(-Math.round(days / 7), 'week');
-  if (days < 365) return rtf.format(-Math.round(days / 30), 'month');
-  return rtf.format(-Math.round(days / 365), 'year');
-}
-
-/**
  * Karşılaştırma fiyatı ("12,90 €/kg" · "18,98 €/L") — raf fiyatının yanında bulunur (98/6/EC).
  * Birim ÇAĞIRANDAN gelir: katı kiloyla, sıvı litreyle kıyaslanır ve ikisini aynı harfle yazmak kıyası bozar.
  */
@@ -66,12 +37,8 @@ export function formatComparison(cents: number, unit: 'kg' | 'L', locale: Locale
 }
 
 /**
- * Sipariş GEÇMİŞİNİN tarihi — `formatShortDate`'ten farkı **yıl taşımasıdır**: burası bir arşiv ve
- * liste yıllara yayılır, yılsız "22 Temmuz" iki farklı siparişi ayırt edemez.
- *
- * `compact` mobil satır içindir (kart tek satıra "22 Tem 2026 · 3 kalem · 103,20 €" sığdırıyor);
- * tasarımın mobil karesi yılsız olsa da yıl yazılır, çünkü o kare yalnız bu ayın siparişleriyle
- * çizilmiş ve eski siparişte yılsız tarih yanlış bilgidir.
+ * Sipariş geçmişinin tarihi; `formatShortDate`ten farkı yıl taşımasıdır, çünkü liste yıllara yayılır ve yılsız tarih iki siparişi
+ * ayıramaz. `compact` mobil satırın kısa ay adıdır; tasarım karesi yılsız olsa da yıl yazılır, eski siparişte yılsız tarih yanlıştır.
  */
 export function formatOrderDate(iso: string, locale: Locale, compact = false): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {

@@ -1,219 +1,118 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import type { KeysetCursor } from '@lezzet/types';
+import { useEffect, useRef } from 'react';
+import { reviewFilterCount, type ProductScore } from '@lezzet/domain-core';
+import { formatDecimal, ratingCountLabel } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import productMessages from '@lezzet/i18n/customer/product';
-import type { PublishedReview } from '@/lib/feedback/product-feedback';
-import { SectionHeader } from '@/components/customer/phone-kit/section-header';
-import type { Messages } from '../product-types';
-import { loadMoreReviewsAction } from '../actions';
-import { PhoneReviewCard } from './phone-review-card';
+import { ReviewRatingFilterEnum, type ReviewRatingFilter } from '@lezzet/types';
+import { Chip } from '@/components/customer/phone-kit/chip';
+import { FunnelHeader } from '@/components/customer/ui/funnel-header';
 import { Icon } from '@/components/customer/ui/icons';
-
-/** Süzgeç etiketindeki `{star}` yer tutucusu yıldız ikonuna döner — sözlükte ★ karakteri taşınmaz. */
-function withStar(label: string) {
-  const [head, tail] = label.split('{star}');
-  if (tail === undefined) return label;
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {head}
-      <Icon name="star" size={11} />
-      {tail}
-    </span>
-  );
-}
-
-/**
- * **Telefonun tüm yorumlar sayfası** — üç yorumluk seçkinin arkasındaki tam liste; masaüstünün
- * modalından ayrı dosya (iki tasarım ayrıldı, ortak komponent yok).
- *
- * ── PANEL SAYFAYI TERK ETMEZ ─────────────────────────────────────────────────
- * Tam ekran açılır ama ayrı bir ROTA değil: ayrı rotadan dönüşte ürün sayfası baştan çizilir ve
- * müşteri galeriyi ile seçtiği boyu kaybederdi. Açık/kapalı hâli `history` üzerinden yürüyor
- * (`?reviews=1`), geri tuşu kaydı düşürür ve `popstate` paneli kapatır.
- *
- * ── LİSTE PANELDE ÇEKİLİR, SAYFADA DEĞİL ────────────────────────────────────
- * İlk on yorum panel AÇILINCA isteniyor; sayfaya gömmek, panelin hiç açılmadığı her ziyarette on
- * satırı boşuna okumak olurdu.
- *
- * ── HİSTOGRAM VE ÇİPLER: SAYILAR DAĞILIMDAN, SATIRLAR SORGUDAN ──────────────
- * Çubuklar ve çip sayıları `score.ratingBreakdown`'dan, yani ürünün TAMAMINDAN okunuyor;
- * sayfalanmış listeden sayılan bir dağılım yanlış olur ve yanlışlığı görünmezdi (çubuklar hep bir
- * şey gösterir). Süzgeç sunucuda uygulandığı için yıldızsız yorumlar süzgeçli çağrıda düşer —
- * "Tümü" sayısıyla çip toplamlarının farkı bir hata değil, iki ayrı kümedir.
- */
-/**
- * Süzgeç çipleri — tasarımın dört seçeneği; `range` doğrudan sorguya gider, `null` = tümü.
- *
- * "3★ ve altı" tek yıldız değil ARALIK: 2★ ile 1★ arasındaki ayrım müşteriye bir şey söylemez,
- * "kötü yorumları göster" söyler.
- */
-const FILTERS = [
-  { key: 'all', range: null },
-  { key: 'five', range: { min: 5, max: 5 } },
-  { key: 'four', range: { min: 4, max: 4 } },
-  { key: 'low', range: { max: 3 } },
-] as const;
-
-type FilterKey = (typeof FILTERS)[number]['key'];
+import { PhoneReviewCard, PhoneStars } from './phone-review-card';
+import { useReviewPages } from './use-review-pages.hook';
 
 interface PhoneAllReviewsProps {
-  t: Messages;
   locale: Locale;
   productId: string;
   productName: string;
-  /** Ürünün TAMAMININ dağılımı — çubuklar ve çip sayıları buradan, yüklenmiş sayfadan değil. */
-  breakdown: readonly [number, number, number, number, number];
-  /** Yazılı yorum sayısı (`commentCount`) — "Tümü" çipinin sayısı. */
+  /** Ürünün tamamının skoru; ortalama, sayı ve dağılım buradan okunur, yüklenmiş sayfadan değil. */
+  score: ProductScore;
+  /** Yazılı yorum sayısı; "Tümü" çipinin sayısı. */
   total: number;
-  onClose: () => void;
 }
 
-export function PhoneAllReviews({ t, locale, productId, productName, breakdown, total, onClose }: PhoneAllReviewsProps) {
-  const [reviews, setReviews] = useState<PublishedReview[]>([]);
-  const [cursor, setCursor] = useState<KeysetCursor | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  /** İlk sayfa geldi mi — "hiç yorum yok" boş durumu ancak ondan sonra söylenebilir. */
-  const [loaded, setLoaded] = useState(false);
-  const [filter, setFilter] = useState<FilterKey>('all');
+/**
+ * Tüm yorumlar sayfası (tasarım 17t): puan özeti, yıldız dağılımı, süzgeç çipleri ve aşağı kaydırdıkça yüklenen liste. Ürün sayfasını
+ * terk etmez, çünkü ayrı rotadan dönüşte sayfa baştan çizilir ve müşteri seçtiği boyu kaybederdi.
+ */
+export function PhoneAllReviews({ locale, productId, productName, score, total }: PhoneAllReviewsProps) {
+  const product = productMessages[locale];
+  const copy = product.reviews;
+  const { reviews, cursor, loading, failed, loaded, filter, setFilter, loadMore, retry } = useReviewPages(locale, productId);
+  const breakdown = score.ratingBreakdown;
+  const countOf = (key: ReviewRatingFilter | null) => (key === null ? total : reviewFilterCount(breakdown, key));
+  // Sayısı sıfır olan çip çizilmez: basılınca boş liste gösteren çip müşteriye kendi dokunuşunu sorgulatır.
+  const chips: (ReviewRatingFilter | null)[] = [null, ...ReviewRatingFilterEnum.options.filter((key) => countOf(key) > 0)];
+  // Çubuk oranı en çok oylanana göre: tasarımda en yüksek çubuk tam dolar.
+  const max = Math.max(...breakdown, 0);
 
-  /** Bir çipin sayısı — dağılım dizisi 0-indisli ve indis 0 = 1★ (arka ucun sözleşmesi). */
-  const countOf = (key: FilterKey): number => {
-    if (key === 'five') return breakdown[4];
-    if (key === 'four') return breakdown[3];
-    if (key === 'low') return breakdown[0] + breakdown[1] + breakdown[2];
-    return total;
-  };
-
-  const load = useCallback(
-    async (from: KeysetCursor | null, key: FilterKey) => {
-      setLoading(true);
-      setFailed(false);
-      const range = FILTERS.find((f) => f.key === key)?.range ?? null;
-      const result = await loadMoreReviewsAction({
-        locale,
-        productId,
-        ...(from ? { cursor: from } : {}),
-        ...(range ? { rating: range } : {}),
-      });
-      if (result.data) {
-        // İmleçsiz çağrı listeyi SIFIRLAR, imleçli EKLER. Çip değişimi imleçsizdir: yeni süzgeç
-        // yeni bir küme demektir, eskinin satırları altında kalsaydı liste iki soruyu karıştırırdı.
-        setReviews((prev) => (from ? [...prev, ...result.data!.reviews] : result.data!.reviews));
-        setCursor(result.data.nextCursor);
-      } else {
-        // Sessiz düşmüyoruz: liste yarım kalırsa müşteri "yorumlar bitti" sanar. Tekrar denenebilir
-        // bir hâl gösteriliyor, çünkü düşen şey bir okuma — kaybolan bir veri yok.
-        setFailed(true);
-      }
-      setLoading(false);
-      setLoaded(true);
-    },
-    [locale, productId],
-  );
-
+  // Liste sınırsız büyür; sonu görününce sonraki sayfa istenir.
+  const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    void load(null, filter);
-  }, [load, filter]);
+    const el = sentinel.current;
+    if (el === null || cursor === null) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) loadMore();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [cursor, loadMore]);
 
-  /**
-   * Başlık hesap alt ekranlarının deseni (`SectionHeader`): üstte terracotta ÜRÜN ADI, altında
-   * bölümün adı. Sayfa ayrı bir ekran gibi açılıyor ve ürün adını taşımasaydı hangi ürünün
-   * yorumlarına bakıldığı hiçbir yerde yazmazdı.
-   */
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-sand-50">
-      <header className="flex flex-none items-center gap-1.5 border-b border-sand-200 px-4.5 py-2.5">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t.reviews.close}
-          className="-ml-2 flex size-10 flex-none cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-sand-200"
-        >
-          <Icon name="arrowLeft" size={20} />
-        </button>
-        {/* Başlık ORTAK sözlükten — seçki bölümüyle aynı kelime; gerekçesi `phone-reviews`te. */}
-        <SectionHeader eyebrow={productName} title={productMessages[locale].reviews.title} />
-      </header>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-sand-50">
+      <FunnelHeader backLabel={product.back} fallback="/catalog" eyebrow={productName} title={copy.title} />
 
-      {/* `min-h-0`: flex çocuğu içeriğinden küçülmez — o olmadan liste taşar ve başlık kayar. */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4.5 py-4">
-        <div className="flex flex-col gap-3">
-          {/* Yıldız dağılımı — çubuklar ürünün TAMAMINDAN. Sıra 5★'dan 1★'a, tasarımın sırası. */}
-          <div className="flex flex-col gap-1.5">
-            {[5, 4, 3, 2, 1].map((star) => {
-              const count = breakdown[star - 1] ?? 0;
-              // Oran EN ÇOK OYLANANA göre, toplama göre değil: tasarımda en yüksek çubuk tam dolar.
-              // Hiç oy yoksa bölme yapılmaz.
-              const max = Math.max(...breakdown, 0);
-              return (
-                <div key={star} className="flex items-center gap-2.5">
-                  <span className="flex w-6 flex-none items-center gap-0.5 font-sans text-micro text-body">
-                    {star}
-                    <Icon name="star" size={10} className="text-star" />
-                  </span>
-                  <span className="block h-2 flex-1 overflow-hidden rounded-pill bg-sand-100">
-                    <span className="block h-2 rounded-pill bg-star" style={{ width: max > 0 ? `${(count / max) * 100}%` : '0%' }} />
-                  </span>
-                  <span className="w-6 flex-none text-right font-sans text-micro text-muted">{count}</span>
-                </div>
-              );
-            })}
+      <div className="flex flex-col gap-3 px-4 pt-3 pb-8">
+        {score.average !== null && (
+          <div className="flex items-center gap-4">
+            <span className="font-serif text-h1-md leading-none text-ink">{formatDecimal(score.average, locale, 1)}</span>
+            <div className="flex flex-col gap-1">
+              <PhoneStars value={score.average} />
+              <span className="font-sans text-note text-muted">{ratingCountLabel(score.totalCount, copy)}</span>
+            </div>
           </div>
+        )}
 
-          {/* Süzgeç çipleri — sayısı SIFIR olan çip çizilmez: basılınca boş liste gösteren bir çip,
-              müşteriye kendi dokunuşunu sorgulatır. "Tümü" her zaman durur. */}
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.filter((f) => f.key === 'all' || countOf(f.key) > 0).map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setFilter(f.key)}
-                className={[
-                  'cursor-pointer rounded-pill border px-3.5 py-1.5 font-sans text-note font-semibold transition-colors',
-                  filter === f.key ? 'border-olive bg-olive text-cream' : 'border-sand-300 bg-card text-ink hover:border-olive',
-                ].join(' ')}
-              >
-                {withStar(t.reviews.filters[f.key].replace('{count}', String(countOf(f.key))))}
-              </button>
-            ))}
-          </div>
-
-          {reviews.map((review) => (
-            <PhoneReviewCard key={review.id} review={review} locale={locale} translation={t.reviews.translation} />
-          ))}
-
-          {/* Boş durum yalnız İLK SAYFA geldikten sonra: yükleme sırasında "yorum yok" demek, bir
-              saniye sonra kendini yalanlayan bir cümle olurdu. */}
-          {loaded && !failed && reviews.length === 0 && (
-            <p className="py-6 text-center font-sans text-body-sm text-muted">{t.reviews.panelEmpty}</p>
-          )}
-
-          {failed && (
-            <button
-              type="button"
-              onClick={() => void load(cursor, filter)}
-              className="cursor-pointer rounded-soft border border-sand-300 py-2.5 text-center font-sans text-body-sm font-bold text-olive transition-colors hover:bg-cream"
-            >
-              {t.reviews.retry}
-            </button>
-          )}
-
-          {/* "Daha fazla yükle" YALNIZ devam eden sayfa varken. Tükenmiş listede duran bir düğme,
-              basılınca hiçbir şey olmayan bir kontroldür. */}
-          {cursor && !failed && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => void load(cursor, filter)}
-              className="cursor-pointer rounded-pill border-[1.5px] border-olive px-4.5 py-2.5 text-center font-sans text-body-sm font-bold text-olive transition-colors hover:bg-olive-bg disabled:opacity-60"
-            >
-              {loading ? t.reviews.loading : t.reviews.loadMore.replace('{shown}', String(reviews.length))}
-            </button>
-          )}
+        <div className="flex flex-col gap-1.5">
+          {[5, 4, 3, 2, 1].map((star) => {
+            const count = breakdown[star - 1] ?? 0;
+            return (
+              <div key={star} className="flex items-center gap-2.5">
+                <span className="flex w-6 flex-none items-center gap-0.5 font-sans text-micro text-body">
+                  {star}
+                  <Icon name="star" size={10} className="text-star" />
+                </span>
+                <span className="block h-2 flex-1 overflow-hidden rounded-pill bg-sand-200">
+                  <span className="block h-2 rounded-pill bg-star" style={{ width: max > 0 ? `${(count / max) * 100}%` : '0%' }} />
+                </span>
+                <span className="w-6 flex-none text-right font-sans text-micro text-muted">{count}</span>
+              </div>
+            );
+          })}
         </div>
+
+        <div className="flex flex-wrap gap-2 py-1">
+          {chips.map((key) => (
+            <Chip
+              key={key ?? 'all'}
+              // Native çiple aynı etiket: kit çipi yalnız metin çizer, yıldız karakterle durur.
+              label={copy.filters[key ?? 'all'].replace('{count}', String(countOf(key))).replace('{star}', '★')}
+              selected={filter === key}
+              onClick={() => setFilter(key)}
+            />
+          ))}
+        </div>
+
+        {reviews.map((review) => (
+          <PhoneReviewCard key={review.id} review={review} locale={locale} />
+        ))}
+
+        {/* Boş durum yalnız ilk sayfa geldikten sonra: yükleme sırasında "yorum yok" demek bir saniye sonra kendini yalanlardı. */}
+        {loaded && !failed && reviews.length === 0 && <p className="py-6 text-center font-sans text-body-sm text-muted">{copy.panelEmpty}</p>}
+
+        {failed && (
+          <button
+            type="button"
+            onClick={retry}
+            className="cursor-pointer rounded-soft border border-sand-300 py-2.5 text-center font-sans text-body-sm font-bold text-olive transition-colors hover:bg-cream"
+          >
+            {copy.retry}
+          </button>
+        )}
+
+        {loading && loaded && <p className="py-2 text-center font-sans text-note text-muted">{copy.loading}</p>}
+        <div ref={sentinel} aria-hidden className="h-px" />
       </div>
     </div>
   );

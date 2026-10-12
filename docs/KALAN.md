@@ -376,5 +376,3 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.52) [hedef: müşteri] Web telefon görünümünde titreşim cihazda hissedilerek doğrulanmadı: iPhone'da kitin eylem düğmeleri
   gizli anahtarı saran şeffaf etiketle tıklar (`phone-kit/haptic-target`), kartlarda tık yok çünkü `Link` tıklamayı iptal ediyor.
   Android'de süreler native'inkiyle aynı (dokunuş 50 ms); Chrome sessiz modda hiç titreşmez.
-- [ ] (K.68) [hedef: müşteri] Telefonda ürün puanlama ve satın alma sonrası yorum bölümleri native'in tasarım desenine uymuyor
-  (kullanıcı gözlemi) — ürün sayfasının yorum bölümü, yorum yazma ve değerlendirme akışı ekran ekran, görselle incelenecek.

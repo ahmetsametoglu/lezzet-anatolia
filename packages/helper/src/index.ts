@@ -17,6 +17,7 @@ export * from './place-change';
 export * from './initials';
 export * from './points-history';
 export * from './price-label';
+export * from './review';
 export * from './vat-summary';
 export * from './recipe';
 export * from './rich-text';

@@ -2,17 +2,14 @@
 import {
   cardBadgeOf,
   contentLineOf,
-  formatNetQuantity,
   formatPrice,
-  fromPriceLabel,
+  headRatingLabel,
   openingVariantOf,
   productPriceLabel,
   showsNoShipChip,
 } from '@lezzet/helper';
-import type { TextSegment } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
-import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/types';
-import type { CatalogSelling, CatalogVariant, Nutrition, ProductAllergen } from '@lezzet/types';
+import type { CatalogSelling, CatalogVariant } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
@@ -20,7 +17,6 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { BlurView } from 'expo-blur';
-import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
@@ -28,7 +24,6 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { submitStockNotice } from '@/lib/api/stock-notices';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import placeMessages from '@lezzet/i18n/customer/place';
 import type { PlaceResolution } from '@/lib/api/places';
 import { stockMarkOf } from '@/lib/places/place-view';
@@ -41,10 +36,12 @@ import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/cust
 import { NoticeSheet, type NoticeSheetCopy } from '@/screens/customer-kit/notice-sheet';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
-import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import messages from '@lezzet/i18n/customer/product';
 import { fill, type Messages } from './product-copy';
+import { ProductDeclaration } from './product-declaration';
 import { ProductHeadLines, ProductHero } from './product-head';
+import { ProductFamilyRail, ProductVariantChips } from './product-options';
+import { ProductReviews } from './product-reviews';
 import { openProductFromCard, productPreviewOf } from './product-preview';
 import { ProductBarSkeleton, ProductBodySkeleton, ProductSkeleton } from './product-skeleton';
 import { useProduct } from './use-product.hook';
@@ -61,52 +58,6 @@ import { useProduct } from './use-product.hook';
 function heroMarkOf(selling: CatalogSelling | undefined, place: PlaceResolution | null, locale: Locale) {
   const mark = selling === undefined || selling.priceCents === null ? null : stockMarkOf(selling.stockStatus, place, locale);
   return mark === null || mark.tone === 'info' ? null : mark;
-}
-
-/** Vurgulu/vurgusuz parçaları tek `Text` altında dizer (kalın parça `strong` kademesiyle). */
-function SegmentText({ segments, style, strongStyle }: { segments: TextSegment[]; style: object; strongStyle: object }) {
-  return (
-    <Text style={style}>
-      {segments.map((segment, index) => (
-        <Text key={index} style={segment.strong ? strongStyle : undefined}>
-          {segment.text}
-        </Text>
-      ))}
-    </Text>
-  );
-}
-
-/** Alerjen kodları görünen ada — sözlük şemanın yanında (`ALLERGEN_LABELS`), liste virgülle kurulur. */
-function allergenList(codes: ProductAllergen[], locale: 'tr' | 'fr' | 'de'): string {
-  return codes.map((code) => resolveLocalizedText(ALLERGEN_LABELS[code], locale)).join(', ');
-}
-
-/**
- * Beyan tablosunu tek satıra indirger: dolu kalemler INCO sırasıyla "Ad değer" çifti olur. Enerji iki birimi tek kalemde taşır,
- * ayrı satırlar aynı ölçümü iki kalem gibi okuturdu.
- */
-function nutritionLine(nutrition: Nutrition, t: Messages): string {
-  const parts: string[] = [];
-  if (nutrition.energyKj !== null || nutrition.energyKcal !== null) {
-    const kj = nutrition.energyKj === null ? null : `${nutrition.energyKj} kJ`;
-    const kcal = nutrition.energyKcal === null ? null : `${nutrition.energyKcal} kcal`;
-    parts.push(`${t.nutrition.energy} ${[kj, kcal].filter((v) => v !== null).join(' / ')}`);
-  }
-  const grams: Partial<Record<keyof Nutrition, string>> = {
-    fatG: t.nutrition.fat,
-    saturatedFatG: t.nutrition.saturatedFat,
-    carbohydrateG: t.nutrition.carbohydrate,
-    sugarsG: t.nutrition.sugars,
-    proteinG: t.nutrition.protein,
-    saltG: t.nutrition.salt,
-  };
-  for (const key of NUTRITION_KEYS) {
-    const label = grams[key];
-    const value = nutrition[key];
-    if (label === undefined || value === null) continue;
-    parts.push(`${label} ${value} g`);
-  }
-  return parts.join(' · ');
 }
 
 interface ProductDetailScreenProps {
@@ -143,18 +94,14 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
   const cart = useCart();
   const fabCount = cartCount(cart);
 
-  /*
-    Asgari sepet hatırlatması eklemeden sonra, sunucunun cevabıyla gelir: ekleme anındaki kalem sayısı değişince konuşur, çünkü
-    sayının değişmesi sunucunun bu eklemeyi görmesidir. Hook koşulsuz olmalı, bu yüzden erken `return`lerden önce; eşik
-    tanımsızsa (`0`) susar.
-  */
+  /* Asgari sepet hatırlatması sunucunun cevabıyla gelir: ekleme anındaki kalem sayısı değişince konuşur, çünkü sayının değişmesi
+     sunucunun bu eklemeyi görmesidir. Hook erken `return`lerden önce durur; eşik tanımsızsa (`0`) susar. */
   useEffect(() => {
     if (awaitingMinimumHint === null || cart.view.itemCount === awaitingMinimumHint) return;
     setAwaitingMinimumHint(null);
     if (cart.view.minBasketOk || cart.view.minBasketCents === 0) return;
     toastInfo(t.minimumHint.replace('{missing}', formatPrice(cart.view.missingForMinBasketCents, locale)));
   }, [awaitingMinimumHint, cart.view, locale, t.minimumHint]);
-  const [accordion, setAccordion] = useState({ ingredients: false, nutrition: false, storage: false });
 
   if (status === 'loading') {
     /* Kart bilgisi yoksa (bağlantıyla açılış) sayfanın yerini iskelet tutar; varsa üst bölüm onunla, veri gelince kullanılacak
@@ -181,6 +128,7 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
           <View style={styles.head}>
             <ProductHeadLines
               categoryName={preview.categoryId === null ? null : undefined}
+              ratingLabel={null}
               name={preview.name}
               selling={preview}
               content={preview.sizes === undefined ? undefined : opening === undefined ? null : contentLineOf(opening, locale)}
@@ -331,6 +279,7 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
         <View style={styles.head}>
           <ProductHeadLines
             categoryName={detail.category?.name ?? null}
+            ratingLabel={headRatingLabel(detail.reviews.summary, t.reviews, locale)}
             name={detail.name}
             selling={variant}
             content={variant === undefined ? null : contentLineOf(variant, locale)}
@@ -344,148 +293,35 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
           ) : null}
 
           {detail.family.length === 0 || detail.category === null ? null : (
-            <View style={styles.familyBlock}>
-              <Text style={styles.familyEyebrow}>{fill(t.family.browse, 'name', upperIn(detail.category.name, locale))}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.familyRailPull}
-                contentContainerStyle={styles.familyRail}
-              >
-                {detail.family.map((member) => (
-                  <PressableSurface
-                    key={member.slug}
-                    onPress={() => {
-                      /* Aile çipi yığına sayfa eklemez: rotanın parametresi değişir, geri tuşu geldiği yeri hatırlar. */
-                      if (!member.isCurrent) router.setParams({ slug: member.slug });
-                    }}
-                    feedback="scale-small"
-                    compact
-                    style={styles.familyChip}
-                    accessibilityLabel={member.label}
-                    testID={`product-family-${member.slug}`}
-                  >
-                    <CirclePhoto
-                      size={customerMetrics.productFamilyPhoto}
-                      initial={member.label.slice(0, 1)}
-                      initialFontSize={theme.text.note}
-                      image={member.image}
-                    />
-                    <View>
-                      <Text style={styles.familyName}>{member.label}</Text>
-                      <Text style={styles.familyPrice}>
-                        {/* Aile kartındaki sayı başka ürünün en ucuz boyu, bu yüzden "'dan" ekiyle yazılır; fiyat yoksa satır
-                            boş kalır. */}
-                        {member.isCurrent ? t.family.current : (fromPriceLabel(member.fromPriceCents, locale) ?? '')}
-                      </Text>
-                    </View>
-                  </PressableSurface>
-                ))}
-              </ScrollView>
-            </View>
+            <ProductFamilyRail family={detail.family} categoryName={detail.category.name} t={t} locale={locale} />
           )}
 
           {variants.length <= 1 ? null : (
-            <View style={styles.variantRow}>
-              {variants.map((option) => {
-                const selected = option.id === variant?.id;
-                return (
-                  <PressableSurface
-                    key={option.id}
-                    onPress={() => {
-                      setVariantId(option.id);
-                      setQuantity(1);
-                    }}
-                    feedback="scale-small"
-                    compact
-                    selected={selected}
-                    style={[styles.variantChip, selected ? styles.variantChipSelected : null]}
-                    accessibilityLabel={option.label}
-                    testID={`product-variant-${option.id}`}
-                  >
-                    <Text style={styles.variantLabel}>{option.label}</Text>
-                    <Text style={styles.variantPrice}>{option.priceCents === null ? '—' : formatPrice(option.priceCents, locale)}</Text>
-                  </PressableSurface>
-                );
-              })}
-            </View>
+            <ProductVariantChips
+              variants={variants}
+              selectedId={variant?.id}
+              onSelect={(id) => {
+                setVariantId(id);
+                setQuantity(1);
+              }}
+              locale={locale}
+            />
           )}
 
           {detail.description === null ? null : <Text style={styles.description}>{detail.description}</Text>}
         </View>
 
-        {/* ── Akordeonlar: üst ve alt düz mürekkep, aralar kesik kum ── */}
-        <View style={styles.accordion}>
-          <PressableSurface
-            onPress={() => setAccordion((current) => ({ ...current, ingredients: !current.ingredients }))}
-            feedback="opacity"
-            style={styles.accordionHead}
-            accessibilityLabel={t.accordion.ingredients}
-            testID="product-acc-ingredients"
-          >
-            <Text style={styles.accordionTitle}>{t.accordion.ingredients}</Text>
-            <Text style={styles.accordionCaret}>▾</Text>
-          </PressableSurface>
-          {accordion.ingredients ? (
-            <View style={styles.accordionBody}>
-              {declaration.ingredients === null ? null : (
-                <SegmentText segments={declaration.ingredients} style={styles.accordionText} strongStyle={styles.accordionStrong} />
-              )}
-              {declaration.allergens.length === 0 ? null : (
-                <Text style={styles.allergenLine} testID="product-allergens">
-                  {fill(t.accordion.allergens, 'list', allergenList(declaration.allergens, locale))}
-                </Text>
-              )}
-              {declaration.traces.length === 0 ? null : (
-                <Text style={styles.accordionText}>{fill(t.accordion.traces, 'list', allergenList(declaration.traces, locale))}</Text>
-              )}
-            </View>
-          ) : null}
+        <ProductDeclaration
+          declaration={declaration}
+          netQuantity={variant?.netQuantity ?? null}
+          netUnit={variant?.netUnit ?? null}
+          t={t}
+          locale={locale}
+        />
 
-          <PressableSurface
-            onPress={() => setAccordion((current) => ({ ...current, nutrition: !current.nutrition }))}
-            feedback="opacity"
-            style={[styles.accordionHead, styles.accordionDivided]}
-            accessibilityLabel={t.accordion.nutrition}
-            testID="product-acc-nutrition"
-          >
-            <Text style={styles.accordionTitle}>{t.accordion.nutrition}</Text>
-            <Text style={styles.accordionCaret}>▾</Text>
-          </PressableSurface>
-          {accordion.nutrition ? (
-            <View style={styles.accordionBody}>
-              {declaration.nutrition === null ? null : (
-                <Text style={styles.accordionText}>{fill(t.accordion.per100, 'rows', nutritionLine(declaration.nutrition, t))}</Text>
-              )}
-              {variant?.netQuantity == null || variant.netUnit === null ? null : (
-                <Text style={styles.netWeight}>
-                  {fill(t.accordion.netQuantity, 'quantity', formatNetQuantity(variant.netQuantity, variant.netUnit, locale))}
-                </Text>
-              )}
-            </View>
-          ) : null}
-
-          <PressableSurface
-            onPress={() => setAccordion((current) => ({ ...current, storage: !current.storage }))}
-            feedback="opacity"
-            style={[styles.accordionHead, styles.accordionDivided]}
-            accessibilityLabel={t.accordion.storage}
-            testID="product-acc-storage"
-          >
-            <Text style={styles.accordionTitle}>{t.accordion.storage}</Text>
-            <Text style={styles.accordionCaret}>▾</Text>
-          </PressableSurface>
-          {accordion.storage && declaration.storage !== null ? (
-            <View style={styles.accordionBody}>
-              <SegmentText segments={declaration.storage} style={styles.accordionText} strongStyle={styles.accordionStrong} />
-            </View>
-          ) : null}
-        </View>
-
-        {/* ── Değerlendirmeler: sözleşme yorum taşımıyor, bu yüzden "yorum yok" hâli çizilir ── */}
-        <View style={styles.reviews}>
+        <View style={styles.reviews} testID="product-reviews">
           <Text style={styles.sectionTitle}>{t.reviews.title}</Text>
-          <Text style={styles.reviewsEmpty}>{t.reviews.empty}</Text>
+          <ProductReviews slug={detail.slug} preview={detail.reviews} t={t} />
         </View>
 
         {similar.length === 0 ? null : (
@@ -645,131 +481,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space.md,
   },
 
-  familyBlock: {
-    gap: theme.space.sm,
-  },
-  familyEyebrow: {
-    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
-    fontSize: theme.text.eyebrow,
-    letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
-    color: theme.colors.terracotta,
-  },
-  /* Ray kenardan kenara kayar: negatif kenar payı ScrollView'a, iç dolgu içerik kabına; ikisi birden içerik kabına konursa ilk
-     ve son kart sayfa boşluğunun altında kalır. */
-  familyRailPull: {
-    marginHorizontal: -theme.space['2xl'],
-  },
-  familyRail: {
-    gap: theme.space.lg,
-    paddingHorizontal: theme.space['2xl'],
-  },
-  /* Sol dolgu bilerek dar: fotoğraf o kenara yaslı. */
-  familyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.lg,
-    paddingVertical: theme.space.md,
-    paddingLeft: theme.space.md,
-    paddingRight: theme.space['2xl'],
-    borderRadius: theme.radius.control,
-    borderWidth: theme.border.base,
-    borderColor: theme.colors['sand-400'],
-  },
-  familyName: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.ink,
-  },
-  familyPrice: {
-    fontFamily: theme.font.body[600],
-    fontSize: theme.text.micro,
-    color: theme.colors['olive-dark'],
-  },
-
-  variantRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.space.md,
-  },
-  variantChip: {
-    gap: theme.space['2xs'],
-    paddingVertical: theme.space.lg,
-    paddingHorizontal: theme.space['3xl'],
-    borderRadius: theme.radius.control,
-    borderWidth: theme.border.base,
-    borderColor: theme.colors['sand-400'],
-  },
-  variantChipSelected: {
-    backgroundColor: theme.colors['sand-150'],
-    borderColor: theme.colors.ink,
-  },
-  variantLabel: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.ink,
-  },
-  variantPrice: {
-    fontFamily: theme.font.body[600],
-    fontSize: theme.text.micro,
-    color: theme.colors['olive-dark'],
-  },
   description: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.body,
-  },
-
-  accordion: {
-    marginVertical: theme.space.xs,
-    marginHorizontal: theme.space.xl,
-    borderTopWidth: theme.border.base,
-    borderBottomWidth: theme.border.base,
-    borderColor: theme.colors.ink,
-  },
-  accordionHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.space.lg,
-    paddingHorizontal: theme.space.lg,
-  },
-  accordionDivided: {
-    borderTopWidth: theme.border.base,
-    borderStyle: 'dashed',
-    borderColor: theme.colors['sand-400'],
-  },
-  accordionTitle: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.ink,
-  },
-  accordionCaret: {
-    color: theme.colors.muted,
-  },
-  accordionBody: {
-    paddingHorizontal: theme.space.lg,
-    paddingBottom: theme.space.lg,
-    gap: theme.space.xs,
-  },
-  accordionText: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.note,
-    lineHeight: theme.text.note * theme.text['lead--line-height'],
-    color: theme.colors.body,
-  },
-  accordionStrong: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-  },
-  allergenLine: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text['body-sm'],
-    color: theme.colors.terracotta,
-  },
-  netWeight: {
-    fontFamily: theme.font.body[600],
-    fontSize: theme.text.micro,
-    color: theme.colors.ink,
   },
 
   reviews: {
@@ -782,17 +498,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['card-title-sm'],
     color: theme.colors.ink,
   },
-  reviewsEmpty: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.note,
-    lineHeight: theme.text.note * theme.text['lead--line-height'],
-    color: theme.colors.muted,
-    backgroundColor: theme.colors['sand-150'],
-    borderRadius: theme.radius.card,
-    paddingVertical: theme.space.lg,
-    paddingHorizontal: theme.space.xl,
-  },
-
   related: {
     paddingTop: theme.space.lg,
     gap: theme.space.md,

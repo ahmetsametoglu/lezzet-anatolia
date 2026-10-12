@@ -1,72 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import type { KeysetCursor } from '@lezzet/types';
+import { reviewFilterCount } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
-import type { PublishedReview } from '@/lib/feedback/product-feedback';
+import productMessages from '@lezzet/i18n/customer/product';
+import { ReviewRatingFilterEnum, type ReviewRatingFilter } from '@lezzet/types';
 import { Dialog } from '@/components/customer/ui/dialog';
-import type { Messages } from '../product-types';
-import { loadMoreReviewsAction } from '../actions';
-import { ReviewCard } from './review-card';
 import { Icon } from '@/components/customer/ui/icons';
-
-/** Süzgeç etiketindeki `{star}` yer tutucusu yıldız ikonuna döner — sözlükte ★ karakteri taşınmaz. */
-function withStar(label: string) {
-  const [head, tail] = label.split('{star}');
-  if (tail === undefined) return label;
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {head}
-      <Icon name="star" size={11} />
-      {tail}
-    </span>
-  );
-}
+import type { Messages } from '../product-types';
+import { ReviewCard } from './review-card';
+import { StarLabel } from './star-label';
+import { useReviewPages } from './use-review-pages.hook';
 
 /**
- * **Tüm yorumlar paneli** — ürün detayındaki üç yorumluk seçkinin arkasındaki tam liste.
- *
- * ── PANEL SAYFAYI TERK ETMEZ ─────────────────────────────────────────────────
- * Web'de modal, mobilde tam ekran sayfa; ayrı bir ROTA değil, çünkü ayrı rotadan dönüşte ürün
- * sayfası baştan çizilir ve müşteri galeriyi ile seçtiği boyu kaybederdi. Açık/kapalı hâli
- * `history` üzerinden yürüyor (`?reviews=1`), geri tuşu kaydı düşürür ve `popstate` paneli kapatır.
- *
- * Adres çubuğundaki anahtar İNGİLİZCE (`reviews`): sorgu anahtarları bu projede dile göre
- * çevrilmiyor (`?offers=1` ile aynı kural).
- *
- * ── LİSTE PANELDE ÇEKİLİR, SAYFADA DEĞİL ────────────────────────────────────
- * İlk on yorum panel AÇILINCA isteniyor; sayfaya gömmek, panelin hiç açılmadığı her ziyarette on
- * satırı boşuna okumak olurdu.
- *
- * ── HİSTOGRAM VE ÇİPLER: SAYILAR DAĞILIMDAN, SATIRLAR SORGUDAN ──────────────
- * Çubuklar ve çip sayıları `score.ratingBreakdown`'dan, yani ürünün TAMAMINDAN okunuyor;
- * sayfalanmış listeden sayılan bir dağılım yanlış olur ve yanlışlığı görünmezdi (çubuklar hep bir
- * şey gösterir). Süzgeç sunucuda uygulandığı için yıldızsız yorumlar süzgeçli çağrıda düşer —
- * "Tümü" sayısıyla çip toplamlarının farkı bir hata değil, iki ayrı kümedir.
+ * Tüm yorumlar paneli; ayrı bir rota değil, çünkü rotadan dönüşte ürün sayfası baştan çizilir ve müşteri galeriyi ve seçtiği boyu
+ * kaybederdi. Çubuklar ve çip sayıları ürünün tamamının dağılımından okunur, yüklenmiş sayfadan değil.
  */
-/**
- * Süzgeç çipleri — tasarımın dört seçeneği; `range` doğrudan sorguya gider, `null` = tümü.
- *
- * "3★ ve altı" tek yıldız değil ARALIK: 2★ ile 1★ arasındaki ayrım müşteriye bir şey söylemez,
- * "kötü yorumları göster" söyler.
- */
-const FILTERS = [
-  { key: 'all', range: null },
-  { key: 'five', range: { min: 5, max: 5 } },
-  { key: 'four', range: { min: 4, max: 4 } },
-  { key: 'low', range: { max: 3 } },
-] as const;
-
-type FilterKey = (typeof FILTERS)[number]['key'];
-
 interface AllReviewsProps {
   t: Messages;
   locale: Locale;
   productId: string;
   productName: string;
-  /** Ürünün TAMAMININ dağılımı — çubuklar ve çip sayıları buradan, yüklenmiş sayfadan değil. */
+  /** Ürünün tamamının dağılımı, indis 0 = 1★. */
   breakdown: readonly [number, number, number, number, number];
-  /** Yazılı yorum sayısı (`commentCount`) — "Tümü" çipinin ve alt satırın sayısı. */
+  /** Yazılı yorum sayısı; "Tümü" çipinin sayısı. */
   total: number;
   /** Mobil tam ekran, masaüstü modal — cihaz sinyali `Reviews`'tan geçer. */
   fullScreen: boolean;
@@ -74,61 +30,19 @@ interface AllReviewsProps {
 }
 
 export function AllReviews({ t, locale, productId, productName, breakdown, total, fullScreen, onClose }: AllReviewsProps) {
-  const [reviews, setReviews] = useState<PublishedReview[]>([]);
-  const [cursor, setCursor] = useState<KeysetCursor | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  /** İlk sayfa geldi mi — "hiç yorum yok" boş durumu ancak ondan sonra söylenebilir. */
-  const [loaded, setLoaded] = useState(false);
-  const [filter, setFilter] = useState<FilterKey>('all');
-
-  /** Bir çipin sayısı — dağılım dizisi 0-indisli ve indis 0 = 1★ (arka ucun sözleşmesi). */
-  const countOf = (key: FilterKey): number => {
-    if (key === 'five') return breakdown[4];
-    if (key === 'four') return breakdown[3];
-    if (key === 'low') return breakdown[0] + breakdown[1] + breakdown[2];
-    return total;
-  };
-
-  const load = useCallback(
-    async (from: KeysetCursor | null, key: FilterKey) => {
-      setLoading(true);
-      setFailed(false);
-      const range = FILTERS.find((f) => f.key === key)?.range ?? null;
-      const result = await loadMoreReviewsAction({
-        locale,
-        productId,
-        ...(from ? { cursor: from } : {}),
-        ...(range ? { rating: range } : {}),
-      });
-      if (result.data) {
-        // İmleçsiz çağrı listeyi SIFIRLAR, imleçli EKLER. Çip değişimi imleçsizdir: yeni süzgeç
-        // yeni bir küme demektir, eskinin satırları altında kalsaydı liste iki soruyu karıştırırdı.
-        setReviews((prev) => (from ? [...prev, ...result.data!.reviews] : result.data!.reviews));
-        setCursor(result.data.nextCursor);
-      } else {
-        // Sessiz düşmüyoruz: liste yarım kalırsa müşteri "yorumlar bitti" sanar. Tekrar denenebilir
-        // bir hâl gösteriliyor, çünkü düşen şey bir okuma — kaybolan bir veri yok.
-        setFailed(true);
-      }
-      setLoading(false);
-      setLoaded(true);
-    },
-    [locale, productId],
-  );
-
-  useEffect(() => {
-    void load(null, filter);
-  }, [load, filter]);
+  const copy = productMessages[locale].reviews;
+  const pages = useReviewPages(locale, productId);
+  const { reviews, cursor, loading, failed, loaded, filter } = pages;
+  const countOf = (key: ReviewRatingFilter | null) => (key === null ? total : reviewFilterCount(breakdown, key));
+  // Sayısı sıfır olan çip çizilmez: basılınca boş liste gösteren çip müşteriye kendi dokunuşunu sorgulatır.
+  const chips: (ReviewRatingFilter | null)[] = [null, ...ReviewRatingFilterEnum.options.filter((key) => countOf(key) > 0)];
 
   const body = (
     <div className="flex flex-col gap-3">
-      {/* Yıldız dağılımı — çubuklar ürünün TAMAMINDAN. Sıra 5★'dan 1★'a, tasarımın sırası. */}
       <div className="flex flex-col gap-1.5">
         {[5, 4, 3, 2, 1].map((star) => {
           const count = breakdown[star - 1] ?? 0;
-          // Oran EN ÇOK OYLANANA göre, toplama göre değil: tasarımda 5★ çubuğu %78 ve o, 18/23'ün
-          // değil en yüksek çubuğun tam dolduğu bir ölçek. Hiç oy yoksa bölme yapılmaz.
+          // Oran en çok oylanana göre: tasarımda en yüksek çubuk tam dolar; hiç oy yoksa bölme yapılmaz.
           const max = Math.max(...breakdown, 0);
           return (
             <div key={star} className="flex items-center gap-2.5">
@@ -145,65 +59,53 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
         })}
       </div>
 
-      {/* Süzgeç çipleri — sayısı SIFIR olan çip çizilmez: basılınca boş liste gösteren bir çip,
-          müşteriye kendi dokunuşunu sorgulatır. "Tümü" her zaman durur. */}
       <div className="flex flex-wrap gap-2">
-        {FILTERS.filter((f) => f.key === 'all' || countOf(f.key) > 0).map((f) => (
+        {chips.map((key) => (
           <button
-            key={f.key}
+            key={key ?? 'all'}
             type="button"
-            onClick={() => setFilter(f.key)}
+            onClick={() => pages.setFilter(key)}
             className={[
               'cursor-pointer rounded-pill border px-3.5 py-1.5 font-sans text-note font-semibold transition-colors',
-              filter === f.key ? 'border-olive bg-olive text-cream' : 'border-sand-300 bg-card text-ink hover:border-olive',
+              filter === key ? 'border-olive bg-olive text-cream' : 'border-sand-300 bg-card text-ink hover:border-olive',
             ].join(' ')}
           >
-            {withStar(t.reviews.filters[f.key].replace('{count}', String(countOf(f.key))))}
+            <StarLabel label={copy.filters[key ?? 'all'].replace('{count}', String(countOf(key)))} />
           </button>
         ))}
       </div>
 
       {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={t.reviews.translation} boxed />
+        <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={copy.translation} boxed />
       ))}
 
-      {/* Boş durum yalnız İLK SAYFA geldikten sonra: yükleme sırasında "yorum yok" demek, bir saniye
-          sonra kendini yalanlayan bir cümle olurdu. */}
-      {loaded && !failed && reviews.length === 0 && (
-        <p className="py-6 text-center font-sans text-body-sm text-muted">{t.reviews.panelEmpty}</p>
-      )}
+      {/* Boş durum yalnız ilk sayfa geldikten sonra: yükleme sırasında "yorum yok" demek bir saniye sonra kendini yalanlardı. */}
+      {loaded && !failed && reviews.length === 0 && <p className="py-6 text-center font-sans text-body-sm text-muted">{copy.panelEmpty}</p>}
 
       {failed && (
         <button
           type="button"
-          onClick={() => void load(cursor, filter)}
+          onClick={pages.retry}
           className="cursor-pointer rounded-soft border border-sand-300 py-2.5 text-center font-sans text-body-sm font-bold text-olive transition-colors hover:bg-cream"
         >
-          {t.reviews.retry}
+          {copy.retry}
         </button>
       )}
 
-      {/* "Daha fazla yükle" YALNIZ devam eden sayfa varken. Tükenmiş listede duran bir düğme,
-          basılınca hiçbir şey olmayan bir kontroldür. */}
       {cursor && !failed && (
         <button
           type="button"
           disabled={loading}
-          onClick={() => void load(cursor, filter)}
+          onClick={pages.loadMore}
           className="cursor-pointer rounded-pill border-[1.5px] border-olive px-4.5 py-2.5 text-center font-sans text-body-sm font-bold text-olive transition-colors hover:bg-olive-bg disabled:opacity-60"
         >
-          {loading ? t.reviews.loading : t.reviews.loadMore.replace('{shown}', String(reviews.length))}
+          {loading ? copy.loading : t.reviews.loadMore.replace('{shown}', String(reviews.length))}
         </button>
       )}
     </div>
   );
 
-  /**
-   * Masaüstü: paylaşılan `Dialog` kabuğu — Escape, odak tuzağı ve gövde kaydırma kilidi oradan
-   * geliyor, ikinci bir kabuk yazmak aynı davranışı iki yerde bakıma bırakırdı.
-   *
-   * Genişlik 720 tasarımın ölçüsü; `Dialog` varsayılanı 420 ve listeli panel için dar.
-   */
+  // Masaüstünde paylaşılan `Dialog` kabuğu: Escape, odak tuzağı ve kaydırma kilidi oradan gelir; genişlik tasarımın 720'si.
   if (!fullScreen) {
     return (
       <Dialog title={t.reviews.title} closeLabel={t.reviews.close} onClose={onClose} maxWidth={720}>
@@ -215,12 +117,6 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
     );
   }
 
-  /**
-   * Mobil: TAM EKRAN, modal değil — ortalanmış bir panel, altındaki sayfanın kenarlarını
-   * göstererek listeyi bir kutunun içine hapsederdi.
-   *
-   * Kendi başlığını çiziyor çünkü `Dialog`'un başlığı modal içindir.
-   */
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-cream">
       <header className="flex flex-none items-center gap-3 border-b border-sand-300 bg-white px-4 py-3.5">
@@ -234,7 +130,7 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
         </button>
         <span className="truncate font-serif text-lead font-semibold text-ink">{t.reviews.title}</span>
       </header>
-      {/* `min-h-0`: flex çocuğu içeriğinden küçülmez — o olmadan liste taşar ve başlık kayar. */}
+      {/* `min-h-0`: flex çocuğu içeriğinden küçülmez; o olmadan liste taşar ve başlık kayar. */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <p className="mb-3 font-sans text-micro text-muted">
           {productName} · {t.reviews.shownCount.replace('{shown}', String(reviews.length))}

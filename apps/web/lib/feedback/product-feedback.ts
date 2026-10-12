@@ -1,38 +1,24 @@
 import 'server-only';
+import { reviewCommentTooShort } from '@lezzet/application';
 import {
   FeedbackRequestService,
   OrderItemService,
   OrderService,
   ProductFeedbackService,
-  ProductRatingService,
   ProductService,
   ProductVariantService,
-  UserProfileService,
   serviceDb,
 } from '@lezzet/database';
 import {
-  EMPTY_PRODUCT_SCORE,
   candidateSignalOf,
   canModerate,
   dedupeBySwiper,
   initialFeedbackStatus,
-  productScoreOf,
-  resolveUserText,
   weighSwipesByProduct,
   type CandidateSignal,
-  type ProductScore,
   type RawSwipe,
 } from '@lezzet/domain-core';
-import type {
-  FeedbackContext,
-  FeedbackVote,
-  KeysetCursor,
-  Page,
-  PreferredLanguage,
-  ProductFeedback,
-  ReviewStatus,
-  SourceLanguage,
-} from '@lezzet/types';
+import type { FeedbackContext, FeedbackVote, KeysetCursor, Page, ProductFeedback, ReviewStatus } from '@lezzet/types';
 import { awardFeedbackPoints } from './points';
 import { logger } from '@lezzet/observability';
 
@@ -147,6 +133,7 @@ export async function submitReview(input: {
 }): Promise<FeedbackWriteResult<ProductFeedback>> {
   const comment = input.comment?.trim() || null;
   if (input.rating == null && !comment) return { ok: false, reason: 'empty_review' };
+  if (comment !== null && (await reviewCommentTooShort(serviceDb(), comment))) return { ok: false, reason: 'comment_too_short' };
 
   const orderId = await findPurchase(input.customerId, input.productId);
   // Satın almayan yazamaz (DOMAIN §14) — doğrulanmamış yorum sosyal kanıt değil reklamdır.
@@ -224,76 +211,6 @@ export async function getReviewEligibility(
     findPurchase(customerId, productId),
   ]);
   return { canReview: orderId !== null, existing };
-}
-
-/** Ürün sayfasında görünen yorum — yazarın adı ve OKUYUCUNUN DİLİ çözülmüş hâliyle. */
-export interface PublishedReview {
-  id: string;
-  authorName: string;
-  rating: number | null;
-  /** Okuyucunun dilinde gösterilecek metin (çeviri yoksa orijinal). */
-  comment: string | null;
-  /** Gösterilen metin makine çevirisi mi — ekran bunu işaretlemeli ("otomatik çevrildi"). */
-  commentTranslated: boolean;
-  /** ORİJİNALİN dili — `lang` özniteliği ve "orijinali göster" için. `null` = tespit koşmadı. */
-  language: SourceLanguage | null;
-  /** Orijinal metin — ekran "orijinali göster" derse bunu basar; çeviri onun yerine GEÇMEZ. */
-  originalComment: string | null;
-  createdAt: string;
-}
-
-/**
- * Ürün sayfasının yorum listesi: yalnız yayınlanmış yazılı yorumlar, keyset sayfalı; beğeniler skora girer, burada görünmez.
- * `viewLanguage` bilerek zorunlu: varsayılan olsaydı dilini vermeyi unutan ekran herkese Türkçe gösterir ve hata vermezdi.
- */
-export async function listProductReviews(
-  productId: string,
-  viewLanguage: PreferredLanguage,
-  cursor?: KeysetCursor,
-  limit?: number,
-  /** Yıldız aralığı — panelin çipleri (`5★` tek değer, `3★ ve altı` aralık). Sunucuda süzülür. */
-  rating?: { min?: number; max?: number },
-): Promise<Page<PublishedReview>> {
-  const db = serviceDb();
-  const page = await new ProductFeedbackService(db).listPublishedComments(productId, cursor, limit, rating);
-  if (page.rows.length === 0) return { rows: [], nextCursor: page.nextCursor };
-
-  const authorIds = page.rows.map((r) => r.customerId).filter((id): id is string => id !== null);
-  const authors = await new UserProfileService(db).listByIds(authorIds);
-  const nameById = new Map(authors.map((a) => [a.id, a.name]));
-
-  return {
-    rows: page.rows.map((r) => {
-      const gosterilen = resolveUserText({ text: r.comment, language: r.language, translations: r.translations }, viewLanguage);
-      return {
-        id: r.id,
-        authorName: (r.customerId && nameById.get(r.customerId)) || '—',
-        rating: r.rating,
-        comment: gosterilen.text,
-        commentTranslated: gosterilen.isTranslated,
-        language: r.language,
-        originalComment: r.comment,
-        createdAt: r.createdAt,
-      };
-    }),
-    nextCursor: page.nextCursor,
-  };
-}
-
-/** Tek ürünün skoru — ürün detayı. Hiç beyanı yoksa boş skor (null dolaştırılmaz). */
-export async function getProductScore(productId: string): Promise<ProductScore> {
-  const row = await new ProductRatingService(serviceDb()).getByProduct(productId);
-  return row ? productScoreOf(row) : EMPTY_PRODUCT_SCORE;
-}
-
-/**
- * Bir listedeki ürünlerin skorları — katalog kartları, "benzer ürünler", vitrin şeridi.
- * Haritada olmayan ürünün skoru yoktur; çağıran `?? EMPTY_PRODUCT_SCORE` okur.
- */
-export async function getProductScores(productIds: readonly string[]): Promise<Map<string, ProductScore>> {
-  if (productIds.length === 0) return new Map();
-  const rows = await new ProductRatingService(serviceDb()).listByProducts(productIds);
-  return new Map(rows.map((row) => [row.productId, productScoreOf(row)]));
 }
 
 /**

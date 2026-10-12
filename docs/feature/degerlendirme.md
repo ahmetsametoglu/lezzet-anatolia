@@ -1,7 +1,7 @@
 # Değerlendirme — alım sonrası akış ve ürün sayfasındaki yorumlar
 
-> **Statü:** alım sonrası akış tamamlandı (12.10.2026); ürün sayfasının yorum bölümü sürüyor (K.68). Kararlar 12.10.2026'da
-> kullanıcıyla Claude Design keşif panosu üzerinden verildi (16e-3, 17a, 18a kareleri).
+> **Statü:** alım sonrası akış ve ürün sayfasının yorum bölümü tamamlandı (12.10.2026). Kararlar 12.10.2026'da kullanıcıyla Claude
+> Design keşif panosu üzerinden verildi (16e-3, 16e-4, 17a, 17t, 18a kareleri).
 
 ## 1. Kararlar (12.10.2026)
 
@@ -15,7 +15,8 @@
    taşır; boşluk, noktalama, tek harf ve "aaa" sayılmaz. Uyarı ("En az 2 kelime") yalnız "tamamla"ya basınca ve yalnız kısa kalan
    satırda çıkar.
 5. **Yorum puanı yazımda verilir,** onay beklenmez.
-6. **Telefonda "Yorum yaz" yoktur;** yorum alım sonrası akıştan gelir. Masaüstü ürün sayfasındaki form kalır.
+6. **Telefonda "Yorum yaz" yoktur;** yorum alım sonrası akıştan gelir. Masaüstü ürün sayfasındaki form kalır ve 4. kararın alt
+   sınırını uygular.
 7. **Ürün sayfası:** puan ürün başlığının üst satırındadır ("TATLI · ★ 4,4 (5 DEĞERLENDİRME)"); kartların altında yalnız
    "N yorumun tümü →"; özet kartı kalkar; "Tüm yorumlar" ekranında dağılım çubukları ve yıldız çipleri. Yorum kartında tarih
    yoktur, yazar adı kısaltılır ("Hugo B."), yıldızsız beğeni "♥ Beğendi" yazar.
@@ -32,5 +33,5 @@
 
 ## 3. Açık işler
 
-- Ürün sayfasının yorum bölümü (7. karar), web telefon görünümü ve native; masaüstü formuna 4. kararın alt sınırı. K.68'in kalan
-  parçası.
+- **Yorum alanının yüksekliği:** panodaki satırda alan ~70 px; native kitin çok satırlı alanı 110, web'inki 96. Hangisinin
+  geçerli olduğu kullanıcıya soruldu.

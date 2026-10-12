@@ -44,7 +44,6 @@
       "title": "Yorumlar",
       "count": "{count} onaylı müşteri yorumu",
       "countShort": "{count} yorum",
-      "all": "{count} yorumun tümü →",
       "write": "Yorum yaz",
       "rating": "Puanınız",
       "placeholder": "Deneyiminizi birkaç cümleyle anlatın (isteğe bağlı)",
@@ -59,20 +58,6 @@
       "close": "Kapat",
       "shownCount": "{shown} yorum gösteriliyor",
       "loadMore": "Daha fazla yükle",
-      "loading": "Yükleniyor…",
-      "retry": "Yorumlar yüklenemedi — yeniden dene",
-      "panelEmpty": "Bu üründe henüz yazılı yorum yok.",
-      "filters": {
-        "all": "Tümü ({count})",
-        "five": "5{star} ({count})",
-        "four": "4{star} ({count})",
-        "low": "3{star} ve altı ({count})"
-      },
-      "translation": {
-        "badge": "otomatik çevrildi",
-        "showOriginal": "Orijinali göster",
-        "showTranslation": "Çeviriyi göster"
-      },
       "purchased": "Satın aldı"
     },
     "family": {
@@ -100,7 +85,8 @@
       "unexpected": "Yorumunuz gönderilemedi. Biraz sonra tekrar deneyin.",
       "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
       "review_empty": "Puan verin ya da birkaç cümle yazın.",
-      "purchase_required": "Yorum yazmak için bu ürünü satın almış olmanız gerekiyor."
+      "purchase_required": "Yorum yazmak için bu ürünü satın almış olmanız gerekiyor.",
+      "comment_too_short": "Yorumunuz çok kısa; birkaç kelimeyle anlatın."
     },
     "backLabel": "Geri",
     "gallery": {
@@ -158,7 +144,6 @@
       "title": "Avis",
       "count": "Avis clients vérifiés : {count}",
       "countShort": "{count} avis",
-      "all": "Voir tous les avis ({count}) →",
       "write": "Écrire un avis",
       "rating": "Votre note",
       "placeholder": "Décrivez votre expérience en quelques mots (facultatif)",
@@ -173,20 +158,6 @@
       "close": "Fermer",
       "shownCount": "Avis affichés : {shown}",
       "loadMore": "Charger plus",
-      "loading": "Chargement…",
-      "retry": "Impossible de charger les avis — réessayer",
-      "panelEmpty": "Aucun avis écrit pour ce produit pour l'instant.",
-      "filters": {
-        "all": "Tous ({count})",
-        "five": "5{star} ({count})",
-        "four": "4{star} ({count})",
-        "low": "3{star} et moins ({count})"
-      },
-      "translation": {
-        "badge": "traduit automatiquement",
-        "showOriginal": "Voir l'original",
-        "showTranslation": "Voir la traduction"
-      },
       "purchased": "Achat vérifié"
     },
     "family": {
@@ -214,7 +185,8 @@
       "unexpected": "Votre avis n'a pas pu être envoyé. Réessayez dans un instant.",
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
       "review_empty": "Donnez une note ou écrivez quelques mots.",
-      "purchase_required": "Vous devez avoir acheté ce produit pour laisser un avis."
+      "purchase_required": "Vous devez avoir acheté ce produit pour laisser un avis.",
+      "comment_too_short": "Votre avis est trop court ; décrivez-le en quelques mots."
     },
     "backLabel": "Retour",
     "gallery": {
@@ -272,7 +244,6 @@
       "title": "Bewertungen",
       "count": "Geprüfte Kundenbewertungen: {count}",
       "countShort": "Bewertungen: {count}",
-      "all": "Alle Bewertungen ({count}) →",
       "write": "Bewertung schreiben",
       "rating": "Ihre Bewertung",
       "placeholder": "Beschreiben Sie Ihre Erfahrung in wenigen Sätzen (optional)",
@@ -287,20 +258,6 @@
       "close": "Schließen",
       "shownCount": "Angezeigte Bewertungen: {shown}",
       "loadMore": "Mehr laden",
-      "loading": "Wird geladen…",
-      "retry": "Bewertungen konnten nicht geladen werden – erneut versuchen",
-      "panelEmpty": "Für dieses Produkt gibt es noch keine geschriebenen Bewertungen.",
-      "filters": {
-        "all": "Alle ({count})",
-        "five": "5{star} ({count})",
-        "four": "4{star} ({count})",
-        "low": "3{star} und weniger ({count})"
-      },
-      "translation": {
-        "badge": "automatisch übersetzt",
-        "showOriginal": "Original anzeigen",
-        "showTranslation": "Übersetzung anzeigen"
-      },
       "purchased": "Gekauft"
     },
     "family": {
@@ -328,7 +285,8 @@
       "unexpected": "Ihre Bewertung konnte nicht gesendet werden. Bitte gleich noch einmal versuchen.",
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
       "review_empty": "Vergeben Sie Sterne oder schreiben Sie ein paar Sätze.",
-      "purchase_required": "Sie müssen dieses Produkt gekauft haben, um es zu bewerten."
+      "purchase_required": "Sie müssen dieses Produkt gekauft haben, um es zu bewerten.",
+      "comment_too_short": "Ihre Bewertung ist zu kurz – beschreiben Sie sie in ein paar Worten."
     },
     "backLabel": "Zurück",
     "gallery": {

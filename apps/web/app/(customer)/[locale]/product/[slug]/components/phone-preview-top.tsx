@@ -32,6 +32,7 @@ export function PhonePreviewTop({ locale, children }: PhonePreviewTopProps) {
       // Filigran veriyle gelir: kartın stok hâli bütün boyların toplamı, sayfanınki açılış boyunun; ikisi farklı cümle söyleyebilir.
       placeMark={null}
       categoryLabel={preview.categoryId === null ? null : undefined}
+      ratingLabel={null}
     />
   );
 }

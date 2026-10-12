@@ -211,6 +211,10 @@ export const ICON_PATHS = {
 export const POINTS_SPARK_PATH =
   'M12 2c.6 5.2 4.2 8.8 9.4 9.4C16.2 12 12.6 16.2 12 22c-.6-5.8-4.2-10-9.4-10.6C7.8 10.8 11.4 7.2 12 2z';
 
+/** Beğeni kalbi (yıldızsız yorumun "Beğendi" işareti); dolgu olduğu için sözlüğün dışında, iki yüzeyin çizicisi `fill` ile basar. */
+export const HEART_PATH =
+  'M12 20.5C6 15.5 3 12.3 3 8.8 3 6.2 5 4.5 7.3 4.5c1.8 0 3.4 1 4.7 2.7 1.3-1.7 2.9-2.7 4.7-2.7C19 4.5 21 6.2 21 8.8c0 3.5-3 6.7-9 11.7z';
+
 /** Değerlendirmenin başparmağı; "beğenmedim" aynı yolun 180° dönmüşü olduğu için sözlüğün dışında, çizici döndürür. */
 export const THUMB_PATH =
   'M7 11v9H4v-9h3zm3 9h7.5a2 2 0 0 0 2-1.6l1.3-6A2 2 0 0 0 18.8 10H14l.8-4.2A1.8 1.8 0 0 0 11.3 4L8 10.5V20z';

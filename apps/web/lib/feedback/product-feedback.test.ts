@@ -9,21 +9,18 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
-import type { ProductFeedback } from '@lezzet/types';
+import { getProductScore, getProductScores, listPublishedReviews } from '@lezzet/application';
+import type { ProductFeedback, PublishedReview } from '@lezzet/types';
 import {
   countPendingReviews,
   listCandidateDemand,
   type CandidateDemandRow,
-  getProductScore,
-  getProductScores,
   getReviewEligibility,
-  listProductReviews,
   listReviewsForModeration,
   moderateReview,
   recordVote,
   submitReview,
   type FeedbackWriteResult,
-  type PublishedReview,
 } from './product-feedback';
 
 /**
@@ -155,11 +152,19 @@ describe('yalnız satın alan yazar', () => {
       reason: 'empty_review',
     });
   });
+
+  // Masaüstü formu alt sınırı atlarsa tek kelimelik yorum yazılır ve puan getirir; davet akışının kuralı burada da geçer.
+  it('alt sınırın altındaki yorum yazılmaz', async () => {
+    expect(await submitReview({ customerId: buyerId, productId, rating: 5, comment: 'Harika.' })).toEqual({
+      ok: false,
+      reason: 'comment_too_short',
+    });
+  });
 });
 
 describe('moderasyon metnin işidir', () => {
   it('metinli yorum kuyruğa düşer', async () => {
-    await submitReview({ customerId: buyerId, productId, rating: 4, comment: 'Güzeldi.' });
+    await submitReview({ customerId: buyerId, productId, rating: 4, comment: 'Çok güzeldi.' });
     const pending = await listReviewsForModeration('pending', undefined, 100);
     expect(pending.rows.some((r) => r.productId === productId)).toBe(true);
   });
@@ -186,14 +191,14 @@ describe('moderasyon metnin işidir', () => {
   });
 
   it('onaylanınca yayınlanır, geri çekilince kaybolur', async () => {
-    const review = await approvedReview(5, 'Harika.');
-    const published = await listProductReviews(productId, 'tr');
+    const review = await approvedReview(5, 'Harika olmuş.');
+    const published = await listPublishedReviews(db, { productId, viewLanguage: 'tr' });
     const first: PublishedReview | undefined = published.rows[0];
-    // Çeviri işi henüz koşmadı: dil boş, metin orijinal ve "çevrildi" işareti YOK.
-    expect(first).toMatchObject({ authorName: 'Ayşe Kaya', rating: 5, comment: 'Harika.', commentTranslated: false, language: null });
+    // Çeviri işi henüz koşmadı: dil boş, metin orijinal ve "çevrildi" işareti yok; soyadı yalnız baş harfiyle yayımlanır.
+    expect(first).toMatchObject({ authorName: 'Ayşe K.', rating: 5, comment: 'Harika olmuş.', commentTranslated: false, language: null });
 
     await moderateReview({ reviewId: review.id, to: 'rejected', moderatorId: staffId });
-    expect((await listProductReviews(productId, 'tr')).rows).toHaveLength(0);
+    expect((await listPublishedReviews(db, { productId, viewLanguage: 'tr' })).rows).toHaveLength(0);
   });
 
   it('onaylanmış yorumun güncellenmesi onu yeniden kuyruğa sokar', async () => {
@@ -256,12 +261,12 @@ describe('beğen / geç', () => {
   });
 
   it('sonradan gelen beğeni ONAYLANMIŞ yorumu ne siler ne kuyruğa sokar', async () => {
-    const review = await approvedReview(5, 'Harika.');
+    const review = await approvedReview(5, 'Harika olmuş.');
     await recordVote({ customerId: buyerId, productId, context: 'purchase', vote: 'like' });
 
     // Metne dokunulmadı: yeniden okunacak bir şey yok, moderasyon damgası da yerinde kalmalı.
-    expect(await feedback.getById(review.id)).toMatchObject({ comment: 'Harika.', status: 'approved', vote: 'like' });
-    expect((await listProductReviews(productId, 'tr')).rows).toHaveLength(1);
+    expect(await feedback.getById(review.id)).toMatchObject({ comment: 'Harika olmuş.', status: 'approved', vote: 'like' });
+    expect((await listPublishedReviews(db, { productId, viewLanguage: 'tr' })).rows).toHaveLength(1);
   });
 
   it('yalnız yıldız gönderen istek yazılmış yorumu silmez', async () => {
@@ -289,18 +294,18 @@ describe('beğen / geç', () => {
 
 describe('ürün skoru — iki ayak', () => {
   it('yalnız onaylı beyanlardan türer', async () => {
-    await submitReview({ customerId: buyerId, productId, rating: 1, comment: 'Beğenmedim.' });
+    await submitReview({ customerId: buyerId, productId, rating: 1, comment: 'Hiç beğenmedim.' });
     // Henüz onaylanmadı: skor oluşmamalı.
-    expect(await getProductScore(productId)).toMatchObject({ average: null, totalCount: 0 });
+    expect(await getProductScore(db, productId)).toMatchObject({ average: null, totalCount: 0 });
 
     const pending = (await feedback.listByCustomer(buyerId)).find((r) => r.productId === productId)!;
     await moderateReview({ reviewId: pending.id, to: 'approved', moderatorId: staffId });
-    expect(await getProductScore(productId)).toMatchObject({ average: 1, ratingAvg: 1, ratingCount: 1 });
+    expect(await getProductScore(db, productId)).toMatchObject({ average: 1, ratingAvg: 1, ratingCount: 1 });
   });
 
   it('beğeni skora girer — yıldızsız üründe bile puan oluşur', async () => {
     await recordVote({ customerId: buyerId, productId, context: 'purchase', vote: 'like' });
-    const score = await getProductScore(productId);
+    const score = await getProductScore(db, productId);
     expect(score.ratingAvg).toBeNull();
     expect(score.likeRatio).toBe(1);
     expect(score.average).toBe(5); // %100 beğeni → 5
@@ -312,8 +317,8 @@ describe('ürün skoru — iki ayak', () => {
     await recordVote({ customerId: buyerId, productId, context: 'purchase', vote: 'like' });
 
     // Yıldız 1, beğeni oranı %100 → beğeni ayağı 5; iki beyan eşit sayıda → ortalama 3.
-    expect(await getProductScore(productId)).toMatchObject({ ratingAvg: 1, likeRatio: 1, average: 3 });
-    expect(await getProductScore(otherProductId)).toMatchObject({ average: null, totalCount: 0 });
+    expect(await getProductScore(db, productId)).toMatchObject({ ratingAvg: 1, likeRatio: 1, average: 3 });
+    expect(await getProductScore(db, otherProductId)).toMatchObject({ average: null, totalCount: 0 });
   });
 
   it('ADAY kaydırması ürün puanına GİRMEZ — ilgi beyanı satın alma beyanı değildir', async () => {
@@ -322,19 +327,19 @@ describe('ürün skoru — iki ayak', () => {
 
     // Aday evresinde toplanan savurmalar, ürün satışa geçtiğinde onu hiç kimse almamışken
     // yüksek puanlı gösterirdi. Aday sinyali kendi panosunda, kendi ağırlığıyla yaşar.
-    expect(await getProductScore(candidateId)).toMatchObject({ average: null, totalCount: 0 });
+    expect(await getProductScore(db, candidateId)).toMatchObject({ average: null, totalCount: 0 });
     const board = (await listCandidateDemand()).find((row) => row.productId === candidateId);
     expect(board?.signal.rawLikes).toBe(2); // ikisi de panoda sayılır
     expect(board?.identifiedLikeCount).toBe(1); // ama yalnız biri KİŞİ
   });
 
   it('hiç beyanı olmayan ürün boş skor döner', async () => {
-    expect(await getProductScore(otherProductId)).toMatchObject({ average: null, totalCount: 0 });
+    expect(await getProductScore(db, otherProductId)).toMatchObject({ average: null, totalCount: 0 });
   });
 
   it('toplu okuma yalnız skoru olan ürünü haritaya koyar', async () => {
     await approvedReview(4);
-    const scores = await getProductScores([productId, otherProductId]);
+    const scores = await getProductScores(db, [productId, otherProductId]);
     expect(scores.get(productId)?.ratingAvg).toBe(4);
     expect(scores.has(otherProductId)).toBe(false);
   });

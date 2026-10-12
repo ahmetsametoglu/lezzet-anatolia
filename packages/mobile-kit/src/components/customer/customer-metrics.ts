@@ -60,6 +60,15 @@ export const customerMetrics = {
   /** Değerlendirme listesinin satırı: ürün dairesi ve oy dairesi; iskelet de okur. */
   feedbackRowPhoto: 52,
   feedbackVoteDot: 42,
+  /** Yorum kartının yıldızı ve beğeni kalbi, tüm yorumlar özetinin yıldızı; web telefon görünümüyle aynı ölçü. */
+  reviewStar: 15,
+  reviewHeart: 13,
+  reviewSummaryStar: 18,
+  /** Tüm yorumlar dağılımının çubuğu ve iki yanındaki yıldız/sayı sütunu; web'in `h-2` ve `w-6`sı. */
+  reviewBarHeight: 8,
+  reviewBarLabel: 24,
+  /** Tüm yorumlar iskeletinin kart yüksekliği; iki satırlık yorum kartı kadar. */
+  reviewSkeletonCard: 76,
 
   /** Sipariş detayındaki canlı takip haritası. */
   mapHeight: 195,

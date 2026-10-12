@@ -4,14 +4,12 @@ import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { TranslationNote } from '@/components/customer/ui/translation-note';
 import { Icon } from '@/components/customer/ui/icons';
-import type { PublishedReview } from '@/lib/feedback/product-feedback';
+import type { PublishedReview } from '@lezzet/types';
 import { formatShortDate } from '@/lib/storefront/format';
 
 /**
- * Tek yorum kartı — ürün detayındaki seçki ve "tüm yorumlar" paneli AYNI kartı çizer; ayrı
- * yazılsalardı müşteri panelden sayfaya dönünce okuduğu satırın aynı satır olduğunu tanıyamazdı.
- *
- * `Stars` da burada yaşıyor: yıldız gösterimi bu ailenin ortak parçası (`CLAUDE.md §1`).
+ * Tek yorum kartı; ürün detayındaki seçki ve "tüm yorumlar" paneli aynı kartı çizer, ayrı yazılsalardı müşteri panelden sayfaya
+ * dönünce okuduğu satırı tanıyamazdı.
  */
 interface ReviewCardProps {
   review: PublishedReview;
@@ -47,8 +45,7 @@ export function ReviewCard({ review, locale, purchasedLabel, translation, boxed 
         boxed ? 'border-sand-200 bg-cream-deep' : 'border-sand-200 bg-card',
       ].join(' ')}
     >
-      {/* Satır YILDIZLA başlar (tasarım 20.09): baş harf dairesi kalktı, çünkü kartların asıl bilgisi
-          kimin yazdığı değil kaç verdiği — üç sütunlu akışta göz önce puanı tarıyor. */}
+      {/* Satır yıldızla başlar, çünkü kartın asıl bilgisi kimin yazdığı değil kaç verdiği; üç sütunlu akışta göz önce puanı tarar. */}
       <div className="flex flex-wrap items-center gap-2.25">
         {review.rating !== null && <Stars value={review.rating} small />}
         <span className="font-sans text-control text-ink">{review.authorName}</span>
@@ -83,8 +80,8 @@ export function ReviewCard({ review, locale, purchasedLabel, translation, boxed 
 }
 
 /**
- * Yıldız satırı — dolu, yarım ya da boş. Skor yarım adıma yuvarlanmış gelir (4,33 → 4,5); yarım yıldız, boş yıldızın üstüne
- * yarısına kadar kırpılmış dolu yıldızla çizilir. Tam sayıya yuvarlamak 4,5'i beş dolu yıldız gösteriyordu.
+ * Yıldız satırı; skor yarım adıma yuvarlanmış gelir (4,33 → 4,5). Yarım yıldız, boş yıldızın üstüne yarısına kadar kırpılmış dolu
+ * yıldızla çizilir, çünkü tam sayıya yuvarlamak 4,5'i beş dolu yıldız gösterirdi.
  */
 export function Stars({ value, small = false }: { value: number; small?: boolean }) {
   const size = small ? 13 : 16;

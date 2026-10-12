@@ -105,6 +105,8 @@ export function ProductHero({ images, name, selling, placeMark, onBack, onShare,
 interface ProductHeadLinesProps {
   /** `undefined`: ürünün kategorisi var ama adı henüz gelmedi; satırın yeri aynı stille boş tutulur. `null`: kategorisi yok. */
   categoryName: string | null | undefined;
+  /** Üst satırın puan parçası ("4,4 (5 değerlendirme)"); puan yoksa ya da henüz gelmediyse `null`. */
+  ratingLabel: string | null;
   name: string;
   selling: CatalogSelling | undefined;
   /** Kutunun içi ya da net miktar (`contentLineOf`). `undefined`: boylar henüz gelmedi, satırın yeri tutulur; `null`: satır yok. */
@@ -114,17 +116,26 @@ interface ProductHeadLinesProps {
 }
 
 /** Künyenin ilk satırları (kategori · ad · içerik · birim satırı · adet sınırı); çağıranın künye kabında, `gap` düzeninde durur. */
-export function ProductHeadLines({ categoryName, name, selling, content, locale, t }: ProductHeadLinesProps) {
+export function ProductHeadLines({ categoryName, ratingLabel, name, selling, content, locale, t }: ProductHeadLinesProps) {
   const { theme } = useUnistyles();
   const was = selling?.wasCents;
   return (
     <>
-      {categoryName === null ? null : categoryName === undefined ? (
+      {categoryName === undefined ? (
         <Text style={[styles.eyebrow, styles.reserved]} accessibilityElementsHidden importantForAccessibility="no">
           {' '}
         </Text>
-      ) : (
-        <Text style={styles.eyebrow}>{upperIn(categoryName, locale)}</Text>
+      ) : categoryName === null && ratingLabel === null ? null : (
+        <View style={styles.eyebrowRow}>
+          {categoryName === null ? null : <Text style={styles.eyebrow}>{upperIn(categoryName, locale)}</Text>}
+          {categoryName === null || ratingLabel === null ? null : <Text style={styles.eyebrow}>·</Text>}
+          {ratingLabel === null ? null : (
+            <View style={styles.eyebrowRating} testID="product-rating">
+              <Icon name="star" size={theme.text.eyebrow} color={theme.colors.terracotta} filled />
+              <Text style={styles.eyebrow}>{upperIn(ratingLabel, locale)}</Text>
+            </View>
+          )}
+        </View>
       )}
       <Text style={styles.title} accessibilityRole="header">
         {name}
@@ -254,6 +265,17 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.eyebrow,
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     color: theme.colors.terracotta,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: theme.space.sm,
+  },
+  eyebrowRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.xs,
   },
   /** Gelecek kategori satırının yeri: aynı stilde görünmez bir satır, yüksekliği gerçek etiketle birebir aynı. */
   reserved: { opacity: 0 },

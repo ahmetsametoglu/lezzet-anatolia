@@ -31,6 +31,6 @@ dosya özelliğin tek kaydı olur: kararlar, yol haritası ve açık işler orad
 - `profesyonel-satis.md` — personelin profesyonel müşteri adına sipariş girmesi (web ve mobil, araçtan vadeli satış dahil),
   satış faturasının Pennylane'de kesilmesi ve havalenin faturalara bağlanması: **kararlar alındı 11.10**, Faz 0–1 tamamlandı.
   Ana iskelete dokunmayan altı fazlı yol haritası (dokunuş seviyesiyle), yasal zemin, açık sorular.
-- `degerlendirme.md` — alım sonrası değerlendirme akışı ve ürün sayfasındaki yorumlar: **kararlar alındı 12.10**, akış tamamlandı,
-  ürün sayfası sürüyor (K.68). Ürün başına oy ve yorum, 2 kelimelik alt sınır, yazımda verilen puan; yol haritası (yapay zekâ ile
-  otomatik onay, anlamsız metin ve küfür süzgeci).
+- `degerlendirme.md` — alım sonrası değerlendirme akışı ve ürün sayfasındaki yorumlar: **kararlar alındı 12.10**, ikisi de
+  tamamlandı. Ürün başına oy ve yorum, 2 kelimelik alt sınır, yazımda verilen puan, başlıkta puan ve tüm yorumlar ekranı; yol
+  haritası (yapay zekâ ile otomatik onay, anlamsız metin ve küfür süzgeci).

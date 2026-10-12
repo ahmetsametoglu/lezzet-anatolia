@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { ReviewRatingFilterEnum } from '@lezzet/types';
 import {
   EMPTY_PRODUCT_SCORE,
   MIN_FEEDBACK_FOR_CONFIDENCE,
   canModerate,
   initialFeedbackStatus,
   productScoreOf,
+  reviewFilterCount,
+  reviewRatingRange,
+  shortAuthorName,
 } from './feedback-score';
 
 describe('moderasyon metnin işidir', () => {
@@ -117,5 +121,25 @@ describe('yıldız dağılımı ve yazılı yorum sayısı', () => {
     const score = productScoreOf({ ratingAvg: 4.2, ratingCount: 20, likeCount: 0, dislikeCount: 0, commentCount: 2 });
     expect(score.ratingCount).toBe(20);
     expect(score.commentCount).toBe(2);
+  });
+});
+
+describe('yayınlanan yorum', () => {
+  it('yazarın soyadı yalnız baş harfiyle yayımlanır', () => {
+    expect(shortAuthorName('Hugo Bernard')).toBe('Hugo B.');
+    expect(shortAuthorName('Jean-Luc de la Fontaine')).toBe('Jean-Luc F.');
+    expect(shortAuthorName('  Claire  ')).toBe('Claire');
+    expect(shortAuthorName('   ')).toBeNull();
+    expect(shortAuthorName(null)).toBeNull();
+  });
+
+  // Çip sayısı ile sorgunun aralığı ayrışırsa çip "3★ ve altı (6)" der ama liste başka bir küme getirir.
+  it('süzgeç çipinin sayısı, süzgecin sorguladığı yıldızları sayar', () => {
+    const breakdown = [1, 2, 3, 4, 5] as const;
+    for (const filter of ReviewRatingFilterEnum.options) {
+      const { min = 1, max = 5 } = reviewRatingRange(filter);
+      const expected = breakdown.slice(min - 1, max).reduce((sum, n) => sum + n, 0);
+      expect(reviewFilterCount(breakdown, filter)).toBe(expected);
+    }
   });
 });

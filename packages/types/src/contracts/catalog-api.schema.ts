@@ -7,6 +7,7 @@ import { ImageFrameSourcesSchema } from '../primitives/image-frames';
 import { ProductSchema } from '../entities/product.schema';
 import { ProductVariantSchema } from '../entities/product-variant.schema';
 import { StockSchema } from '../entities/stock.schema';
+import { ReviewPreviewSchema } from './review-api.schema';
 
 /**
  * Katalog sözleşme şemaları — mobil `/api/v1/{categories,products,products/:slug}` uçlarının ve Expo ekranının ortak dili;
@@ -232,7 +233,7 @@ export type CatalogFamilyMember = z.infer<typeof CatalogFamilyMemberSchema>;
 
 /**
  * Ürün detayı (`StorefrontProductDetail` aynası) — sayfanın tamamı tek turda; kartı genişletmez, çünkü detayda fiyat ürünün değil
- * seçili boyun alanıdır ve iki fiyat kaynağı ilk çelişkide birbirini yalanlardı. Yorum/puan bilerek yok, geri bildirim modülüne ait.
+ * seçili boyun alanıdır ve iki fiyat kaynağı ilk çelişkide birbirini yalanlardı.
  */
 export const CatalogProductDetailSchema = ProductSchema.pick({ id: true, slug: true, shippable: true }).extend({
   name: z.string(),
@@ -260,5 +261,7 @@ export const CatalogProductDetailSchema = ProductSchema.pick({ id: true, slug: t
    * (`localizedUrl`) ve mobilde kurmak o kuralın ikinci kopyası olurdu. Her ürünün slug'ı olduğu için zorunludur.
    */
   shareUrl: z.string().url(),
+  /** Puan özeti ve en yeni yorumlar; aynı turda gelir, çünkü puan başlığın satırında durur ve sonradan gelseydi satır oynardı. */
+  reviews: ReviewPreviewSchema,
 });
 export type CatalogProductDetail = z.infer<typeof CatalogProductDetailSchema>;
