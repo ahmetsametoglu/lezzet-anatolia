@@ -43,7 +43,7 @@ export const VariantRow = memo(function VariantRow({ row, qty, shipping, onQty }
   const sub = subOf(row, qty, shipping);
   return (
     <View style={styles.row} testID={`staff-order-variant-${row.variantId}`}>
-      <OperationsProductThumb name={row.title} size="md" />
+      <OperationsProductThumb name={row.title} photoUri={row.imageUrl} size="md" />
       <View style={styles.texts}>
         <Text style={[styles.title, sub.addable ? null : styles.titleOff]} numberOfLines={1}>
           {row.title}

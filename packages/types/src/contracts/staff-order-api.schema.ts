@@ -154,6 +154,8 @@ export const StaffDeliveryContextRequestSchema = z.object({
 export const StaffVariantRowSchema = z.object({
   variantId: z.string().uuid(),
   title: z.string(),
+  /** Ürünün kare küçük resmi (CDN 200 px); `null` = görsel yok, istemci monogram çizer. */
+  imageUrl: z.string().nullable(),
   /** Müşteriye çözülmüş liste fiyatı (kanal tabanında); `null` = bu müşteriye satışa kapalı. */
   listPriceCents: z.number().int().nullable(),
   /** Yenileme maliyeti (HT); `null` = ölçülemedi ya da gösterilmiyor, marj uyarısı susar. */

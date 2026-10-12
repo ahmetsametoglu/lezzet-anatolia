@@ -25,6 +25,7 @@ import type {
   Address,
   Channel,
   CustomerCreditSummary,
+  ImageRender,
   KeysetCursor,
   OrderSource,
   Page,
@@ -41,7 +42,7 @@ import type {
   StaffVariantScan,
   UserProfile,
 } from '@lezzet/types';
-import { EMPTY_PRODUCT_CONTEXT, toVariant } from '../catalog/map';
+import { EMPTY_PRODUCT_CONTEXT, thumbnailImageUrl, toVariant } from '../catalog/map';
 import { readCostBasis } from '../catalog/cost-basis';
 import { effectiveChannelOf, pricingViewerFor } from '../catalog/pricing-viewer';
 import { loadProductContext } from '../catalog/product-context';
@@ -228,7 +229,7 @@ export async function readStaffDeliveryContext(
 // ── Kalemler ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 interface StaffVariantInput {
-  product: Pick<ProductWithRelations, 'name' | 'vatRate' | 'targetMarginPercent' | 'targetMarginB2bPercent' | 'shippable'>;
+  product: Pick<ProductWithRelations, 'name' | 'vatRate' | 'targetMarginPercent' | 'targetMarginB2bPercent' | 'shippable'> & ImageRender;
   variant: Pick<ProductVariant, 'id' | 'label'>;
   /** Motorun çözdüğü fiyat; `null` = bu müşteriye satışa kapalı. */
   priceCents: number | null;
@@ -246,6 +247,7 @@ export function toStaffVariantRow(input: StaffVariantInput): StaffVariantRow {
   return {
     variantId: input.variant.id,
     title: `${resolveLocalizedText(input.product.name)} · ${resolveLocalizedText(input.variant.label)}`,
+    imageUrl: thumbnailImageUrl(input.product),
     listPriceCents: input.priceCents,
     costCents: input.includeCost ? input.costCents : null,
     targetMarginPercent: input.includeCost

@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ProductVariant, UserProfile } from '@lezzet/types';
 import { toStaffCustomerOption, toStaffVariantRow } from './staff-order';
 
 /**
  * Personel sipariş girişinin seçici eşlemeleri, DB'siz. Sınanan kararlar ekranda doğru görünüp yanlış olabilecek türden: onaysız
- * şirketin kanalı, kanala göre hedef marj, bilinmeyen deponun sıfıra düşmemesi ve maliyetin yalnız pazarlık yazabilene gitmesi.
+ * şirketin kanalı, kanala göre hedef marj, bilinmeyen deponun sıfıra düşmemesi, maliyetin yalnız pazarlık yazabilene gitmesi ve
+ * ürün görselinin satıra gelmesi.
  */
 
 const profile = (patch: Partial<UserProfile> = {}): UserProfile =>
@@ -30,6 +31,13 @@ const product = (patch: Partial<Parameters<typeof toStaffVariantRow>[0]['product
   targetMarginPercent: 40,
   targetMarginB2bPercent: null,
   shippable: true,
+  imageKey: null,
+  imageUpdatedAt: null,
+  imageFocalX: 50,
+  imageFocalY: 50,
+  imageZoom: 100,
+  imageWidth: null,
+  imageHeight: null,
   ...patch,
 });
 
@@ -82,5 +90,22 @@ describe('kalem seçicisi satırı', () => {
     expect(saha.costCents).toBeNull();
     expect(saha.targetMarginPercent).toBeNull();
     expect(saha.listPriceCents).toBe(2000);
+  });
+});
+
+describe('kalem seçicisi satırının görseli', () => {
+  const saved = process.env.R2_PUBLIC_BASE_URL;
+  beforeEach(() => {
+    process.env.R2_PUBLIC_BASE_URL = 'https://pub-test.r2.dev';
+  });
+  afterEach(() => {
+    if (saved === undefined) delete process.env.R2_PUBLIC_BASE_URL;
+    else process.env.R2_PUBLIC_BASE_URL = saved;
+  });
+
+  // Görsel satıra gelmezse personel ürünü yalnız adından tanır; görselsiz üründe adres yoktur, ekran monogram çizer.
+  it('ürünün görseli satıra küçük resim adresi olarak gelir, görselsiz üründe null kalır', () => {
+    expect(row({ product: product({ imageKey: 'catalog/products/baklava.jpeg' }) }).imageUrl).toContain('catalog/products/baklava.jpeg');
+    expect(row().imageUrl).toBeNull();
   });
 });
