@@ -300,28 +300,6 @@
     },
     "call": "Ara",
     "whatsApp": "WhatsApp",
-    "proof": {
-      "heading": "KANIT {scope}",
-      "required": "— B2B'DE ZORUNLU",
-      "optional": "— İSTEĞE BAĞLI (AYAR)",
-      "sign": "İmza al",
-      "photo": "Fotoğraf",
-      "photoUnavailable": "Fotoğraf çekimi bu sürümde bağlı değil — kamera modülü kurulu değil; kanıt olarak imza alın.",
-      "canvasHint": "buraya imzalayın — {name}",
-      "clear": "Temizle",
-      "confirm": "Onayla",
-      "cancel": "Vazgeç",
-      "takenSignature": "İmza alındı — {name} ✓",
-      "retake": "yeniden al",
-      "uploading": "Kanıt yükleniyor…",
-      "uploadFailed": "Kanıt yüklenemedi — teslim yazılmadı. Bağlantıyı kontrol edip tekrar deneyin.",
-      "refusal": {
-        "unsupported_type": "Bu dosya türü kabul edilmiyor.",
-        "too_many": "Bu teslimat için kanıt sayısı sınırına ulaşıldı.",
-        "not_found": "Bu durak size atanmamış.",
-        "storage_unavailable": "Kanıt deposu şu an yapılandırılmamış — yükleme yapılamıyor. Teslim kanıtsız kapatılamaz; operasyonu arayın."
-      }
-    },
     "goods": {
       "heading": "MAL — {n} KALEM",
       "decrease": "İade adedini azalt",
@@ -391,8 +369,7 @@
       "noteLabel": "Kısa not",
       "notePlaceholder": "ör. zil bozuk",
       "noteRequired": "Not zorunlu — kapıda ne olduğunu bir cümleyle yazın.",
-      "photo": "fotoğraf ekle (isteğe bağlı)",
-      "photoUnavailable": "Fotoğraf çekimi bu sürümde bağlı değil — kamera modülü kurulu değil.",
+      "unreachableHint": "Sipariş hazıra döner ve mal ayrılmış kalır.",
       "refusedHint": "Koliler iade akışına düşer — akıbet kararı depo kabulünde verilir.",
       "cancel": "Vazgeç",
       "confirm": "Onayla — kaydet"
