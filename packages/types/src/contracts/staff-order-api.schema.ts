@@ -173,6 +173,32 @@ export const StaffVariantPageSchema = z.object({
 });
 export type StaffVariantPage = z.infer<typeof StaffVariantPageSchema>;
 
+/** Barkod okutmanın cevabı; koli barkodu birden çok adet sayar. Bilinmeyen ya da satışta olmayan kod hata değil cevaptır. */
+export const StaffVariantScanSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('found'), row: StaffVariantRowSchema, qtyPerCode: z.number().int().positive() }),
+  z.object({ status: z.literal('unknown_code') }),
+  z.object({ status: z.literal('not_sellable') }),
+]);
+export type StaffVariantScan = z.infer<typeof StaffVariantScanSchema>;
+
+/** Duraktan açılan siparişin müşterisi ve adresi; adres defterde artık yoksa `null`, personel seçer. */
+export const StaffOrderOriginSchema = z.object({
+  customer: StaffCustomerOptionSchema,
+  addressId: z.string().uuid().nullable(),
+});
+export type StaffOrderOrigin = z.infer<typeof StaffOrderOriginSchema>;
+
+/** Sepetteki boyların siparişin deposundaki güncel kalanı; stok reddinden sonra ekran tükenen kalemi kendi satırında işaretler. */
+export const StaffStockRequestSchema = z.object({
+  warehouseId: z.string().uuid(),
+  variantIds: z.array(z.string().uuid()).min(1).max(100),
+});
+
+export const StaffStockResponseSchema = z.object({
+  stock: z.array(z.object({ variantId: z.string().uuid(), availableQty: z.number().int() })),
+});
+export type StaffStockResponse = z.infer<typeof StaffStockResponseSchema>;
+
 export const StaffOrderLineSchema = z.object({
   variantId: z.string().uuid(),
   qty: z.number().int().positive(),
@@ -199,6 +225,8 @@ export const StaffOrderResponseSchema = z.discriminatedUnion('status', [
     status: z.literal('placed'),
     orderId: z.string().uuid(),
     referenceNo: z.string().nullable(),
+    /** Siparişin kesin toplamı (kargo ve indirim dahil, cent); ekrandaki "~" tutar yalnız göstergedir. */
+    totalCents: z.number().int(),
   }),
   z.object({ status: z.literal('rejected'), reason: z.string(), message: z.string() }),
 ]);

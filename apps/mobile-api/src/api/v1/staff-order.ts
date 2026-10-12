@@ -4,9 +4,12 @@ import { serviceDb } from '@lezzet/database';
 import { createStaffCustomer, previewStaffCompany } from '@lezzet/application/customer/staff-customer';
 import {
   addStaffAddress,
+  findStaffVariantByCode,
   placeStaffOrder,
   readStaffAddresses,
   readStaffDeliveryContext,
+  readStaffOrderOrigin,
+  readStaffStock,
   searchStaffCustomers,
   searchStaffVariants,
   staffCustomerOptionOf,
@@ -24,9 +27,13 @@ import {
   StaffCustomerPageSchema,
   StaffDeliveryContextRequestSchema,
   StaffDeliveryContextSchema,
+  StaffOrderOriginSchema,
   StaffOrderRequestSchema,
   StaffOrderResponseSchema,
+  StaffStockRequestSchema,
+  StaffStockResponseSchema,
   StaffVariantPageSchema,
+  StaffVariantScanSchema,
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor, readJsonBody } from '../../lib/request';
@@ -146,6 +153,42 @@ staffOrder.get('/variants', async (c) => {
   );
 });
 
+const VariantScanQuerySchema = z.object({
+  customerId: z.string().uuid(),
+  warehouseId: z.string().uuid().optional(),
+  code: z.string().trim().min(1).max(100),
+});
+
+/** Barkod okutma: kod müşterinin fiyatı ve siparişin deposunun stoğuyla seçici satırına çözülür. */
+staffOrder.get('/variants/scan', async (c) => {
+  const parsed = VariantScanQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) return fail(c, 'invalid_query', 400);
+  const scan = await findStaffVariantByCode(serviceDb(), {
+    customerId: parsed.data.customerId,
+    warehouseId: parsed.data.warehouseId ?? null,
+    code: parsed.data.code,
+    includeCost: canNegotiatePrice(c.get('staff').roles),
+  });
+  return ok(c, StaffVariantScanSchema.parse(scan));
+});
+
+/** Duraktan açılan sipariş: kurye siparişin kimliğini taşır, müşteriyi ve adresi sunucu siparişten çözer. */
+staffOrder.get('/origin/:orderId', async (c) => {
+  const orderId = z.string().uuid().safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'invalid_id', 400);
+  const origin = await readStaffOrderOrigin(serviceDb(), orderId.data);
+  if (!origin) return fail(c, 'order_not_found', 404);
+  return ok(c, StaffOrderOriginSchema.parse(origin));
+});
+
+/** Stok reddinden sonra sepetteki boyların güncel kalanı; ekran tükenen kalemi kendi satırında işaretler. */
+staffOrder.post('/stock', async (c) => {
+  const parsed = StaffStockRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+  const stock = await readStaffStock(serviceDb(), parsed.data);
+  return ok(c, StaffStockResponseSchema.parse({ stock } satisfies z.input<typeof StaffStockResponseSchema>));
+});
+
 /** Siparişi yazan personel künyeden gelir; pazarlıklı fiyatı yönetici olmayan gönderirse sipariş yazılmaz ve 403 döner. */
 staffOrder.post('/orders', async (c) => {
   const parsed = StaffOrderRequestSchema.safeParse(await readJsonBody(c));
@@ -154,7 +197,7 @@ staffOrder.post('/orders', async (c) => {
   if (outcome.status === 'price_not_allowed') return fail(c, 'forbidden', 403);
   const body: z.input<typeof StaffOrderResponseSchema> =
     outcome.status === 'placed'
-      ? { status: 'placed', orderId: outcome.orderId, referenceNo: outcome.referenceNo }
+      ? { status: 'placed', orderId: outcome.orderId, referenceNo: outcome.referenceNo, totalCents: outcome.totalCents }
       : { status: 'rejected', reason: outcome.status, message: staffOrderRejectionText(outcome) };
   return ok(c, StaffOrderResponseSchema.parse(body));
 });

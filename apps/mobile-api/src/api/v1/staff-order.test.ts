@@ -20,7 +20,15 @@ import {
   testPostalCode,
   type SettingsSnapshot,
 } from '@lezzet/database/testing';
-import type { StaffAddressCreateResponse, StaffCustomerPage, StaffDeliveryContext, StaffOrderResponse } from '@lezzet/types';
+import type {
+  StaffAddressCreateResponse,
+  StaffCustomerPage,
+  StaffDeliveryContext,
+  StaffOrderOrigin,
+  StaffOrderResponse,
+  StaffStockResponse,
+  StaffVariantScan,
+} from '@lezzet/types';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
@@ -36,6 +44,7 @@ const LIMIT = 1_000_000;
 const IKINCI_LIMIT = 250_000;
 
 let warehouseId: string;
+let baskaDepoId: string;
 let categoryId: string;
 let productId: string;
 let variantId: string;
@@ -76,15 +85,23 @@ const siparis = async (user: SignedInUser, patch: Record<string, unknown> = {}) 
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
+  baskaDepoId = (await createTestWarehouse(db)).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Personel siparişi ${stamp}` } })).id;
+  // Seçici yalnız satıştaki ürünü listeler; yayın kısıtı üç dilde ad, açıklama, içindekiler, saklama ve alerjen beyanı ister.
+  const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const urun = await new ProductService(db).create({
-    name: { tr: `Saha böreği ${stamp}` },
+    name: ucDil(`Saha böreği ${stamp}`),
     categoryId,
     vatRate: 5.5,
-    variants: [{ label: { tr: '1 kg' }, sku: `PSG-${stamp}` }],
+    variants: [{ label: { tr: '1 kg' }, sku: `PSG-${stamp}`, netQuantity: 1000, netUnit: 'g' }],
+    description: ucDil('Personel siparişi testi ürünü'),
+    ingredients: ucDil('Un, su, tuz'),
+    storageInstructions: ucDil('Serin yerde saklayın'),
+    allergens: [],
   });
   productId = urun.product.id;
   variantId = urun.variants[0]!.id;
+  await new ProductService(db).update({ id: productId, status: 'active' });
   const prices = new PriceService(db);
   await prices.setPrice({ variantId, channel: 'b2c', amountCents: 2500 });
   await prices.setPrice({ variantId, channel: 'b2b', amountCents: 3000 });
@@ -145,7 +162,7 @@ afterAll(async () => {
     categoryIds: [categoryId],
     profileIds: profiller,
     authUserIds: [kurye.authUserId, yonetici.authUserId, musteriHesabi.authUserId],
-    warehouseIds: [warehouseId],
+    warehouseIds: [warehouseId, baskaDepoId],
   });
   SettingsService.invalidate();
 });
@@ -192,6 +209,34 @@ describe('sipariş yazımı', () => {
     const data = await envelopeData<StaffOrderResponse>(await siparis(kurye, { lines: [{ variantId, qty: 12 }] }));
     expect(data).toMatchObject({ status: 'rejected', reason: 'payment_not_allowed' });
     if (data.status === 'rejected') expect(data.message.length).toBeGreaterThan(0);
+  });
+});
+
+describe('duraktan ve barkoddan giriş', () => {
+  it('duraktan açılan sipariş durağın müşterisine ve adresine bağlanır', async () => {
+    const yazilan = await envelopeData<StaffOrderResponse>(await siparis(kurye));
+    expect(yazilan.status).toBe('placed');
+    if (yazilan.status !== 'placed') return;
+    const origin = await envelopeData<StaffOrderOrigin>(await istek(kurye, `/origin/${yazilan.orderId}`));
+    expect({ musteri: origin.customer.id, adres: origin.addressId }).toEqual({ musteri: vadeliId, adres: vadeliAdresId });
+  });
+
+  it('okutulan ürün müşterinin fiyatıyla gelir; maliyet yalnız yöneticiye gider', async () => {
+    const yol = `/variants/scan?customerId=${vadeliId}&warehouseId=${warehouseId}&code=PSG-${stamp}`;
+    const kuryeye = await envelopeData<StaffVariantScan>(await istek(kurye, yol));
+    const yoneticiye = await envelopeData<StaffVariantScan>(await istek(yonetici, yol));
+    expect(kuryeye).toMatchObject({ status: 'found', qtyPerCode: 1, row: { variantId, listPriceCents: 3000, costCents: null } });
+    expect(yoneticiye).toMatchObject({ status: 'found', row: { variantId, listPriceCents: 3000 } });
+    if (yoneticiye.status === 'found') expect(yoneticiye.row.costCents).not.toBeNull();
+  });
+});
+
+describe('stok tazeleme', () => {
+  it('kalan yalnız istenen deponun stoğundan okunur', async () => {
+    const oku = async (depo: string) =>
+      envelopeData<StaffStockResponse>(await istek(kurye, '/stock', { warehouseId: depo, variantIds: [variantId] }));
+    expect((await oku(warehouseId)).stock[0]?.availableQty).toBeGreaterThan(0);
+    expect(await oku(baskaDepoId)).toEqual({ stock: [{ variantId, availableQty: 0 }] });
   });
 });
 

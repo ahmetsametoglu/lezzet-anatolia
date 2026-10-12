@@ -3,8 +3,11 @@ import {
   AddressService,
   OrderService,
   ProductService,
+  ProductVariantService,
   SettingsService,
+  StockService,
   UserProfileService,
+  VariantBarcodeService,
   WarehouseService,
   type Db,
 } from '@lezzet/database';
@@ -33,7 +36,9 @@ import type {
   StaffAddressOption,
   StaffCustomerOption,
   StaffDeliveryContext,
+  StaffOrderOrigin,
   StaffVariantRow,
+  StaffVariantScan,
   UserProfile,
 } from '@lezzet/types';
 import { EMPTY_PRODUCT_CONTEXT, toVariant } from '../catalog/map';
@@ -42,6 +47,7 @@ import { effectiveChannelOf, pricingViewerFor } from '../catalog/pricing-viewer'
 import { loadProductContext } from '../catalog/product-context';
 import { addCustomerAddress } from '../customer/addresses';
 import { customerBusiness } from '../delivery/place';
+import { ANONYMOUS_BUYER_ID } from './on-site-sale';
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 import { placeOrder, type PlaceOrderOutcome } from './place-order';
@@ -251,39 +257,30 @@ export function toStaffVariantRow(input: StaffVariantInput): StaffVariantRow {
   };
 }
 
-/**
- * Kalem seçicisi: satıştaki ürünler müşteriye çözülmüş fiyatla ve siparişin deposunun stoğuyla gelir. `term: null` bütün kataloğu
- * katalog sırasıyla sayfalar; yazılan terim en az iki harf ister.
- */
-export async function searchStaffVariants(
-  db: Db,
-  input: { customerId: string; term: string | null; warehouseId: string | null; cursor?: KeysetCursor | null; includeCost: boolean },
-): Promise<Page<StaffVariantRow>> {
-  const query = input.term?.trim() ?? null;
-  if (query !== null && query.length < MIN_TERM_LENGTH) return emptyPage();
+interface StaffVariantScope {
+  customerId: string;
+  warehouseId: string | null;
+  includeCost: boolean;
+}
 
-  const profile = await new UserProfileService(db).getById(input.customerId);
+/** Ürün sayfasının satırları: fiyat müşterinin görüşüyle, stok siparişin deposundan, maliyet yalnız pazarlık yazabilene. */
+async function staffRowsOf(db: Db, products: ProductWithRelations[], scope: StaffVariantScope): Promise<StaffVariantRow[]> {
+  if (products.length === 0) return [];
+  const profile = await new UserProfileService(db).getById(scope.customerId);
   const viewer = await pricingViewerFor(db, profile);
   const business = customerBusinessOf(profile);
-  const page = await new ProductService(db).listWithRelations({
-    filters: { status: 'active', ...(query === null ? {} : { query }) },
-    cursor: input.cursor ?? undefined,
-    limit: PICK_PAGE_SIZE,
-  });
-  if (page.rows.length === 0) return emptyPage();
-
   // Kargo deposu müşterinin işinden seçilir: QUALITE kargo göndermez, müşterisine kargo stoğu gösterilmez.
   const shippingWarehouseId =
     (await new WarehouseService(db).list({ activeOnly: true })).find((w) => w.shipsOnline && w.business === business)?.id ?? null;
-  const context = await loadProductContext(db, page.rows, { warehouseId: input.warehouseId, shippingWarehouseId, business }, viewer);
-  const costs = input.includeCost
+  const context = await loadProductContext(db, products, { warehouseId: scope.warehouseId, shippingWarehouseId, business }, viewer);
+  const costs = scope.includeCost
     ? await readCostBasis(
         db,
-        page.rows.flatMap((p) => p.variants?.map((v) => v.id) ?? []),
+        products.flatMap((p) => p.variants?.map((v) => v.id) ?? []),
       )
     : null;
 
-  const rows = page.rows.flatMap((product) =>
+  return products.flatMap((product) =>
     (product.variants ?? [])
       .filter((variant) => variant.isActive)
       .map((variant) => {
@@ -295,12 +292,64 @@ export async function searchStaffVariants(
           costCents: costs ? costOf(costs.get(variant.id) ?? { status: 'unknown' }) : null,
           availableQty: ctx.stock.get(variant.id)?.availableQty ?? 0,
           channel: viewer.channel,
-          warehouseKnown: input.warehouseId !== null,
-          includeCost: input.includeCost,
+          warehouseKnown: scope.warehouseId !== null,
+          includeCost: scope.includeCost,
         });
       }),
   );
-  return { rows, nextCursor: page.nextCursor };
+}
+
+/**
+ * Kalem seçicisi: satıştaki ürünler müşteriye çözülmüş fiyatla ve siparişin deposunun stoğuyla gelir. `term: null` bütün kataloğu
+ * katalog sırasıyla sayfalar; yazılan terim en az iki harf ister.
+ */
+export async function searchStaffVariants(
+  db: Db,
+  input: StaffVariantScope & { term: string | null; cursor?: KeysetCursor | null },
+): Promise<Page<StaffVariantRow>> {
+  const query = input.term?.trim() ?? null;
+  if (query !== null && query.length < MIN_TERM_LENGTH) return emptyPage();
+
+  const page = await new ProductService(db).listWithRelations({
+    filters: { status: 'active', ...(query === null ? {} : { query }) },
+    cursor: input.cursor ?? undefined,
+    limit: PICK_PAGE_SIZE,
+  });
+  return { rows: await staffRowsOf(db, page.rows, input), nextCursor: page.nextCursor };
+}
+
+/** Barkod, SKU ya da tedarikçi kodu → seçici satırı; koli barkodu birden çok adet sayar (`qtyPerCode`). */
+export async function findStaffVariantByCode(db: Db, input: StaffVariantScope & { code: string }): Promise<StaffVariantScan> {
+  const match = await new VariantBarcodeService(db).findByCode(input.code.trim());
+  if (!match) return { status: 'unknown_code' };
+  const variant = await new ProductVariantService(db).getById(match.variantId);
+  if (!variant) return { status: 'unknown_code' };
+  const page = await new ProductService(db).listWithRelations({ filters: { status: 'active', ids: [variant.productId] }, limit: 1 });
+  const row = (await staffRowsOf(db, page.rows, input)).find((r) => r.variantId === variant.id);
+  return row ? { status: 'found', row, qtyPerCode: match.qtyPerCode } : { status: 'not_sellable' };
+}
+
+/** Boyların siparişin deposundaki kalanı; listede olmayan boy sıfırdır, çünkü o depoda o boydan hiç kalem yoktur. */
+export async function readStaffStock(
+  db: Db,
+  input: { warehouseId: string; variantIds: readonly string[] },
+): Promise<{ variantId: string; availableQty: number }[]> {
+  const available = await new StockService(db).getAvailableMap(input.warehouseId, [...input.variantIds]);
+  return input.variantIds.map((variantId) => ({ variantId, availableQty: available.get(variantId)?.availableQty ?? 0 }));
+}
+
+/**
+ * Duraktan açılan siparişin müşterisi ve adresi: kurye siparişin kimliğini taşır, müşteriyi ve adresi sunucu çözer. Adres müşterinin
+ * defterinde artık yoksa `null` döner ve personel adresi kendisi seçer; anonim alıcıya sipariş açılmaz.
+ */
+export async function readStaffOrderOrigin(db: Db, orderId: string): Promise<StaffOrderOrigin | null> {
+  const order = await new OrderService(db).getById(orderId);
+  if (!order || order.customerId === ANONYMOUS_BUYER_ID) return null;
+  const profile = await new UserProfileService(db).getById(order.customerId);
+  if (!profile) return null;
+  const own = await new AddressService(db).listByCustomer(profile.id);
+  const addressId = order.addressId !== null && own.some((a) => a.id === order.addressId) ? order.addressId : null;
+  return { customer: await staffCustomerOptionOf(db, profile), addressId };
 }
 
 // ── Sipariş ─────────────────────────────────────────────────────────────────────────────────────────────────────────
