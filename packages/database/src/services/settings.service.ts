@@ -128,6 +128,15 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
     return saved;
   }
 
+  /** Kapsam satırını siler; satırı olmayan anahtarı okuyan, çağrı yerinde bildirdiği varsayılana döner. */
+  async remove(key: string, opts: { scopeType?: SettingScope; scopeId?: string | null } = {}): Promise<void> {
+    const scopeType = opts.scopeType ?? 'global';
+    const scopeId = scopeType === 'global' ? null : (opts.scopeId ?? null);
+    const existing = (await this.listByKey(key)).find((row) => row.scopeType === scopeType && row.scopeId === scopeId);
+    if (existing) await this.delete(existing.id);
+    SettingsService.cache.delete(key);
+  }
+
   /** Bir anahtarın tüm kapsam satırları (admin ekranı: "bu ayar nerede eziliyor"). */
   listByKey(key: string): Promise<Setting[]> {
     return this.getAll({ key }, { orderBy: 'scopeType' });

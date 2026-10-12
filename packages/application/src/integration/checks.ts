@@ -33,7 +33,7 @@ const rejected = (detail: string): IntegrationCheck => ({ status: 'rejected', de
 const unreachable = (detail: string): IntegrationCheck => ({ status: 'unreachable', detail });
 
 /** Sağlayıcı cevabındaki okunur hata metni; gövde JSON değilse ya da alan yoksa durum kodu söylenir. */
-async function reasonOf(res: Response): Promise<string> {
+export async function reasonOf(res: Response): Promise<string> {
   const text = await res.text().catch(() => '');
   try {
     const body = JSON.parse(text) as { error?: { message?: string } | string; message?: string };

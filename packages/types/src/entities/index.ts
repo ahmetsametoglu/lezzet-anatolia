@@ -57,6 +57,7 @@ export * from './ticket.schema';
 export * from './conversation.schema';
 // AI kullanım defteri — koşu başına jeton ve yaklaşık maliyet (USD).
 export * from './ai-usage.schema';
+export * from './ai-model.schema';
 export * from './product-feedback.schema';
 export * from './points.schema';
 export * from './trust.schema';

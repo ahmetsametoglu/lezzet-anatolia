@@ -12,6 +12,7 @@ import { McpCard } from './mcp-card';
 import { RegisterCard } from './register-card';
 import { PennylaneCard } from './pennylane-card';
 import { ConnectionsPanel } from './connections-panel';
+import { AiModelCard } from './ai-model-card';
 import type { SettingsViewProps } from './settings-types';
 
 /**
@@ -95,6 +96,9 @@ export function SettingsDesktop({
               </GridCell>
               <GridCell>
                 <McpCard data={data.setup.mcp} />
+              </GridCell>
+              <GridCell>
+                <AiModelCard data={data.setup.aiModel} />
               </GridCell>
             </CardGrid>
           ) : null

@@ -132,7 +132,7 @@ export async function setDefaultTicketModeAction(mode: unknown): Promise<ActionR
 
 /** AI üretim sonucunun operatöre söylenecek hâli — başarı `null` döndürür (hata yok). */
 const DRAFT_FAILURE: Record<string, string> = {
-  not_configured: 'AI yapılandırılmamış — env dosyasına sağlayıcı anahtarı (AI_PROVIDER + API anahtarı) eklenmeli.',
+  not_configured: "AI yapılandırılmamış — Ayarlar › Bağlantılar'da Anthropic ya da Gemini API key yazılmalı.",
   provider_error: 'AI sağlayıcısına ulaşılamadı — birazdan yeniden deneyin.',
   invalid_output: 'AI beklenen biçimde cevap üretemedi — yeniden deneyin; sürerse bildirin.',
   wrong_mode: 'Taslak yalnız hibrit modda üretilir — önce modu Hibrit yapın.',
@@ -195,11 +195,8 @@ export async function triggerReturnAction(ticketId: string): Promise<ActionResul
 }
 
 /**
- * Elle talep açma — WhatsApp/telefon konuşmasından (`admin-talepler.md §3`).
- *
- * `source: 'admin'` ve `authorId` operatörün kendisi: ikisi birlikte ilk sözü operatörün söylediği
- * anlamına geliyor (`openTicket`) ve müşteriye "bize yazdıklarınız" başlıklı bir teyit maili
- * GİTMİYOR — müşteri kendi yazmadığı bir metni okumamalı (16.4 kararı).
+ * Elle talep açma (WhatsApp ya da telefon konuşmasından): `source: 'admin'` ile operatörün `authorId`si ilk sözün operatörün olduğunu
+ * söyler. Müşteriye "bize yazdıklarınız" teyit maili gitmez, çünkü müşteri kendi yazmadığı bir metni okumamalı.
  */
 export async function openManualTicketAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {

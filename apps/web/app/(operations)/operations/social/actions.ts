@@ -125,7 +125,7 @@ export async function setConversationModeAction(
 }
 
 const DRAFT_FAILURE: Record<string, string> = {
-  not_configured: 'AI yapılandırılmamış — env dosyasına sağlayıcı anahtarı (AI_PROVIDER + API anahtarı) eklenmeli.',
+  not_configured: "AI yapılandırılmamış — Ayarlar › Bağlantılar'da Anthropic ya da Gemini API key yazılmalı.",
   provider_error: 'AI sağlayıcısına ulaşılamadı — birazdan yeniden deneyin.',
   invalid_output: 'AI beklenen biçimde cevap üretemedi — yeniden deneyin; sürerse bildirin.',
   wrong_mode: 'Taslak yalnız hibrit modda üretilir — önce modu Hibrit yapın.',

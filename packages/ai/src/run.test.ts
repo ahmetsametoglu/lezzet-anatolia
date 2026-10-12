@@ -19,8 +19,8 @@ const CEVIRI = JSON.stringify({ sourceLanguage: 'tr', tr: 'Merhaba', fr: 'Bonjou
 
 describe('runTask', () => {
   beforeEach(() => {
-    delete process.env.AI_PROVIDER;
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   });
 
   it('şemaya uyan çıktıyı tipli döndürür', async () => {
@@ -79,15 +79,6 @@ describe('runTask', () => {
     expect(gonderilen).toContain('Ürün bozuk geldi');
     expect(gonderilen).toContain('çeviri motorusun');
   });
-
-  it('enjekte model verilmezse env`den çözer — sağlayıcı seçimi kodda değil', async () => {
-    process.env.AI_PROVIDER = 'sihirli-model';
-    const res = await runTask(translateTask, { text: 'x', kind: 'urun_yorumu' });
-    expect(res.ok).toBe(false);
-    if (res.ok) return;
-    expect(res.reason).toBe('not_configured');
-    expect(res.message).toContain('AI_PROVIDER');
-  });
 });
 
 describe('AiTask sözleşmesi', () => {
@@ -114,8 +105,8 @@ describe('kullanım kancası (15.27)', () => {
   const kayitlar: AiUsageRecord[] = [];
   beforeEach(() => {
     kayitlar.length = 0;
-    delete process.env.AI_PROVIDER;
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     setAiUsageRecorder(async (kayit) => void kayitlar.push(kayit));
   });
   afterEach(() => setAiUsageRecorder(null));

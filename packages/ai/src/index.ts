@@ -1,10 +1,8 @@
-// @lezzet/ai — sağlayıcı-agnostik AI PORTU. Görev kaydı + tipli çağrı + token ölçümü; başka
-// hiçbir şey (ne DB, ne log, ne iş kuralı). Kullanım amaçları ve prompt kararları:
-// docs/build/20-yapay-zeka.md
+// @lezzet/ai — sağlayıcıdan bağımsız yapay zekâ portu: görev kaydı, tipli çağrı ve jeton ölçümü; veritabanı, log ve iş kuralı yok.
 export type { AiFailure, AiFailureReason, AiModel, AiProviderName, AiResult, AiSuccess, AiTask, AiTier, AiUsage } from './types';
-export { DEFAULT_PROVIDER, resolveModel } from './provider';
+export { pickModel, resolveModel, setAiModelChoices, type AiModelChoices } from './provider';
 export { runTask } from './run';
-// Kullanım kancası (15.27) — kaydediciyi süreç başında uygulama takar; paket DB bilmez (`usage-recorder.ts`).
+// Kaydedici ve model seçimi süreç başında uygulamadan takılır, çünkü paket veritabanını bilmez.
 export { setAiUsageRecorder, type AiUsageContext, type AiUsageRecord, type AiUsageRecorder } from './usage-recorder';
 export { EMPTY_USAGE, addUsage, estimateCost, toAiUsage, type ModelRate } from './usage';
 export { TranslateOutputSchema, translateTask, type TranslateInput, type TranslateOutput } from './tasks/translate';
@@ -35,19 +33,8 @@ export {
   type VoiceTranscriptOutput,
 } from './tasks/voice-transcript';
 
-/**
- * Araç ilkelinin TEK kapısı (16.9) — `ai` SDK'sından geçiriliyor.
- *
- * Araçları tanımlayan taraf uygulama katmanıdır (gövde veritabanına bakar, bu paket bakamaz), ama
- * SDK'ya doğrudan bağlanması gerekmesin diye ilkel buradan çıkıyor: sağlayıcı katmanı değişirse
- * araç yazan hiçbir dosya elleşmez. `runTask(…, { tools })` bunları bekliyor.
- */
+/** Araçları uygulama katmanı tanımlar ama SDK'ya bağlanmaz; ilkel buradan çıkar ki sağlayıcı katmanı değişince araç dosyaları değişmesin. */
 export { tool, type ToolSet } from 'ai';
 
-/**
- * Şema ilkeli de buradan (16.9) — **teknik bir zorunluluk, kolaylık değil.**
- *
- * Aracın `inputSchema`'sını SDK doğruluyor; şema başka bir zod KOPYASINDAN gelirse örnek kontrolleri
- * sessizce tutmaz ve araç hiç çağrılmaz. Tek örnek garantisi ancak tek kapıdan geçmekle sağlanır.
- */
+/** Şema ilkeli de buradan çıkar: araç şeması başka bir zod kopyasından gelirse SDK'nın doğrulaması tutmaz ve araç hiç çağrılmaz. */
 export { z } from 'zod';

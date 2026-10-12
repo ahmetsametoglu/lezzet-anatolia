@@ -1,4 +1,5 @@
 import { setAiUsageRecorder } from '@lezzet/ai';
+import { loadAiModelChoices } from '@lezzet/application/ai/model-choice';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
 import { installEmailKeySource, loadIntegrationSecrets } from '@lezzet/application/integration/secrets';
 import { serviceDb } from '@lezzet/database';
@@ -11,6 +12,7 @@ import { installSupabaseKeepAlive } from '@lezzet/database/keep-alive';
 */
 setAiUsageRecorder(aiUsageRecorder(serviceDb()));
 installEmailKeySource(serviceDb());
-// Bağlantılar'da yazılan anahtarlar istek karşılanmadan önce belleğe yüklenir; sonra dakikada bir tazelenir.
+// Bağlantılar'da yazılan anahtarlar ve Kurulum'da seçilen yapay zekâ modeli istek karşılanmadan önce belleğe yüklenir; sonra dakikada bir tazelenir.
 await loadIntegrationSecrets(serviceDb());
+await loadAiModelChoices(serviceDb());
 installSupabaseKeepAlive();

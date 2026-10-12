@@ -66,6 +66,8 @@ const UYGULAMA_DBSIZ = [
   'packages/application/src/integration/secrets.test.ts',
   // Anahtar sınamasının kararları saf: sağlayıcı `fetch` taklidiyle cevap verir.
   'packages/application/src/integration/checks.test.ts',
+  // Model listesi ve tarife ayrıştırması saf: sağlayıcı `fetch` taklidiyle cevap verir.
+  'packages/application/src/ai/models.test.ts',
 ];
 
 const WEB_LIB_DBSIZ = [

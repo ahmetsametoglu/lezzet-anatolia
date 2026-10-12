@@ -1,55 +1,27 @@
 import type { LanguageModel } from 'ai';
 import type { z } from 'zod';
-import type { AiRunFailure } from '@lezzet/types';
+import type { AiProvider, AiRunFailure, AiTier as Tier } from '@lezzet/types';
 
 /**
- * `@lezzet/ai` sözleşmeleri — paket bir PORT'tur: model çağırır, tipli sonuç döner.
- *
- * **Paket hiçbir şey bilmez ve hiçbir şeye yazmaz:** ne veritabanı, ne logger, ne iş kuralı.
- * Ölçümü (`usage`) döner, LOGLAMAZ — çağıran loglar. `dependency-cruiser`'daki `ai-scope`
- * kuralı bunu makineyle zorluyor (yalnız `@lezzet/types`). Sebebi domain-core'unkiyle aynı:
- * dış dünyası olmayan bir katman ağa çıkmadan test edilebilir.
+ * `@lezzet/ai` bir porttur: model çağırır, tipli sonuç ve ölçüm döner; veritabanı, logger ve iş kuralı bilmez. Bu sınırı
+ * `dependency-cruiser`'ın `ai-scope` kuralı zorlar, çünkü dış dünyası olmayan katman ağa çıkmadan sınanabilir.
  */
 
-/**
- * Model KATMANI — görev kaydında model ADI değil katman durur.
- *
- * Görev "ucuz olanla çevir" der; hangi modelin ucuz olduğu bugünün bilgisidir ve env'den gelir
- * (`AI_MODEL_CHEAP`). Model adını görev tanımına gömmek, model değişince KODU değiştirmek
- * demekti — oysa bu bir dağıtım kararıdır, bir iş kararı değil.
- */
-export type AiTier = 'cheap' | 'standard';
+/** Görev model adını değil katmanı söyler; katmanın modeli Kurulum'da seçilir, model değişince görev değişmez. */
+export type AiTier = Tier;
 
-/**
- * Çalıştırılabilir bir model. **Kütüphanenin tipi burada YENİDEN ADLANDIRILIYOR** ki çağıranlar
- * (`apps/backend`, `apps/web`) `ai` paketini doğrudan import etmek zorunda kalmasın — yoksa
- * "sağlayıcı-agnostik" iddiası ilk satırda çürürdü: kütüphane değişince üç uygulama da değişirdi.
- */
+/** Kütüphanenin tipi yeniden adlandırılır ki çağıranlar `ai` paketini doğrudan almasın; kütüphane değişince uygulamalar değişmez. */
 export type AiModel = LanguageModel;
 
-/** Desteklenen sağlayıcılar. Seçim `AI_PROVIDER` ile; anahtar sağlayıcının kendi env'inden. */
-export type AiProviderName = 'anthropic' | 'google';
+export type AiProviderName = AiProvider;
 
 /**
- * Başarısızlığın ÜÇ sebebi — çağıranın davranışı üçünde de farklı olduğu için ayrı tutuluyor:
- *
- * · `not_configured` — anahtar/env yok. Beklenen bir hâl: özellik AI'sız çalışmaya devam eder,
- *   kullanıcıya hata gösterilmez, tekrar denemenin anlamı yoktur.
- * · `provider_error`  — ağ/kota/model hatası. GEÇİCİ olabilir; tekrar denenebilir.
- * · `invalid_output`  — model şemaya uymayan bir şey döndürdü. Tekrar denemek genelde işe yarar
- *   ama sınırlı: aynı prompt üçüncü kez de bozuksa sorun prompt'tadır.
- *
- * Kayda giren iki sebep (`provider_error`, `invalid_output`) tip paketinde TEK listede durur
- * (`AiRunFailureEnum`) — kullanım defterinin kolonu da onu doğrular (15.27).
+ * `not_configured` beklenen bir hâldir ve özellik yapay zekâsız sürer; `provider_error` geçici olabilir; `invalid_output` prompt'a
+ * işaret eder. Kayda giren iki sebep tip paketindeki tek listededir (`AiRunFailureEnum`).
  */
 export type AiFailureReason = 'not_configured' | AiRunFailure;
 
-/**
- * Bir çağrının token ölçümü.
- *
- * Alanlar `number | null` — **`0` değil.** Sağlayıcı ölçümü vermediyse "sıfır token harcandı"
- * demek, bozuk ölçümü sağlıklı gibi okutur (`CLAUDE §1`). Bilinmiyorsa bilinmiyor yazar.
- */
+/** Alanlar `null` olabilir, `0` değil: sağlayıcı ölçümü vermediyse "sıfır jeton" demek bozuk ölçümü sağlıklı gösterirdi. */
 export interface AiUsage {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -64,13 +36,7 @@ export interface AiSuccess<T> {
   usage: AiUsage;
   /** Çağrının GERÇEKTEN gittiği model — ölçüm ve maliyet bununla eşleşir. */
   modelId: string;
-  /**
-   * Modelin ÇAĞIRDIĞI araçların adları (16.9), çağrı sırasıyla; araçsız koşuda boş.
-   *
-   * İzlenebilirlik için var (16.5'in "kim/ne yanıtladı" gereği): "AI teslimat günü söyledi" ile
-   * "AI teslimat gününü UYDURDU" arasındaki farkı sonradan yalnız bu liste ayırt ettirir. Paket
-   * loglamaz, ölçümü döndürür — kaydı çağıran tutar.
-   */
+  /** Modelin çağırdığı araçlar, sırasıyla; "AI teslim günü söyledi" ile "uydurdu" farkını sonradan yalnız bu liste ayırır. */
   toolCalls: string[];
 }
 
@@ -84,26 +50,15 @@ export interface AiFailure {
 export type AiResult<T> = AiSuccess<T> | AiFailure;
 
 /**
- * Bir AI görevi — kaydın tek birimi.
- *
- * Prompt burada durur, çağıranın içinde değil: aynı prompt'un iki yerde iki sürümü olması
- * (`CLAUDE §1` duplication) çıktının neden değiştiğini bulunamaz hâle getirir.
+ * Modele giden kullanıcı mesajının parçaları. `mediaType` zorunludur, çünkü model dosyayı uzantıdan değil bu alandan okur; dosyayı
+ * metne gömmek jeton sayacını yanıltırdı.
  */
-/**
- * Modele giden tek kullanıcı mesajının parçaları (15.26).
- *
- * `data` ham bayt ya da base64 dize olabilir — SDK ikisini de alıyor; `mediaType` zorunlu, çünkü
- * modelin dosyayı nasıl okuyacağını uzantı değil bu alan söyler (`audio/ogg`, `image/jpeg`).
- * Dosyayı bir dizeye gömmek (base64'ü prompt metnine yapıştırmak) teknik olarak mümkün ama
- * yanlış: jeton sayacı onu metin sanır ve maliyet okunamaz hâle gelirdi.
- */
-export type AiPromptPart =
-  | { type: 'text'; text: string }
-  | { type: 'file'; data: Uint8Array | string; mediaType: string };
+export type AiPromptPart = { type: 'text'; text: string } | { type: 'file'; data: Uint8Array | string; mediaType: string };
 
 /** Görevin ürettiği istem: düz metin ya da (dosya taşıyorsa) parça dizisi. */
 export type AiPromptContent = string | AiPromptPart[];
 
+/** Prompt görevde durur, çağıranda değil: aynı prompt'un iki sürümü çıktının neden değiştiğini bulunamaz kılardı. */
 export interface AiTask<TInput, TOutput> {
   /** Kayıt anahtarı — ölçüm/log satırında görünür. */
   id: string;
@@ -112,29 +67,13 @@ export interface AiTask<TInput, TOutput> {
   output: z.ZodType<TOutput>;
   /** Sistem talimatı — görevin değişmeyen yarısı. */
   system: string;
-  /**
-   * Girdinin değişen yarısı.
-   *
-   * **Metin ya da PARÇA DİZİSİ** (15.26): sesli mesajı çözmek için modele ham dosyayı vermek
-   * gerekiyor ve dosya bir dizeye sığmaz. Dize dönen bugünkü görevlerin hiçbiri değişmedi —
-   * koşucu iki hâli de aynı kapıdan geçiriyor.
-   *
-   * Ayrı bir "ses çağrısı" yazmak yerine sözleşmenin genişletilmesi bilinçli: ikinci bir model
-   * çağırma yolu, kullanım ölçümünü, tekrar denemesini ve hata sınıflandırmasını ikinci kez
-   * yaşatırdı (`CLAUDE §1`).
-   */
+  /** Girdinin değişen yarısı; ses gibi dosyalar parça dizisiyle gelir ki ikinci bir çağırma yolu açılmasın. */
   buildPrompt(input: TInput): AiPromptContent;
-  /**
-   * Yaratıcılık ayarı. Çeviri/çıkarım gibi TEK doğrusu olan işlerde 0 — aynı girdi aynı çıktıyı
-   * versin. Metin taslağı gibi işlerde yükselir.
-   */
+  /** Tek doğrusu olan işlerde (çeviri, çıkarım) 0, ki aynı girdi aynı çıktıyı versin; metin taslağında yükselir. */
   temperature: number;
   /**
-   * Araçlı koşuda adım tavanı (16.9) — yalnız `runTask`a araç verilirse anlamlı. Araç çağıran model
-   * kendi kendine döngüye girebilir; tavan bunun faturasını sınırlar. Varsayılan 4.
-   *
-   * Araç listesi BURADA değil çünkü araç göreve değil ÇAĞRIYA aittir: aynı görev bir müşteri için
-   * koşarken onun kimliğine kapatılmış araçlarla gelir (`run.ts` künyesi).
+   * Araçlı koşuda adım tavanı, varsayılan 4; araç çağıran model döngüye girebilir ve tavan faturayı sınırlar. Araç listesi görevde
+   * değil çağrıdadır, çünkü aynı görev her müşteri için onun kimliğine kapatılmış araçlarla koşar.
    */
   maxSteps?: number;
 }

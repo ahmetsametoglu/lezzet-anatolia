@@ -1,27 +1,18 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import type { AiModelChoice } from '@lezzet/types';
 import type { LanguageModel } from 'ai';
 import type { AiFailure, AiProviderName, AiTier } from './types';
 
 /**
- * Sağlayıcı çözümü — **kod değil env karar verir** (`docs/build/20-yapay-zeka.md`).
- *
- * Referans projede (petitcigogne) bu katman ELLE yazılmıştı: nötr mesaj/araç tipleri + döngü +
- * sağlayıcı adaptörü, ~350 satır. Üç sağlayıcı için tasarlanmış, biri yazılmış; nötr tip
- * `meta?: Record<string, unknown>` diye bir kaçış deliği açmak zorunda kalmış (Gemini'nin
- * `thoughtSignature`'ı aynen geri gitmezse 400) ve turlar arası araç geçmişi tamamen ATILMIŞ
- * (sağlayıcı doğrulaması bozuluyordu). Biz o katmanı yazmıyoruz: Vercel AI SDK (`ai`) aynı işi
- * bakımı sürdürülen bir kütüphaneyle yapıyor, sağlayıcı tek satırda değişiyor.
- *
- * **İki sağlayıcı var ve ikisinin de gerçek bir işi var** — "ileride lazım olur" değil: toplu
- * çeviri hacimli ve ucuz katman ister, metin taslağı marka sesi ister. Biri kotaya takılırsa
- * öteki env değişikliğiyle devralır.
+ * Sağlayıcı katmanını kütüphane (Vercel AI SDK) kurar; burada yalnız katmanın hangi modelle ve hangi anahtarla koşacağı seçilir.
+ * Seçimi uygulama katmanı süreç başında takar (`setAiModelChoices`), çünkü paket veritabanını bilmez.
  */
 
 interface ProviderSpec {
-  /** Anahtarın okunduğu env değişkeni — sağlayıcının SDK'sının beklediği ad. */
+  /** Sağlayıcı SDK'sının beklediği ortam adı; Bağlantılar'da yazılan anahtar süreç ortamına bu adla biner. */
   apiKeyEnv: string;
-  /** Katman varsayılanları. `AI_MODEL_CHEAP`/`AI_MODEL_STANDARD` ezer. */
+  /** Katman seçilmemişken çalışan model. */
   defaults: Record<AiTier, string>;
   create(apiKey: string, modelId: string): LanguageModel;
 }
@@ -29,34 +20,60 @@ interface ProviderSpec {
 const PROVIDERS: Record<AiProviderName, ProviderSpec> = {
   anthropic: {
     apiKeyEnv: 'ANTHROPIC_API_KEY',
-    defaults: { cheap: 'claude-haiku-4-5-20251001', standard: 'claude-sonnet-5' },
+    defaults: { cheap: 'claude-haiku-5-5', standard: 'claude-sonnet-5-5' },
     create: (apiKey, modelId) => createAnthropic({ apiKey })(modelId),
   },
   google: {
     apiKeyEnv: 'GOOGLE_GENERATIVE_AI_API_KEY',
-    /*
-      2.5 SATIRI ÖLDÜ — ölçüldü 07.09: `gemini-2.5-flash-lite` çağrısı
-      *"no longer available to new users"* ile reddedildi. Varsayılan bir model listesi bayatladığında
-      arıza SESSİZ olmuyor ama YANLIŞ yerde görünüyor: env'i doğru kurulmuş makinede her şey çalışır,
-      env'siz bir ortamda (CI, yeni geliştirici, üretim ilk kurulum) ilk AI çağrısı sağlayıcı hatasıyla
-      düşer ve sebep koddaki bu satırdır.
-
-      Ses çözümünün ucuz katmanda olması bir maliyet tercihi DEĞİL, doğru model seçimidir: lite'ta
-      düşünme kapalı ve transkripsiyon akıl yürütme değil çözümleme işidir. Ölçüldü (42 sn kayıt):
-      flash 799 çıktı jetonu · flash-lite 186 — metin ikisinde de doğru, lite'ınki dil kodunu da
-      doğru verdi. Fiyat farkıyla birlikte toplam ~10 kat.
-    */
-    defaults: { cheap: 'gemini-3.5-flash-lite', standard: 'gemini-3.5-flash' },
+    // Ses çözümü ucuz katmanda kalır: Flash-Lite'ta düşünme kapalıdır ve çözümleme akıl yürütme istemez.
+    defaults: { cheap: 'gemini-3.5-flash-lite', standard: 'gemini-3.8-flash' },
     create: (apiKey, modelId) => createGoogleGenerativeAI({ apiKey })(modelId),
   },
 };
 
-export const DEFAULT_PROVIDER: AiProviderName = 'anthropic';
+/** Seçim yokken sıra: anahtarı tanımlı ilk sağlayıcının varsayılanı çalışır. */
+const DEFAULT_ORDER: readonly AiProviderName[] = ['anthropic', 'google'];
 
-function readProviderName(): AiProviderName | null {
-  const raw = process.env.AI_PROVIDER?.trim();
-  if (!raw) return DEFAULT_PROVIDER;
-  return raw in PROVIDERS ? (raw as AiProviderName) : null;
+export type AiModelChoices = Partial<Record<AiTier, AiModelChoice>>;
+
+// Seçim `globalThis`te durur: Next sunucu kodunu birden çok modül grafiğinde derler ve modül değişkeni öteki grafikte boş kalırdı.
+const SLOT = Symbol.for('lezzet.ai.model-choices');
+type Slot = { [SLOT]?: () => AiModelChoices };
+
+/** Seçimin kaynağı süreç başında takılır; `null` söker (testte önceki hâli geri koymak için). */
+export function setAiModelChoices(source: (() => AiModelChoices) | null): void {
+  (globalThis as Slot)[SLOT] = source ?? undefined;
+}
+
+export interface PickedModel {
+  ok: true;
+  provider: AiProviderName;
+  modelId: string;
+  /** Kurulum'da seçilmiş mi, yoksa seçim olmadığı için varsayılan mı. */
+  chosen: boolean;
+}
+
+/**
+ * Katmanın modeli: seçim varsa o, yoksa anahtarı tanımlı ilk sağlayıcının varsayılanı. Seçilen modelin sağlayıcısının anahtarı yoksa
+ * başka sağlayıcıya düşülmez, çünkü seçilmemiş bir modelin sessizce koşması seçimi yalanlardı.
+ */
+export function pickModel(tier: AiTier, choices: AiModelChoices, env: Record<string, string | undefined>): PickedModel | AiFailure {
+  const choice = choices[tier];
+  if (choice) {
+    const keyEnv = PROVIDERS[choice.provider].apiKeyEnv;
+    if (!env[keyEnv]?.trim())
+      return { ok: false, reason: 'not_configured', message: `${choice.model} seçili ama ${keyEnv} tanımlı değil.` };
+    return { ok: true, provider: choice.provider, modelId: choice.model, chosen: true };
+  }
+  const provider = DEFAULT_ORDER.find((name) => env[PROVIDERS[name].apiKeyEnv]?.trim());
+  if (!provider) {
+    return {
+      ok: false,
+      reason: 'not_configured',
+      message: 'Yapay zekâ anahtarı tanımlı değil (ANTHROPIC_API_KEY ya da GOOGLE_GENERATIVE_AI_API_KEY).',
+    };
+  }
+  return { ok: true, provider, modelId: PROVIDERS[provider].defaults[tier], chosen: false };
 }
 
 interface ResolvedModel {
@@ -66,22 +83,11 @@ interface ResolvedModel {
   provider: AiProviderName;
 }
 
-/**
- * Katman → çalıştırılabilir model. **Fırlatmaz**: yapılandırma eksikse `not_configured` döner ve
- * çağıran özelliği AI'sız sürdürür. Modül YÜKLENİRKEN env okunmaz — anahtarsız bir ortamda
- * `import` etmek bile patlamamalı, yoksa AI paketine dokunan her test ortam kurulumu ister.
- */
+/** Fırlatmaz: yapılandırma eksikse `not_configured` döner ve çağıran özelliği yapay zekâsız sürdürür. Ortam çağrı anında okunur. */
 export function resolveModel(tier: AiTier): ResolvedModel | AiFailure {
-  const provider = readProviderName();
-  if (!provider) {
-    return { ok: false, reason: 'not_configured', message: `AI_PROVIDER geçersiz: '${process.env.AI_PROVIDER}' (anthropic|google)` };
-  }
-  const spec = PROVIDERS[provider];
-  const apiKey = process.env[spec.apiKeyEnv]?.trim();
-  if (!apiKey) {
-    return { ok: false, reason: 'not_configured', message: `${spec.apiKeyEnv} tanımlı değil — '${provider}' sağlayıcısı kullanılamıyor.` };
-  }
-  const envKey = tier === 'cheap' ? 'AI_MODEL_CHEAP' : 'AI_MODEL_STANDARD';
-  const modelId = process.env[envKey]?.trim() || spec.defaults[tier];
-  return { ok: true, model: spec.create(apiKey, modelId), modelId, provider };
+  const picked = pickModel(tier, (globalThis as Slot)[SLOT]?.() ?? {}, process.env);
+  if (!picked.ok) return picked;
+  const spec = PROVIDERS[picked.provider];
+  const apiKey = process.env[spec.apiKeyEnv]?.trim() ?? '';
+  return { ok: true, model: spec.create(apiKey, picked.modelId), modelId: picked.modelId, provider: picked.provider };
 }

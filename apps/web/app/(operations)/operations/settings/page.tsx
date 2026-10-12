@@ -19,6 +19,7 @@ import { readMcpPanel } from './mcp-read';
 import { readRegisterPanel } from './register-read';
 import { readInvoiceTemplateList, readPennylanePanel } from './pennylane-read';
 import { readIntegrationKeyCount, readIntegrationKeysPanel } from './integration-keys-read';
+import { readAiModelPanel } from './ai-model-read';
 import { parseSettingsUrl } from './settings-url';
 import type { SettingsData, SetupData } from './settings-types';
 
@@ -86,11 +87,12 @@ async function readAllSettings(svc: SettingsService): Promise<Setting[]> {
 }
 
 async function readSetup(): Promise<SetupData> {
-  const [siteImages, mcp, register, pennylane] = await Promise.all([
+  const [siteImages, mcp, register, pennylane, aiModel] = await Promise.all([
     readSiteImages(),
     readMcpPanel(),
     readRegisterPanel(),
     readPennylanePanel(),
+    readAiModelPanel(),
   ]);
-  return { siteImages, mcp, register, pennylane };
+  return { siteImages, mcp, register, pennylane, aiModel };
 }
