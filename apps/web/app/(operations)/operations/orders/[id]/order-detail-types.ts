@@ -181,7 +181,8 @@ export interface OrderFinanceView {
 export interface DeliveryProofView {
   when: string | null;
   kind: DeliveryProofRecord['kind'];
-  // BEKLEYEN(K.76): kapı kodunun sonucu (`doorCode`) taşınmıyor; detay kodun doğrulandığını ya da kodsuz teslimi göstermiyor.
+  /** Kapı kodunun sonucu; `null` = siparişe kod üretilmedi. */
+  doorCode: NonNullable<DeliveryProofRecord['doorCode']> | null;
 }
 
 /** Sağ rayın müşteri kartı: kim, ne kadar borcu var, limiti ne. */

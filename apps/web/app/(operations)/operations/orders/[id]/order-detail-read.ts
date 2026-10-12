@@ -684,7 +684,7 @@ function recipientOf(
 /** Ham blok burada ayrıştırılmaz; okuma tek kapıda (`readDeliveryProof`) ki yazan ve okuyan aynı şemayı kullansın. */
 function proofOf(raw: unknown): OrderDetailView['delivery']['proof'] {
   const proof = readDeliveryProof(raw);
-  return proof ? { when: proof.at, kind: proof.kind } : null;
+  return proof ? { when: proof.at, kind: proof.kind, doorCode: proof.doorCode ?? null } : null;
 }
 
 /** Kuyrukta bekleyen siparişin sebebi: plan durduysa sebep, kasaya yazılamıyorsa deneme sayısı ve hata, yoksa sırada. */

@@ -13,6 +13,7 @@ import { OrderLines } from './components/order-lines';
 import {
   boxTrailOf,
   DECISION_COPY,
+  DOOR_CODE_LABEL,
   ORDER_NOTES,
   PROOF_KIND_LABEL,
   SHIPMENT_STATUS_LABEL,
@@ -31,6 +32,9 @@ import type { OrderDecision } from '@lezzet/domain-core';
 import type { OrderSource, OrderStatus } from '@lezzet/types';
 import { cardClass } from '@/components/operation/ui/card';
 import { TrustHistory } from '@/components/operation/ui/trust-history';
+
+const PROOF_BADGE =
+  'rounded-[6px] border border-ops-olive-line bg-ops-white px-2 py-1 font-ops-mono text-ops-micro font-medium text-ops-olive-dark';
 
 // Bölüm sırası yoğun ve sade siparişte aynıdır, verisi olmayan blok hiç çizilmez: operatör aynı ekranda hep aynı yere bakar.
 
@@ -498,9 +502,10 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, onRetryRefund
                 <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-olive-line bg-ops-olive-bg px-3 py-2.5">
                   <span className="font-ops-display text-ops-xs font-semibold text-ops-olive-dark">Teslim kanıtı</span>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-[6px] border border-ops-olive-line bg-ops-white px-2 py-1 font-ops-mono text-ops-micro font-medium text-ops-olive-dark">
-                      {PROOF_KIND_LABEL[order.delivery.proof.kind]}
-                    </span>
+                    <span className={PROOF_BADGE}>{PROOF_KIND_LABEL[order.delivery.proof.kind]}</span>
+                    {order.delivery.proof.doorCode ? (
+                      <span className={PROOF_BADGE}>{DOOR_CODE_LABEL[order.delivery.proof.doorCode]}</span>
+                    ) : null}
                     {order.delivery.proof.when ? (
                       <span className="ml-auto font-ops-mono text-ops-micro text-ops-olive-dark">
                         {shortDateTime(order.delivery.proof.when)}

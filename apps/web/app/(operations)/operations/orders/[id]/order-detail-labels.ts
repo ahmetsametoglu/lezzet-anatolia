@@ -210,6 +210,12 @@ export const PROOF_KIND_LABEL: Record<DeliveryProofView['kind'], string> = {
   box_scan: 'kutu QR',
 };
 
+/** Kodsuz teslim de gösterilir, çünkü ihtilafta kodun sorulmadığı görülmeli. */
+export const DOOR_CODE_LABEL: Record<NonNullable<DeliveryProofView['doorCode']>, string> = {
+  verified: 'kod doğrulandı',
+  skipped: 'kodsuz teslim',
+};
+
 /** Sipariş detayının kısa cümleleri — ekranda tekrarlanan metin koda gömülmez. */
 export const ORDER_NOTES = {
   proofBoxScan:
