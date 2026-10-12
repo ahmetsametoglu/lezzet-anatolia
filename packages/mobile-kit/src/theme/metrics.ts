@@ -50,6 +50,8 @@ export const appMetrics = {
     controlSm: 46,
     /** Çok satırlı alanın asgari yüksekliği (tasarım: 110). */
     controlMultiline: 110,
+    /** Liste satırındaki kısa çok satırlı alan (değerlendirme yorumu); satırları ekranlarca uzatmasın diye standarttan kısa. */
+    controlMultilineShort: 85,
     /** Yazışma kutusunun uzayabileceği tavan; ötesinde kutu kendi içinde kayar (web `max-h-40` ile aynı). */
     controlGrowMax: 160,
     /** Başlık çubuğundaki yuvarlak ikon düğmesi (tasarım: 40). */

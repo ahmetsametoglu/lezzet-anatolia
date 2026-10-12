@@ -75,7 +75,7 @@ export function FeedbackRow({
           onChangeText={onChangeComment}
           accessibilityLabel={t.list.commentLabel.replace('{product}', card.name)}
           placeholder={t.list.commentPlaceholder.replace('{product}', card.name)}
-          multiline
+          multiline="short"
           errorText={short ? t.list.minWords.replace('{count}', String(minWords)) : undefined}
           footerAside={<Tag label={earned ? `✓ ${points}` : points} tone={earned ? 'olive' : 'terracotta'} rotate={-2} testID={`${testID}-badge`} />}
           testID={`${testID}-comment`}

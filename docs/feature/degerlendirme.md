@@ -20,6 +20,8 @@
 7. **Ürün sayfası:** puan ürün başlığının üst satırındadır ("TATLI · ★ 4,4 (5 DEĞERLENDİRME)"); kartların altında yalnız
    "N yorumun tümü →"; özet kartı kalkar; "Tüm yorumlar" ekranında dağılım çubukları ve yıldız çipleri. Yorum kartında tarih
    yoktur, yazar adı kısaltılır ("Hugo B."), yıldızsız beğeni "♥ Beğendi" yazar.
+8. **Yorum alanı 85 px:** panodaki ~70 ile kitin standart çok satırlı alanı (native 110, web 96) arasında; standart alan öteki
+   formlarda aynen kalır.
 
 ## 2. Yol haritası
 
@@ -30,8 +32,3 @@
 - **Küfür süzgeci,** üç dilde.
 - **Günlük yorum sınırı:** günlük puan tavanı puanı sınırlar, yorum sayısını sınırlamaz.
 - **Reddedilen yorumun puanı:** bugün moderasyonun reddi puanı geri almaz; geri alınıp alınmayacağı karar bekliyor.
-
-## 3. Açık işler
-
-- **Yorum alanının yüksekliği:** panodaki satırda alan ~70 px; native kitin çok satırlı alanı 110, web'inki 96. Hangisinin
-  geçerli olduğu kullanıcıya soruldu.

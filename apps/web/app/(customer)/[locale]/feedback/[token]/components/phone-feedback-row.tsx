@@ -67,6 +67,7 @@ export function PhoneFeedbackRow({
           placeholder={copy.list.commentPlaceholder.replace('{product}', card.name)}
           rows={3}
           variant="soft"
+          height="short"
           error={short ? copy.list.minWords.replace('{count}', String(minWords)) : undefined}
           footerAside={<Tag label={earned ? `✓ ${points}` : points} tone={earned ? 'olive' : 'terracotta'} rotate={-2} />}
         />

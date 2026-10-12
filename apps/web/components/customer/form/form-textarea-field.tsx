@@ -15,6 +15,8 @@ interface FormTextareaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAre
   error?: string;
   footerAside?: ReactNode;
   variant?: FieldVariant;
+  /** `short`: liste satırındaki kısa alan (85 px, native `controlMultilineShort`); varsayılan 96 px. */
+  height?: 'regular' | 'short';
   id?: string;
   textareaRef?: Ref<HTMLTextAreaElement>;
 }
@@ -27,6 +29,7 @@ export function FormTextareaField({
   error,
   footerAside,
   variant,
+  height = 'regular',
   id,
   textareaRef,
   className,
@@ -48,11 +51,15 @@ export function FormTextareaField({
       footerAside={footerAside}
       variant={variant}
     >
-      {/* Tek satırlık alanın sabit 48px'i burada `min-h-24` ile ezilir; dikey ped geri gelir
-          (input'ta metni tarayıcı ortalıyor, çok satırlıda ortalayacak bir şey yok). */}
+      {/* Tek satırlık alanın sabit yüksekliği burada asgari yükseklikle ezilir; dikey ped geri gelir, çünkü çok satırlıda metni
+          tarayıcı ortalamaz. */}
       <textarea
         id={fieldId}
-        className={controlClass(Boolean(error), ['min-h-24 resize-y py-3', className].filter(Boolean).join(' '), variant)}
+        className={controlClass(
+          Boolean(error),
+          [height === 'short' ? 'min-h-21.25' : 'min-h-24', 'resize-y py-3', className].filter(Boolean).join(' '),
+          variant,
+        )}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={errorIdFor(fieldId, error)}
         rows={rows}

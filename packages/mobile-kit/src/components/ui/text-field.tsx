@@ -71,8 +71,11 @@ interface TextFieldProps {
   /** Otomatik doldurma ve klavye önerisi için alanın türü (`CONTENT_TRAITS`). */
   content?: FieldContent;
   numeric?: boolean;
-  /** `'grow'`: yazışma kutusu — tek satır yüksekliğinden başlar, metinle `controlGrowMax`a kadar uzar; Enter satır atlar. */
-  multiline?: boolean | 'grow';
+  /**
+   * `'grow'`: yazışma kutusu — tek satır yüksekliğinden başlar, metinle `controlGrowMax`a kadar uzar; Enter satır atlar. `'short'`:
+   * liste satırındaki kısa alan (`controlMultilineShort`).
+   */
+  multiline?: boolean | 'grow' | 'short';
   /** Alanın sonundaki yuva — genellikle bir düğme. */
   trailing?: ReactNode;
   /** Alanın başındaki ikon; dokunmayı almaz ve metin ikonun sağından başlar. */
@@ -149,6 +152,7 @@ export function TextField({
             density === 'compact' ? styles.compact : styles.comfortable,
             shape === 'pill' ? styles.pill : styles.soft,
             multiline === 'grow' ? styles.grow : multiline ? styles.multiline : styles.singleLine,
+            multiline === 'short' ? styles.multilineShort : undefined,
             icon === undefined ? undefined : styles.withIcon,
             accent ? styles.accent : undefined,
             /* Hata çerçevesi yoğunluğun ve vurgunun çerçevesini EZER ve sırası bu yüzden sonda: sessiz
@@ -204,6 +208,9 @@ const styles = StyleSheet.create((theme) => ({
     minHeight: theme.size.controlMultiline,
     paddingVertical: theme.space['2xl'],
     textAlignVertical: 'top',
+  },
+  multilineShort: {
+    minHeight: theme.size.controlMultilineShort,
   },
   grow: {
     minHeight: theme.size.controlMd,
