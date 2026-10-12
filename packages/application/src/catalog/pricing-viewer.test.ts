@@ -52,7 +52,7 @@ async function birimFiyat(customerId: string | null): Promise<number | null> {
   const detail = await getProductDetail(db, {
     locale: 'tr',
     slug: productSlug,
-    place: { warehouseId, shippingWarehouseId: null, business: 'lezzet' },
+    place: { warehouseId, shippingWarehouseId: null, business: 'lezzet', country: null },
     viewer,
   });
   return detail?.variants[0]?.priceCents ?? null;
@@ -111,6 +111,7 @@ describe('pricingViewerOf', () => {
     const customerId = await newCustomer({ company: true, approved: false });
     expect(await pricingViewerOf(db, customerId)).toEqual({
       channel: 'b2c',
+      vatChannel: 'b2b',
       b2bApproved: false,
       customerId,
       groupPercentOff: null,
@@ -125,6 +126,7 @@ describe('pricingViewerOf', () => {
     const customerId = await newCustomer({ company: true, approved: true });
     expect(await pricingViewerOf(db, customerId)).toEqual({
       channel: 'b2b',
+      vatChannel: 'b2b',
       b2bApproved: true,
       customerId,
       groupPercentOff: null,

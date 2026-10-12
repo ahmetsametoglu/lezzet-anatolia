@@ -16,14 +16,16 @@ import {
   costOf,
   creditSummary,
   customerBusinessOf,
+  findShippingWarehouse,
   PAYMENT_TERM_DAYS_DEFAULT,
   PAYMENT_TERM_DAYS_KEY,
   targetMarginFor,
 } from '@lezzet/domain-core';
-import { resolveLocalizedText } from '@lezzet/types';
+import { COUNTRY_LABELS, SELLER_COUNTRY, resolveLocalizedText } from '@lezzet/types';
 import type {
   Address,
   Channel,
+  Country,
   CustomerCreditSummary,
   ImageRender,
   KeysetCursor,
@@ -263,6 +265,8 @@ interface StaffVariantScope {
   customerId: string;
   warehouseId: string | null;
   includeCost: boolean;
+  /** Teslim adresinin ülkesi; fiyat ve satılabilirlik ondan okunur, bilinmiyorsa genel fiyat. */
+  country?: Country | null;
 }
 
 /** Ürün sayfasının satırları: fiyat müşterinin görüşüyle, stok siparişin deposundan, maliyet yalnız pazarlık yazabilene. */
@@ -272,9 +276,18 @@ async function staffRowsOf(db: Db, products: ProductWithRelations[], scope: Staf
   const viewer = await pricingViewerFor(db, profile);
   const business = customerBusinessOf(profile);
   // Kargo deposu müşterinin işinden seçilir: QUALITE kargo göndermez, müşterisine kargo stoğu gösterilmez.
+  const warehouses = await new WarehouseService(db).list({ activeOnly: true });
+  const country = scope.country ?? null;
   const shippingWarehouseId =
-    (await new WarehouseService(db).list({ activeOnly: true })).find((w) => w.shipsOnline && w.business === business)?.id ?? null;
-  const context = await loadProductContext(db, products, { warehouseId: scope.warehouseId, shippingWarehouseId, business }, viewer);
+    (country ? findShippingWarehouse(country, warehouses, business) : warehouses.find((w) => w.shipsOnline && w.business === business))
+      ?.id ?? null;
+  const context = await loadProductContext(
+    db,
+    products,
+    { warehouseId: scope.warehouseId, shippingWarehouseId, business, country },
+    viewer,
+    'tr',
+  );
   const costs = scope.includeCost
     ? await readCostBasis(
         db,
@@ -477,6 +490,10 @@ export function staffOrderRejectionText(outcome: Exclude<StaffOrderOutcome, { st
     case 'pickup_not_allowed':
     case 'pickup_warehouse_unavailable':
       return 'Gel-al seçimi personel sipariş girişinde yok — sipariş adrese teslim olarak yazılır, yeniden deneyin.';
+    case 'not_sold_in_country':
+      return `${COUNTRY_LABELS[outcome.country]}'daki tüketiciye satılmayan ürün (ülke KDV oranı girilmemiş): ${outcome.lines.join(', ')}`;
+    case 'sale_origin_unsupported':
+      return `Siparişin deposu ${COUNTRY_LABELS[SELLER_COUNTRY]} dışında; oradan satış desteklenmiyor.`;
   }
   // `default` yok: motora eklenen yeni ret hâli burada derlemede kırılır, sessizce genel bir cümleye düşmez.
   const unhandled: never = outcome;

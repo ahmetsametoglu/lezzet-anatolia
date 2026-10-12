@@ -1,7 +1,7 @@
 import { PriceService, ProductVariantService, StockService } from '@lezzet/database';
-import type { ActiveOffer, CostBasis } from '@lezzet/domain-core';
+import { priceCountryOf, type ActiveOffer, type CostBasis } from '@lezzet/domain-core';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ProductWithRelations } from '@lezzet/types';
+import type { PreferredLanguage, ProductWithRelations } from '@lezzet/types';
 import { readCostBasis } from './cost-basis';
 import type { ProductContext } from './map';
 import type { PricingViewer } from './pricing-viewer';
@@ -9,15 +9,18 @@ import type { PlaceWarehouses } from './storefront-types';
 
 /**
  * Bir ürün listesinin fiyat ve stok yan verilerini sabit sayıda sorguyla toplu okur; `viewer` zorunludur, yoksa unutan çağrı
- * sessizce perakende fiyat okurdu. Yer belliyse o deponun kullanılabiliri (söz), belirsizse yerin işinin depo-üstü toplamı okunur.
+ * sessizce perakende fiyat okurdu. Yer belliyse o deponun kullanılabiliri (söz), belirsizse yerin işinin depo-üstü toplamı okunur;
+ * fiyat yerin ülkesinden, yer yoksa arayüz dilinden okunur (`priceCountryOf`).
  */
 export async function loadProductContext(
   db: SupabaseClient,
   rows: ProductWithRelations[],
   place: PlaceWarehouses,
   viewer: PricingViewer,
+  locale: PreferredLanguage,
 ): Promise<Map<string, ProductContext>> {
   const { warehouseId, shippingWarehouseId } = place;
+  const priceCountry = priceCountryOf(place.country, locale);
   /**
    * Yer biliniyor mu: `warehouseId` yalnız rota deposudur, rota dışındaki müşteride kargo deposu doludur; ikili üç hâli ayırır.
    */
@@ -37,9 +40,8 @@ export async function loadProductContext(
 
   const stocks = new StockService(db);
   const [prices, stock, shippingStock, networkStock, offerBatches, costBasis] = await Promise.all([
-    // Kanal VE kimlik birlikte gider: kimlik olmadan `findApplicableMap` müşteriye özel fiyat
-    // satırlarını hiç sorgulamıyor ve motor her zaman `customerPriceCents: null` alıyordu.
-    new PriceService(db).findApplicableMap(variantIds, viewer.channel, viewer.customerId),
+    // Kanal ve kimlik birlikte gider: kimliksiz okuma müşteriye özel fiyatı hiç sorgulamaz.
+    new PriceService(db).findApplicableMap(variantIds, viewer.channel, viewer.customerId, undefined, priceCountry),
     // Rota dışındaki müşteride yerel havuz boş haritadır, ağ-geneli değil; ağ toplamına düşse motor yine `local` derdi.
     warehouseId
       ? stocks.getAvailableMap(warehouseId, variantIds)
@@ -79,6 +81,8 @@ export async function loadProductContext(
       offers,
       costs,
       vatRate: row.vatRate,
+      priceCountry,
+      countryRates: row.countryRates,
     });
   }
   return context;

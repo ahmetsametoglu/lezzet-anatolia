@@ -12,6 +12,7 @@ const rates = new ProductVatRateService(db);
 let productId: string;
 let slug: string;
 let categoryId: string;
+const extraProductIds: string[] = [];
 
 beforeAll(async () => {
   categoryId = (await new CategoryService(db).create({ name: { tr: `Ülke oranı ${Date.now()}` } })).id;
@@ -21,7 +22,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
+  await purgeTestData(db, { productIds: [productId, ...extraProductIds], categoryIds: [categoryId] });
 });
 
 const yaz = (country: string, vatRate: number) =>
@@ -65,5 +66,24 @@ describe('ProductVatRateService', () => {
 
     expect(await rates.listByProducts([productId])).toEqual([]);
     expect((await products.findBySlug(slug))?.countryRates).toEqual([]);
+  });
+});
+
+/** Operasyonun "Almanya oranı eksik" süzgeci; süzgeç gömülü ilişkinin yokluğundan okunur ve ilişkiyi her projeksiyon seçmelidir. */
+describe('ürün süzgeci — ülke oranı eksik', () => {
+  // Oranı olan ürün süzgeçte kalırsa, sayaç listeden ayrılırsa ya da dar okumalardan biri süzgeçle düşerse kırmızıya döner.
+  it('yalnız o ülkenin oranı olmayan ürünler gelir; liste, sayaç ve dar okumalar aynı kümeyi verir', async () => {
+    const { product: oransiz } = await products.create({ name: { tr: `Oransız lokum ${Date.now()}` }, categoryId });
+    extraProductIds.push(oransiz.id);
+    await rates.set({ productId, country: 'DE', vatRate: 7 });
+
+    const filters = { categoryId, missingCountryRate: 'DE' as const };
+    const ids = (page: { rows: Array<{ id: string }> }) => page.rows.map((row) => row.id);
+    expect(ids(await products.listWithRelations({ filters }))).toEqual([oransiz.id]);
+    expect(ids(await products.list({ filters }))).toEqual([oransiz.id]);
+    expect(ids(await products.listPriceRows({ filters }))).toEqual([oransiz.id]);
+    expect(ids(await products.listStockRows({ filters }))).toEqual([oransiz.id]);
+    expect(await products.countMatching(filters)).toBe(1);
+    expect(await products.countMatching({ categoryId })).toBe(2);
   });
 });

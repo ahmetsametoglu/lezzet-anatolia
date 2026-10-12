@@ -81,7 +81,7 @@ export async function readRecipeItems(
   // `limit` açıkça verilir, yoksa `listWithRelations` varsayılan sayfa boyunda keser ve malzeme çözülemeyen satıra düşerdi. `status`
   // süzgeci bilerek sorguda yok: "satıştan kalkmış" ile "hiç okunamadı" aşağıda ayrı dallarda kalır.
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds }, limit: productIds.length });
-  const context = await loadProductContext(db, page.rows, place, viewer);
+  const context = await loadProductContext(db, page.rows, place, viewer, locale);
 
   const byVariant = new Map<string, ProductVariant>(variants.map((v) => [v.id, v]));
   const byProduct = new Map<string, ProductWithRelations>(page.rows.map((p) => [p.id, p]));

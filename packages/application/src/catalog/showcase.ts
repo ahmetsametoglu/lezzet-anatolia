@@ -53,7 +53,7 @@ export async function readShowcase(
 ): Promise<StorefrontProduct[]> {
   const limit = options.limit ?? SHOWCASE_LIMIT_DEFAULT;
   const rows = await showcaseRows(db, { warehouseId: place.warehouseId, channel: viewer.channel }, limit, options);
-  const context = await loadProductContext(db, rows, place, viewer);
+  const context = await loadProductContext(db, rows, place, viewer, locale);
   const products = rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
   /* FIRSAT ELEMESİ ANCAK BURADA YAPILABİLİR: `wasCents` bir satır özelliği değil, motorun
      KARARIDIR (teklif normal fiyatı yendi mi) ve o karar `toProduct`ta veriliyor. Bu yüzden

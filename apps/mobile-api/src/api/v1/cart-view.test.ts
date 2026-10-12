@@ -1,25 +1,21 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { MIN_BASKET_KEY } from '@lezzet/application';
+import {
+  CategoryService,
+  DeliveryZoneService,
+  PriceService,
+  ProductService,
+  ProductVatRateService,
+  SettingsService,
+  StockService,
+  serviceDb,
+} from '@lezzet/database';
+import { createTestWarehouse, mustDelete, purgeTestData, testPostalCode } from '@lezzet/database/testing';
 import { app } from '../../app';
 
 /**
- * MİSAFİRİN SEPET GÖRÜNÜMÜ — `POST /api/v1/cart/view`, Bearer'SIZ (21.21).
- *
- * ── UCUN VAR OLMA SEBEBİ ────────────────────────────────────────────────────
- * Sepet oturumsuz doldurulur (satırları cihaz taşır) ama o sepetin **PARASI sunucunun kararıdır**.
- * Fiyatı/tükendiyi/asgari sepeti istemciye hesaplatmak, aynı sepetin misafirken bir, giriş yapınca
- * başka bir tutar göstermesi demekti.
- *
- * ── ÇİVİLENEN ÜÇ KARAR ──────────────────────────────────────────────────────
- * 1. **NİYET gövdeden, FİYAT asla.** Gövde satırın yalnız ADRESİNİ ve adedini taşır. İstemcinin
- *    gönderdiği bir tutar kabul edilseydi sepet, müşterinin kendi belirlediği fiyattan kurulurdu.
- * 2. **HİÇBİR ŞEY YAZMAZ.** Uç bir görünüm üretir; sunucuda satır açsaydı girişli kullanıcının
- *    sepeti buradan gölgelenebilirdi.
- * 3. **`source` ve `place` SUNUCUDA KALIR.** Okuma kapısı üçünü birden döndürüyor
- *    (`CartRead = {body, source, place}`) ve `ok()` GEVŞEK TİPLİ — tamamını göndermek derlemede
- *    HATA VERMEZDİ. Bu sızıntı 24.08'de gerçekten oldu ve **gözle** yakalandı; testi olsaydı
- *    kendiliğinden yakalanırdı. Bu dosyanın yazılma sebeplerinden biri o.
+ * Misafirin sepet görünümü (`POST /api/v1/cart/view`, Bearer'sız): sepetin parası sunucunun kararıdır, gövde satırın yalnız adresini
+ * ve adedini taşır, uç hiçbir şey yazmaz. Okuma kapısının `source` ve `place` alanları zarfa sızmaz, çünkü `ok()` gevşek tiplidir.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -43,12 +39,8 @@ async function errorOf(res: Response): Promise<string> {
 }
 
 /**
- * Misafir sepeti isteği — gövde niyeti taşır, dil SORGU DİZESİNDEN gelir.
- *
- * `?locale=` zorunlu ve varsayılansız (`localeOf` künyesi): `resolveLocalizedText` dil verilmezse
- * kanonik sıraya düşer ve Fransız müşteriye sessizce Türkçe ürün adı gönderilirdi. İlk taslak
- * `accept-language` BAŞLIĞINI kullanıyordu ve altı iddia birden 400 aldı — testin kendi hatası,
- * ölçüldü 25.08.
+ * Misafir sepeti isteği; dil sorgu dizesinden gelir ve varsayılansızdır (`localeOf`), çünkü dilsiz okuma Fransız müşteriye Türkçe ürün
+ * adı gönderirdi.
  */
 function view(body: unknown, locale = 'tr') {
   return app.request(`/api/v1/cart/view?locale=${locale}`, {
@@ -106,8 +98,7 @@ describe('POST /api/v1/cart/view', () => {
   });
 
   it('`source` ve `place` ZARFA SIZMAZ — okuma kapısı üçünü birden döndürüyor', async () => {
-    // 24.08'de gerçekten sızdı ve gözle yakalandı: `ok()` gevşek tipli, tamamını göndermek
-    // derlemede hata vermiyor. Bu iddia o sızıntının geri gelmesini yakalar.
+    // `ok()` gevşek tipli olduğu için okuma kapısının tamamını göndermek derlemede hata vermez; sızıntıyı bu iddia yakalar.
     const body = await dataOf<Record<string, unknown>>(await view({ items: [satir()] }));
 
     expect(body).not.toHaveProperty('source');
@@ -154,5 +145,41 @@ describe('POST /api/v1/cart/view', () => {
     expect(res.status).toBe(200);
     const body = await dataOf<{ lines: unknown[] }>(res);
     expect(body.lines.length).toBeGreaterThan(0);
+  });
+});
+
+describe('POST /api/v1/cart/view — yerin kapsamı', () => {
+  const kod = testPostalCode();
+  const settings = new SettingsService(db);
+  // Asgari sepet kapsamların en yükseğidir; bölgenin değeri öteki kapsamların hepsinden yüksek seçilir ki okunan değer ondan gelsin.
+  const BOLGE_ASGARI = 987_600;
+  const ALMANYA_FIYATI = 1390;
+  let zoneId: string;
+
+  beforeAll(async () => {
+    const zones = new DeliveryZoneService(db);
+    zoneId = (await zones.insert({ name: `Misafir bölgesi ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5] })).id;
+    await zones.replacePostalCodes(zoneId, [{ country: 'DE', postalCode: kod }]);
+    await settings.set(MIN_BASKET_KEY, BOLGE_ASGARI, { scopeType: 'zone', scopeId: zoneId });
+    await new ProductVatRateService(db).set({ productId, country: 'DE', vatRate: 7 });
+    await new PriceService(db).setPrice({ variantId, channel: 'b2c', amountCents: ALMANYA_FIYATI, country: 'DE' });
+  });
+
+  afterAll(async () => {
+    await settings.remove(MIN_BASKET_KEY, { scopeType: 'zone', scopeId: zoneId });
+    await mustDelete(db, 'delivery_zone', (q) => q.eq('id', zoneId));
+  });
+
+  // Sepet yerin ülkesini ve bölgesini okumaya geçmezse Almanya fiyatı ve bölgenin asgari sepeti görünmez; kırmızıya döner.
+  it('Almanya adresinde sepet Almanya fiyatını ve bölgenin asgari sepetini okur', async () => {
+    const res = await app.request(`/api/v1/cart/view?locale=tr&postalCode=${kod}&country=DE`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ items: [satir()] }),
+    });
+
+    const body = await dataOf<{ lines: { unitPriceCents: number | null }[]; minBasketCents: number }>(res);
+    expect(body.lines[0]?.unitPriceCents).toBe(ALMANYA_FIYATI);
+    expect(body.minBasketCents).toBe(BOLGE_ASGARI);
   });
 });

@@ -80,6 +80,11 @@ export const AppNotificationKindEnum = z.enum([
   'door_card_unmatched',
   /** Bizde kapıda kart diye yazılmış tahsilatın Revolut'ta ödemesi bulunamadı: para karttan çekilmemiş ya da eşleşme belirsiz. */
   'door_card_missing',
+  /**
+   * AB'ye uzaktan satış eşiğinin uyarı yüzdesine varıldı ya da eşik aşıldı; aşılınca AB'deki tüketiciye varış ülkesinin KDV'si
+   * uygulanır ve OSS beyanı başlar, yönetim ve muhasebe seviye başına yılda bir kez duyar.
+   */
+  'distance_sale_threshold',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -109,6 +114,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'payout_unexplained',
   'door_card_unmatched',
   'door_card_missing',
+  'distance_sale_threshold',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

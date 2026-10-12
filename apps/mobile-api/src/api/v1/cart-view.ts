@@ -39,8 +39,8 @@ export function localeOf(c: Context): ReturnType<typeof PreferredLanguageEnum.sa
 }
 
 /**
- * Görünümün tek kuyruğu, girişli ve misafir sepeti buradan geçer; paket kapısı web'inkiyle aynıdır (`getPackagesByIds`).
- * Ülke ve bölge kapıya geçilmez, çünkü posta kodundan türetmek yer çözümünü ikinci kez yazmak olurdu.
+ * Görünümün tek kuyruğu, girişli ve misafir sepeti buradan geçer; paket kapısı web'inkiyle aynıdır (`getPackagesByIds`). Ülke ve
+ * bölge yer çözümünün kendisinden kapıya geçer, böylece kargo ücreti ve asgari sepet checkout'un okuduğu kapsamla okunur.
  */
 export async function readCartView(
   db: Db,
@@ -63,7 +63,7 @@ export async function readCartView(
   },
 ): Promise<CartRead> {
   // Gel-al'da sepet SEÇİLEN DEPONUN stoğuyla okunur ve kargo dolgusu yoktur: depoda olmayan kalem "burada yok"tur.
-  const { place, pickup } = await readPlaceOrPickup(db, {
+  const { place, pickup, zoneId } = await readPlaceOrPickup(db, {
     postalCode: opts.postalCode,
     country: opts.country,
     pickupWarehouseId: opts.pickupWarehouseId,
@@ -76,7 +76,10 @@ export async function readCartView(
     warehouseId: place.warehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
     business: place.business,
-    ...(pickup ? { country: pickup.countryCode, zoneId: null, pickup: true } : {}),
+    // Çözülemeyen kodda ülke müşterinin seçimidir; web'in yer kapsamı da öyle okur.
+    country: place.country ?? opts.country ?? null,
+    zoneId,
+    pickup: pickup !== null,
     // `db` bağlanır, başka hiçbir şey yapılmaz: port imzası (`CartBundlePort`) ile kapının imzası
     // `db` dışında birebir tutuyor ve dönüş şekli `CartBundleSource`un yapısal ikizi. Araya bir
     // eşleme yazmak, sepetin gördüğü paketi vitrinin gösterdiğinden ayırma riski demekti.

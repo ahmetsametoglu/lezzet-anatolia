@@ -15,6 +15,7 @@ import { seedAssistantProposals } from './seed/assistant';
 import { seedBarcodes } from './seed/barcode';
 import { seedCarts } from './seed/cart';
 import { seedCourierReturn } from './seed/courier-return';
+import { seedCountryMarket } from './seed/country';
 import { seedTestOrders } from './seed/test-orders';
 import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
 import { seedNegotiatedPrices, seedPrices } from './seed/pricing';
@@ -103,6 +104,7 @@ async function main(): Promise<void> {
   // Trigger yeni auth kullanıcısını e-postayla eşleşen profile bağlar; profil önce var olmalı.
   await seedStaffLogins(db);
   await seedNegotiatedPrices(db, varyantlar, kisiler);
+  await seedCountryMarket(db, varyantlar);
   await seedBarcodes(db, varyantlar, kisiler);
   // Paket fiyatı kalemlerin birim fiyatlarından türer; fiyatlardan önce koşsa paket fiyatsız kurulurdu.
   await seedBundles(db);

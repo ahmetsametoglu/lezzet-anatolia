@@ -52,6 +52,7 @@ import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
 import { pennylaneSyncJob } from './jobs/pennylane-sync';
 import { salesInvoiceOpenJob } from './jobs/sales-invoice-open';
 import { bankFeedQuietJob } from './jobs/bank-feed-quiet';
+import { DISTANCE_SALE_THRESHOLD, distanceSaleThresholdJob } from './jobs/distance-sale-threshold';
 import { REGISTER_CLOSE_DAY, registerCloseCron, registerCloseDayJob } from './jobs/register-close-day';
 import { registerCheckCron, registerCheckDayJob } from './jobs/register-check-day';
 
@@ -306,6 +307,16 @@ cron.schedule(
   '10 9 * * *',
   () => {
     void runJob(BANK_FEED_QUIET_JOB, bankFeedQuietJob);
+  },
+  { timezone: 'Europe/Paris' },
+);
+
+// Uzaktan satış eşiği günde bir, mesai öncesi: toplam gün ölçeğinde değişir ve uyarı yönetimin sabahına düşmeli; gece koşsaydı
+// operasyon telefonlarına gece bildirim giderdi.
+cron.schedule(
+  '8 8 * * *',
+  () => {
+    void runJob(DISTANCE_SALE_THRESHOLD, distanceSaleThresholdJob);
   },
   { timezone: 'Europe/Paris' },
 );

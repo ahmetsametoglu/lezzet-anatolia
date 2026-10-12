@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
+import { CategoryService, PriceService, ProductService, ProductVatRateService, StockService, serviceDb } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, mustDelete, purgeVariantStock, settingsSnapshot } from '@lezzet/database/testing';
-import { AUTO_PRICE_STEP_KEY } from '@lezzet/domain-core';
+import { AUTO_PRICE_STEP_KEY, DISTANCE_SALE_SETTINGS } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import { repriceAllAuto, repriceProduct, repriceVariants } from './auto-price';
 
 /**
  * Otomatik fiyatın kablosu: motorun hesabı `domain-core/auto-price`ta sınanır, burada o hesabın doğru satırlara ve yalnız onlara
- * uygulanması (otomatik olmayan ürün, kapalı kanal, değişmeyen fiyatın geçmişi) ve adımın ayardan okunması sınanır.
+ * uygulanması (otomatik olmayan ürün, kapalı kanal, değişmeyen fiyatın geçmişi, Almanya satırı) ve adımın ayardan okunması sınanır.
  */
 const db = serviceDb();
 const prices = new PriceService(db);
@@ -135,7 +136,7 @@ describe('hedefe çekme', () => {
     expect(await currentCents(autoVariantId, 'b2b')).toBe(700);
   });
 
-  it('MALİYET SIÇRARSA fiyat oynamaz — karar admin\'e bırakılır', async () => {
+  it("MALİYET SIÇRARSA fiyat oynamaz — karar admin'e bırakılır", async () => {
     // Geçmiş 2,10 € civarında oturmuş, son alış 4,50 €.
     await setCostHistory(autoVariantId, 210, 210, 450);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 30000, customerId: null });
@@ -210,5 +211,53 @@ describe('dokunulmayanlar', () => {
 
     expect((await repriceVariants(db, [autoVariantId])).changes).toHaveLength(0);
     expect(await priceRowCount(autoVariantId)).toBe(after);
+  });
+});
+
+/** Eşik durumu ayarla kurulur: açılış tutarı eşiği aşınca varış ülkesi vergilendirmesi başlar, dev eşik onu kapatır. */
+async function esikDurumu(asildi: boolean): Promise<void> {
+  const yil = Number(parisDateOf(new Date()).slice(0, 4));
+  await settings.override(DISTANCE_SALE_SETTINGS.thresholdCents.key, asildi ? 1_000_000 : 1_000_000_000_000);
+  await settings.override(DISTANCE_SALE_SETTINGS.openingYear.key, yil);
+  await settings.override(DISTANCE_SALE_SETTINGS.openingCents.key, asildi ? 2_000_000 : 0);
+  await settings.override(DISTANCE_SALE_SETTINGS.openingPreviousCents.key, 0);
+}
+
+describe('Almanya tüketici fiyatı', () => {
+  const almanya = async (channel: 'b2c' | 'b2b') => (await prices.findListPricesMap([autoVariantId], channel)).get(autoVariantId);
+
+  it('eşik aşılmışken Alman oranıyla yazılır, eşik altında genel fiyata eşit olduğu için kalkar; işletme fiyatı satır almaz', async () => {
+    const oranlar = new ProductVatRateService(db);
+    await oranlar.set({ productId: autoProductId, country: 'DE', vatRate: 19 });
+    try {
+      await setCostHistory(autoVariantId, 1000);
+      await prices.setPrice({ variantId: autoVariantId, channel: 'b2c', amountCents: 1200, customerId: null });
+      await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
+
+      // 14 € HT: Fransa'da %5,5 ile 15,00 €, Almanya'da %19 ile 16,66 → 17,00 €.
+      await esikDurumu(true);
+      await repriceVariants(db, [autoVariantId]);
+      expect(await almanya('b2c')).toMatchObject({ general: { amountCents: 1500 }, byCountry: { DE: { amountCents: 1700 } } });
+      expect((await almanya('b2b'))?.byCountry).toEqual({});
+
+      // Eşik altında Almanya'daki tüketici satıcının oranını öder; fiyat genel fiyata eşitlenir ve satır gereksizleşir.
+      await esikDurumu(false);
+      await repriceVariants(db, [autoVariantId]);
+      expect((await almanya('b2c'))?.byCountry).toEqual({});
+    } finally {
+      await oranlar.remove(autoProductId, 'DE');
+    }
+  });
+
+  it('Almanya oranı olmayan ürünün eski Almanya satırı kaldırılır — orada satılmayan ürünün fiyatı yoktur', async () => {
+    await setCostHistory(autoVariantId, 1000);
+    await prices.setPrice({ variantId: autoVariantId, channel: 'b2c', amountCents: 1500, customerId: null });
+    await prices.setPrice({ variantId: autoVariantId, channel: 'b2c', amountCents: 1900, customerId: null, country: 'DE' });
+
+    await esikDurumu(true);
+    const outcome = await repriceVariants(db, [autoVariantId]);
+
+    expect((await almanya('b2c'))?.byCountry).toEqual({});
+    expect(outcome.changes).toContainEqual({ variantId: autoVariantId, channel: 'b2c', country: 'DE', fromCents: 1900, toCents: null });
   });
 });

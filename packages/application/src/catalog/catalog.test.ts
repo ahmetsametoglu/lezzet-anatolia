@@ -1,5 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, PriceService, ProductService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
+import {
+  CategoryService,
+  PriceService,
+  ProductService,
+  ProductVatRateService,
+  StockService,
+  WarehouseService,
+  serviceDb,
+} from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { DEFAULT_CROP_FIELDS, type Business } from '@lezzet/types';
 import { getCatalogData } from './catalog';
@@ -27,9 +35,9 @@ const extraWarehouseIds: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 /** Yer BİLİNMİYOR — ziyaretçinin posta kodu vermediği hâl (depo-üstü okuma). */
-const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null, business: 'lezzet' };
+const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null, business: 'lezzet', country: null };
 /** Yer BELLİ — teklif tutarının gösterilebildiği tek hâl. */
-const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null, business: 'lezzet' });
+const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null, business: 'lezzet', country: null });
 
 /** Yayın kısıtlarının şartı: `active` ürün üç dilde dolu, alerjen beyanı girilmiş olmalı; bunlar fikstürün konusu değil. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
@@ -247,8 +255,7 @@ describe('çok boylu üründe birincil boy EN UCUZ olandır', () => {
       name: ucDil(`Cokboy ${damga}`),
       categoryId,
       ...yayinaHazir,
-      // Sıra operatörün: 2 kg önce (sortOrder 0). Fiyat tersine — düzeltmeden önceki hâlde kart
-      // 33,82 € yazar ve ürün sıralamada 33,82 €'ya göre yerleşirdi.
+      // Sıra operatörün: 2 kg önce (sortOrder 0), fiyat tersine; kart ilk boyu okursa 33,82 € yazar ve ürün o fiyatla sıralanır.
       variants: [
         { label: { tr: '2 kg' }, netQuantity: 2000, netUnit: 'g' },
         { label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' },
@@ -474,5 +481,37 @@ describe('yer bilinmezken "var" müşterinin işinin depolarından okunur', () =
   it('yalnız QUALITE deposunda duran ürün Lezzet ziyaretçisine tükenmiş, QUALITE müşterisine var görünür', async () => {
     expect(await durum('lezzet')).toBe('out_of_stock');
     expect(await durum('qualite')).toBe('available');
+  });
+});
+
+describe('ülke pazarı: fiyat ve satılabilirlik yerin ülkesinden', () => {
+  const kartlar = async (place: PlaceWarehouses, viewer: PricingViewer = VISITOR, locale: 'tr' | 'de' = 'tr') => {
+    const data = await getCatalogData(db, { locale, query: { search: String(stamp) }, place, viewer });
+    return new Map(data.products.map((p) => [p.id, { priceCents: p.priceCents, notSoldIn: p.notSoldIn }]));
+  };
+
+  // Almanya'daki tüketiciye oranı olmayan ürün fiyatlı görünürse ya da Almanya fiyatı yerine genel fiyat yazılırsa kırmızıya döner.
+  it('Almanya yerinde oranı olmayan ürün satılmaz, oranı olan ürün Almanya fiyatıyla görünür; Fransa yeri genel fiyatı okur', async () => {
+    const oranlar = new ProductVatRateService(db);
+    await oranlar.set({ productId: orta.productId, country: 'DE', vatRate: 7 });
+    await prices.setPrice({ variantId: orta.variantId, channel: 'b2c', amountCents: 1290, country: 'DE' });
+    try {
+      const almanya = await kartlar({ ...YERSIZ, country: 'DE' });
+      expect(almanya.get(orta.productId)).toEqual({ priceCents: 1290, notSoldIn: null });
+      expect(almanya.get(ucuz.productId)).toEqual({ priceCents: null, notSoldIn: 'DE' });
+
+      const fransa = await kartlar({ ...YERSIZ, country: 'FR' }, VISITOR, 'de');
+      expect(fransa.get(orta.productId)).toEqual({ priceCents: 1200, notSoldIn: null });
+      expect(fransa.get(ucuz.productId)).toEqual({ priceCents: 400, notSoldIn: null });
+
+      // Yer yokken Almanca arayüz Almanya fiyatını okur (`priceCountryOf`).
+      expect((await kartlar(YERSIZ, VISITOR, 'de')).get(orta.productId)?.priceCents).toBe(1290);
+      // İşletmeye ters yüklemeyle satılır, ülke oranı aranmaz.
+      const toptanci = await kartlar({ ...YERSIZ, country: 'DE' }, { ...TOPTANCI, vatChannel: 'b2b' });
+      expect(toptanci.get(ucuz.productId)).toEqual({ priceCents: 900, notSoldIn: null });
+    } finally {
+      await oranlar.remove(orta.productId, 'DE');
+      await prices.removeCountryPrice(orta.variantId, 'b2c', 'DE');
+    }
   });
 });

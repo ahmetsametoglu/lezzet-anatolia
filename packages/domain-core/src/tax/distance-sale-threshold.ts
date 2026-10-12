@@ -3,6 +3,7 @@ import type { Order, OrderStatus, VatTreatment } from '@lezzet/types';
 import { saleNetCents, type SaleVatBasis } from '../accounting/export';
 import type { AccountingLine } from '../accounting/line';
 import { isFulfillmentSettled } from '../order/status-machine';
+import { vatByRate, type RateAmount } from '../pricing/vat-base';
 
 /**
  * AB'ye uzaktan satış eşiği (docs/feature/ulke-pazari.md): AB'deki tüketiciye satışların KDV hariç toplamı içinde bulunulan ya da
@@ -148,4 +149,30 @@ function warningOf(totalCents: number, settings: DistanceSaleSettings): Distance
   if (reached(settings.secondWarningPercent)) return 'second';
   if (reached(settings.firstWarningPercent)) return 'first';
   return 'none';
+}
+
+/** Defterden karar: mandal, bu yıl varış ülkesinin KDV'siyle yazılmış siparişin varlığıdır. */
+export function distanceSaleDecision(input: {
+  year: number;
+  ledger: DistanceSaleLedger;
+  orderNetCents: number;
+  settings: DistanceSaleSettings;
+}): DistanceSaleThreshold {
+  const { year, ledger, orderNetCents, settings } = input;
+  return distanceSaleThreshold({
+    year,
+    currentYearCents: ledger.currentYearCents,
+    previousYearCents: ledger.previousYearCents,
+    orderNetCents,
+    latched: ledger.firstDestinationOrder !== null,
+    settings,
+  });
+}
+
+/**
+ * Yazılacak siparişin eşiğe giren KDV hariç tutarı, satıcının oranlarıyla: karar verilene kadar sipariş satıcının KDV'siyle yazılacak
+ * sayılır. Kargo ücreti girmez, çünkü karar ücret belli olmadan verilir; yazılan sipariş sonraki kararlara ücretiyle birlikte girer.
+ */
+export function distanceSaleOrderNetCents(goods: readonly RateAmount[], pricesIncludeVat: boolean): number {
+  return vatByRate(goods, [], pricesIncludeVat).reduce((sum, line) => sum + line.netCents, 0);
 }

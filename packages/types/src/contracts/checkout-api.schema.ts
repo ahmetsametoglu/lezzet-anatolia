@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { OrderSchema, ServicePointSnapshotSchema } from '../entities/order.schema';
-import { DeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
+import { CountryEnum, DeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 import { AddressLookupPointSchema, MeAddressSchema } from './address-api.schema';
 import { CartDiscountReasonSchema } from './cart-api.schema';
 
@@ -330,6 +330,10 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('pickup_not_allowed') }),
   /** Seçilen depo gel-al noktası değil, pasif ya da yok; ekran teklifi yeniden okur. */
   z.object({ status: z.literal('pickup_warehouse_unavailable') }),
+  /** Satırın ürünü teslim ülkesinin tüketicisine satılmıyor (o ülkenin KDV oranı yok); adlar sepettekidir, çıkarılmadan sipariş açılmaz. */
+  z.object({ status: z.literal('not_sold_in_country'), country: CountryEnum, lines: z.array(z.string()) }),
+  /** Siparişin deposu satıcının ülkesinde değil; oradan satış desteklenmiyor. Müşterinin düzeltebileceği bir şey yok, ekran özür diler. */
+  z.object({ status: z.literal('sale_origin_unsupported') }),
   /**
    * Stok son anda ayrılamadı (yarış): taslak kapatılır, kapıda/vadeli ödemede para çekilmedi. Ad değil kimlik taşınır, ekranın
    * elinde çözülmüş sepet var.

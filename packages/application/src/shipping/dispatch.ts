@@ -99,11 +99,11 @@ export async function resolveDispatch(
   const [boxTypes, contents, warehouse, items] = await Promise.all([
     new ShippingBoxService(db).listForWarehouse(input.warehouseId),
     new OrderBoxItemService(db).listByBoxes(boxes.map((b) => b.id)),
-    new WarehouseService(db).getById(input.warehouseId),
+    new WarehouseService(db).list({ warehouseIds: [input.warehouseId] }).then((rows) => rows[0] ?? null),
     new OrderItemService(db).listByOrder(input.orderId),
   ]);
 
-  const from = warehouse ? senderOf(warehouse) : null;
+  const from = warehouse ? senderOf(warehouse, order.deliveryCountry) : null;
   if (!from) return { ok: false, block: { status: 'no_sender' } };
 
   const itemVariant = new Map<string, string | null>(items.map((i) => [i.id, i.variantId]));

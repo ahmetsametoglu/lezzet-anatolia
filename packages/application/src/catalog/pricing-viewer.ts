@@ -14,6 +14,8 @@ export interface PricingViewer {
    * motor da aynı daraltmayı yapar.
    */
   channel: Channel;
+  /** KDV kararının kanalı (`deriveChannel`): onaysız şirket de işletmedir; ülkede satılabilirlik bundan sorulur, checkout'la aynı. */
+  vatChannel: Channel;
   /** Motora olduğu gibi geçer; `null` (hiç başvurmamış) onay DEĞİLDİR. */
   b2bApproved: boolean;
   /** Müşteriye özel fiyat satırlarının okunacağı kimlik; ziyaretçide `null`. */
@@ -33,6 +35,7 @@ export interface PricingViewer {
 /** Ziyaretçi — kimliksiz, perakende. Bağlamı olmayan okumaların (boş bağlam) hâli. */
 export const VISITOR: PricingViewer = {
   channel: 'b2c',
+  vatChannel: 'b2c',
   b2bApproved: false,
   customerId: null,
   groupPercentOff: null,
@@ -78,6 +81,7 @@ export async function pricingViewerFor(db: SupabaseClient, profile: UserProfile 
       : null;
   return {
     channel: effective,
+    vatChannel: deriveChannel({ isCompany: profile.type === 'company' }),
     b2bApproved,
     customerId: profile.id,
     groupPercentOff,

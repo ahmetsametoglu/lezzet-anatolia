@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CategorySchema } from '../entities/category.schema';
 import { CollectionSchema } from '../entities/collection.schema';
-import { StockStatusEnum } from '../primitives/enums.schema';
+import { CountryEnum, StockStatusEnum } from '../primitives/enums.schema';
 import { ImageCropSchema } from '../primitives/image.schema';
 import { ImageFrameSourcesSchema } from '../primitives/image-frames';
 import { ProductSchema } from '../entities/product.schema';
@@ -74,6 +74,11 @@ export const CatalogSellingSchema = z.object({
    * `null` = bu kanalda fiyatı yok, ürün satışa kapalı (DOMAIN §5): istemci fiyat satırını çizmez ve aksiyonu pasifler.
    */
   priceCents: z.number().int().nullable(),
+  /**
+   * Ürün bu ülkenin tüketicisine satılmıyor (o ülkenin KDV oranı yok); doluyken `priceCents` `null`dur. İsteğe bağlı, çünkü uygulama
+   * ile sunucu ayrı yayına çıkar.
+   */
+  notSoldIn: CountryEnum.nullable().optional(),
   /**
    * İndirim öncesi referans — yalnız yakın-SKT teklifi normal fiyatı yendiğinde dolar, "Fırsat" rozeti ve üstü çizili fiyat çizilir.
    * Alan hiç yoksa indirim de yoktur; indirimin sebebi (partinin tarihi) taşınmaz.

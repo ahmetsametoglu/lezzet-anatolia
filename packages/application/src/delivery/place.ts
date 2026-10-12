@@ -1,7 +1,7 @@
 import { DeliveryZoneService, PostalCodePlaceService, UserProfileService, WarehouseService } from '@lezzet/database';
 import { customerBusinessOf, findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
 import { normalizePostalCode } from '@lezzet/address';
-import type { Business, Country } from '@lezzet/types';
+import type { Business, Country, Warehouse } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { PlaceWarehouses } from '../catalog/storefront-types';
@@ -45,7 +45,7 @@ export async function resolvePlaceForPostalCode(
 
 /**
  * Çözümün `warehouseId`i kargo hâlinde kargo deposunu taşır; burada yalnız rota deposu olarak yayılır, yoksa rota dışındaki müşteri
- * "ücretsiz kapı teslimi" görürdü. Çözülemeyen kodda iki kimlik de `null`dur: tahmin, yanlış stok ve yanlış teslimat sözü demek.
+ * "ücretsiz kapı teslimi" görürdü. Çözülemeyen kodda kimlikler ve ülke `null`dur: tahmin, yanlış stok ve yanlış teslimat sözü demek.
  */
 export async function resolvePlaceWarehouses(
   db: SupabaseClient,
@@ -53,23 +53,42 @@ export async function resolvePlaceWarehouses(
   business: Business,
   country?: Country,
 ): Promise<PlaceWarehouses> {
+  return (await resolvePlace(db, postalCode, business, country)).place;
+}
+
+/** Yer ve rota bölgesi tek çözümden; bölge sepetin ayar kapsamıdır (asgari sepet), kargo hâlinde `null`. */
+export async function resolvePlace(
+  db: SupabaseClient,
+  postalCode: string,
+  business: Business,
+  country?: Country,
+): Promise<{ place: PlaceWarehouses; zoneId: string | null }> {
   const inputs = await readPlaceInputs(db, postalCode);
   const resolution = resolveFrom(inputs, business, country);
 
-  if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return unresolvedPlace(business);
+  if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return { place: unresolvedPlace(business), zoneId: null };
 
   return {
-    // Kargo hâlinde `null` ki yerel havuz boş kalsın.
-    warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
-    // Kargo deposu ülkeden türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
-    shippingWarehouseId: findShippingWarehouse(resolution.country, inputs.warehouses, business)?.id ?? null,
-    business,
+    place: {
+      // Kargo hâlinde `null` ki yerel havuz boş kalsın.
+      warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
+      // Kargo deposu ülkeden türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
+      shippingWarehouseId: findShippingWarehouse(resolution.country, inputs.warehouses, business)?.id ?? null,
+      business,
+      country: resolution.country,
+    },
+    zoneId: resolution.kind === 'route' ? resolution.zoneId : null,
   };
 }
 
-/** İki `null` bir hâldir: yer bilinmiyor; iş yine bellidir, "hiç var mı" o işin depolarından okunur. */
+/** Kimlikler ve ülke `null`: yer bilinmiyor; iş yine bellidir, "hiç var mı" o işin depolarından okunur. */
 export function unresolvedPlace(business: Business): PlaceWarehouses {
-  return { warehouseId: null, shippingWarehouseId: null, business };
+  return { warehouseId: null, shippingWarehouseId: null, business, country: null };
+}
+
+/** Deponun kendisi yer olduğunda (gel-al, yerinde satış): kargo dolgusu yoktur, ülke deponun ülkesidir. */
+export function warehousePlace(warehouse: Pick<Warehouse, 'id' | 'business' | 'countryCode'>): PlaceWarehouses {
+  return { warehouseId: warehouse.id, shippingWarehouseId: null, business: warehouse.business, country: warehouse.countryCode };
 }
 
 /** Kimlikten müşterinin işi; profili okunamayan kimlik ve ziyaretçi Lezzet'tir (`customerBusinessOf`). */

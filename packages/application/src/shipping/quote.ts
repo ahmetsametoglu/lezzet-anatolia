@@ -45,7 +45,8 @@ export async function quoteShipping(
   if (wanted.length === 0) return { status: 'ok', options: [], parcelCount: 0, totalWeightG: 0, plan: [] };
 
   const [warehouse, variants, boxes] = await Promise.all([
-    new WarehouseService(db).getById(input.warehouseId),
+    // Gönderim ülkesi satırlarıyla okunur: varış ülkesinin teslim noktası çıkışı değiştirir.
+    new WarehouseService(db).list({ warehouseIds: [input.warehouseId] }).then((rows) => rows[0] ?? null),
     new ProductVariantService(db).listByIds(wanted.map((i) => i.variantId)),
     // **Yalnız AKTİF kutular**: kapalı kutu listede görünür ama seçilemez — kapalı bir kutuya
     // gönderi planlamak, olmayan bir kutuyu kullanmaktır.
@@ -53,7 +54,7 @@ export async function quoteShipping(
   ]);
 
   if (!warehouse) return { status: 'no_sender' };
-  const from = senderOf(warehouse);
+  const from = senderOf(warehouse, input.to.countryCode);
   if (!from) return { status: 'no_sender' };
 
   const byId = new Map(variants.map((v) => [v.id, v]));

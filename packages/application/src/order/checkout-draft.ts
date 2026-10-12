@@ -1,11 +1,8 @@
 import {
   AddressService,
-  BundleItemService,
   CartService,
   ConversationService,
   OrderService,
-  ProductService,
-  ProductVariantService,
   UserProfileService,
   WarehouseService,
   type Db,
@@ -20,12 +17,11 @@ import {
   needsServicePoint,
   servicePointAccepts,
 } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import type {
+  Country,
   DeliveryType,
   Order,
   OrderItem,
-  OrderItemInsert,
   OrderSource,
   ParcelPlanSnapshot,
   PaymentMethod,
@@ -48,10 +44,10 @@ import {
   orderScopeOf,
   storedPrices,
   type CartEntry,
-  type CartLine,
 } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
-import { saleVatOf } from './sale-vat';
+import { orderItemsOf } from './order-items';
+import { decideSaleVat } from './sale-vat';
 import { readDeliveryInputs, resolveDelivery, type DeliveryResolution } from './delivery';
 import { readUnitCosts } from './unit-costs';
 import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot, shippingVatLines } from './shipping-selection';
@@ -117,7 +113,11 @@ export type CheckoutDraftOutcome =
   /** Gel-al istendi ama müşterinin izni yok — ekran kartı göstermemişti, istek elle kurulmuştur. */
   | { status: 'pickup_not_allowed' }
   /** Seçilen depo gel-al noktası değil, pasif, araç ya da yok. */
-  | { status: 'pickup_warehouse_unavailable' };
+  | { status: 'pickup_warehouse_unavailable' }
+  /** Satırın ürünü teslim ülkesinin tüketicisine satılmıyor (o ülkenin KDV oranı yok); adlar sepettekidir. */
+  | { status: 'not_sold_in_country'; country: Country; lines: string[] }
+  /** Çıkış deposu satıcının ülkesinde değil; oradan satış desteklenmiyor. */
+  | { status: 'sale_origin_unsupported' };
 
 export interface CheckoutDraftInput {
   locale: PreferredLanguage;
@@ -229,11 +229,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   if (input.shippingOrder && !orderWarehouseId) {
     return { status: 'warehouse_unresolved', reason: 'no_shipping_warehouse' };
   }
-  // Karar malın çıktığı deponun ülkesini ister; depo çözülemediyse sipariş aşağıda zaten açılmaz. Eşik durumu sipariş toplamından
-  // okunmadığı sürece AB'deki tüketiciye satış eşik altı sayılır, yani satıcının oranıyla yazılır.
+  // KDV kararı malın çıktığı deponun ülkesini ister; depo çözülemediyse sipariş aşağıda zaten açılmaz.
   const originCountry = (pickupWarehouse ?? deliveryInputs.warehouses.find((w) => w.id === orderWarehouseId))?.countryCode;
-  const vatNumberValid = customer.vatNumberValid ?? undefined;
-  const vat = originCountry ? saleVatOf({ channel, originCountry, deliveryCountry, vatNumberValid, destinationTaxation: false }) : null;
 
   // Sipariş yalnız kendi şeridini alır ve şerit müşterinin gerçek yeriyle okunur, çünkü aşağıdaki okuma kargo siparişinde kargo
   // deposuyla yapılır ve orada her satır `local` görünür. Personel siparişi daraltılmaz, kalemi sessizce düşürmek yerine reddedilir.
@@ -293,6 +290,20 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const orderedShares = scope.shares;
   if (orderedLines.length === 0) return { status: 'cold_chain_unshippable' };
 
+  // Eşik siparişe giren tutarla okunur; kalemler satıcının oranlarıyla, karar verilene kadar sipariş o oranla yazılacak sayılır.
+  const vatOutcome = originCountry
+    ? await decideSaleVat(db, {
+        channel,
+        originCountry,
+        deliveryCountry,
+        vatNumberValid: customer.vatNumberValid ?? undefined,
+        goods: orderedLines.map((l, i) => ({ vatRate: l.vatRate, amountCents: (l.lineTotalCents ?? 0) - (orderedShares[i] ?? 0) })),
+        pricesIncludeVat: cart.pricesIncludeVat,
+      })
+    : null;
+  if (vatOutcome && !vatOutcome.ok) return { status: vatOutcome.reason };
+  const vat = vatOutcome?.vat ?? null;
+
   // Kapsam dışı kalem kargo kararını etkilemez: siparişe girmeyen kalem yüzünden kargo yolunu kapatmak olmayan bir kısıt olurdu.
   const hasNonShippableItem = orderedLines.some((l) => !l.shippable);
   const delivery = await resolveDelivery(db, {
@@ -336,7 +347,16 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     // Adres tutarlılığı yalnız rota siparişinde sorulur: kurye sokağa gider ve kod ile şehir çelişiyorsa hangisinin yanlış olduğunu
     // biz bilemeyiz. Kargoda adresi taşıyıcı doğrular; kural formda değil kapıda, çünkü form atlanabilir.
     deliveryType === 'route' ? placesForPostalCode(db, address.country, address.postalCode) : null,
-    vat ? expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null) : [],
+    vat
+      ? orderItemsOf(db, {
+          lines: orderedLines,
+          shares: orderedShares,
+          vat,
+          deliveryCountry,
+          channel,
+          priceSetBy: input.staff?.actorId ?? null,
+        })
+      : { status: 'ok' as const, items: [] },
     // Kargo dışında ücret teklife bağlı değildir; ödeme kapısı teklifi beklemeden sorulur.
     deliveryType === 'shipping' ? null : paymentOf(null),
     // Komşu daveti kişinin kendi kabul kaydından okunur ve ancak sefer belli olunca sorulabilir; eşleşmeme sessizdir.
@@ -355,6 +375,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   if (input.shippingOrder && hasNonShippableItem) return { status: 'cold_chain_unshippable' };
   // Gel-al'da soğuk zincir engeli yok: mal hiç yola çıkmıyor, müşteri depodan alıyor.
   if (!pickupWarehouse && delivery.shippingBlockedReason === 'cold_chain') return { status: 'cold_chain_unshippable' };
+  // Ülkede satılmayan ürünün satırı fiyatsız, yani engelli görünür; sebebi engelden önce söylenir.
+  if (items.status === 'not_sold_in_country') return items;
   if (cart.hasBlocked) return { status: 'blocked_lines', lines: cart.lines.filter((l) => l.blocked).map((l) => l.name) };
 
   // Sipariş tek depodan çıkar: o depoda olmayan kalem buraya giremez, yoksa iş ödemeden sonra rezervasyonda patlar.
@@ -507,7 +529,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       // Mailler bu dilden konuşur.
       locale: input.locale,
     },
-    items,
+    items.items,
     // Kupon kotası siparişle birlikte tükenir; buradan yalnız kodun hangi kapıdan girildiği geçer.
     { discountCodeId: discountCodeIdOf(cart) },
   );
@@ -517,73 +539,6 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   input.onCustomerAcquired?.(customer.id);
 
   return { status: 'ok', orderId: order.id, totalCents: options.orderTotalCents, deliveryType, order, items: createdItems };
-}
-
-/**
- * Paket burada varyant kalemlerine parçalanır, çünkü depo ürün toplar ve stok varyanttan düşer; kalem `bundle_id` taşır ki paket
- * yeniden kurulabilsin. Birim fiyat paketin payıdır; indirim payı da kaleme yazılır, çünkü ödeme durumu borcu kalemlerden toplar.
- */
-async function expandToOrderItems(
-  db: Db,
-  lines: readonly CartLine[],
-  shares: readonly number[],
-  /** Ters vergilendirme: kalem oranı sıfırdır. */
-  zeroRated: boolean,
-  /** `null`: müşteri yolu, pazarlık izi yazılmaz. */
-  priceSetBy: string | null,
-): Promise<Omit<OrderItemInsert, 'orderId'>[]> {
-  const items = new BundleItemService(db);
-  const bundleItems = new Map(
-    await Promise.all(
-      lines.filter((l) => l.kind === 'bundle').map(async (l) => [l.bundleId, await items.listByBundle(l.bundleId)] as const),
-    ),
-  );
-
-  // KDV oranı ürünün alanıdır; varyantlar ürünlerine tek turda bağlanır.
-  const variantIds = [
-    ...lines.filter((l) => l.kind === 'variant').map((l) => l.variantId),
-    ...[...bundleItems.values()].flat().map((i) => i.variantId),
-  ];
-  const variants = await new ProductVariantService(db).listByIds([...new Set(variantIds)]);
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
-  const vatByProduct = new Map(products.map((p) => [p.id, p.vatRate]));
-  // Sıfırlama haritanın kendisinde: kalem ve paket parçası aynı haritadan okur.
-  const vatByVariant = new Map(variants.map((v) => [v.id, zeroRated ? 0 : (vatByProduct.get(v.productId) ?? 0)]));
-
-  const rows: Omit<OrderItemInsert, 'orderId'>[] = [];
-  lines.forEach((line, index) => {
-    if (line.kind === 'variant') {
-      rows.push({
-        variantId: line.variantId,
-        qty: line.qty,
-        stockId: line.stockId,
-        bundleId: null,
-        unitPriceCents: line.unitPriceCents ?? 0,
-        // Pazarlık izi ikisi birlikte yazılır (`order_item_negotiation_complete`); pazarlıksız satırda ikisi de `null`, yoksa her
-        // kalem sahte bir taviz kaydı taşırdı.
-        listUnitPriceCents: line.listUnitPriceCents ?? null,
-        priceSetBy: line.listUnitPriceCents != null ? priceSetBy : null,
-        vatRate: vatByVariant.get(line.variantId) ?? 0,
-        lineDiscountAmountCents: shares[index] ?? 0,
-      });
-      return;
-    }
-    for (const item of bundleItems.get(line.bundleId) ?? []) {
-      rows.push({
-        variantId: item.variantId,
-        // Paketin adedi kalemin adedini çarpar.
-        qty: item.qty * line.qty,
-        stockId: null,
-        bundleId: line.bundleId,
-        // `allocatedUnitPrice` euro olarak saklanıyor; çevrim ortak `toCents` ile.
-        unitPriceCents: toCents(item.allocatedUnitPrice),
-        vatRate: vatByVariant.get(item.variantId) ?? 0,
-        // Pakete sepet indirimi binmez; paketin kendi indirimi birim fiyatın içinde.
-        lineDiscountAmountCents: 0,
-      });
-    }
-  });
-  return rows;
 }
 
 /** Yalnız `applied` hâlde vardır: `outranked` hâlde kazanan kampanyadır ve uygulanmamış kod "karşılık buldu" diye sayılırdı. */

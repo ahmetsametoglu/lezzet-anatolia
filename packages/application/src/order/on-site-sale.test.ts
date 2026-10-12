@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, DiscountService, MoneyMovementService, OrderItemService, OrderService, PriceService,
-  ProductService, StockService, UserProfileService, serviceDb,
+  ProductService, ProductVatRateService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeOrdersBy, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, quoteOnSiteSale, sellOnSite } from './on-site-sale';
@@ -382,5 +382,44 @@ describe('adı belli müşteriye satış', () => {
     expect(await sale({ customerId: ANONYMOUS_BUYER_ID, paymentMethod: 'bank_transfer', onAccount: true })).toEqual({
       status: 'payment_not_allowed',
     });
+  });
+});
+
+describe('satışın çıkış ülkesi', () => {
+  let almanyaDeposu: string;
+
+  beforeAll(async () => {
+    almanyaDeposu = (await createTestWarehouse(db, { label: 'YSDE', countryCode: 'DE' })).id;
+  });
+
+  afterAll(async () => {
+    await purgeVariantStock(db, [variantId]);
+    await purgeTestData(db, { warehouseIds: [almanyaDeposu] });
+  });
+
+  // Almanya'daki depodan satış fırlatırsa ya da sipariş yazarsa kırmızıya döner; anonim yol da aynı karardan geçmeli.
+  it("Almanya'daki depodan satış yazılmaz, sebep tipli döner — adı belli müşteride de anonim alıcıda da", async () => {
+    // Oran verilir ki satır fiyatlansın ve satış KDV kararına kadar gelsin; oransız ürün o ülkede zaten satılmaz.
+    const oranlar = new ProductVatRateService(db);
+    await oranlar.set({ productId, country: 'DE', vatRate: 7 });
+    try {
+      await stocks.insert({ warehouseId: almanyaDeposu, variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePriceCents: 400 });
+      const red = { status: 'sale_origin_unsupported' };
+      expect(await sale({ warehouseId: almanyaDeposu })).toEqual(red);
+      expect(await sale({ warehouseId: almanyaDeposu, customerId: ANONYMOUS_BUYER_ID })).toEqual(red);
+      expect(
+        await quoteOnSiteSale(db, {
+          warehouseId: almanyaDeposu,
+          customerId,
+          paymentMethod: 'cash',
+          paymentAccountId: cashAccount,
+          lines: [{ variantId, qty: 1 }],
+        }),
+      ).toEqual(red);
+      const { data: siparisler } = await db.from('order').select('id').eq('warehouse_id', almanyaDeposu);
+      expect(siparisler).toEqual([]);
+    } finally {
+      await oranlar.remove(productId, 'DE');
+    }
   });
 });

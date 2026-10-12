@@ -18,6 +18,7 @@ import {
 } from '@lezzet/application/order/staff-order';
 import { canNegotiatePrice } from '@lezzet/domain-core';
 import {
+  CountryEnum,
   StaffAddressCreateResponseSchema,
   StaffAddressInputSchema,
   StaffAddressListSchema,
@@ -128,6 +129,8 @@ staffOrder.post('/context', async (c) => {
 const VariantQuerySchema = z.object({
   customerId: z.string().uuid(),
   warehouseId: z.string().uuid().optional(),
+  /** Teslim adresinin ülkesi; fiyat ve ülkede satılabilirlik ondan okunur, verilmezse genel fiyat. */
+  country: CountryEnum.optional(),
   q: z.string().max(100).optional(),
   cursor: z.string().optional(),
 });
@@ -141,6 +144,7 @@ staffOrder.get('/variants', async (c) => {
     customerId: parsed.data.customerId,
     term,
     warehouseId: parsed.data.warehouseId ?? null,
+    country: parsed.data.country ?? null,
     cursor: decodeCursor(parsed.data.cursor),
     includeCost: canNegotiatePrice(c.get('staff').roles),
   });
@@ -156,6 +160,7 @@ staffOrder.get('/variants', async (c) => {
 const VariantScanQuerySchema = z.object({
   customerId: z.string().uuid(),
   warehouseId: z.string().uuid().optional(),
+  country: CountryEnum.optional(),
   code: z.string().trim().min(1).max(100),
 });
 
@@ -166,6 +171,7 @@ staffOrder.get('/variants/scan', async (c) => {
   const scan = await findStaffVariantByCode(serviceDb(), {
     customerId: parsed.data.customerId,
     warehouseId: parsed.data.warehouseId ?? null,
+    country: parsed.data.country ?? null,
     code: parsed.data.code,
     includeCost: canNegotiatePrice(c.get('staff').roles),
   });

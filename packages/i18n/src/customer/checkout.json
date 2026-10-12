@@ -183,7 +183,9 @@
       },
       "service_point_invalid": "Bu kargo servisi bir teslim noktasına teslim ediyor. Lütfen açık bir teslim noktası seçin.",
       "pickup_not_allowed": "Depodan teslim hesabınız için açık değil — adresinize teslimi seçin.",
-      "pickup_warehouse_unavailable": "Seçtiğiniz depo şu an gel-al için kapalı — seçenekleri yenileyip yeniden seçin."
+      "pickup_warehouse_unavailable": "Seçtiğiniz depo şu an gel-al için kapalı — seçenekleri yenileyip yeniden seçin.",
+      "not_sold_in_country": "Şu ürünler seçtiğiniz ülkeye satılmıyor: {detail}. Sepetten çıkarıp tekrar deneyin.",
+      "sale_origin_unsupported": "Bu sipariş şu an tamamlanamıyor — sipariş verilmedi. Lütfen bizimle iletişime geçin."
     },
     "paymentSheet": {
       "configuration_missing": "Kartla ödeme şu an kullanılamıyor. Kapıda ödemeyi seçebilirsiniz.",
@@ -413,7 +415,9 @@
       },
       "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert.",
       "pickup_not_allowed": "Le retrait à l'entrepôt n'est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
-      "pickup_warehouse_unavailable": "L'entrepôt choisi n'accepte pas le retrait pour le moment — actualisez les options et choisissez à nouveau."
+      "pickup_warehouse_unavailable": "L'entrepôt choisi n'accepte pas le retrait pour le moment — actualisez les options et choisissez à nouveau.",
+      "not_sold_in_country": "Ces produits ne sont pas vendus dans le pays choisi : {detail}. Retirez-les du panier puis réessayez.",
+      "sale_origin_unsupported": "Cette commande ne peut pas être finalisée pour le moment — aucune commande n'a été passée. Veuillez nous contacter."
     },
     "paymentSheet": {
       "configuration_missing": "Le paiement par carte est indisponible pour le moment. Vous pouvez choisir le paiement à la livraison.",
@@ -643,7 +647,9 @@
       },
       "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt.",
       "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet – wählen Sie die Lieferung an Ihre Adresse.",
-      "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an – Optionen aktualisieren und erneut wählen."
+      "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an – Optionen aktualisieren und erneut wählen.",
+      "not_sold_in_country": "Diese Produkte werden im gewählten Land nicht verkauft: {detail}. Entfernen Sie sie aus dem Warenkorb und versuchen Sie es erneut.",
+      "sale_origin_unsupported": "Diese Bestellung kann derzeit nicht abgeschlossen werden – es wurde keine Bestellung aufgegeben. Bitte kontaktieren Sie uns."
     },
     "paymentSheet": {
       "configuration_missing": "Die Kartenzahlung ist derzeit nicht verfügbar. Sie können bei Lieferung zahlen.",

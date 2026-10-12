@@ -88,11 +88,13 @@ async function capalariTopla(db: Db): Promise<Capalar | null> {
   const ad = (v: unknown): string => (typeof v === 'string' ? v : ((v as { tr?: string })?.tr ?? '—'));
   const parti = partiler?.[0];
 
-  // Fiyatlar: kanal b2c, en SON yazılan kayıt kazanır (aynı varyantın birden çok dönem fiyatı var).
+  // Genel b2c fiyatı (müşteri ve ülke satırı değil); aynı varyantın birden çok dönem fiyatı var, en SON yazılan kazanır.
   const { data: fiyatSatirlari } = await db
     .from('price')
     .select('variant_id, amount, created_at')
     .eq('channel', 'b2c')
+    .is('customer_id', null)
+    .is('country', null)
     .order('created_at');
   const fiyatlar = new Map<string, number>();
   for (const satir of fiyatSatirlari ?? []) {

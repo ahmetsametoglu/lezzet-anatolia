@@ -11,7 +11,7 @@ import {
   type DiscountableLine,
 } from '@lezzet/domain-core';
 import { CountryEnum, resolveLocalizedText } from '@lezzet/types';
-import type { Business, PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
+import type { Business, Country, PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
 import { EMPTY_IMAGE, EMPTY_PRODUCT_CONTEXT, imageOf, sellingOf, toVariant } from '../catalog/map';
 import type { ProductContext } from '../catalog/map';
 import { loadProductContext } from '../catalog/product-context';
@@ -136,6 +136,8 @@ export async function getCartView(
     warehouseId: opts.warehouseId ?? null,
     shippingWarehouseId: opts.shippingWarehouseId ?? null,
     business: opts.business,
+    // Ayarın ülke ekseni malın teslim edildiği yerdir; fiyat da o ülkeden okunur.
+    country: countryOf(opts.country),
   };
   // Görüntüleyen, satırların kaynağı ve indirimin girdisi birbirini beklemez: her tur sunucuda bir gidiş-dönüştür ve sepet,
   // ödeme ve sipariş bu okumadan geçer. Görüntüleyen oturumdan değil sepetin kimliğinden çözülür, misafir OTP yolunda oturum yoktur.
@@ -171,7 +173,7 @@ export async function getCartView(
   const packages = new Map(packageRows.map((p) => [p.id, p]));
   const byVariant = new Map(variants.map((v) => [v.id, v]));
   const byProduct = new Map(page.rows.map((p) => [p.id, p]));
-  const context = await loadProductContext(db, page.rows, place, viewer);
+  const context = await loadProductContext(db, page.rows, place, viewer, locale);
 
   const lines: CartLine[] = [];
   for (const entry of entries) {
@@ -480,9 +482,14 @@ function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | unde
 
 /** Ters yükleme sepette de siparişteki kuralla sorulur; ülkesi bilinmeyen okuma %0 açmaz, yanlış %0 bizim riskimizdir. */
 function zeroRatedFor(viewer: PricingViewer, country: string | null | undefined): boolean {
-  const deliveryCountry = CountryEnum.safeParse(country);
+  const deliveryCountry = countryOf(country);
   return (
-    deliveryCountry.success &&
-    reverseChargeApplies({ channel: viewer.channel, deliveryCountry: deliveryCountry.data, vatNumberValid: viewer.vatNumberValid })
+    deliveryCountry !== null && reverseChargeApplies({ channel: viewer.channel, deliveryCountry, vatNumberValid: viewer.vatNumberValid })
   );
+}
+
+/** Ayar kapsamının ülkesi serbest metindir; tanınmayan değer ülke sayılmaz. */
+function countryOf(value: string | null | undefined): Country | null {
+  const parsed = CountryEnum.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }

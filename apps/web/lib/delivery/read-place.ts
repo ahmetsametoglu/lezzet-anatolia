@@ -3,6 +3,7 @@ import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { POSTAL_CODE_PATTERN } from '@lezzet/address';
 import { pickupOfferFor, type PlaceWarehouses } from '@lezzet/application';
+import { warehousePlace } from '@lezzet/application/delivery/place';
 import { AddressService, PostalCodePlaceService, serviceDb } from '@lezzet/database';
 import { customerBusinessOf, findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
 import type { Address, Business, CheckoutPickup, UserProfile, Warehouse } from '@lezzet/types';
@@ -94,10 +95,11 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
 
 /** İki depo birlikte döner: "yerelde yok" tek başına "tükendi" değildir, kargo deposunda varsa ürün satılabilir. */
 export async function readPlaceWarehouses(): Promise<PlaceWarehouses> {
-  const { warehouseId, shippingWarehouseId, pickupWarehouse, business } = await readPlaceContext();
+  const { warehouseId, shippingWarehouseId, pickupWarehouse, business, resolution } = await readPlaceContext();
   // Gel-al'da okumalar SEÇİLEN DEPONUN stoğuyla yapılır; kargo dolgusu yoktur (depoda olmayan kalem "burada yok").
-  if (pickupWarehouse) return { warehouseId: pickupWarehouse.id, shippingWarehouseId: null, business: pickupWarehouse.business };
-  return { warehouseId, shippingWarehouseId, business };
+  if (pickupWarehouse) return warehousePlace(pickupWarehouse);
+  const resolved = resolution?.kind === 'route' || resolution?.kind === 'shipping';
+  return { warehouseId, shippingWarehouseId, business, country: resolved ? resolution.country : null };
 }
 
 /** Depoyu değil yalnız yeri isteyen çağıran için: "gelince haber ver" kaydı müşterinin yeri hakkındadır, iç coğrafyamız hakkında değil. */

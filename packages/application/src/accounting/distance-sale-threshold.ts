@@ -2,8 +2,9 @@ import { OrderItemService, SettingsService, TreatmentOrderService, type Db } fro
 import {
   DISTANCE_SALE_SETTINGS,
   DISTANCE_SALE_TREATMENTS,
+  distanceSaleDecision,
   distanceSaleLedger,
-  distanceSaleThreshold,
+  type DistanceSaleLedger,
   type DistanceSaleSettings,
   type DistanceSaleWarning,
 } from '@lezzet/domain-core';
@@ -25,6 +26,13 @@ export interface DistanceSaleThresholdStatus {
   crossingOrder: { id: string; referenceNo: string | null; day: string } | null;
 }
 
+/** Eşik kararının siparişten bağımsız girdileri: yıl, iki yılın sistem toplamları ve ayarlar. */
+export interface DistanceSaleBasis {
+  year: number;
+  ledger: DistanceSaleLedger;
+  settings: DistanceSaleSettings;
+}
+
 /** Eşik ayarları; satırı olmayan ayar fabrika değerini alır. */
 async function readDistanceSaleSettings(db: Db): Promise<DistanceSaleSettings> {
   const settings = new SettingsService(db);
@@ -42,10 +50,10 @@ async function readDistanceSaleSettings(db: Db): Promise<DistanceSaleSettings> {
 }
 
 /**
- * Uzaktan satış eşiğinin bugünkü durumu: iki yılın uzaktan satış siparişleri tek taramada okunur, toplam ve karar motordadır. Yıl Paris
- * takvimindedir, çünkü sipariş günü işletmenin günüdür.
+ * İki yılın uzaktan satış siparişleri tek taramada okunur, toplam motordadır. Yıl Paris takvimindedir, çünkü sipariş günü işletmenin
+ * günüdür.
  */
-export async function readDistanceSaleThreshold(db: Db, now: Date = new Date()): Promise<DistanceSaleThresholdStatus> {
+export async function readDistanceSaleBasis(db: Db, now: Date = new Date()): Promise<DistanceSaleBasis> {
   const year = Number(parisDateOf(now).slice(0, 4));
   const range = { from: parisDayRange(`${year - 1}-01-01`).from, to: parisDayRange(`${year + 1}-01-01`).from };
   const [orders, settings] = await Promise.all([
@@ -53,19 +61,17 @@ export async function readDistanceSaleThreshold(db: Db, now: Date = new Date()):
     readDistanceSaleSettings(db),
   ]);
   const itemsByOrder = groupBy(await new OrderItemService(db).listByOrders(orders.map((order) => order.id)), (item) => item.orderId);
-
   const ledger = distanceSaleLedger(
     year,
     orders.map((order) => ({ order, items: itemsByOrder.get(order.id) ?? [] })),
   );
-  const decision = distanceSaleThreshold({
-    year,
-    currentYearCents: ledger.currentYearCents,
-    previousYearCents: ledger.previousYearCents,
-    orderNetCents: 0,
-    latched: ledger.firstDestinationOrder !== null,
-    settings,
-  });
+  return { year, ledger, settings };
+}
+
+/** Uzaktan satış eşiğinin bugünkü durumu, eşik kartının ve Pano satırının okuması. */
+export async function readDistanceSaleThreshold(db: Db, now: Date = new Date()): Promise<DistanceSaleThresholdStatus> {
+  const { year, ledger, settings } = await readDistanceSaleBasis(db, now);
+  const decision = distanceSaleDecision({ year, ledger, orderNetCents: 0, settings });
   const crossing = decision.sincePreviousYear ? null : ledger.firstDestinationOrder;
 
   return {

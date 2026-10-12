@@ -94,6 +94,10 @@ export function rejectionMessage(
       return r.payment_unavailable[result.reason];
     case 'order_not_placed':
       return r.order_not_placed;
+    case 'not_sold_in_country':
+      return r.not_sold_in_country.replace('{detail}', result.lines.join(', '));
+    case 'sale_origin_unsupported':
+      return r.sale_origin_unsupported;
     default: {
       const unreachable: never = result;
       return unreachable;

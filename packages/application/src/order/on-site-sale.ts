@@ -14,7 +14,7 @@ import { getCartView } from '../cart/read';
 import { discountAmountOf, discountIdOf, discountLabelOf, discountSharesOf, type CartLine } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDoorAccountId } from './door-account';
-import { saleVatOf } from './sale-vat';
+import { decideSaleVat } from './sale-vat';
 import { quickSale, type QuickSaleOutcome } from './quick-sale';
 import { shippingVatLines } from './shipping-selection';
 
@@ -88,7 +88,9 @@ export type OnSiteSaleOutcome =
   /** Vade freni: izin yok, vadesi geçmiş borç var ya da limit yetmiyor; sipariş yazılmaz. */
   | { status: 'credit_not_allowed'; reason: 'not_enabled' | 'overdue' | 'limit_exceeded' }
   /** Kapanış adımının reddi olduğu gibi taşınır — mal yok, yarış, kural reddi. */
-  | { status: 'sale_failed'; outcome: Exclude<QuickSaleOutcome, { status: 'ok' }> };
+  | { status: 'sale_failed'; outcome: Exclude<QuickSaleOutcome, { status: 'ok' }> }
+  /** Deponun ülkesi satıcının ülkesi değil; oradan satış desteklenmiyor, sipariş yazılmaz. */
+  | { status: 'sale_origin_unsupported' };
 
 /** Kesin tutarın girdisi: satışın kendisi, yazımı yapan personel ve tekrar kimliği olmadan. */
 export type OnSiteSaleQuoteInput = Pick<
@@ -107,7 +109,8 @@ type SaleRefusal = Extract<
       | 'insufficient_here'
       | 'no_payment_account'
       | 'business_mismatch'
-      | 'credit_not_allowed';
+      | 'credit_not_allowed'
+      | 'sale_origin_unsupported';
   }
 >;
 
@@ -135,7 +138,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
 
   const priced = await priceOnSiteSale(db, input);
   if (priced.status !== 'priced') return priced;
-  const { warehouse, buyer, view, kept, terms, totalCents, paymentAccountId, locale } = priced;
+  const { warehouse, view, kept, vat, terms, totalCents, paymentAccountId, locale } = priced;
   const onAccount = input.onAccount === true;
 
   const items: CreateOrderItemInput[] = kept.map(({ line, share }) => ({
@@ -146,7 +149,8 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     ...(line.listUnitPriceCents != null
       ? { listUnitPriceCents: line.listUnitPriceCents, priceSetBy: input.staffId }
       : {}),
-    vatRate: terms?.vat.zeroRated ? 0 : line.vatRate,
+    // Mal depoda el değiştirdiği için oran satıcının ülkesinindir; satırın oranı ürünün kendi (satıcı) oranıdır.
+    vatRate: vat.zeroRated ? 0 : line.vatRate,
     // İndirim kaleme yazılır, yoksa ciro onu görmez: `revenue_total` tetikleyicisi (`resync_order_revenue`) yalnız bu alanı okur.
     lineDiscountAmountCents: share,
   }));
@@ -157,7 +161,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     {
       customerId: input.customerId,
       warehouseId: input.warehouseId,
-      channel: terms?.channel ?? 'b2c',
+      channel: priced.channel,
       // Son kapı satışları görünümü (`listDoorSales`) siparişi bu kaynaktan bulur.
       orderSource: 'door',
       deliveryType: 'pickup',
@@ -167,14 +171,11 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
       // Kargo ücreti SORULMUYOR: `resolveShippingFee` `pickup` almıyor, sipariş doğrudan 0 yazar.
       shippingFeeCents: 0,
       orderedTotalCents: totalCents,
-      ...(terms === null || buyer === null
-        ? {}
-        : {
-            deliveryCountry: warehouse.countryCode,
-            vatTreatment: terms.vat.treatment,
-            vatNumberSnapshot: terms.vat.zeroRated ? buyer.vatNumber : null,
-            pricesIncludeVat: terms.payment.pricesIncludeVat,
-          }),
+      // Anonim satışta da kararın kendisi yazılır; kolon varsayılanı bir karar değildir.
+      deliveryCountry: warehouse.countryCode,
+      vatTreatment: vat.treatment,
+      vatNumberSnapshot: vat.zeroRated ? (priced.buyer?.vatNumber ?? null) : null,
+      pricesIncludeVat: terms?.payment.pricesIncludeVat ?? view.pricesIncludeVat,
       /*
         Siparişin indirim alanları da yazılır, çünkü kampanya kotası `create_order` RPC'sinde `discount_id`den tükenir ve veritabanı
         `discount_amount = Σ line_discount_amount` eşitliğini commit anında denetler (`order_discount_balance`); alanlar checkout'un
@@ -252,7 +253,14 @@ async function priceOnSiteSale(db: Db, input: OnSiteSaleQuoteInput) {
     db,
     locale,
     input.lines.map((line) => ({ kind: 'variant' as const, variantId: line.variantId, qty: line.qty, stockId: null })),
-    { customerId: input.customerId, priceOverrides: overrides, warehouseId: input.warehouseId, business: warehouse.business },
+    {
+      customerId: input.customerId,
+      priceOverrides: overrides,
+      warehouseId: input.warehouseId,
+      business: warehouse.business,
+      // Mal kapıda el değiştirir: fiyat deponun ülkesinden okunur.
+      country: warehouse.countryCode,
+    },
   );
 
   const blocked = view.lines.filter((line) => line.unitPriceCents === null).map((line) => line.name);
@@ -281,6 +289,19 @@ async function priceOnSiteSale(db: Db, input: OnSiteSaleQuoteInput) {
     .map((line, index) => ({ line, share: shares[index] ?? 0 }))
     .filter((row): row is { line: typeof row.line & { variantId: string }; share: number } => row.line.variantId !== undefined);
 
+  // Mal depoda el değiştirir: çıkış da teslim de deponun ülkesidir ve anonim alıcı tüketicidir.
+  const channel = buyer ? deriveChannel({ isCompany: buyer.type === 'company' }) : 'b2c';
+  const vatOutcome = await decideSaleVat(db, {
+    channel,
+    originCountry: warehouse.countryCode,
+    deliveryCountry: warehouse.countryCode,
+    vatNumberValid: buyer?.vatNumberValid ?? undefined,
+    goods: kept.map(({ line, share }) => ({ vatRate: line.vatRate, amountCents: (line.lineTotalCents ?? 0) - share })),
+    pricesIncludeVat: view.pricesIncludeVat,
+  });
+  if (!vatOutcome.ok) return { status: vatOutcome.reason } as const;
+  const vat = vatOutcome.vat;
+
   const terms =
     buyer === null
       ? null
@@ -297,12 +318,12 @@ async function priceOnSiteSale(db: Db, input: OnSiteSaleQuoteInput) {
   }
   const totalCents = terms?.payment.orderTotalCents ?? view.totalCents;
 
-  return { status: 'priced', warehouse, buyer, view, kept, terms, totalCents, paymentAccountId, locale } as const;
+  return { status: 'priced', warehouse, buyer, view, kept, vat, channel, terms, totalCents, paymentAccountId, locale } as const;
 }
 
 /**
- * Adı belli müşterinin siparişinde kanal, KDV ve borç checkout'un kurallarıyla yazılır: B2B fiyatı vergisizdir, borç her tabanda KDV
- * dahildir. Teslim ülkesi deponun ülkesidir, çünkü mal kapıda ya da araçta el değiştirir.
+ * Adı belli müşterinin siparişinde borç checkout'un kurallarıyla yazılır: B2B fiyatı vergisizdir, borç her tabanda KDV dahildir.
+ * Teslim ülkesi deponun ülkesidir, çünkü mal kapıda ya da araçta el değiştirir.
  */
 async function namedSaleTerms(
   db: Db,
@@ -315,15 +336,6 @@ async function namedSaleTerms(
     shares: readonly number[];
   },
 ) {
-  const channel = deriveChannel({ isCompany: input.buyer.type === 'company' });
-  // Mal depoda el değiştirir: çıkış da teslim de deponun ülkesidir, eşik durumu sorulmaz.
-  const vat = saleVatOf({
-    channel,
-    originCountry: input.warehouse.countryCode,
-    deliveryCountry: input.warehouse.countryCode,
-    vatNumberValid: input.buyer.vatNumberValid ?? undefined,
-    destinationTaxation: null,
-  });
   const payment = await resolveCheckoutPayment(db, {
     customerId: input.buyer.id,
     deliveryType: 'pickup',
@@ -334,7 +346,7 @@ async function namedSaleTerms(
     country: input.warehouse.countryCode,
     warehouseId: input.warehouse.id,
   });
-  return { channel, vat, payment };
+  return { payment };
 }
 
 /**

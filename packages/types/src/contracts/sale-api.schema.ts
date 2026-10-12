@@ -57,6 +57,8 @@ const InsufficientHereSchema = z.object({
 const BlockedLinesSchema = z.object({ status: z.literal('blocked_lines'), lines: z.array(z.string()) });
 /** Kapı reddetti (yarış, kural). Ayrıntı sunucuda loglanır; ekran tek cümle söyler. */
 const SaleFailedSchema = z.object({ status: z.literal('failed') });
+/** Deponun ülkesi satıcının ülkesi değil; oradan satış desteklenmiyor, sipariş HİÇ yazılmadı. */
+const SaleOriginUnsupportedSchema = z.object({ status: z.literal('sale_origin_unsupported') });
 
 /**
  * Cevap, kapının kararı ne olursa olsun HTTP 200'dür: durum kodu isteğin kapıya ulaşıp ulaşmadığını, gövde satışın olup olmadığını
@@ -79,6 +81,7 @@ export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
   InsufficientHereSchema,
   BlockedLinesSchema,
   SaleFailedSchema,
+  SaleOriginUnsupportedSchema,
 ]);
 export type OnSiteSaleResponse = z.infer<typeof OnSiteSaleResponseSchema>;
 
@@ -96,6 +99,7 @@ export const OnSiteSaleQuoteResponseSchema = z.discriminatedUnion('status', [
   InsufficientHereSchema,
   BlockedLinesSchema,
   SaleFailedSchema,
+  SaleOriginUnsupportedSchema,
 ]);
 
 /* ────────────────────────────────────────────────────────────────────────────

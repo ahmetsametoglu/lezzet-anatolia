@@ -117,7 +117,7 @@ async function readSimilar(
   // Alınabilirlik seçimden önce bilinmeli, bu yüzden bağlam havuzun tamamı için okunur; tur sayısı aday sayısından bağımsız.
   // Kartlar farklı kategori ve koleksiyonlardan gelir ve üstünde kampanyayı söyleyecek başlık yoktur, rozet kapsamı bu yüzden okunur.
   const [context, scopeCampaigns] = await Promise.all([
-    placeAndViewer.then(([place, viewer]) => loadProductContext(db, candidates, place, viewer)),
+    placeAndViewer.then(([place, viewer]) => loadProductContext(db, candidates, place, viewer, locale)),
     placeAndViewer.then(([, viewer]) =>
       readScopeCampaigns(db, {
         categoryIds: candidates.flatMap((p) => (p.categoryId === null ? [] : [p.categoryId])),
@@ -174,7 +174,7 @@ async function readFamily(
   if (page.rows.length < 2) return [];
 
   const [place, viewer] = await placeAndViewer;
-  const context = await loadProductContext(db, page.rows, place, viewer);
+  const context = await loadProductContext(db, page.rows, place, viewer, locale);
   const cards = page.rows
     // "Tükendi mi" ve başlangıç fiyatı `toProduct`tan okunur: kart, katalog ve detay aynı ürün için farklı sayı göstermemeli.
     // Fiyat en ucuz aktif boyunki olduğu için çizimdeki "…'dan" eki doğru bir alt sınırdır.
@@ -243,7 +243,7 @@ export async function getProductDetail(
 
   const [family, context, images, category, similar] = await Promise.all([
     readFamily(db, product, locale, placeAndViewer),
-    placeAndViewer.then(([place, viewer]) => loadProductContext(db, [product], place, viewer)),
+    placeAndViewer.then(([place, viewer]) => loadProductContext(db, [product], place, viewer, locale)),
     new ProductImageService(db).listByProduct(product.id),
     product.categoryId ? new CategoryService(db).getById(product.categoryId) : Promise.resolve(null),
     // Aynı künye "benzer ürünler"e de gider: detay B2B fiyat gösterirken altındaki kartların

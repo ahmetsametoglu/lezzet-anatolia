@@ -7,6 +7,7 @@ import {
   PriceService,
   ProductService,
   ProductVariantService,
+  ProductVatRateService,
   SettingsService,
   ShippingBoxService,
   StockService,
@@ -15,11 +16,19 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { readCheckoutSnapshot, type ShippingRateProvider } from '@lezzet/application';
-import { shippingPriceWithVat } from '@lezzet/domain-core';
+import { DISTANCE_SALE_SETTINGS, shippingPriceWithVat } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 
 type ShippingQuote = Awaited<ReturnType<ShippingRateProvider['quote']>>[number];
 type ServicePoint = NonNullable<Awaited<ReturnType<ShippingRateProvider['servicePoint']>>>;
-import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete, testPostalCode } from '@lezzet/database/testing';
+import {
+  createTestWarehouse,
+  purgeTestData,
+  purgeVariantStock,
+  mustDelete,
+  settingsSnapshot,
+  testPostalCode,
+} from '@lezzet/database/testing';
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
@@ -89,6 +98,10 @@ beforeAll(async () => {
   localVariantId = local.variants[0]!.id;
   // Kapı siparişinin asgari sepeti küresel ayardan okunur; fiyat onun rahatça üstünde ki test ayara dokunmasın.
   await new PriceService(db).insert({ variantId: localVariantId, channel: 'b2c', amountCents: 20_000 });
+  // Almanya'daki tüketiciye yalnız Almanya oranı girilmiş ürün satılır (`sellableIn`).
+  const rates = new ProductVatRateService(db);
+  await rates.set({ productId, country: 'DE', vatRate: 7 });
+  await rates.set({ productId: localProductId, country: 'DE', vatRate: 7 });
   await new StockService(db).insert({
     warehouseId: routeWarehouseId,
     variantId: localVariantId,
@@ -522,5 +535,40 @@ describe('fiyatsız kargo siparişi', () => {
     } finally {
       await variants.update({ id: variantId, packedWeightG: 1000 });
     }
+  });
+});
+
+describe('Almanya’daki tüketiciye satış', () => {
+  const settings = settingsSnapshot(db);
+  afterAll(() => settings.restore());
+
+  // Almanya oranı olmayan ürün siparişe satıcının oranıyla yazılırsa ya da ret ürünün adını söylemezse kırmızıya döner.
+  it('Almanya oranı olmayan ürünle sipariş açılmaz; ret ülkeyi ve ürünün adını söyler', async () => {
+    const oranlar = new ProductVatRateService(db);
+    await oranlar.remove(productId, 'DE');
+    try {
+      expect(await createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true })).toEqual({
+        status: 'not_sold_in_country',
+        country: 'DE',
+        lines: [expect.stringContaining(`Kargo ürünü ${stamp}`)],
+      });
+      const { data: siparisler } = await db.from('order').select('id').eq('customer_id', customerId);
+      expect(siparisler).toEqual([]);
+    } finally {
+      await oranlar.set({ productId, country: 'DE', vatRate: 7 });
+    }
+  });
+
+  // Eşik aşıldıktan sonra sipariş satıcının KDV'siyle yazılırsa kırmızıya döner.
+  it('eşik aşılmışsa sipariş OSS işlemiyle, kalem Almanya oranıyla yazılır', async () => {
+    await settings.override(DISTANCE_SALE_SETTINGS.thresholdCents.key, 1_000_000);
+    await settings.override(DISTANCE_SALE_SETTINGS.openingYear.key, Number(parisDateOf(new Date()).slice(0, 4)));
+    await settings.override(DISTANCE_SALE_SETTINGS.openingCents.key, 2_000_000);
+
+    const outcome = await createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true });
+    if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
+    const yazilan = await new OrderService(db).getWithItems(outcome.orderId);
+    expect(yazilan?.order.vatTreatment).toBe('intra_eu_distance_oss');
+    expect(yazilan?.items.map((item) => item.vatRate)).toEqual([7]);
   });
 });

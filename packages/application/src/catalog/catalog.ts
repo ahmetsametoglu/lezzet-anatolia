@@ -194,7 +194,7 @@ async function readCatalogProducts(
   /* Kampanya tek okumayla hem etkin kesite hem karışık listedeki kartlara cevap verir; ek sorgu doğmaz, çünkü satırlar `categoryId`
      ve `collections[]` taşıyor. `loadProductContext` ile paralel koşar, ikisi birbirini beklemez. */
   const [context, scopeCampaigns] = await Promise.all([
-    loadProductContext(db, page.rows, place, viewer),
+    loadProductContext(db, page.rows, place, viewer, locale),
     readScopeCampaigns(db, {
       categoryIds: [
         ...(activeCategory ? [activeCategory.id] : []),

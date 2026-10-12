@@ -36,6 +36,7 @@ import {
   SaleScanResponseSchema,
   SaleVariantsResponseSchema,
   type Business,
+  type Country,
   type UserProfile,
 } from '@lezzet/types';
 import { captureError, SOURCES } from '@lezzet/observability';
@@ -60,14 +61,16 @@ interface SaleEnv {
     /** Satışın alıcısı; `null` = anonim alıcı. */
     saleBuyer: UserProfile | null;
     saleBusiness: Business;
+    /** Deponun ülkesi; mal kapıda el değiştirdiği için fiyat bu ülkeden okunur. */
+    saleCountry: Country | null;
   };
 }
 
 export const sale = new Hono<SaleEnv>();
 
 /** Satışın yeri satıcının deposudur ve işi deponun işidir; seçilen müşterinin işi onunla tutmak zorundadır. */
-function salePlaceOf(warehouseId: string, business: Business): PlaceWarehouses {
-  return { warehouseId, shippingWarehouseId: null, business };
+function salePlaceOf(c: Context<SaleEnv>): PlaceWarehouses {
+  return { warehouseId: c.get('warehouseId'), shippingWarehouseId: null, business: c.get('saleBusiness'), country: c.get('saleCountry') };
 }
 
 /** Fiyat seçilen müşterinin görüşünden okunur (özel → grup → liste); alıcı yoksa ziyaretçi. */
@@ -129,6 +132,7 @@ async function saleBuyerGuard(c: Context<SaleEnv>, next: Next): Promise<Response
   if (buyer === null && business !== customerBusinessOf(null)) return fail(c, 'door_sale_closed', 403);
   c.set('saleBuyer', buyer);
   c.set('saleBusiness', business);
+  c.set('saleCountry', warehouse?.countryCode ?? null);
   await next();
 }
 
@@ -166,7 +170,8 @@ sale.post('/on-site/quote', async (c) => {
     outcome.status === 'insufficient_here' ||
     outcome.status === 'blocked_lines' ||
     outcome.status === 'no_payment_account' ||
-    outcome.status === 'credit_not_allowed'
+    outcome.status === 'credit_not_allowed' ||
+    outcome.status === 'sale_origin_unsupported'
   ) {
     const body: z.input<typeof OnSiteSaleQuoteResponseSchema> = outcome;
     return ok(c, OnSiteSaleQuoteResponseSchema.parse(body));
@@ -205,7 +210,8 @@ sale.post('/on-site', async (c) => {
     outcome.status === 'insufficient_here' ||
     outcome.status === 'blocked_lines' ||
     outcome.status === 'no_payment_account' ||
-    outcome.status === 'credit_not_allowed'
+    outcome.status === 'credit_not_allowed' ||
+    outcome.status === 'sale_origin_unsupported'
   ) {
     const body: z.input<typeof OnSiteSaleResponseSchema> = outcome;
     return ok(c, OnSiteSaleResponseSchema.parse(body));
@@ -249,7 +255,7 @@ sale.get('/catalog', async (c) => {
       /* Araç bir vitrin değildir, kurye elindekini satar; tesis kapısında kural tersinedir (`listStockedProductIds`). */
       onlyStockedHere: c.get('salePlace') === 'van',
     },
-    place: salePlaceOf(c.get('warehouseId'), c.get('saleBusiness')),
+    place: salePlaceOf(c),
     viewer: await saleViewerOf(c),
     limit: DEFAULT_PAGE_SIZE,
   });
@@ -289,7 +295,7 @@ sale.get('/catalog/:slug/variants', async (c) => {
   const detail = await getProductDetail(db, {
     locale: locale.data,
     slug: c.req.param('slug'),
-    place: salePlaceOf(c.get('warehouseId'), c.get('saleBusiness')),
+    place: salePlaceOf(c),
     viewer: await saleViewerOf(c),
   });
   if (!detail) return fail(c, 'product_not_found', 404);
@@ -336,7 +342,7 @@ sale.get('/scan', async (c) => {
   const variant = await new ProductVariantService(db).getById(match.variantId);
   if (variant === null) return ok(c, SaleScanResponseSchema.parse({ status: 'unknown_code' }));
 
-  const place = salePlaceOf(c.get('warehouseId'), c.get('saleBusiness'));
+  const place = salePlaceOf(c);
   const viewer = await saleViewerOf(c);
 
   const page = await getCatalogData(db, {

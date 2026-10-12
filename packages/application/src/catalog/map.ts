@@ -1,4 +1,4 @@
-import { isCustomerPrice, resolvePrice } from '@lezzet/domain-core';
+import { isCustomerPrice, resolvePrice, sellableIn } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import { comparisonPrice, variantNameOf } from '@lezzet/helper';
 import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
@@ -19,11 +19,13 @@ import type {
   AvailableStockTotal,
   CatalogSize,
   Category,
+  Country,
   ImageMeta,
   PreferredLanguage,
   Price,
   Product,
   ProductVariant,
+  ProductWithRelations,
   StockStatus,
 } from '@lezzet/types';
 import type { ScopeCampaign } from './campaign';
@@ -149,6 +151,10 @@ export interface ProductContext {
   costs: Map<string, number>;
   /** Ürünün KDV oranı; alış tabanlı kural fiyatını B2C tabanına çevirir. */
   vatRate: number | null;
+  /** Fiyatın ve satılabilirliğin ülkesi (`priceCountryOf`); `null` = yer de dil de ülke söylemiyor, genel fiyat okunur. */
+  priceCountry: Country | null;
+  /** Ürünün satıcının ülkesi dışındaki KDV oranları; o ülkenin tüketicisine satış bunlara bağlıdır (`sellableIn`). */
+  countryRates: ProductWithRelations['countryRates'];
 }
 
 /**
@@ -194,6 +200,8 @@ export const EMPTY_PRODUCT_CONTEXT: ProductContext = {
   offers: new Map(),
   costs: new Map(),
   vatRate: null,
+  priceCountry: null,
+  countryRates: [],
 };
 
 /**
@@ -212,16 +220,17 @@ function comparisonOf(priceCents: number | null, variant: Pick<ProductVariant, '
 export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
   const priceRows = ctx.prices.get(variant.id);
   // Servis cent döndürür (STACK §8).
-  const listCents = priceRows?.channelPrice?.amountCents ?? null;
+  const listRow = priceRows?.channelPrice ?? null;
   const customerCents = priceRows?.customerPrice?.amountCents ?? null;
+  const notSoldIn = notSoldInOf(ctx);
 
   const resolved = resolvePrice({
     channel: ctx.viewer.channel,
     b2bApproved: ctx.viewer.b2bApproved,
-    // Liste, okunduğu kanalın genel satırıdır — `viewer.channel` zaten daraltılmış hâl (onaysız şirket B2C'dir), yani motorun kendi
-    // daraltması bu listeyle çelişmez; fiyat okuması ülke satırını getirmediği için ülke genel fiyattır.
-    channelPrices: listCents != null ? [{ channel: ctx.viewer.channel, amountCents: listCents, country: null }] : [],
-    country: null,
+    // Liste okunduğu kanalın satırıdır, `viewer.channel` zaten daraltılmış hâl (onaysız şirket B2C'dir); satır fiyat ülkesinin
+    // satırı ya da genel satırdır (`findApplicableMap`), ülkesini motora taşır.
+    channelPrices: listRow ? [{ channel: ctx.viewer.channel, amountCents: listRow.amountCents, country: listRow.country }] : [],
+    country: ctx.priceCountry,
     customerPriceCents: customerCents,
     customerRule: ctx.viewer.customerRule ?? null,
     costCents: ctx.costs.get(variant.id) ?? null,
@@ -230,24 +239,34 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
     groupPercentOff: ctx.viewer.groupPercentOff,
     offer: ctx.offers.get(variant.id) ?? null,
   });
+  // O ülkenin tüketicisine satılmayan ürünün fiyatı da yoktur; satış künyesi satışa kapalı ürününkiyle aynı boş hâle düşer.
+  const sold = resolved.sellable && notSoldIn === null ? resolved : null;
 
-  const priceCents = resolved.sellable ? resolved.unitPriceCents : null;
+  const priceCents = sold ? sold.unitPriceCents : null;
   return {
     priceCents,
+    notSoldIn,
     // Teklif kazandıysa üstü çizilen, teklifin YERİNE GEÇTİĞİ fiyattır.
-    wasCents: resolved.sellable && resolved.source === 'offer' ? (resolved.strikeCents ?? undefined) : undefined,
+    wasCents: sold && sold.source === 'offer' ? (sold.strikeCents ?? undefined) : undefined,
     /** Müşteriye özel fiyat kazandı mı (ürün bazlı ya da genel kural); böyle kalem indirim matrahına girmez. */
-    specialPrice: resolved.sellable && isCustomerPrice(resolved.source),
+    specialPrice: sold !== null && isCustomerPrice(sold.source),
     // Kıyas fiyatı ÖDENEN fiyattan hesaplanır (teklif kazandıysa indirimli olandan) — müşteri
     // karşılaştırırken bugün ödeyeceği tutarı kıyaslar. Net miktar girilmemişse satır düşer.
     ...comparisonOf(priceCents, variant),
     // Adet tavanı yalnız teklifte vardır (partide kalan miktar); normal satışta tavan yoktur.
-    limitLabel: resolved.sellable && resolved.quantityCap != null ? String(resolved.quantityCap) : null,
+    limitLabel: sold && sold.quantityCap != null ? String(sold.quantityCap) : null,
     // Teklif kazandıysa kalem O PARTİYE çıpalanır: indirimin sebebi partinin tarihidir, başka
     // partiye taşınmaz (DOMAIN §5). Sepet ve rezervasyon bu kimliği taşır.
-    stockId: resolved.sellable ? resolved.stockId : null,
+    stockId: sold ? sold.stockId : null,
     availableQty: ctx.stock.get(variant.id)?.availableQty ?? 0,
   };
+}
+
+/** Ürün fiyat ülkesinin tüketicisine satılmıyorsa o ülke; karar KDV kanalıyla sorulur ki vitrin checkout'la aynı cevabı versin. */
+function notSoldInOf(ctx: ProductContext): Country | null {
+  if (ctx.priceCountry === null) return null;
+  const sellable = sellableIn({ country: ctx.priceCountry, channel: ctx.viewer.vatChannel, countryRates: ctx.countryRates });
+  return sellable ? null : ctx.priceCountry;
 }
 
 /**
@@ -313,6 +332,7 @@ export function toVariant(
     netQuantity: variant.netQuantity,
     netUnit: variant.netUnit,
     priceCents: selling.priceCents,
+    notSoldIn: selling.notSoldIn,
     wasCents: selling.wasCents,
     comparisonCents: selling.comparisonCents,
     comparisonUnit: selling.comparisonUnit,
@@ -372,6 +392,8 @@ export function toProduct(
     comparisonCents: selling?.comparisonCents ?? null,
     comparisonUnit: selling?.comparisonUnit ?? null,
     priceCents: selling?.priceCents ?? null,
+    // Ülke kararı ürünündür, boyun değil: birincil boy yoksa da sorulur.
+    notSoldIn: selling?.notSoldIn ?? notSoldInOf(ctx),
     wasCents: selling?.wasCents,
     limitLabel: selling?.limitLabel ?? null,
     purchaseMode: variants.length > 1 ? 'options' : 'quick',

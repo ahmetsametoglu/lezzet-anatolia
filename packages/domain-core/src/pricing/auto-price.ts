@@ -43,6 +43,33 @@ export function autoPriceCents(input: AutoPriceInput): number | null {
   return price;
 }
 
+/** Otomatik fiyatlı ürünün bir ülkedeki tüketici satırı: yazılacak tutar ya da satırın kaldırılması. */
+export type CountryAutoPrice = { action: 'set'; amountCents: number } | { action: 'remove' };
+
+/**
+ * Bir ülkenin tüketici fiyatı hedef marjdan, o ülkede şu an uygulanan oranla (`applicableVatRate`) türer; genel fiyata eşitse ülke
+ * satırı gereksizdir. Oran yoksa ürün o ülkede satılmaz ve satır da tutulmaz.
+ */
+export function countryAutoPrice(input: {
+  costCents: number;
+  targetMarginPercent: number;
+  stepCents: number;
+  /** O ülkede şu an uygulanan oran; `null` = ürün orada satılmıyor. */
+  countryVatRate: number | null;
+  /** Genel otomatik tüketici fiyatı (`autoPriceCents`). */
+  generalCents: number;
+}): CountryAutoPrice {
+  if (input.countryVatRate === null) return { action: 'remove' };
+  const amountCents = autoPriceCents({
+    channel: 'b2c',
+    costCents: input.costCents,
+    targetMarginPercent: input.targetMarginPercent,
+    vatRate: input.countryVatRate,
+    stepCents: input.stepCents,
+  });
+  return amountCents === null || amountCents === input.generalCents ? { action: 'remove' } : { action: 'set', amountCents };
+}
+
 /**
  * Saklanan fiyatın HT karşılığı; ekran ve motor bu tek dönüşümü kullanır ki otomatik fiyat kendi uyarısını tetiklemesin.
  */

@@ -35,6 +35,7 @@ import {
   type ProductFamilyInsert,
   type ProductFamilyUpdate,
   type ProductFamilyOrder,
+  type ProductVatRate,
   type ImageDimensions,
   IMAGE_RENDER_FIELDS,
 } from '@lezzet/types';
@@ -72,6 +73,11 @@ interface ProductFilters {
   onlyIncomplete?: boolean;
   /** Yalnız kargolanabilenler, vitrindeki "adresime gönderilebilir" çipi; sunucuda süzülür (gerekçe `collectionId`te). */
   onlyShippable?: boolean;
+  /**
+   * Yalnız bu ülkenin KDV oranı girilmemiş olanlar, operasyonun "Almanya oranı eksik" süzgeci; oranı olmayan ürün o ülkenin
+   * tüketicisine satılmaz (`sellableIn`). Sunucuda süzülür (gerekçe `collectionId`te).
+   */
+  missingCountryRate?: ProductVatRate['country'];
 }
 
 interface ProductListOptions {
@@ -120,16 +126,31 @@ function productSelect(f?: ProductFilters): string {
   const collections = f?.collectionId
     ? 'collections:product_collections!inner(collection_id)'
     : 'collections:product_collections(collection_id)';
-  return `*,variants:product_variant(*),${collections},countryRates:product_vat_rate(country,vat_rate)`;
+  return `*,variants:product_variant(*),${collections},countryRates:product_vat_rate(country,vat_rate)${rateGapSelect(f)}`;
+}
+
+/** Oran boşluğu süzgecinin gömmesi; ad snake_case yazılır, çünkü süzgeç anahtarı kolon çevirisinden geçer. */
+const RATE_GAP = 'rate_gap';
+
+/** Gömülü ilişkide süzen sorgu, ilişki seçimde yoksa reddedilir; süzgeci taşıyan her projeksiyon bu parçayı ekler. */
+function rateGapSelect(f?: ProductFilters): string {
+  return f?.missingCountryRate ? `,${RATE_GAP}:product_vat_rate(country)` : '';
+}
+
+interface ProductQuery {
+  filters: Record<string, unknown>;
+  orFilters: string[];
+  isNullFields: string[];
 }
 
 /**
- * Süzgeçleri eşitlik süzgeçlerine ve `or` gruplarına çevirir; liste, sayaç ve fiyat sıralı okuma aynı çeviriyi kullanır, yoksa sayaç
- * listeyle çelişirdi. Sınıf dışındadır, çünkü `ProductListingService` de kullanır ve süzgeç mantığı iki yerde yaşayamaz.
+ * Süzgeçleri eşitlik, `or` grubu ve `is null` koşullarına çevirir; liste, sayaç ve fiyat sıralı okuma aynı çeviriyi kullanır, yoksa
+ * sayaç listeyle çelişirdi. Sınıf dışındadır, çünkü `ProductListingService` de kullanır ve süzgeç mantığı iki yerde yaşayamaz.
  */
-function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {
+function buildProductQuery(f?: ProductFilters): ProductQuery {
   const filters: Record<string, unknown> = {};
   const orFilters: string[] = [];
+  const isNullFields: string[] = [];
   if (f?.categoryId) filters.categoryId = f.categoryId;
   if (f?.familyId) filters.familyId = f.familyId;
   // Süzgeç ancak projeksiyon `!inner` iken işler (`productSelect`); LEFT ilişkide sessizce bütün katalog döner.
@@ -147,7 +168,12 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
   // "Beyan eksik" ölçütü üretilmiş kolondadır (`is_incomplete`), süzgeç ve sayaç aynı gerçeği okusun diye.
   if (f?.onlyIncomplete) filters.isIncomplete = true;
   if (f?.onlyShippable) filters.shippable = true;
-  return { filters, orFilters };
+  // Ülkeye daraltılmış gömme boş kalan ürünler: o ülkenin oran satırı yok (PostgREST'in gömmede `is null` süzgeci).
+  if (f?.missingCountryRate) {
+    filters[`${RATE_GAP}.country`] = f.missingCountryRate;
+    isNullFields.push(RATE_GAP);
+  }
+  return { filters, orFilters, isNullFields };
 }
 
 /**
@@ -195,9 +221,9 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
     return { ...filters, channel: scope.channel, ...(scope.warehouseId ? { warehouseId: scope.warehouseId } : {}) };
   }
 
-  /** Kapsamın `eq` ile ifade edilemeyen yarısı: "yer bilinmiyor" satırı. */
-  private scopeOptions(scope: ProductListingScope): { isNullFields?: string[] } {
-    return scope.warehouseId ? {} : { isNullFields: ['warehouse_id'] };
+  /** Kapsamın `eq` ile ifade edilemeyen yarısı ("yer bilinmiyor" satırı), süzgeçlerin `is null` koşullarına eklenir. */
+  private scopeOptions(scope: ProductListingScope, isNullFields: readonly string[]): { isNullFields: string[] } {
+    return { isNullFields: scope.warehouseId ? [...isNullFields] : [...isNullFields, 'warehouse_id'] };
   }
 
   /**
@@ -205,7 +231,7 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
    * ürünü fiyat sıralamasında süzer, varsayılan sırada gösterirdi.
    */
   async list(opts: ProductListOptions & ProductListingScope): Promise<Page<ProductListingRow>> {
-    const { filters, orFilters } = buildProductQuery(opts.filters);
+    const { filters, orFilters, isNullFields } = buildProductQuery(opts.filters);
     // Şema görünümün satırıdır, ürününki değil: Zod tanımadığı alanı düşürür ve görünümün hesapladığı fiyat kaybolurdu.
     return this.getPageAs(ProductListingRowSchema, this.scopedFilters(filters, opts), {
       select: productSelect(opts.filters),
@@ -213,7 +239,7 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
-      ...this.scopeOptions(opts),
+      ...this.scopeOptions(opts, isNullFields),
     });
   }
 
@@ -224,7 +250,7 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
   async listByPrice(
     opts: ProductListOptions & ProductListingScope & { direction: 'asc' | 'desc' },
   ): Promise<Page<ProductListingRow>> {
-    const { filters, orFilters } = buildProductQuery(opts.filters);
+    const { filters, orFilters, isNullFields } = buildProductQuery(opts.filters);
     return this.getPageAs(ProductListingRowSchema, this.scopedFilters(filters, opts), {
       select: productSelect(opts.filters),
       orderBy: 'sortPrice',
@@ -232,7 +258,7 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
-      ...this.scopeOptions(opts),
+      ...this.scopeOptions(opts, isNullFields),
     });
   }
 
@@ -244,7 +270,7 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
     return this.getAllAs(
       ProductListingRowSchema,
       this.scopedFilters({ status: 'active' }, { warehouseId: null, channel: 'b2c' }),
-      { select: productSelect(undefined), orderBy: 'sortOrder', ...this.scopeOptions({ warehouseId: null, channel: 'b2c' }) },
+      { select: productSelect(undefined), orderBy: 'sortOrder', ...this.scopeOptions({ warehouseId: null, channel: 'b2c' }, []) },
     );
   }
 
@@ -253,12 +279,12 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
    * listeyle çelişirdi.
    */
   async countMatching(filters: ProductFilters | undefined, scope: ProductListingScope): Promise<number> {
-    const { filters: eq, orFilters } = buildProductQuery(filters);
+    const { filters: eq, orFilters, isNullFields } = buildProductQuery(filters);
     // Projeksiyon sayımda da geçer: gömülü ilişkide süzen sayım, ilişki select'te yoksa `PGRST108` ile düşer.
     return this.count(this.scopedFilters(eq, scope), {
       orFilters,
       select: productSelect(filters),
-      ...this.scopeOptions(scope),
+      ...this.scopeOptions(scope, isNullFields),
     });
   }
 }
@@ -277,12 +303,14 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
 
   /** Operasyon listesi, sunucuda süzülmüş ve keyset sayfalı (STACK §6); sıra `sortOrder` ile `id`, imleç kaymasın diye. */
   async list(opts: ProductListOptions = {}): Promise<Page<Product>> {
-    const { filters, orFilters } = this.buildQuery(opts.filters);
+    const { filters, orFilters, isNullFields } = this.buildQuery(opts.filters);
     return this.getPage(filters, {
+      select: `*${rateGapSelect(opts.filters)}`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
+      isNullFields,
     });
   }
 
@@ -291,14 +319,15 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    * ve satır genişliği pahalıdır. Aday ürün de gelir, çünkü adayın stoğu girilmiş olabilir ve depodaki mal listede görünmeli.
    */
   async listStockRows(opts: ProductListOptions = {}): Promise<Page<ProductStockRow>> {
-    const { filters, orFilters } = this.buildQuery(opts.filters);
+    const { filters, orFilters, isNullFields } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductStockRowSchema, filters, {
       // `sort_order` imleç için seçilir: dar şema onu düşürür, imleç ham satırdan kurulur (`pageOf`).
-      select: `id,sort_order,name,category_id,date_type,shelf_life_days,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,min_stock_qty,sku)`,
+      select: `id,sort_order,name,category_id,date_type,shelf_life_days,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,min_stock_qty,sku)${rateGapSelect(opts.filters)}`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
+      isNullFields,
     });
   }
 
@@ -307,14 +336,15 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    * alanlar stok satırında yok ve tek geniş okuma iki ekrana da öbürünün alanlarını ödetirdi.
    */
   async listPriceRows(opts: ProductListOptions = {}): Promise<Page<ProductPriceRow>> {
-    const { filters, orFilters } = this.buildQuery(opts.filters);
+    const { filters, orFilters, isNullFields } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductPriceRowSchema, filters, {
       // Baştaki `sort_order` ürününkidir ve imleç ona dayanır; gömülü seçimdeki boyun sıra numarasıdır.
-      select: `id,sort_order,name,category_id,vat_rate,target_margin_percent,target_margin_b2b_percent,auto_price,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,sort_order)`,
+      select: `id,sort_order,name,category_id,vat_rate,target_margin_percent,target_margin_b2b_percent,auto_price,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,sort_order)${rateGapSelect(opts.filters)}`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
+      isNullFields,
     });
   }
 
@@ -331,13 +361,14 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    * sorgu N+1 olurdu (STACK §13).
    */
   async listWithRelations(opts: ProductListOptions = {}): Promise<Page<ProductWithRelations>> {
-    const { filters, orFilters } = this.buildQuery(opts.filters);
+    const { filters, orFilters, isNullFields } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductWithRelationsSchema, filters, {
       select: productSelect(opts.filters),
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
+      isNullFields,
     });
   }
 
@@ -381,12 +412,12 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    * ikisine birden girer. `counts()` yetmez, çünkü RPC yalnız dört süzgeç iletir ve ötekiler sessizce düşerdi.
    */
   async countMatching(filters?: ProductFilters): Promise<number> {
-    const { filters: eq, orFilters } = buildProductQuery(filters);
+    const { filters: eq, orFilters, isNullFields } = buildProductQuery(filters);
     // Projeksiyon sayımda da geçer: gömülü ilişkide süzen sayım, ilişki select'te yoksa `PGRST108` ile düşer.
-    return this.count(eq, { orFilters, select: productSelect(filters) });
+    return this.count(eq, { orFilters, select: productSelect(filters), isNullFields });
   }
 
-  private buildQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {
+  private buildQuery(f?: ProductFilters): ProductQuery {
     return buildProductQuery(f);
   }
 

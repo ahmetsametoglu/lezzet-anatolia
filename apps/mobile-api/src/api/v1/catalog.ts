@@ -12,13 +12,13 @@ import {
   toCategory,
   toWireCampaign,
   customerBusiness,
-  resolvePlaceWarehouses,
   unresolvedPlace,
   type PlaceWarehouses,
   type PricingViewer,
   availabilityOf,
   readPickupOffer,
 } from '@lezzet/application';
+import { resolvePlace, warehousePlace } from '@lezzet/application/delivery/place';
 import { customerBusinessOf } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
 import {
@@ -65,8 +65,18 @@ export async function readPlace(
   business: Business,
   country?: Country,
 ): Promise<PlaceWarehouses> {
-  if (postalCode === undefined || postalCode.trim() === '') return unresolvedPlace(business);
-  return resolvePlaceWarehouses(db, postalCode, business, country);
+  return (await readPlaceWithZone(db, postalCode, business, country)).place;
+}
+
+/** Yer ve rota bölgesi tek çözümden; bölge sepetin ayar kapsamıdır. */
+async function readPlaceWithZone(
+  db: SupabaseClient,
+  postalCode: string | undefined,
+  business: Business,
+  country?: Country,
+): Promise<{ place: PlaceWarehouses; zoneId: string | null }> {
+  if (postalCode === undefined || postalCode.trim() === '') return { place: unresolvedPlace(business), zoneId: null };
+  return resolvePlace(db, postalCode, business, country);
 }
 
 /**
@@ -89,14 +99,13 @@ export function placeQueryOf(c: { req: { query: (name: string) => string | undef
 export async function readPlaceOrPickup(
   db: SupabaseClient,
   opts: { postalCode: string | undefined; country?: Country; pickupWarehouseId: string | undefined; customerId: string | null },
-): Promise<{ place: PlaceWarehouses; pickup: Warehouse | null }> {
+): Promise<{ place: PlaceWarehouses; pickup: Warehouse | null; zoneId: string | null }> {
   const pickup =
     opts.customerId && opts.pickupWarehouseId ? (await readPickupOffer(db, opts.customerId, opts.pickupWarehouseId)).warehouse : null;
+  if (pickup) return { place: warehousePlace(pickup), pickup, zoneId: null };
   // Yer müşterinin işinin bölgelerinden çözülür, ziyaretçi Lezzet'tir; gel-al deposu teklif kapısından müşterinin işinde gelir.
-  const place: PlaceWarehouses = pickup
-    ? { warehouseId: pickup.id, shippingWarehouseId: null, business: pickup.business }
-    : await readPlace(db, opts.postalCode, await customerBusiness(db, opts.customerId), opts.country);
-  return { place, pickup };
+  const { place, zoneId } = await readPlaceWithZone(db, opts.postalCode, await customerBusiness(db, opts.customerId), opts.country);
+  return { place, pickup: null, zoneId };
 }
 
 /**

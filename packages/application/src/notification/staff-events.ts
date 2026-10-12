@@ -270,6 +270,34 @@ export async function notifyBankFeedQuiet(
 }
 
 /**
+ * Uzaktan satış eşiğinin uyarı seviyesi — yönetime ve muhasebeye; anahtar yıl ve seviye başınadır, seviye yılda bir kez haber olur.
+ * Tutarlar KDV hariç cent; geçen yıl aşıldıysa vergilendirme yılbaşından beri sürer.
+ */
+export async function notifyDistanceSaleThreshold(
+  db: SupabaseClient,
+  input: {
+    year: number;
+    warning: 'first' | 'second' | 'exceeded';
+    yearTotalCents: number;
+    thresholdCents: number;
+    sincePreviousYear: boolean;
+  },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'distance_sale_threshold',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: input,
+      dedupeKey: `distance-sale-threshold:${input.year}:${input.warning}`,
+    });
+  } catch (err) {
+    yut(err, 'distance_sale_threshold');
+  }
+}
+
+/**
  * Sefer kapandı ama durak sonuçlanmadı: sevkiyat masası dürtülür, çünkü askıdaki durak bakan olmazsa kaybolmuş gibi kalır; zil yalnız "bak" der, gün seçmez.
  * Depo süzgeçlidir ve dedupe yoktur: her kapanış ayrıdır.
  */

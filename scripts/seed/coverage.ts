@@ -95,6 +95,8 @@ async function iliskisizSay(db: Db, tablo: string, kolon: string, hedefTablo: st
   return tumu.filter((r) => !kume.has(r[kolon === 'id' ? 'id' : kolon])).length;
 }
 
+// Genel b2c liste fiyatı; müşteri ve ülke satırı genel fiyat değildir.
+const b2cGenel = (db: Db) => db.from('price').select('variant_id,amount').eq('channel', 'b2c').is('customer_id', null).is('country', null);
 /**
  * Parti bazında marj dağılımı: alış fiyatı liste fiyatını tanıyor mu; karşılaştırma KDV hariç yapılır, çünkü alış zaten hariçtir.
  * Tek turda üç okuma; küme parti sayısıyla sınırlıdır.
@@ -102,7 +104,7 @@ async function iliskisizSay(db: Db, tablo: string, kolon: string, hedefTablo: st
 async function marjDagilimi(db: Db): Promise<{ zarar: number; kar: number }> {
   const [{ data: partiler }, { data: fiyatlar }, { data: varyantlar }, { data: urunler }] = await Promise.all([
     db.from('stock').select('variant_id,purchase_price').not('purchase_price', 'is', null),
-    db.from('price').select('variant_id,amount').eq('channel', 'b2c').is('customer_id', null),
+    b2cGenel(db),
     db.from('product_variant').select('id,product_id'),
     db.from('product').select('id,vat_rate'),
   ]);
@@ -409,7 +411,7 @@ const KAPSAM: KapsamAlani[] = [
           const varyantIds = [...new Set(teklifler.map((t) => t.variant_id))];
           const [{ data: varyantlar }, { data: fiyatlar }] = await Promise.all([
             db.from('product_variant').select('id,product_id,is_active').in('id', varyantIds),
-            db.from('price').select('variant_id,amount').eq('channel', 'b2c').is('customer_id', null).in('variant_id', varyantIds),
+            b2cGenel(db).in('variant_id', varyantIds),
           ]);
           const vRows = (varyantlar ?? []) as unknown as { id: string; product_id: string; is_active: boolean }[];
           const { data: urunler } = await db

@@ -73,7 +73,7 @@ async function readOffers(
   if (!productIds.length) return [];
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds, status: 'active' }, limit: OFFER_POOL_LIMIT });
-  const context = await loadProductContext(db, page.rows, place, viewer);
+  const context = await loadProductContext(db, page.rows, place, viewer, locale);
   // Havuz ÖNCE süzülür, sonra seçilir: `isOffer` motorun kararıdır (teklif normal fiyatı yenmezse
   // ürün fırsat değildir) ve elenen bir ürünü seçime sokmak, bandın bazı yenilemelerde iki kartla
   // çizilmesi demekti — "üçü rastgele" sözü ancak üçü de gerçek fırsatken tutulur.

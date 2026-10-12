@@ -3,6 +3,7 @@ import type { CartLineRoute } from '@lezzet/domain-core';
 import type {
   Business,
   CatalogSize,
+  Country,
   ImageCrop,
   ImageFrameSources,
   KeysetCursor,
@@ -27,6 +28,8 @@ export interface PlaceWarehouses {
   warehouseId: string | null;
   /** Ülkenin kargo çıkış deposu. `null` = yer bilinmiyor ya da o ülkeye kargo yok. */
   shippingWarehouseId: string | null;
+  /** Yerin ülkesi: adresin, gel-al ve yerinde satışta deponun; `null` = yer bilinmiyor. Fiyatın ülkesi buradan türer (`priceCountryOf`). */
+  country: Country | null;
   /**
    * Müşterinin işi, ziyaretçi Lezzet'tir; seçilen gel-al ya da satış deposu da bu iştendir. Yer bilinmezken "hiç var mı",
    * bilinirken "başka depoda var" bu işin depolarından okunur.
@@ -86,6 +89,8 @@ export interface StorefrontProduct {
   comparisonUnit: 'kg' | 'L' | null;
   /** null = bu kanalda fiyatı yok → ürün SATIŞA KAPALI (DOMAIN §5); kart fiyat göstermez. */
   priceCents: number | null;
+  /** Ürün bu ülkenin tüketicisine satılmıyor (o ülkenin KDV oranı yok); doluyken `priceCents` `null`dur. */
+  notSoldIn: Country | null;
   /** İndirim öncesi fiyat — verilirse "Fırsat" rozeti + üstü çizili eski fiyat. */
   wasCents?: number;
   /** Adet sınırı ("En fazla 5 adet"); yalnız teklifte doğar, çünkü teklif fiyatı partiye bağlıdır. Sınırsızsa null. */
@@ -118,6 +123,8 @@ export interface StorefrontVariant {
   portionKind: 'item' | 'slice' | 'package' | null;
   /** null = bu kanalda fiyatı yok → varyant seçilebilir ama satın alınamaz (DOMAIN §5). */
   priceCents: number | null;
+  /** Boy bu ülkenin tüketicisine satılmıyor (o ülkenin KDV oranı yok); doluyken `priceCents` `null`dur. */
+  notSoldIn: Country | null;
   /** Teklif kazandıysa üstü çizilecek referans; yoksa tanımsız. */
   wasCents?: number;
   comparisonCents: number | null;

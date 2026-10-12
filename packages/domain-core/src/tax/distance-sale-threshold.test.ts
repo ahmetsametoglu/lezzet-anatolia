@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { AccountingLine } from '../accounting/line';
 import {
+  distanceSaleDecision,
   distanceSaleLedger,
+  distanceSaleOrderNetCents,
   distanceSaleThreshold,
+  type DistanceSaleLedger,
   type DistanceSaleOrder,
   type DistanceSaleSettings,
   type DistanceSaleThresholdInput,
@@ -161,5 +164,23 @@ describe('uzaktan satış eşiği — siparişlerden toplam', () => {
       { order: siparis({ vatTreatment: 'intra_eu_distance_oss', status: 'cancelled', createdAt: '2026-01-02T09:00:00+00:00' }), items: [] },
     ]);
     expect(defter.firstDestinationOrder).toEqual({ id: ilk.id, referenceNo: ilk.referenceNo, createdAt: ilk.createdAt });
+  });
+});
+
+describe('uzaktan satış eşiği — yazılacak siparişin katkısı', () => {
+  // Siparişin tutarı KDV dahil sayılırsa eşik erken aşılır, defterin mandalı karara taşınmazsa aşılmış eşik geri alınır; kırmızıya döner.
+  it('sipariş eşiğe KDV hariç tutarıyla katılır; defterde varış KDVli sipariş varsa karar varışta kalır', () => {
+    // 10,55 € KDV dahil, %5,5: KDV hariç 10,00 €.
+    const katki = distanceSaleOrderNetCents([{ vatRate: 5.5, amountCents: 1055 }], true);
+    expect(katki).toBe(1000);
+    expect(distanceSaleOrderNetCents([{ vatRate: 5.5, amountCents: 1000 }], false)).toBe(1000);
+
+    const defter: DistanceSaleLedger = { currentYearCents: 999_000, previousYearCents: 0, firstDestinationOrder: null };
+    const varisMi = (ledger: DistanceSaleLedger) =>
+      distanceSaleDecision({ year: 2026, ledger, orderNetCents: katki, settings: AYAR }).destinationTaxation;
+    expect(varisMi(defter)).toBe(false);
+    expect(varisMi({ ...defter, currentYearCents: 999_001 })).toBe(true);
+    const ilkVaris = { id: 'o1', referenceNo: 'LA-26-X', createdAt: '2026-03-01T10:00:00Z' };
+    expect(varisMi({ ...defter, currentYearCents: 0, firstDestinationOrder: ilkVaris })).toBe(true);
   });
 });

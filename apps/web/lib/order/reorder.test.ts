@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { CategoryService, OrderService, PriceService, ProductService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
+import {
+  CategoryService,
+  OrderService,
+  PriceService,
+  ProductService,
+  ProductVatRateService,
+  StockService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 
 /* Tekrar sipariş de bir ekleme kanalıdır: yer biliniyorken bu adrese gelemeyen kalemi sepete koyarsa kural bu kanaldan delinir. */
@@ -53,6 +62,10 @@ beforeAll(async () => {
   const prices = new PriceService(db);
   await prices.setPrice({ variantId: kargoVariantId, channel: 'b2c', amountCents: 2500 });
   await prices.setPrice({ variantId: sogukVariantId, channel: 'b2c', amountCents: 2500 });
+  // İkisinin de Almanya oranı var: soğuk kalem satılmadığı için değil, bu adrese gelemediği için dışarıda kalmalı.
+  const rates = new ProductVatRateService(db);
+  await rates.set({ productId: kargoProductId, country: 'DE', vatRate: 7 });
+  await rates.set({ productId: sogukProductId, country: 'DE', vatRate: 7 });
   const stock = new StockService(db);
   await stock.insert({
     warehouseId: shippingId,

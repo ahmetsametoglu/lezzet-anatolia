@@ -114,7 +114,7 @@ function fiyatCtx(cents: Record<string, number | null>, variants: ProductVariant
     prices: new Map(
       Object.entries(cents).map(([id, amountCents]) => [
         id,
-        { channelPrice: amountCents == null ? null : ({ amountCents } as Price), customerPrice: null },
+        { channelPrice: amountCents == null ? null : ({ amountCents, country: null } as Price), customerPrice: null },
       ]),
     ),
   };

@@ -186,3 +186,34 @@ describe('quoteShipping — teklif', () => {
     expect(sonuc).toMatchObject({ status: 'provider_error' });
   });
 });
+
+describe('quoteShipping — çıkış noktası', () => {
+  // Almanya teklifi teslim noktasından değil deponun adresinden sorulursa gösterilen fiyat satın alınan etiketten ayrışır; kırmızıya döner.
+  it('teslim noktası olan ülkenin teklifi oradan, öteki ülkeninki deponun adresinden sorulur', async () => {
+    const cikislar: unknown[] = [];
+    const p = providerStub({
+      quote: async (args) => {
+        cikislar.push(args.from);
+        return [secenek()];
+      },
+    });
+    const warehouses = new WarehouseService(db);
+    await warehouses.setShipCountries(warehouseId, [
+      { country: 'DE', handover: { line1: 'Hafenstraße 2', postalCode: '77694', city: 'Kehl' } },
+    ]);
+    try {
+      await quoteShipping(db, p, {
+        warehouseId,
+        to: { countryCode: 'DE', postalCode: '10115', city: 'Berlin' },
+        items: [{ variantId: olculuId, qty: 1 }],
+      });
+      await quoteShipping(db, p, { warehouseId, to: paris, items: [{ variantId: olculuId, qty: 1 }] });
+      expect(cikislar).toEqual([
+        { countryCode: 'DE', postalCode: '77694', city: 'Kehl', name: 'Test deposu KRG', addressLine1: 'Hafenstraße 2' },
+        { countryCode: 'FR', postalCode: '67000', city: 'Strasbourg', name: 'Test deposu KRG', addressLine1: 'Test sok. 1' },
+      ]);
+    } finally {
+      await warehouses.setShipCountries(warehouseId, []);
+    }
+  });
+});
