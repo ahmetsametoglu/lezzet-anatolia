@@ -14,10 +14,16 @@ export interface PaymentSnapshot {
   paymentToken: string | null;
 }
 
+/** Sağlayıcının açtığı iade; kimliği defterdeki iade satırının anahtarıdır ve iade bildirimi de onunla gelir. */
+interface ProviderRefund {
+  refundOrderId: string;
+  amountCents: number;
+}
+
 export interface PaymentGateway {
   /** `null` = tanımadığımız bir durum: karar verilemez, bir sonraki soruya bırakılır. */
   read(paymentRef: string): Promise<PaymentSnapshot | null>;
   cancel(paymentRef: string): Promise<void>;
-  /** Ödemenin iade edilmemiş kalanının tamamını iade eder. */
-  refund(paymentRef: string): Promise<void>;
+  /** Ödemenin iade edilmemiş kalanının tamamını iade eder; iade edilecek bir şey kalmamışsa `null`. */
+  refund(paymentRef: string): Promise<ProviderRefund | null>;
 }

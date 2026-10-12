@@ -37,8 +37,15 @@ let cashAccount: string;
 const createdProfiles: string[] = [];
 
 /** Geç ödeme dalının iadesi ağa çıkmaz: kök `.env`teki deneme anahtarı sahte ödeme kimliğiyle sağlayıcıya giderdi. */
-const fakeGateway: PaymentGateway = { read: async () => null, cancel: async () => undefined, refund: async () => undefined };
+const fakeGateway: PaymentGateway = { read: async () => null, cancel: async () => undefined, refund: async () => null };
 const handlePaymentEvent = (event: PaymentEvent, accountId: string | null) => handleWithGateway(event, accountId, undefined, fakeGateway);
+/** İade eden sahte sağlayıcı: iade siparişinin kimliği ödemeden türer, tutar kalanın tamamıdır. */
+const refundingGateway = (amountCents: number): PaymentGateway => ({
+  ...fakeGateway,
+  refund: async (paymentRef) => ({ refundOrderId: `re_${paymentRef}`, amountCents }),
+});
+const lateRefundOf = (event: PaymentEvent, amountCents: number) =>
+  handleWithGateway(event, providerAccount, undefined, refundingGateway(amountCents));
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 let eventSeq = 0;
@@ -166,41 +173,76 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
     expect(active.reduce((sum, row) => sum + row.qty, 0)).toBe(2);
   });
 
-  it('stok da kalmadıysa sipariş İPTAL edilir — elle karar beklenmez', async () => {
+  it('stok da kalmadıysa sipariş İPTAL edilir — elle karar beklenmez; para alınıp geri verildiği defterde görünür', async () => {
     const orderId = await pendingOrder(4, { reserve: false });
     // Bu arada mal başkasına gitti: elde kalan 1 adet.
     const other = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [
       { variantId, qty: 4, unitPriceCents: 1000, vatRate: 5.5 },
     ]);
     await reservations.reserve({ orderId: other.order.id, warehouseId, variantId, qty: 4 });
+    const event = paidEvent(orderId, 4000, { feeCents: 120, paymentId: `p_${stamp}_stok` });
 
-    const outcome = await handlePaymentEvent(paidEvent(orderId, 4000), providerAccount);
+    const outcome = await lateRefundOf(event, 4000);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     const cancelled = await orders.getById(orderId);
     expect(cancelled?.status).toBe('cancelled');
-    // Sebep yazılır, çünkü bu dalda para gerçekten çekilip geri verildi; `paymentStatus` ayırt etmez, tahsilat hiç yazılmadığı
-    // için durum `pending` kalır ve ayrım sebepten gelir.
+    // Para alınıp geri verildiğini ödeme durumu, neden geri verildiğini sebep söyler.
     expect(cancelled?.cancelReason).toBe('out_of_stock');
-    expect(cancelled?.paymentStatus).toBe('pending');
-    // İade DAMGASI da düşer: ekranın "para geri verildi mi" sorusu buradan cevaplanıyor.
+    expect(cancelled?.paymentStatus).toBe('refunded');
     expect(cancelled?.providerRefundedAt).not.toBeNull();
+    // Sağlayıcının aldığı komisyon iade edilmez; gider olarak siparişte durur.
+    expect(cancelled?.paymentFeeCents).toBe(120);
+    await expectLatePaymentLedger(orderId, event, 4000);
   });
 
-  it('ZATEN İPTAL siparişe geç gelen ödeme de damgalanır — sebep DEĞİŞMEZ', async () => {
-    // Ödeme penceresi kapanınca iptal edilen taslağa geç ödeme gelir: sebebi `out_of_stock`a çevirmek yalan, sebepsiz bırakmak
-    // "tahsilat yapılmadı" dedirtirdi; para geri verildiğini damga söyler.
+  it('ZATEN İPTAL siparişe geç gelen ödeme de geri verilir ve defterde iz bırakır — sebep DEĞİŞMEZ', async () => {
+    // Ödeme penceresi kapanınca iptal edilen taslağa geç ödeme gelir: sebebi `out_of_stock`a çevirmek yalan olurdu.
     const orderId = await pendingOrder(2, { reserve: false });
     await orders.cancel(orderId, 'draft', null, 'payment_failed');
+    const event = paidEvent(orderId, 2000);
 
-    const outcome = await handlePaymentEvent(paidEvent(orderId, 2000), providerAccount);
+    const outcome = await lateRefundOf(event, 2000);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     const after = await orders.getById(orderId);
     expect(after?.cancelReason).toBe('payment_failed');
+    expect(after?.paymentStatus).toBe('refunded');
     expect(after?.providerRefundedAt).not.toBeNull();
+    await expectLatePaymentLedger(orderId, event, 2000);
   });
 });
+
+/** Geç ödemenin defterdeki izi: sağlayıcı hesabına tahsilat ve iade siparişinin kimliğiyle iade; ikisi de yalnız birer kez. */
+async function expectLatePaymentLedger(orderId: string, event: PaymentEvent, amountCents: number) {
+  const paymentRef = event.kind === 'payment_completed' ? event.paymentRef : '';
+  const rows = (await new MoneyMovementService(db).listByOrder(orderId)).map((row) => ({
+    type: row.type,
+    amountCents: row.amountCents,
+    accountId: row.accountId,
+    paymentMethod: row.paymentMethod,
+    idempotencyKey: row.idempotencyKey,
+  }));
+  expect(rows).toHaveLength(2);
+  expect(rows).toEqual(
+    expect.arrayContaining([
+      {
+        type: 'order_payment',
+        amountCents,
+        accountId: providerAccount,
+        paymentMethod: 'online',
+        idempotencyKey: `card-payment:${paymentRef}`,
+      },
+      {
+        type: 'order_refund',
+        amountCents,
+        accountId: providerAccount,
+        paymentMethod: 'online',
+        idempotencyKey: `card-refund:re_${paymentRef}`,
+      },
+    ]),
+  );
+}
 
 describe('kart reddedilirse (sayfa içi ödeme)', () => {
   it('mal GERİ BIRAKILMAZ — müşteri hâlâ sayfada, başka kart deneyecek', async () => {

@@ -5,9 +5,9 @@ import { ringBell } from '../realtime/bell';
 import { orderChannelName } from '../realtime/order-channel';
 import { kickOrderRegister } from '../register/sync';
 import type { OrderEffects } from './effects';
-import { recordOrderPayment } from './payment';
+import { recordOrderPayment, recordOrderRefund } from './payment';
 import type { PaymentGateway } from './payment-gateway';
-import { cancelOrder } from './refund';
+import { cancelOrder, cardRefundMovementKey } from './refund';
 import { transitionOrder } from './transition';
 
 /**
@@ -46,17 +46,17 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
    * geçebilir. Bu emniyet olmasa para alınmış ama siparişi olmayan bir müşteri kalırdı.
    */
   if (order.status === 'cancelled') {
-    await refundProviderPayment(db, deps.gateway, input.paymentRef, order.id);
+    await returnLatePayment(db, deps.gateway, input, accountId);
     return { status: 'ok', action: 'refunded' };
   }
 
   const decision = await decideForOrder(db, order.id, order.warehouseId, items);
 
-  // Stok kalmadı: para iade edilir ve sipariş `out_of_stock` sebebiyle iptal olur. Sağlayıcı iadesi önce, çünkü iadesi düşen
-  // ödemede siparişi iptal etmek müşteriyi hem malsız hem parasız bırakırdı.
+  // Stok kalmadı: sipariş `out_of_stock` sebebiyle iptal olur ve para iade edilir. İptal önce, çünkü iptal edilmemiş siparişe yazılan
+  // tahsilat kasaya satış olarak giderdi; iade düşerse borç siparişte görünür ve sağlayıcının bildirimi iadeyi yeniden dener.
   if (decision === 'refund') {
-    await refundProviderPayment(db, deps.gateway, input.paymentRef, order.id);
     await cancelOrder(db, order.id, { refundAccountId: accountId, refundAmountCents: 0, reason: 'out_of_stock', effects: deps.effects });
+    await returnLatePayment(db, deps.gateway, input, accountId);
     // İptal de bir cevaptır: ekran "onaylanıyor"da asılı kalmaz.
     await ringBell(orderChannelName(order.id));
     return { status: 'ok', action: 'refunded' };
@@ -103,11 +103,37 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
 
 
 /**
- * Sağlayıcı ödemesini iade eder ve damgalar; damga iadeden sonra, yoksa iadesi düşen ödeme "iade edildi" görünürdü. Port yoksa
- * iade iletilemez ama damga yine düşer.
+ * Satılmamış siparişe gelen ödemenin dönüşü: tahsilat ve sağlayıcının iadesi deftere yazılır ki sağlayıcı hesabının bakiyesi gerçeğiyle
+ * tutsun; sipariş satılmadığı için kasaya yazılmaz (`isNeverSold`). Damga iadeden sonra düşer, port yoksa iade iletilemez ama damga düşer.
  */
-async function refundProviderPayment(db: Db, gateway: PaymentGateway | null, paymentRef: string | null, orderId: string): Promise<void> {
-  if (gateway && paymentRef) await gateway.refund(paymentRef);
+async function returnLatePayment(db: Db, gateway: PaymentGateway | null, input: ConfirmPaymentInput, accountId: string): Promise<void> {
+  const { orderId, paymentRef, amountCents } = input;
+  if (paymentRef && amountCents != null) {
+    await recordOrderPayment(db, {
+      orderId,
+      accountId,
+      amountCents,
+      method: 'online',
+      description: 'Geç kart tahsilatı',
+      source: 'system',
+      meta: { providerRef: paymentRef },
+      idempotencyKey: `card-payment:${paymentRef}`,
+    });
+  }
+  const refund = gateway && paymentRef ? await gateway.refund(paymentRef) : null;
+  // İade satırı iade siparişinin kimliğiyle yazılır; sağlayıcının "iade tamamlandı" bildirimi aynı satırı bulur.
+  if (refund && paymentRef) {
+    await recordOrderRefund(db, {
+      orderId,
+      accountId,
+      amountCents: refund.amountCents,
+      method: 'online',
+      description: 'Geç kart tahsilatının iadesi',
+      source: 'system',
+      meta: { providerRef: paymentRef, refundId: refund.refundOrderId },
+      idempotencyKey: cardRefundMovementKey(refund.refundOrderId),
+    });
+  }
   await new OrderService(db).update({ id: orderId, providerRefundedAt: new Date().toISOString() });
 }
 

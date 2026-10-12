@@ -16,7 +16,7 @@ import {
 
 export type RegisterOrder = Pick<
   Order,
-  'status' | 'channel' | 'isGiftOrder' | 'shippingFeeCents' | 'orderedTotalCents' | 'pricesIncludeVat'
+  'status' | 'channel' | 'isGiftOrder' | 'shippingFeeCents' | 'orderedTotalCents' | 'pricesIncludeVat' | 'referenceNo'
 >;
 export type RegisterItem = FulfilledItem & Pick<OrderItem, 'id' | 'vatRate'>;
 
@@ -34,7 +34,15 @@ export type RegisterOp =
   /** Kasadaki ödeme satırları silinen hareketten eşdeğer yeni harekete geçer; kasaya yazım yoktur. */
   | { op: 'relink_payment'; fromMovementId: string; toMovementId: string };
 
-export type RegisterSkip = 'b2b' | 'gift_order';
+export type RegisterSkip = 'b2b' | 'gift_order' | 'never_sold';
+
+/**
+ * Numarası doğmadan, taslakken iptal edilen sipariş satılmamıştır: ona sonradan gelen ödeme ve iadesi defterin kaydıdır, kasanın değil.
+ * Numarası olan iptal sipariş satılmıştır ve kasaya yazılmamış parası yine yazılır.
+ */
+export function isNeverSold(order: Pick<Order, 'status' | 'referenceNo'>): boolean {
+  return order.status === 'cancelled' && order.referenceNo === null;
+}
 export type RegisterBlockReason = 'gift_order_money' | 'unknown_method' | 'refund_before_sale' | 'no_lines';
 
 export type RegisterPlan =
@@ -58,6 +66,7 @@ export interface RegisterPlanInput {
 export function planRegister({ order, items, movements, tickets }: RegisterPlanInput): RegisterPlan {
   // B2B kasa yükümlülüğünün dışında ve faturası muhasebeden kesilir; hediye sipariş ödemesiz kapanır, para görmez.
   if (order.channel === 'b2b') return { status: 'skip', reason: 'b2b' };
+  if (isNeverSold(order)) return { status: 'skip', reason: 'never_sold' };
   if (order.isGiftOrder && movements.length === 0) return { status: 'skip', reason: 'gift_order' };
 
   const ops: RegisterOp[] = [];
@@ -161,9 +170,8 @@ function paymentDeltaOf(
 }
 
 /**
- * Siparişin kasadaki hedef kalemleri: `charged` ödeme türetiminin tanımıdır (iptalde boş), `ordered` sipariş edilen hâldir. Kargo,
- * ücretlenen kalem varsa oran başına bölünür. İçerik düzeltmesi sipariş depodan çıkınca yazılır, çünkü kapanmış fiş değişmez ve
- * hazır siparişin kutusu hâlâ yeniden açılabilir.
+ * Siparişin kasadaki hedef kalemleri: `charged` ödeme türetiminin tanımıdır (iptalde boş), `ordered` sipariş edilen hâldir. İçerik
+ * düzeltmesi sipariş depodan çıkınca yazılır, çünkü kapanmış fiş değişmez ve hazır siparişin kutusu hâlâ yeniden açılabilir.
  */
 function registerLinesOf(order: RegisterOrder, items: readonly RegisterItem[], basis: 'charged' | 'ordered'): RegisterLine[] {
   if (basis === 'charged' && order.status === 'cancelled') return [];
@@ -211,7 +219,7 @@ function diffRegisterLines(target: readonly RegisterLine[], registered: readonly
     sums.delete(keyOf(line));
     diff.push(...deltaOf(line, line, sum ?? { qty: 0, amountCents: 0 }));
   }
-  // Hedefte artık bulunmayan kaynak: yazılmış olanın tamamı geri alınır.
+  // Hedefte bulunmayan kaynak: yazılmış olanın tamamı geri alınır.
   for (const sum of sums.values()) diff.push(...deltaOf(sum.line, { qty: 0, amountCents: 0 }, sum));
   return diff;
 }

@@ -103,7 +103,9 @@ Online ödemede stok **checkout başlarken** ayrılır — cart'ta değil ("sepe
 - **Ödeme penceresi = TTL:** sağlayıcı siparişi rezervasyonun bittiği anda düşecek biçimde açılır (`expire_pending_after`); ödenmeyen sipariş sağlayıcıda da kapanır. Sağlayıcıdan gelen bir alt sınır yoktur.
   - Taslak ve ayırma "Öde"ye basınca doğar; ödeme ekranında açık bırakılan seçim stok kilitlemez.
   - Rezervasyon düşmüşken ödeme gelirse aşağıdaki **geç ödeme emniyet kuralı** işler: yeniden ayır ya da otomatik iade et.
-- **Geç ödeme emniyet kuralı (webhook gecikirse/tekrarlanırsa):** rezervasyon düşmüş bir sipariş için ödeme onayı gelirse sistem önce stoğu **yeniden ayırmayı** dener — ayrılabilirse sipariş normal devam eder; ayrılamazsa **otomatik para iadesi** + müşteriye bilgi mesajı. Elle karar gerekmez; dallanma `domain-core`'da tanımlıdır.
+- **Geç ödeme emniyet kuralı (webhook gecikirse/tekrarlanırsa):** rezervasyon düşmüş bir sipariş için ödeme onayı gelirse sistem önce stoğu **yeniden ayırmayı** dener — ayrılabilirse sipariş normal devam eder; ayrılamazsa **otomatik para iadesi** + müşteriye bilgi mesajı. Elle karar gerekmez; dallanma `domain-core`'da tanımlıdır. İptal edilmiş
+  siparişe gelen ödeme de iade edilir. Para sağlayıcı hesabından girip çıktığı için tahsilat, iade ve komisyon defterde iz bırakır;
+  sipariş satılmadığı için sertifikalı kasaya yazılmaz.
 - `confirmed` yalnız ödeme onayında olur; onaya kadar sipariş `draft`'tır ama stok ayrılmıştır.
 
 ### Teslim edilememe → rezervasyon depoya çıpalıdır

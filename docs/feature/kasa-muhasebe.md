@@ -304,6 +304,8 @@ düzeltilen hareket kendiliğinden doğru sonuca iner.
 **Kapsam:** B2C siparişlerin bütün tahsilat ve iadeleri (çevrim içi, kapıda nakit ve kart, gel-al, kapı
 önü ve araç satışı) ve eşlenmiş kasaların öteki nakit hareketleri. B2B siparişi fiş olmaz (10. karar);
 hediye sipariş hiç para görmez (11. karar). Tarih ayarı yoktur (19. karar): satış, tesis eşlenmeden önce ödenmiş olsa da yazılır.
+Numarası doğmadan (taslakken) iptal edilmiş siparişe gelen geç ödeme ve iadesi satış değildir: defterde iz bırakır, kasaya
+yazılmaz ve gün sonu onu beklemez; numarası olan iptal siparişin parası yazılır.
 
 **Akış:**
 1. `money_movement`ta sipariş parası yazılınca, değişince ya da silinince tetikleyici siparişi kasa

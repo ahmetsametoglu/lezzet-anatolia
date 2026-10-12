@@ -26,7 +26,7 @@ vi.mock('../../lib/revolut', async (orig) => ({
       paymentToken: niyetAnahtari.get(id) ?? null,
     }),
     cancel: async () => undefined,
-    refund: async () => undefined,
+    refund: async () => null,
   }),
 }));
 

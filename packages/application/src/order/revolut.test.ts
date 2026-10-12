@@ -159,14 +159,15 @@ describe('revolutSessionCreator · ödeme sayfası', () => {
 });
 
 describe('revolutGateway.refund', () => {
-  it('yalnız iade edilmemiş kalanı ve siparişten türeyen anahtarla iade eder; kalan yoksa istek gitmez', async () => {
+  it('yalnız iade edilmemiş kalanı ve siparişten türeyen anahtarla iade eder, açtığı iadeyi döner; kalan yoksa istek gitmez', async () => {
     const { client, calls } = fakeRevolut({
       kismi: order({ id: 'kismi', state: 'completed', refunded_amount: 500 }),
       tam: order({ id: 'tam', state: 'completed', refunded_amount: 1250 }),
     });
     const gateway = revolutGateway(client)!;
-    await gateway.refund('kismi');
-    await gateway.refund('tam');
+    // İade kimliği defterdeki iade satırının anahtarıdır; dönmeseydi satır iade bildirimiyle birleşemezdi.
+    expect(await gateway.refund('kismi')).toEqual({ refundOrderId: 'iade-1', amountCents: 750 });
+    expect(await gateway.refund('tam')).toBeNull();
     const refunds = calls.filter((call) => call.url.endsWith('/refund'));
     expect(refunds).toHaveLength(1);
     expect(refunds[0]?.body).toMatchObject({ amount: 750, currency: 'EUR' });

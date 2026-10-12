@@ -115,6 +115,21 @@ describe('ödül yazımı — para alındığında', () => {
   });
 });
 
+describe('iptal edilmiş siparişe gelen para ödül doğurmaz', () => {
+  it('taslakken iptal edilmiş siparişe geç gelen ödeme getirene puan yazmaz', async () => {
+    // Geç ödeme satış değildir ve hemen iade edilir; ödül yazılsaydı getiren bir an için hak etmediği puanı görürdü.
+    const pair = await referralPair('geç ödeme');
+    const { order } = await orders.create(
+      { warehouseId, customerId: pair.customer, channel: 'b2c', status: 'cancelled', orderedTotalCents: 1000 },
+      [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
+    );
+
+    await recordOrderPayment(db, { orderId: order.id, accountId, amountCents: 1000, method: 'online' });
+
+    expect(await ledgerOf(pair.inviter)).toEqual([]);
+  });
+});
+
 describe('KISMÎ iade ödüle dokunmaz (kullanıcı kararı 25.08)', () => {
   it('30 € siparişte 10 € iade → ödül DURUR, durum `partial` olur', async () => {
     const senaryo = await paidOrderWithReward('kısmî', 3);

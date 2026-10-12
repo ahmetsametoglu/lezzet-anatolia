@@ -897,6 +897,23 @@ describe('gün sonu', () => {
     expect(kinds).toContainEqual({ kind: 'vat', vatRate: 20, oursCents: 0, registerCents: 500 });
   });
 
+  it('taslakken iptal edilen siparişe gelen geç ödeme ve iadesi kasaya yazılmaz; gün sonu onları beklemez', async () => {
+    const own = await ownStore('KASA-GEC-ODEME');
+    // Numarası doğmadan iptal edilmiş sipariş satılmamıştır.
+    const { order } = await orders.create(
+      { warehouseId: own.warehouseId, customerId, channel: 'b2c', status: 'cancelled', shippingFeeCents: 490, orderedTotalCents: 2990 },
+      [{ variantId, qty: 2, unitPriceCents: 1250, vatRate: 5.5 }],
+    );
+    for (const type of ['order_payment', 'order_refund'] as const) {
+      await movements.recordForOrder({ orderId: order.id, accountId: bankAccountId, amountCents: 2990, type, paymentMethod: 'online' });
+    }
+
+    expect(await runRow('order_id', order.id)).toBe('skipped');
+    expect([...fake.sales.values()].filter((sale) => sale.extRef.startsWith(`LA-${order.id.slice(0, 8)}`))).toEqual([]);
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: false });
+    expect(result.stores.find((store) => store.warehouseId === own.warehouseId)?.days).toEqual([{ date: today(), differences: [] }]);
+  });
+
   describe('gece yarısı', () => {
     /** Bu gecenin Paris gece yarısından `seconds` saniye uzaktaki an. */
     const aroundMidnight = (seconds: number) => new Date(new Date(parisDayRange(today()).to).getTime() + seconds * 1000);

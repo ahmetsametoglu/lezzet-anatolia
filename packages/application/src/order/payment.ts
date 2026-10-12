@@ -112,10 +112,10 @@ async function finalize(
     await new OrderService(db).update({ id: order.id, paymentStatus: derivation.status });
 
     /**
-     * Getirenin ödülü para gerçekten alındığında doğar; kartta sipariş, kapıda teslim anını kapsayan
-     * tek an durumun `paid`e döndüğü andır. Ödül asıl işlemi durdurmaz.
+     * Getirenin ödülü para gerçekten alındığında, durumun `paid`e döndüğü anda doğar ve asıl işlemi durdurmaz; iptal edilmiş
+     * siparişe gelen geç ödeme satış değildir, ödül doğurmaz.
      */
-    if (derivation.status === 'paid') await rewardReferralOnPaidOrder(db, order.id);
+    if (derivation.status === 'paid' && order.status !== 'cancelled') await rewardReferralOnPaidOrder(db, order.id);
 
     /**
      * Elde hiç para kalmadıysa (`refunded` ya da `pending`) ödül geri alınır; kısmi iade kısmi

@@ -64,7 +64,7 @@ const gateway: PaymentGateway = {
     const odeme = odemeler.get(id);
     if (odeme) odeme.status = 'cancelled';
   },
-  refund: async () => undefined,
+  refund: async () => null,
 };
 const haberler: string[] = [];
 const deps = { gateway, effects: { notifyException: async (_id: string, event: string) => void haberler.push(event) } };

@@ -10,10 +10,10 @@ import {
   WarehouseService,
   type Db,
 } from '@lezzet/database';
-import { reconcileLedgerDay, reconcileRegisterDay, type RegisterDaySide } from '@lezzet/domain-core';
+import { isNeverSold, reconcileLedgerDay, reconcileRegisterDay, type RegisterDaySide } from '@lezzet/domain-core';
 import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { RegisterDayCheck, RegisterDayDifference, RegisterStore } from '@lezzet/types';
+import type { RegisterDayCheck, RegisterDayDifference, RegisterDayMovement, RegisterStore } from '@lezzet/types';
 import { notifyRegisterDayUnclosed } from '../notification/staff-events';
 import type { CashRegister } from './port';
 import { storeOf } from './sync';
@@ -141,10 +141,22 @@ export async function checkRegisterDay(db: Db, register: CashRegister, opts: { n
 /** Günün farkları: önce defter ↔ ayna, sonra ayna ↔ kasa. */
 async function differencesOf(db: Db, register: CashRegister, store: RegisterStore, date: string): Promise<RegisterDayDifference[]> {
   const { from, to } = parisDayRange(date);
+  const movements = await new RegisterStoreService(db).dayMovements(store, await warehousesOfStore(db, store), from, to);
   return [
-    ...reconcileLedgerDay(await new RegisterStoreService(db).dayMovements(store, await warehousesOfStore(db, store), from, to)),
+    ...reconcileLedgerDay(await withoutNeverSold(db, movements)),
     ...reconcileRegisterDay(await oursOf(db, store, date), await registerSideOf(register, store, date)),
   ];
+}
+
+/** Satılmamış siparişin parası kasanın kapsamı dışındadır (`isNeverSold`): plan onu yazmaz, gün sonu da onu beklemez. */
+async function withoutNeverSold(db: Db, movements: RegisterDayMovement[]): Promise<RegisterDayMovement[]> {
+  const unwritten = movements.filter((movement) => movement.kind === 'payment' && movement.writtenCents !== movement.expectedCents);
+  if (unwritten.length === 0) return movements;
+  const money = await new MoneyMovementService(db).listByIds(unwritten.map((movement) => movement.movementId));
+  const orderIds = [...new Set(money.flatMap((movement) => (movement.orderId ? [movement.orderId] : [])))];
+  const neverSold = new Set((await new OrderService(db).listByIds(orderIds)).filter(isNeverSold).map((order) => order.id));
+  const exempt = new Set(money.filter((movement) => movement.orderId && neverSold.has(movement.orderId)).map((movement) => movement.id));
+  return movements.filter((movement) => !exempt.has(movement.movementId));
 }
 
 /** Satışı bu mağazaya yazılan depolar: kendisi ve kendi mağazası olmayan araçları; karar fişi yazan kuralındır (`storeOf`). */

@@ -161,8 +161,14 @@ export function revolutGateway(client: RevolutClient | null): PaymentGateway | n
     async refund(orderRef) {
       const order = await readRevolutOrder(client, orderRef);
       const remaining = order.amount - (order.refunded_amount ?? 0);
-      if (remaining <= 0) return;
-      await refundRevolutOrder(client, { orderRef, amountCents: remaining, currency: order.currency, idempotencyKey: `full:${order.id}` });
+      if (remaining <= 0) return null;
+      const { refundOrderId } = await refundRevolutOrder(client, {
+        orderRef,
+        amountCents: remaining,
+        currency: order.currency,
+        idempotencyKey: `full:${order.id}`,
+      });
+      return { refundOrderId, amountCents: remaining };
     },
   };
 }

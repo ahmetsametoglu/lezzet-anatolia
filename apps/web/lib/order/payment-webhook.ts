@@ -122,8 +122,8 @@ async function confirmPayment(
   );
   if (outcome.status === 'not_found') return { status: 'not_found' };
 
-  // İade dalında tahsilat yazılmadığı için komisyon da yazılmaz.
-  if (outcome.action !== 'refunded' && accountId && event.fee) {
+  // Geri verilen geç ödemenin komisyonu da gerçek giderdir; o dalda da tahsilat deftere yazılır.
+  if (accountId && event.fee) {
     await recordPaymentFee(db, {
       orderId: event.orderId,
       accountId,

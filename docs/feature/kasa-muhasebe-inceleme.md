@@ -19,7 +19,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 9 | İki kasa arasındaki nakit transferi kasaya tek taraftan yazılıyor | Orta | Açıklandı |
 | 10 | Kendi başlattığımız iade Revolut bildirimiyle yarışırsa iki kez yazılabiliyor | Düşük | Yapıldı |
 | 11 | Kapıda kart komisyonu yazılmıyor, kâr onu sıfır sayıyor | Düşük | Yapıldı |
-| 12 | İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor | Düşük | Konuşulacak |
+| 12 | İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor | Düşük | Yapıldı |
 | 13 | Hediye siparişin değeri aktarıma 0 € gidiyor | Düşük | Konuşulacak |
 | 14 | Revolut'a giden iade anahtarı kırpılıyor | Düşük | Yapıldı |
 | 15 | Para ekranının yöntem dökümü siparişin son yönteminden okunuyor | Düşük | Konuşulacak |
@@ -298,13 +298,17 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 12. İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor
 
-**Durum:** Konuşulacak · **Ağırlık:** düşük
+**Durum:** Yapıldı (12.10) · **Ağırlık:** düşük
 
 - **Mevcut durum:** İptal edilmiş ya da stoğu kalmamış siparişe sonradan gelen kart ödemesi Revolut'tan iade edilir; defterde ne
   tahsilat ne iade yazılır, komisyon da yazılmaz.
 - **Problem:** Para Revolut'a girip çıktığı hâlde defterde iz yoktur. 06.10 sandbox'ta komisyon iadeyle geri dönmedi; canlıda da
   öyleyse Merchant bakiyesi komisyon kadar kayar. Bu ödemenin kasaya yazılıp yazılmayacağı yasal bir sorudur.
-- **Olması gereken:** Konuşulacak.
+- **Olması gereken (karar 12.10, A):** Para defterde iz bırakır, kasaya yazılmaz.
+- **Çözüm (12.10):** Numarası doğmadan iptal edilmiş (satılmamış) siparişe gelen ödeme geri verilirken tahsilat ve iade
+  sağlayıcı hesabına yazılır; iade satırı Revolut'un iade siparişi kimliğini taşır, "iade tamamlandı" bildirimi aynı satırı
+  bulur. Komisyon da yazılır. Bu sipariş kasaya yazılmaz, gün sonu onu beklemez; numarası olan iptal sipariş eskisi gibi
+  kasaya girer. Stok yokken sipariş önce iptal edilir, sonra para yazılır. İptal siparişe gelen para getiren ödülü doğurmaz.
 - **Kanıt:** `packages/application/src/order/confirm-payment.ts:48-62` · `apps/web/lib/order/payment-webhook.ts:111-114`.
 
 ## 13. Hediye siparişin değeri aktarıma 0 € gidiyor

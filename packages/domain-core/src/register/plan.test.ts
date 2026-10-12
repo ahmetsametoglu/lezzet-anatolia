@@ -5,6 +5,7 @@ import { planRegister, type RegisterItem, type RegisterMovement, type RegisterOr
 /** 3 × 10,00 lokum (%5,5) + 1 × 2,00 ambalaj (%20) + 4,90 kargo = 36,90; ödeme alındı, hazırlık başlamadı. */
 const order = (over: Partial<RegisterOrder> = {}): RegisterOrder => ({
   status: 'confirmed',
+  referenceNo: 'LA-26-7K4M2P',
   channel: 'b2c',
   isGiftOrder: false,
   shippingFeeCents: 490,
@@ -257,6 +258,13 @@ describe('kasa planı — kapsam ve durma', () => {
     // Ödeme kodu tahminle yazılsaydı nakit kartta görünür, kasa sayımı tutmazdı.
     const r = plan({ movements: [move('h1', 3690, null), move('h2', 100, 'cash', '11:00')] });
     expect(r).toMatchObject({ ops: [], blocked: { reason: 'unknown_method', movementId: 'h1' } });
+  });
+
+  it('taslakken iptal edilen siparişe gelen geç ödeme ve iadesi kasaya girmez; numarası olan iptal sipariş girer', () => {
+    // Satılmamış siparişin parası defterin kaydıdır; fiş açılsaydı kasada hiç olmamış bir satış ve iadesi görünürdü.
+    const late = { movements: [move('h1', 3690, 'online'), move('h2', -3690, 'online', '11:00')] };
+    expect(plan({ order: order({ status: 'cancelled', referenceNo: null }), ...late })).toEqual({ status: 'skip', reason: 'never_sold' });
+    expect(plan({ order: order({ status: 'cancelled' }), ...late })).toMatchObject({ status: 'plan', blocked: null });
   });
 
   it('fişi olmayan siparişin ilk hareketi iadeyse yazılmaz', () => {
