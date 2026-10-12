@@ -1,4 +1,5 @@
 import { OrderService, ProductVariantService, StockService, WarehouseService } from '@lezzet/database';
+import type { DistanceSaleLevel } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { TicketType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -269,19 +270,16 @@ export async function notifyBankFeedQuiet(
   }
 }
 
+/** Eşik haberinin tekilleştirme anahtarı; eşik okuması seviyenin ilk haber gününü aynı anahtardan bulur. */
+export const distanceSaleThresholdKey = (year: number, warning: DistanceSaleLevel): string => `distance-sale-threshold:${year}:${warning}`;
+
 /**
  * Uzaktan satış eşiğinin uyarı seviyesi — yönetime ve muhasebeye; anahtar yıl ve seviye başınadır, seviye yılda bir kez haber olur.
  * Tutarlar KDV hariç cent; geçen yıl aşıldıysa vergilendirme yılbaşından beri sürer.
  */
 export async function notifyDistanceSaleThreshold(
   db: SupabaseClient,
-  input: {
-    year: number;
-    warning: 'first' | 'second' | 'exceeded';
-    yearTotalCents: number;
-    thresholdCents: number;
-    sincePreviousYear: boolean;
-  },
+  input: { year: number; warning: DistanceSaleLevel; yearTotalCents: number; thresholdCents: number; sincePreviousYear: boolean },
 ): Promise<void> {
   try {
     await dispatchStaffNotification(db, {
@@ -290,7 +288,7 @@ export async function notifyDistanceSaleThreshold(
       warehouseId: null,
       target: null,
       payload: input,
-      dedupeKey: `distance-sale-threshold:${input.year}:${input.warning}`,
+      dedupeKey: distanceSaleThresholdKey(input.year, input.warning),
     });
   } catch (err) {
     yut(err, 'distance_sale_threshold');

@@ -1,7 +1,15 @@
 import { OrderItemService, OrderSaleService, OrderService, serviceDb } from '@lezzet/database';
 import { buildAccountingExport, type AccountingExport, type AccountingExportRow } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
-import { BUSINESS_LABELS, type Business, type KeysetCursor, type OrderSale, type Page } from '@lezzet/types';
+import {
+  BUSINESS_LABELS,
+  COUNTRY_LABELS,
+  SELLER_COUNTRY,
+  type Business,
+  type KeysetCursor,
+  type OrderSale,
+  type Page,
+} from '@lezzet/types';
 
 /**
  * Muhasebe export kapısı (DOMAIN §9): sistem resmî muhasebe değildir, fatura kesmez ve numara üretmez, muhasebeciye temiz veri verir.
@@ -72,7 +80,11 @@ export function toExportCsv(data: AccountingExport): string {
   const summaryLines = [
     '',
     `TOPLAM;${summary.orderCount} satış;HT ${summary.net};KDV ${summary.vat};TTC ${summary.gross}`,
-    ...summary.byVatRate.map((line) => `KDV %${line.vatRate};;HT ${line.net};KDV ${line.vat};TTC ${line.gross}`),
+    // Yabancı ülkenin oranı adıyla yazılır: OSS beyanı ülke ülke verilir ve aynı oran Fransa'nınkiyle karışmamalı.
+    ...summary.byVatRate.map(
+      (line) =>
+        `KDV %${line.vatRate}${line.country && line.country !== SELLER_COUNTRY ? ` · ${COUNTRY_LABELS[line.country]}` : ''};;HT ${line.net};KDV ${line.vat};TTC ${line.gross}`,
+    ),
     // Hediye satış olarak dosyada yok; maliyeti muhasebecinin ikram gideridir, liste fiyatı yalnız bilgi içindir.
     ...(summary.excludedGiftCount > 0
       ? [

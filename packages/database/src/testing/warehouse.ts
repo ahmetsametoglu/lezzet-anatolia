@@ -1,12 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { WarehouseService } from '../services/warehouse.service';
 import { VehicleService } from '../services/storage-point.service';
-import type { Country, Warehouse } from '@lezzet/types';
+import type { Country, Warehouse, WarehouseShipCountryEntry } from '@lezzet/types';
 
 /**
  * Entegrasyon testlerinin depo kurulumu; kod damgalıdır (`Date.now()`), çünkü yerel veritabanı eşzamanlı koşularca paylaşılır ve
- * `warehouse.code` benzersizdir. Gönderim ülkesi varsayılan olarak yoktur, çünkü bir ülkeye tek aktif depo kargo yapar ve her test kendi
- * kargo deposunu açsaydı ikincisi reddedilirdi.
+ * `warehouse.code` benzersizdir. Gönderim ülkesi varsayılan olarak yoktur, çünkü bir ülkeye tek aktif depo kargo yapar; ülkeyi aktif
+ * test deposuna `claimShipCountry` verir.
  */
 
 let counter = 0;
@@ -17,7 +17,7 @@ export interface TestWarehouseOptions {
   countryCode?: Warehouse['countryCode'];
   /** Tesis mi araç mı; varsayılan `facility`, araç kurulumu kendi kurallarını sınayan testin işidir. */
   kind?: Warehouse['kind'];
-  /** Deponun kargo yaptığı ülkeler (`warehouse_ship_country`); bulunduğu ülkeden bağımsızdır. */
+  /** Deponun kargo yaptığı ülkeler; yalnız pasif depoda güvenlidir, aktif depoya ülkeyi `claimShipCountry` verir. */
   shipsTo?: readonly Country[];
   /** Gel-al noktası — checkout'un gel-al testi bu tesisi ister; varsayılan kapalı (üretim varsayılanıyla aynı). */
   pickupEnabled?: boolean;
@@ -73,4 +73,49 @@ export async function createTestWarehousePair(db: SupabaseClient): Promise<{ pri
     createTestWarehouse(db, { label: 'B' }),
   ]);
   return { primary, secondary };
+}
+
+/** Ülkenin geçici sahipliği; `restore` ülkeyi asıl sahibine teslim noktasıyla geri verir, ikinci çağrı bir şey yapmaz. */
+export interface ShipCountryClaim {
+  restore(): Promise<void>;
+}
+
+/**
+ * Ülkeyi aktif test deposuna verir: bir ülkeye tek aktif depo kargo yapar ve besleme ülkeleri tutar, bu yüzden tutan deponun satırı
+ * teslim noktasıyla birlikte okunur, geçici kaldırılır ve `restore` onu geri koyar. Ülke başka bir test deposuna taşındıysa o depo
+ * `restore`dan önce silinmelidir.
+ */
+export async function claimShipCountry(db: SupabaseClient, warehouseId: string, country: Country): Promise<ShipCountryClaim> {
+  const warehouses = new WarehouseService(db);
+  const without = (rows: readonly WarehouseShipCountryEntry[]) => rows.filter((row) => row.country !== country);
+  const read = async (id: string) => (await warehouses.list({ warehouseIds: [id] }))[0] ?? null;
+  const holder = (await warehouses.list({ activeOnly: true })).find((w) => w.id !== warehouseId && w.shipsTo.includes(country)) ?? null;
+  const held = holder?.shipCountries.find((row) => row.country === country) ?? null;
+  const giveBack = async () => {
+    const current = holder && held ? await read(holder.id) : null;
+    if (current && held) await warehouses.setShipCountries(current.id, [...without(current.shipCountries), held]);
+  };
+  const release = async () => {
+    const own = await read(warehouseId);
+    if (own?.shipsTo.includes(country)) await warehouses.setShipCountries(warehouseId, without(own.shipCountries));
+  };
+
+  if (holder) await warehouses.setShipCountries(holder.id, without(holder.shipCountries));
+  try {
+    const own = await read(warehouseId);
+    await warehouses.setShipCountries(warehouseId, [...(own?.shipCountries ?? []), { country, handover: null }]);
+  } catch (err) {
+    await giveBack();
+    throw err;
+  }
+
+  let restored = false;
+  return {
+    async restore() {
+      if (restored) return;
+      restored = true;
+      await release();
+      await giveBack();
+    },
+  };
 }

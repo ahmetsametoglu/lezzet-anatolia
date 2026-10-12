@@ -10,7 +10,15 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, testPostalCode } from '@lezzet/database/testing';
+import {
+  claimShipCountry,
+  createTestWarehouse,
+  mustDelete,
+  purgeTestData,
+  purgeVariantStock,
+  testPostalCode,
+  type ShipCountryClaim,
+} from '@lezzet/database/testing';
 import { readCheckoutSnapshot } from '../order/checkout-snapshot';
 import { cartCheckoutCents, type CartEntry } from './cart-types';
 import { getCartView } from './read';
@@ -33,6 +41,7 @@ let zoneId = '';
 let customerId = '';
 let addressId = '';
 let discountId = '';
+let almanyaKargosu: ShipCountryClaim | null = null;
 
 beforeAll(async () => {
   categoryId = (await new CategoryService(db).create({ name: { tr: `Sepet düğmesi ${stamp}` } })).id;
@@ -58,7 +67,8 @@ beforeAll(async () => {
 
   // Kapı kalemi rota deposunda, kargo kalemi yalnız kargo deposunda: sepet iki gruba bölünür.
   routeId = (await createTestWarehouse(db, { label: 'DUGME-ROTA', countryCode: 'DE' })).id;
-  shippingId = (await createTestWarehouse(db, { label: 'DUGME-KARGO', countryCode: 'DE', shipsTo: ['DE'] })).id;
+  shippingId = (await createTestWarehouse(db, { label: 'DUGME-KARGO', countryCode: 'DE' })).id;
+  almanyaKargosu = await claimShipCountry(db, shippingId, 'DE');
   const stock = new StockService(db);
   await stock.insert({ warehouseId: routeId, variantId: localVariantId, physicalQty: 10, expiryDate });
   await stock.insert({ warehouseId: shippingId, variantId: shippingVariantId, physicalQty: 10, expiryDate });
@@ -94,14 +104,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'discount', (q) => q.eq('id', discountId));
-  await purgeVariantStock(db, [localVariantId, shippingVariantId]);
-  await purgeTestData(db, {
-    productIds: [localProductId, shippingProductId],
-    categoryIds: [categoryId],
-    profileIds: [customerId],
-    warehouseIds: [routeId, shippingId],
-  });
+  try {
+    await mustDelete(db, 'discount', (q) => q.eq('id', discountId));
+    await purgeVariantStock(db, [localVariantId, shippingVariantId]);
+    await purgeTestData(db, {
+      productIds: [localProductId, shippingProductId],
+      categoryIds: [categoryId],
+      profileIds: [customerId],
+      warehouseIds: [routeId, shippingId],
+    });
+  } finally {
+    await almanyaKargosu?.restore();
+  }
 });
 
 describe('sepet düğmesi', () => {

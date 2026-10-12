@@ -109,6 +109,10 @@ export interface DistanceSaleThresholdInput {
 /** Uyarı seviyesi: `first` ve `second` eşiğin ayardaki yüzdelerine varıldığında, `exceeded` varış ülkesi vergilendirmesi başladığında. */
 export type DistanceSaleWarning = 'none' | 'first' | 'second' | 'exceeded';
 
+/** Haber olan seviyeler, sırasıyla; her biri yılda bir kez duyurulur. */
+export const DISTANCE_SALE_LEVELS = ['first', 'second', 'exceeded'] as const satisfies readonly DistanceSaleWarning[];
+export type DistanceSaleLevel = (typeof DISTANCE_SALE_LEVELS)[number];
+
 export interface DistanceSaleThreshold {
   /** Varış ülkesinin KDV'si mi uygulanır; eşiği aşan sipariş de dahildir. */
   destinationTaxation: boolean;
@@ -118,13 +122,20 @@ export interface DistanceSaleThreshold {
   yearTotalCents: number;
   /** Önceki yılın toplamı: sistem + açılış. */
   previousYearTotalCents: number;
+  /** Toplamların iki kaynağı ayrı: sistemdeki siparişler ve sistem dışı açılış tutarı (ayar). */
+  yearSystemCents: number;
+  yearOpeningCents: number;
+  previousYearSystemCents: number;
+  previousYearOpeningCents: number;
   warning: DistanceSaleWarning;
 }
 
 export function distanceSaleThreshold(input: DistanceSaleThresholdInput): DistanceSaleThreshold {
   const { settings } = input;
-  const yearTotalCents = input.currentYearCents + openingOf(input.year, settings) + input.orderNetCents;
-  const previousYearTotalCents = input.previousYearCents + openingOf(input.year - 1, settings);
+  const yearOpeningCents = openingOf(input.year, settings);
+  const previousYearOpeningCents = openingOf(input.year - 1, settings);
+  const yearTotalCents = input.currentYearCents + yearOpeningCents + input.orderNetCents;
+  const previousYearTotalCents = input.previousYearCents + previousYearOpeningCents;
   // Eşik geçilmedikçe satıcının KDV'si uygulanır: eşiğe eşit toplam henüz aşmış sayılmaz.
   const sincePreviousYear = previousYearTotalCents > settings.thresholdCents;
   const destinationTaxation = sincePreviousYear || input.latched || yearTotalCents > settings.thresholdCents;
@@ -133,6 +144,10 @@ export function distanceSaleThreshold(input: DistanceSaleThresholdInput): Distan
     sincePreviousYear,
     yearTotalCents,
     previousYearTotalCents,
+    yearSystemCents: input.currentYearCents,
+    yearOpeningCents,
+    previousYearSystemCents: input.previousYearCents,
+    previousYearOpeningCents,
     warning: destinationTaxation ? 'exceeded' : warningOf(yearTotalCents, settings),
   };
 }

@@ -9,7 +9,7 @@ import { SupplierService } from './supplier.service';
 import { PurchaseOrderService } from './purchase-order.service';
 import { WarehouseService } from './warehouse.service';
 import { WarehouseTransferService } from './warehouse-transfer.service';
-import { createTestWarehouse, createTestWarehousePair } from '../testing/warehouse';
+import { claimShipCountry, createTestWarehouse, createTestWarehousePair, type ShipCountryClaim } from '../testing/warehouse';
 import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
 import type { Business, WarehouseAddress } from '@lezzet/types';
 
@@ -36,6 +36,14 @@ let productId: string;
 let categoryId: string;
 let supplierId: string;
 
+/** Testlerin aldığı ülkeler; her test kendi `finally`sinde geri verir, dosya sonu düşen testin bıraktığını da verir. */
+const ulkeler: ShipCountryClaim[] = [];
+const ulkeAl = async (warehouseId: string) => {
+  const claim = await claimShipCountry(db, warehouseId, 'DE');
+  ulkeler.push(claim);
+  return claim;
+};
+
 const orderId = () => crypto.randomUUID();
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
@@ -60,12 +68,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, {
-    productIds: [productId],
-    categoryIds: [categoryId],
-    supplierIds: [supplierId],
-    warehouseIds: [doluDepo, bosDepo, qualiteDepo],
-  });
+  try {
+    await purgeTestData(db, {
+      productIds: [productId],
+      categoryIds: [categoryId],
+      supplierIds: [supplierId],
+      warehouseIds: [doluDepo, bosDepo, qualiteDepo],
+    });
+  } finally {
+    for (const claim of ulkeler) await claim.restore();
+  }
 });
 
 beforeEach(async () => {
@@ -346,13 +358,11 @@ describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
 });
 
 describe('depo kaydı — kurallar veritabanında', () => {
-  /**
-   * Testler kendi kargo depolarını kurar ve toplar; ülke `DE`, çünkü Fransa'ya kargo yapan beslemenin deposuyla yarışmaz. Depolar
-   * Fransa'dadır: kargo yapılan ülke deponun bulunduğu ülkeden bağımsızdır.
-   */
+  /** Testin deposu Almanya'yı beslemenin deposundan geçici alır (`claimShipCountry`); kargo yapılan ülke deponun ülkesinden bağımsızdır. */
   it('bir ülkeye ikinci aktif depo kargo yapamaz; reddedilen ekleme deponun kümesine dokunmaz', async () => {
-    const ilk = await createTestWarehouse(db, { label: 'SHIP', shipsTo: ['DE'] });
+    const ilk = await createTestWarehouse(db, { label: 'SHIP' });
     const ikinci = await createTestWarehouse(db, { label: 'SHIP2' });
+    const almanya = await ulkeAl(ilk.id);
     try {
       await expect(warehouses.setShipCountries(ikinci.id, [{ country: 'DE', handover: null }])).rejects.toThrow(
         /warehouse_ship_country_single_active/,
@@ -362,12 +372,14 @@ describe('depo kaydı — kurallar veritabanında', () => {
       expect(okunan.get(ikinci.id)).toMatchObject({ shipsTo: [], shipsOnline: false });
     } finally {
       await purgeTestData(db, { warehouseIds: [ilk.id, ikinci.id] });
+      await almanya.restore();
     }
   });
 
   it('pasif deponun satırı başka deponun önünü kesmez; pasif depo ülke doluyken geri açılamaz', async () => {
-    const eski = await createTestWarehouse(db, { label: 'SHIPOLD', shipsTo: ['DE'] });
+    const eski = await createTestWarehouse(db, { label: 'SHIPOLD' });
     const yeni = await createTestWarehouse(db, { label: 'SHIPNEW' });
+    const almanya = await ulkeAl(eski.id);
     try {
       await warehouses.update({ id: eski.id, isActive: false });
       await warehouses.setShipCountries(yeni.id, [{ country: 'DE', handover: null }]);
@@ -376,7 +388,9 @@ describe('depo kaydı — kurallar veritabanında', () => {
       await expect(warehouses.update({ id: eski.id, isActive: true })).rejects.toThrow(/warehouse_ship_country_single_active/);
       expect((await warehouses.getById(eski.id))?.isActive).toBe(false);
     } finally {
+      // Ülke `yeni`ye geçti: depolar silinmeden geri verilirse asıl sahibi ülkeyi alamaz.
       await purgeTestData(db, { warehouseIds: [eski.id, yeni.id] });
+      await almanya.restore();
     }
   });
 
@@ -407,6 +421,7 @@ describe('gönderim ülkesi ve teslim noktası', () => {
   it('teslim noktası ülkeyle yazılır ve okunur; kalan ülkenin noktası değişir ya da boşalır, çıkan ülke silinir', async () => {
     const depo = await createTestWarehouse(db, { label: 'HAND' });
     const oku = async () => (await warehouses.list({ warehouseIds: [depo.id] }))[0];
+    const almanya = await ulkeAl(depo.id);
     try {
       await warehouses.setShipCountries(depo.id, [{ country: 'DE', handover: KEHL }]);
       expect(await oku()).toMatchObject({ shipCountries: [{ country: 'DE', handover: KEHL }], shipsTo: ['DE'], shipsOnline: true });
@@ -421,6 +436,28 @@ describe('gönderim ülkesi ve teslim noktası', () => {
       expect(await oku()).toMatchObject({ shipCountries: [], shipsTo: [], shipsOnline: false });
     } finally {
       await purgeTestData(db, { warehouseIds: [depo.id] });
+      await almanya.restore();
+    }
+  });
+
+  // Yardımcı ülkeyi geri vermez ya da teslim noktasını düşürürse beslemenin deposu testten sonra Almanya'ya kargosuz kalır; kırmızıya döner.
+  it('ülkeyi alan test deposu geri verince ülke asıl sahibine teslim noktasıyla döner', async () => {
+    const tutan = await createTestWarehouse(db, { label: 'TUTAN' });
+    const alan = await createTestWarehouse(db, { label: 'ALAN' });
+    const oku = async (id: string) => (await warehouses.list({ warehouseIds: [id] }))[0]?.shipCountries;
+    const tutanin = await ulkeAl(tutan.id);
+    try {
+      await warehouses.setShipCountries(tutan.id, [{ country: 'DE', handover: KEHL }]);
+      const alanin = await claimShipCountry(db, alan.id, 'DE');
+      expect(await oku(tutan.id)).toEqual([]);
+      expect(await oku(alan.id)).toEqual([{ country: 'DE', handover: null }]);
+
+      await alanin.restore();
+      expect(await oku(alan.id)).toEqual([]);
+      expect(await oku(tutan.id)).toEqual([{ country: 'DE', handover: KEHL }]);
+    } finally {
+      await purgeTestData(db, { warehouseIds: [tutan.id, alan.id] });
+      await tutanin.restore();
     }
   });
 
@@ -443,6 +480,7 @@ describe('gönderim ülkesi ve teslim noktası', () => {
     const fransaDeposu = (await warehouses.list({ activeOnly: true })).find((w) => w.shipsTo.includes('FR'));
     const yedek = fransaDeposu ? null : await createTestWarehouse(db, { label: 'HANDFR', shipsTo: ['FR'] });
     const depo = await createTestWarehouse(db, { label: 'HANDDE' });
+    const almanya = await ulkeAl(depo.id);
     try {
       await warehouses.setShipCountries(depo.id, [{ country: 'DE', handover: KEHL }]);
 
@@ -459,6 +497,7 @@ describe('gönderim ülkesi ve teslim noktası', () => {
       expect((await warehouses.list({ warehouseIds: [depo.id] }))[0]?.shipCountries).toEqual([{ country: 'DE', handover: KEHL }]);
     } finally {
       await purgeTestData(db, { warehouseIds: [depo.id, ...(yedek ? [yedek.id] : [])] });
+      await almanya.restore();
     }
   });
 });

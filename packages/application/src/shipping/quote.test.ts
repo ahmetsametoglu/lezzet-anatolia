@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, ShippingBoxService, WarehouseService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { claimShipCountry, createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { ShippingQuote } from '@lezzet/sendcloud';
 import { quoteShipping } from './quote';
 import type { ShippingRateProvider } from './port';
@@ -197,8 +197,8 @@ describe('quoteShipping — çıkış noktası', () => {
         return [secenek()];
       },
     });
-    const warehouses = new WarehouseService(db);
-    await warehouses.setShipCountries(warehouseId, [
+    const almanya = await claimShipCountry(db, warehouseId, 'DE');
+    await new WarehouseService(db).setShipCountries(warehouseId, [
       { country: 'DE', handover: { line1: 'Hafenstraße 2', postalCode: '77694', city: 'Kehl' } },
     ]);
     try {
@@ -213,7 +213,7 @@ describe('quoteShipping — çıkış noktası', () => {
         { countryCode: 'FR', postalCode: '67000', city: 'Strasbourg', name: 'Test deposu KRG', addressLine1: 'Test sok. 1' },
       ]);
     } finally {
-      await warehouses.setShipCountries(warehouseId, []);
+      await almanya.restore();
     }
   });
 });

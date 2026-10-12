@@ -82,7 +82,7 @@ describe('KDV ayrıştırma — fiyat TTC, muhasebe HT ister', () => {
     expect(row.gross).toBe(21.1);
     expect(row.net).toBe(20);
     expect(row.vat).toBe(1.1);
-    expect(row.vatLines).toEqual([{ vatRate: 5.5, gross: 21.1, net: 20, vat: 1.1 }]);
+    expect(row.vatLines).toEqual([{ vatRate: 5.5, gross: 21.1, net: 20, vat: 1.1, country: 'FR' }]);
   });
 
   it('karışık oranlı satış oran başına ayrışır — beyan bunun üstünde durur', () => {
@@ -104,7 +104,7 @@ describe('KDV ayrıştırma — fiyat TTC, muhasebe HT ister', () => {
   });
 
   it('eksik karşılanan kalem TESLİM EDİLEN kadar faturalanır, indirim payı da oransal düşer', () => {
-    // 07.8 kısmi karşılamanın muhasebe yüzü: gitmeyen mal faturalanmaz.
+    // Kısmi karşılamanın muhasebe yüzü: gitmeyen mal faturalanmaz.
     const row = buildExportRow(sale(), [line({ qty: 4, fulfilledQty: 2, unitPriceCents: 1000, lineDiscountAmountCents: 400 })]);
     expect(row.gross).toBe(18); // 2×10 − (4×2/4)
   });
@@ -153,7 +153,7 @@ describe('kargo — malın oranını izler', () => {
     const row = buildExportRow(sale({ shippingFeeCents: 600 }), [line({ unitPriceCents: 0, vatRate: 5.5 })]);
 
     expect(row.gross).toBe(6);
-    expect(row.vatLines).toEqual([{ vatRate: 20, gross: 6, net: 5, vat: 1 }]);
+    expect(row.vatLines).toEqual([{ vatRate: 20, gross: 6, net: 5, vat: 1, country: 'FR' }]);
   });
 });
 
@@ -179,7 +179,7 @@ describe('KDV tabanı siparişin fiyat tabanından gelir (DOMAIN §5)', () => {
     ]);
 
     // Kalem 100,00 + 5,50 KDV; kargo 11,90 içinden 11,28 + 0,62.
-    expect(row.vatLines).toEqual([{ vatRate: 5.5, gross: 117.4, net: 111.28, vat: 6.12 }]);
+    expect(row.vatLines).toEqual([{ vatRate: 5.5, gross: 117.4, net: 111.28, vat: 6.12, country: 'FR' }]);
   });
 
   it('aynı sayı KDV dahil fiyatta TTC okunur', () => {
@@ -203,7 +203,7 @@ describe('reverse charge', () => {
     expect(row.gross).toBe(215);
     expect(row.invoiceNote).toBe('Autoliquidation');
     expect(row.vatNumber).toBe('DE811907980');
-    expect(row.vatLines).toEqual([{ vatRate: 0, gross: 215, net: 215, vat: 0 }]);
+    expect(row.vatLines).toEqual([{ vatRate: 0, gross: 215, net: 215, vat: 0, country: null }]);
   });
 });
 
@@ -252,6 +252,27 @@ describe('dönem özeti satırlardan TÜRETİLİR', () => {
     const bucketTotal = summary.byVatRate.reduce((t, l) => t + l.gross, 0);
     expect(bucketTotal).toBe(summary.gross);
     for (const vatLine of summary.byVatRate) expect(vatLine.net + vatLine.vat).toBe(vatLine.gross);
+  });
+
+  // Oran kovası ülkesiz kurulursa aynı oranın iki ülkesi tek satırda birleşir ve beyan yanlış ülkeye yazılır; kırmızıya döner.
+  it("kova oran ve ülkeyle kurulur: OSS satışı varış ülkesinin, eşik altındaki uzaktan satış Fransa'nın satırına düşer", () => {
+    const almanya = { deliveryCountry: 'DE' as const };
+    // Aynı oran iki ülkede: kova yalnız orandan kurulsaydı iki satır birleşirdi.
+    const { rows, summary } = buildAccountingExport({ from: '2026-03-01', to: '2026-03-31' }, [
+      { sale: sale({ ...almanya, vatTreatment: 'intra_eu_distance_oss' }), items: [line({ unitPriceCents: 1070, vatRate: 7 })] },
+      {
+        sale: sale({ id: '44444444-4444-4444-4444-444444444444', ...almanya, vatTreatment: 'intra_eu_distance_origin' }),
+        items: [line({ unitPriceCents: 1055, vatRate: 5.5 })],
+      },
+      { sale: sale({ id: '55555555-5555-5555-5555-555555555555' }), items: [line({ unitPriceCents: 1070, vatRate: 7 })] },
+    ]);
+
+    expect(rows[0]!.vatLines.map((l) => l.country)).toEqual(['DE']);
+    expect(summary.byVatRate.map((l) => [l.vatRate, l.country, l.net])).toEqual([
+      [5.5, 'FR', 10],
+      [7, 'DE', 10],
+      [7, 'FR', 10],
+    ]);
   });
 
   it('satış yoksa özet sıfırdır, dosya yine üretilir', () => {

@@ -9,7 +9,14 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
+import {
+  claimShipCountry,
+  createTestWarehouse,
+  mustDelete,
+  purgeTestData,
+  purgeVariantStock,
+  type ShipCountryClaim,
+} from '@lezzet/database/testing';
 
 /* Tekrar sipariş de bir ekleme kanalıdır: yer biliniyorken bu adrese gelemeyen kalemi sepete koyarsa kural bu kanaldan delinir. */
 
@@ -36,10 +43,12 @@ let sogukProductId = '';
 let sogukVariantId = '';
 let customerId = '';
 let orderId = '';
+let almanyaKargosu: ShipCountryClaim | null = null;
 
 beforeAll(async () => {
   routeId = (await createTestWarehouse(db, { label: 'TSR', countryCode: 'DE' })).id;
-  shippingId = (await createTestWarehouse(db, { label: 'TSK', countryCode: 'DE', shipsTo: ['DE'] })).id;
+  shippingId = (await createTestWarehouse(db, { label: 'TSK', countryCode: 'DE' })).id;
+  almanyaKargosu = await claimShipCountry(db, shippingId, 'DE');
   scope.shippingWarehouseId = shippingId;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Tekrar sipariş ${stamp}` } })).id;
   const products = new ProductService(db);
@@ -102,14 +111,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'order', (q) => q.eq('id', orderId));
-  await purgeVariantStock(db, [kargoVariantId, sogukVariantId]);
-  await purgeTestData(db, {
-    productIds: [kargoProductId, sogukProductId],
-    categoryIds: [categoryId],
-    profileIds: [customerId],
-    warehouseIds: [routeId, shippingId],
-  });
+  try {
+    await mustDelete(db, 'order', (q) => q.eq('id', orderId));
+    await purgeVariantStock(db, [kargoVariantId, sogukVariantId]);
+    await purgeTestData(db, {
+      productIds: [kargoProductId, sogukProductId],
+      categoryIds: [categoryId],
+      profileIds: [customerId],
+      warehouseIds: [routeId, shippingId],
+    });
+  } finally {
+    await almanyaKargosu?.restore();
+  }
 });
 
 describe('tekrar sipariş', () => {

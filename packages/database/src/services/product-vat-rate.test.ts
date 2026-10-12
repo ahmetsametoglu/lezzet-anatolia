@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
+import { PriceService } from './price.service';
 import { ProductService } from './product.service';
 import { ProductVatRateService } from './product-vat-rate.service';
 
@@ -85,5 +86,28 @@ describe('ürün süzgeci — ülke oranı eksik', () => {
     expect(ids(await products.listStockRows({ filters }))).toEqual([oransiz.id]);
     expect(await products.countMatching(filters)).toBe(1);
     expect(await products.countMatching({ categoryId })).toBe(2);
+  });
+});
+
+/** Fiyat ekranının "Almanya fiyatı olan" süzgeci; ülke satırı boyun fiyatındadır, süzgeç iç birleşimli iki gömmeden okunur. */
+describe('ürün süzgeci — ülke fiyatı olan', () => {
+  // Ülke satırı olmayan ürün süzgeçte kalırsa, sayaç listeden ayrılırsa ya da dar okumalardan biri süzgeçle düşerse kırmızıya döner.
+  it('yalnız o ülkeye özel fiyat satırı olan boyu bulunan ürünler gelir; liste, sayaç ve dar okumalar aynı kümeyi verir', async () => {
+    const prices = new PriceService(db);
+    const almanyaFiyatli = await products.create({ name: { tr: `Almanya fiyatlı ${Date.now()}` }, categoryId });
+    const genelFiyatli = await products.create({ name: { tr: `Genel fiyatlı ${Date.now()}` }, categoryId });
+    extraProductIds.push(almanyaFiyatli.product.id, genelFiyatli.product.id);
+    await prices.setPrice({ variantId: almanyaFiyatli.variants[0]!.id, channel: 'b2c', amountCents: 1200 });
+    await prices.setPrice({ variantId: almanyaFiyatli.variants[0]!.id, channel: 'b2c', amountCents: 1290, country: 'DE' });
+    await prices.setPrice({ variantId: genelFiyatli.variants[0]!.id, channel: 'b2c', amountCents: 1200 });
+
+    const filters = { categoryId, hasCountryPrice: 'DE' as const };
+    const ids = (page: { rows: Array<{ id: string }> }) => page.rows.map((row) => row.id);
+    const beklenen = [almanyaFiyatli.product.id];
+    expect(ids(await products.listPriceRows({ filters }))).toEqual(beklenen);
+    expect(ids(await products.listWithRelations({ filters }))).toEqual(beklenen);
+    expect(ids(await products.list({ filters }))).toEqual(beklenen);
+    expect(ids(await products.listStockRows({ filters }))).toEqual(beklenen);
+    expect(await products.countMatching(filters)).toBe(1);
   });
 });

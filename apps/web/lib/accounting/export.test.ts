@@ -4,12 +4,8 @@ import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { buildExport, matchInvoiceNo, pendingInvoices, toExportCsv } from './export';
 
 /**
- * Muhasebe export'u (12.7) — DB üstünde. Doğrulanan şey dosyanın biçimi değil, **neyin girip
- * neyin girmediği**:
- * - satış tarihi sipariş kaydından değil, TESLİM/KAPANIŞ anından gelir (`order_sale` görünümü),
- * - hediye sipariş dosyaya girmez ama farkı açıklayan satır özet'te durur,
- * - gerçekleşmemiş sipariş (taslak/onaylı) hiç görünmez,
- * - fatura numarası eşleşen satış kuyruktan düşer.
+ * Muhasebe aktarımı, veritabanı üstünde: dosyanın biçimi değil neyin girip neyin girmediği sınanır. Satış tarihi teslim ya da kapanış
+ * anından gelir, hediye ve gerçekleşmemiş sipariş dosyaya girmez, fatura numarası eşleşen satış kuyruktan düşer.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -220,5 +216,31 @@ describe('fatura eşleştirme kuyruğu', () => {
     const order = await makeSale({ daysAgo: 190 });
     expect(await matchInvoiceNo(order.id, '   ')).toEqual({ status: 'invalid', reason: 'empty_invoice_no' });
     expect((await orders.getById(order.id))?.invoiceNo).toBeNull();
+  });
+});
+
+describe('dosyanın KDV satırları', () => {
+  // Yabancı ülkenin oranı ülkesiz yazılırsa muhasebeci OSS satırını Fransa'nınkiyle karıştırır; kırmızıya döner.
+  it("yabancı ülkenin oranı adıyla, Fransa'nın ve ters yüklemenin oranı adsız yazılır", () => {
+    const satir = (vatRate: number, country: 'FR' | 'DE' | null) => ({ vatRate, country, gross: 10, net: 10, vat: 0 });
+    const csv = toExportCsv({
+      rows: [],
+      summary: {
+        from: '2026-03-01',
+        to: '2026-03-31',
+        orderCount: 0,
+        gross: 0,
+        net: 0,
+        vat: 0,
+        shippingFee: 0,
+        discountAmount: 0,
+        byVatRate: [satir(0, null), satir(5.5, 'FR'), satir(7, 'DE')],
+        excludedGiftCount: 0,
+        excludedGiftCost: 0,
+        excludedGiftListValue: 0,
+      },
+    });
+    const kdvSatirlari = csv.split('\n').filter((line) => line.startsWith('KDV %'));
+    expect(kdvSatirlari.map((line) => line.split(';')[0])).toEqual(['KDV %0', 'KDV %5.5', 'KDV %7 · Almanya']);
   });
 });

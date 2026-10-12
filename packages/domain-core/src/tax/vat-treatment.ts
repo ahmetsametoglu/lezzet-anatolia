@@ -14,6 +14,12 @@ export function isZeroRated(treatment: VatTreatment): boolean {
   return treatment === 'intra_eu_b2b_reverse_charge';
 }
 
+/** Siparişe yazılmış işlemenin oran ülkesi, `resolveVatTreatment`in `rateCountry`sinin kalıcı hâli; ters yüklemede `null`. */
+export function rateCountryOf(treatment: VatTreatment, deliveryCountry: Country): Country | null {
+  if (isZeroRated(treatment)) return null;
+  return treatment === 'intra_eu_distance_oss' ? deliveryCountry : SELLER_COUNTRY;
+}
+
 export interface VatTreatmentInput {
   channel: Channel;
   /** Malın çıktığı deponun fiziksel ülkesi. */

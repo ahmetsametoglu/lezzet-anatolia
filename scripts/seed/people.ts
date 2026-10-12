@@ -55,6 +55,8 @@ interface SeedKisi {
    */
   depolar?: (keyof Depolar)[];
   type?: 'individual' | 'company';
+  /** Müşterinin işi; QUALITE yalnız onaylı şirkette olur (`user_profiles_business_b2b`). Verilmezse Lezzet. */
+  business?: 'lezzet' | 'qualite';
   country?: 'FR' | 'DE';
   preferredLanguage?: 'tr' | 'fr' | 'de';
   companyInfo?: { legalName: string; siret?: string; activityCode?: string; foundedYear?: number; isActive?: boolean };
@@ -146,6 +148,27 @@ const KISILER: SeedKisi[] = [
     codAllowed: false,
     note: 'Sınır ötesi B2B — reverse charge.',
   },
+  // — QUALITE: restoran, onaylı toptan müşteri; siparişi QUALITE deposundan ve QUALITE rotasıyla gider.
+  {
+    key: 'qualiteRestoran',
+    name: 'Restaurant Le Fossile',
+    email: 'cuisine.lefossile@example.fr',
+    phone: '+33388327720',
+    roles: ['customer'],
+    type: 'company',
+    business: 'qualite',
+    preferredLanguage: 'fr',
+    companyInfo: { legalName: 'RESTAURANT LE FOSSILE', siret: '37922310000015', activityCode: '56.10A', foundedYear: 1990, isActive: true },
+    vatNumber: 'FR59379223100',
+    vatNumberValid: true,
+    vatNumberCheckedAt: an(-20),
+    b2bApproved: true,
+    creditEnabled: true,
+    creditLimitCents: 150000,
+    paymentTermDays: 30,
+    codAllowed: true,
+    note: 'QUALITE müşterisi — haftalık toptan alım.',
+  },
   // — B2C: sık alan, rota içi, pazarlama izinli.
   {
     key: 'b2cSadik',
@@ -186,18 +209,17 @@ const KISILER: SeedKisi[] = [
   // Personel operasyon rolleri, sipariş geçişlerinin aktörü. Depocu tek kapsamlıdır, çünkü mobil depo bölümü çok kapsamlı
   // depocuda kilitlenir; çok kapsamlı hâl `muhasebe` hesabında denenir.
   { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolie.com', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
-  { key: 'depocuBordeaux', name: 'Claire Muller', email: 'depo.bordeaux@lezzetanatolie.com', phone: '+33600000105', roles: ['warehouse'], depolar: ['bdx'], preferredLanguage: 'fr' },
-  // Kurye kapsamı tek tesis ({str}): kurye rotaları kapsamla süzülür ve dört hattın dördü de STR'ye bağlı. Araç deposu
-  // kapsamda değil, çünkü yerinde satış aracı seferden çözer (`vehicleWarehouseOf`).
+  // Kurye kapsamı tek tesistir: rotalar kapsamla süzülür ve Lezzet'in dört hattı STR'ye bağlıdır. Araç deposu kapsamda değil, çünkü
+  // yerinde satış aracı seferden çözer (`vehicleWarehouseOf`).
   { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolie.com', phone: '+33600000102', roles: ['courier'], depolar: ['str'], preferredLanguage: 'fr' },
-  // Çoklu operasyon rolü ve iki depo kapsamı: depo seçicinin kapsamla sınırlı hâli burada denenir.
-  { key: 'muhasebe', name: 'Ayşe Demir', email: 'muhasebe@lezzetanatolie.com', phone: '+33600000103', roles: ['accounting', 'warehouse'], depolar: ['str', 'kehl'], preferredLanguage: 'tr' },
-  // Yalnız ikinci depoyu gören personel, çünkü kapsam sınırı ancak kapsamı dar biri varsa denenebilir.
-  { key: 'depocuKehl', name: 'Jonas Weber', email: 'depo.kehl@lezzetanatolie.com', phone: '+4978519901', roles: ['warehouse'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
+  // Çoklu operasyon rolü ve iki işin tesisi: depo seçicinin kapsamla sınırlı hâli burada denenir.
+  { key: 'muhasebe', name: 'Ayşe Demir', email: 'muhasebe@lezzetanatolie.com', phone: '+33600000103', roles: ['accounting', 'warehouse'], depolar: ['str', 'qlt'], preferredLanguage: 'tr' },
+  // Yalnız QUALITE deposunu gören personel, çünkü kapsam sınırı ancak kapsamı dar biri varsa denenebilir.
+  { key: 'depocuQualite', name: 'Jonas Weber', email: 'depo.qualite@lezzetanatolie.com', phone: '+33600000107', roles: ['warehouse'], depolar: ['qlt'], preferredLanguage: 'fr' },
   // Dört bölümü de gören hesap, sekme çubuğunun dolu hâli için; kapsamı kuryeninkiyle aynı.
   { key: 'hepsi', name: 'Emre Yıldız', email: 'hepsi@lezzetanatolie.com', phone: '+33600000106', roles: ['admin', 'warehouse', 'courier', 'accounting'], depolar: ['str'], preferredLanguage: 'tr' },
-  // Sınır ötesi rotanın kuryesi — kapsamı da Kehl. Kurye kapsamsız olamaz (DB kısıtı).
-  { key: 'kuryeKehl', name: 'Stefan Bauer', email: 'kurye.kehl@lezzetanatolie.com', phone: '+4978519902', roles: ['courier'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
+  // QUALITE'nin kuryesi ayrı hesaptır ve yalnız kendi deposuna bağlıdır; kurye kapsamsız olamaz (DB kısıtı).
+  { key: 'kuryeQualite', name: 'Stefan Bauer', email: 'kurye.qualite@lezzetanatolie.com', phone: '+33600000108', roles: ['courier'], depolar: ['qlt'], preferredLanguage: 'fr' },
 ];
 
 

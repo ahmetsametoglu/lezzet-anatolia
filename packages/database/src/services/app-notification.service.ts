@@ -9,6 +9,7 @@ import {
   STAFF_NOTIFICATION_KINDS,
   type AppNotification,
   type AppNotificationInsert,
+  type AppNotificationKind,
   type AppNotificationUpdate,
   type KeysetCursor,
   type NotificationDelivery,
@@ -19,24 +20,14 @@ import {
 import { BaseDbService } from '../core/base.service';
 
 /**
- * **Bildirim kaydı** (14.12, migration 0049). Servis karar vermez, satır getirir/yazar (STACK §4):
- * hangi olayın satır yazacağı, kanal sırası ve BELGE güvencesi TEK KAPININ işidir
- * (`@lezzet/application/notification/dispatch`).
- *
- * ── OKUNMAMIŞ TANIMI TEK YERDE ──────────────────────────────────────────────
- * "Rozete sayılan satır" = `read_at is null AND dismissed_at is null`. Bu süzgeç yalnız burada
- * kurulur (`UNREAD`); sayaç ve liste aynı sabitten okur — iki yerde yazılsaydı rozet "3" deyip
- * liste iki satır gösterirdi (mobil kabuğun kendi künyesindeki tuzağın DB hâli).
+ * Rozete sayılan satır: okunmamış ve gizlenmemiş. Süzgeç tek yerde kurulur, çünkü sayaç ile liste ayrı yazsaydı rozet başka sayı,
+ * liste başka satır gösterirdi; hangi olayın satır yazacağı dağıtım kapısının işidir (`application/notification/dispatch`).
  */
 const UNREAD = { isNullFields: ['read_at', 'dismissed_at'] as string[] };
 
 /**
- * KİTLE süzgeci (26.08 — cihaz turu bulgusu): tek tabloda iki kitle yaşıyor ve KARMA profil
- * (aynı kişi hem müşteri hem personel) gerçek: dev hesabında 120 personel satırı müşteri akışına
- * düşüp müşteri sözlüğünde 120 kez "Hesabınızla ilgili bir gelişme var." diye çizildi — kullanıcıya
- * hiçbir şey söylemeyen tek tip bir liste. Müşteri yüzeyi personel türünü GÖRMEZ ve SAYMAZ;
- * operasyon yüzeyi yalnız personel türünü görür. Küme `STAFF_NOTIFICATION_KINDS` (types) —
- * saklama süpürmesiyle aynı liste, aynı kural: yeni personel türü enum'a girerken oraya da girer.
+ * Kitle: tek tabloda iki kitle yaşar ve aynı kişi hem müşteri hem personel olabilir; müşteri yüzeyi personel türünü görmez ve saymaz,
+ * operasyon yüzeyi yalnız onu görür. Küme `STAFF_NOTIFICATION_KINDS`tır, saklama süpürmesiyle aynı liste.
  */
 export type NotificationAudience = 'customer' | 'staff';
 
@@ -52,20 +43,16 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
   }
 
   /**
-   * Tekilleştirmeli yazım — `dedupe_key` çakışması SESSİZ `null` döner (olay zaten işlendi).
-   * Anahtarsız satır hiç yarışmaz (kısmi unique). Çağıran `null`u "tekrar" diye okur ve kanala
-   * da GÖNDERMEZ: satırı yutulan olayın maili gitseydi, defter ile posta kutusu ayrışırdı.
+   * Tekilleştirmeli yazım: anahtar çakışması `null` döner ve çağıran onu "olay zaten işlendi" diye okuyup kanala göndermez, yoksa
+   * defter ile posta kutusu ayrışırdı. Anahtarsız satır yarışmaz (kısmi tekil indeks).
    */
   record(input: AppNotificationInsert): Promise<AppNotification | null> {
     return this.insertIgnoringConflict(input);
   }
 
   /**
-   * Kişinin akışı — en yeni üstte, keyset (küme veriyle sınırsız büyür, CLAUDE §1).
-   *
-   * GİZLENENLER varsayılan olarak DIŞARIDA: gizlemenin bütün anlamı satırın listeden kalkması.
-   * `includeDismissed` yalnız ileride bir "gizlenenleri göster" ekranı doğarsa açılır — okunmuş
-   * satır ise listede KALIR (yalnız rozetten düşer): bildirim bir akıştır, gelen kutusu değil.
+   * Kişinin akışı, en yeni üstte ve keyset sayfalı. Gizlenen satır dışarıda kalır, çünkü gizlemenin anlamı listeden kalkmaktır;
+   * okunmuş satır kalır ve yalnız rozetten düşer.
    */
   listByProfile(
     profileId: string,
@@ -85,10 +72,8 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
   }
 
   /**
-   * **Sahiplik süzgeçli** okundu işareti — TEK deyimde: satır hem kimliğiyle hem SAHİBİYLE
-   * eşleşmezse hiçbir şey güncellenmez ve `false` döner. İki sorguya bölmek (önce oku, sonra yaz)
-   * hem bir tur fazlaydı hem de okuma ile yazma arasında sahibinin değişebildiği bir pencere
-   * açardı — kimlik istemciden geliyor, süzgeç pazarlık konusu değil.
+   * Sahiplik süzgeçli okundu işareti, tek deyimde: kimlik ve sahip birlikte eşleşmezse hiçbir şey yazılmaz ve `false` döner. Kimlik
+   * istemciden gelir; önce okuyup sonra yazmak araya sahiplik değişikliği girebilen bir pencere açardı.
    */
   async markReadOwned(id: string, profileId: string): Promise<boolean> {
     const { data, error } = await this.supabase
@@ -113,16 +98,21 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
     return (data ?? []).length > 0;
   }
 
+  /** Anahtarlı bildirimin ilk yazıldığı an, anahtar başına; satır kişi başına çoğaldığı için en erkeni alınır. */
+  async firstSentAtByDedupeKey(kind: AppNotificationKind, keys: readonly string[]): Promise<Map<string, string>> {
+    if (keys.length === 0) return new Map();
+    const rows = await this.getAll({ kind, dedupeKey: [...keys] }, { orderBy: 'createdAt' });
+    const first = new Map<string, string>();
+    for (const row of rows) if (row.dedupeKey && !first.has(row.dedupeKey)) first.set(row.dedupeKey, row.createdAt);
+    return first;
+  }
+
   /** Rozet sayacı — satır taşımadan (`head: true`), kısmi indeksin üstünde. */
   unreadCount(profileId: string, audience?: NotificationAudience): Promise<number> {
     return this.count({ profileId }, { ...UNREAD, ...(audience ? { orFilters: [audienceFilter(audience)] } : {}) });
   }
 
-  /**
-   * "Tümünü okundu say" — listeyi çekmeden, tek deyimde. Damga karşılaştırılMAdığı için uygulama
-   * saati yeterli (customer_phone'daki iki-saat dersinin tersi: orada damga sessizlik hesabına
-   * giriyordu, burada yalnız "dolu mu" diye okunuyor).
-   */
+  /** "Tümünü okundu say", listeyi çekmeden tek deyimde; damga yalnız "dolu mu" diye okunduğu için uygulama saati yeter. */
   async markAllRead(profileId: string, audience?: NotificationAudience, since?: string): Promise<void> {
     let query = this.supabase
       .from('notification')
@@ -134,32 +124,16 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
     // personel satırını okundu yapsaydı, operasyon rozeti kimse görmeden sönerdi (tersi de aynı).
     if (audience === 'staff') query = query.in('kind', [...STAFF_NOTIFICATION_KINDS]);
     else if (audience === 'customer') query = query.not('kind', 'in', `(${STAFF_NOTIFICATION_KINDS.join(',')})`);
-    /* GÖRÜLENLE SINIRLA (05.09) — `since` verilirse yalnız o damgadan YENİ satırlar okundu olur.
-       Sebep ölçülmüş bir arıza: ekran bir SAYFA (30 satır) çiziyor ama beyan TÜM kitleyi okundu
-       yapıyordu; sayfanın arkasında kalan, kullanıcının hiç görmediği satırlar da damgalanıyordu.
-       Bedeli iki kat: satır rozetten düşüyor (kimse haberdar olmadan sessizleşiyor) ve 90 gün
-       sonra `purgeSeenStaffBefore` onu GÖRÜLMÜŞ sayıp siliyor — saklama künyesinin "görülmemiş
-       satır bekleyen iştir, durur" güvencesi tam buradan deliniyordu.
-       Çağıran `since` olarak çizdiği EN ESKİ satırın damgasını verir; liste `created_at desc`
-       sıralı olduğu için o damgadan yenisi = ekranda gerçekten görülenlerdir. */
+    /* Yalnız ekranda görülen satırlar okundu olur: çağıran çizdiği en eski satırın damgasını verir. Görülmeyen satır damgalansaydı
+       rozetten sessizce düşer ve saklama süpürmesi onu görülmüş sayıp silerdi. */
     if (since !== undefined) query = query.gte('created_at', since);
     const { error } = await query;
     if (error) throw error;
   }
 
   /**
-   * Saklama süpürmesi (14.15) — GÖRÜLMÜŞ personel satırlarını siler, sayıyı döner (süpürme izi,
-   * `deleteOlderThan` künyesinin aynı kuralı: eşik ancak sayıyla ölçülür).
-   *
-   * Base'in `deleteOlderThan`ı yetmiyor: süzgeç yalnız yaş değil — TÜR (müşteri satırı asla) ve
-   * GÖRÜLMÜŞLÜK (okunmamış satır bekleyen iştir, yaşı ne olursa olsun durur; süpürülen okunAN ya
-   * da gizlenendir).
-   *
-   * "Görülmüş" İKİ DÜZ DEYİMDE silinir, tek `or`lu deyimde DEĞİL — ölçüldü (26.08): PostgREST
-   * DELETE üstünde `or=` süzgecini her hâlde `42703 column … does not exist` ile reddediyor
-   * (AYNI or-ağacı SELECT'te çalışıyor; kolon DB'de var, `\d` ile doğrulandı). İkinci deyim yalnız
-   * okunMAmış-ama-gizlenmiş satırı alır — kesişim yok, sayı çift saymaz; tarama idempotent olduğu
-   * için iki deyim arasındaki an da zararsızdır.
+   * Saklama süpürmesi: görülmüş (okunmuş ya da gizlenmiş) personel satırını siler ve sayıyı döner; okunmamış satır bekleyen iştir ve
+   * yaşı ne olursa olsun durur. İki düz deyimdir, çünkü PostgREST silmede `or=` süzgecini reddeder; kümeler kesişmez.
    */
   async purgeSeenStaffBefore(cutoffIso: string, kinds: readonly string[]): Promise<number> {
     if (kinds.length === 0) return 0;
@@ -198,7 +172,7 @@ export class NotificationDeliveryService extends BaseDbService<
       'notification_delivery',
       NotificationDeliverySchema,
       NotificationDeliveryInsertSchema,
-      // GÖNDERİM gerçeği donuk; değişebilen tek yüz MAKBUZ (14.16) — update şeması yalnız onu açar.
+      // Gönderim kaydı değişmez; değişebilen tek yüz makbuzdur ve güncelleme şeması yalnız onu açar.
       NotificationDeliveryUpdateSchema,
       false,
     );

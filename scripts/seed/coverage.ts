@@ -362,6 +362,26 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    // Almanya'daki tüketiciye satış ürün başına orana bağlıdır: oranlı ürün de oransız aktif ürün de olmalı ki "satışta değil" hâli görünsün.
+    baslik: 'Ülke pazarı (Almanya)',
+    kovalar: [
+      { ad: 'Almanya oranı olan ürün', zorunlu: true, sayac: (db) => say(db, 'product_vat_rate', (q) => q.eq('country', 'DE')) },
+      {
+        ad: 'Almanya oranı olmayan aktif ürün',
+        zorunlu: true,
+        sayac: async (db) => {
+          const [{ data: aktif }, { data: oranli }] = await Promise.all([
+            db.from('product').select('id').eq('status', 'active'),
+            db.from('product_vat_rate').select('product_id').eq('country', 'DE'),
+          ]);
+          const oranliKume = new Set(((oranli ?? []) as { product_id: string }[]).map((r) => r.product_id));
+          return ((aktif ?? []) as { id: string }[]).filter((p) => !oranliKume.has(p.id)).length;
+        },
+      },
+      { ad: 'Almanya fiyatı', zorunlu: true, sayac: (db) => say(db, 'price', (q) => q.eq('country', 'DE')) },
+    ],
+  },
+  {
     baslik: 'Stok — parti',
     tablo: 'stock',
     kovalar: [
@@ -451,7 +471,14 @@ const KAPSAM: KapsamAlani[] = [
       /* Pasif depo (kapsam seçicisi ve "depo kapandı" hâli) zorunlu değildir: beslemede kapalı depo yok; operatör bir depoyu kapattığında dolar. */
       { ad: 'pasif', zorunlu: false, filtre: (q) => q.eq('is_active', false) },
       { ad: 'kargo çıkışlı', zorunlu: true, sayac: (db) => say(db, 'warehouse_ship_country') },
+      // Almanya paketi teslim noktasında taşıyıcıya verilir; noktasız satır teklifi deponun adresinden sorardı.
+      {
+        ad: "Almanya'ya kargo (teslim noktalı)",
+        zorunlu: true,
+        sayac: (db) => say(db, 'warehouse_ship_country', (q) => q.eq('country', 'DE').not('handover', 'is', null)),
+      },
       { ad: 'yalnız rota', zorunlu: true, sayac: (db) => iliskisizSay(db, 'warehouse', 'id', 'warehouse_ship_country', 'warehouse_id') },
+      { ad: 'QUALITE tesisi', zorunlu: true, filtre: (q) => q.eq('business', 'qualite').eq('kind', 'facility') },
       // Araç deposu: türün üç kuralı (bölgeye bağlanamaz, kargo çıkışı olamaz, depo-üstü toplamaya girmez) ancak bir araç satırı varsa koşar.
       { ad: 'tesis', zorunlu: true, filtre: (q) => q.eq('kind', 'facility') },
       { ad: 'araç', zorunlu: true, filtre: (q) => q.eq('kind', 'vehicle') },
@@ -595,55 +622,14 @@ const KAPSAM: KapsamAlani[] = [
           return [...depolar.values()].filter((s) => s.size > 1).length;
         },
       },
-      {
-        ad: 'karma sepet üretebilen varyant (kargo deposunda VAR, rota deposunda YOK)',
-        zorunlu: true,
-        /**
-         * İki gruplu sepet: kalem kargolanabilir, kargo deposunda var, müşterinin rota deposunda yok; ölçüt deponun adı değil bu ilişkidir.
-         * Sayı sıfıra düşerse iki gruplu sepet üretilemiyor demektir, bu yüzden zorunludur.
-         */
-        sayac: async (db) => {
-          const [{ data: depoSatirlari }, { data: bolgeSatirlari }, { data: stokSatirlari }, { data: varyantSatirlari }, { data: urunSatirlari }] =
-            await Promise.all([
-              db.from('warehouse_ship_country').select('warehouse_id').eq('warehouse_active', true),
-              db.from('delivery_zone').select('warehouse_id').eq('is_active', true),
-              db.from('stock').select('variant_id,warehouse_id').gt('physical_qty', 0),
-              db.from('product_variant').select('id,product_id'),
-              db.from('product').select('id').eq('shippable', true),
-            ]);
-
-          const kargoDepolari = new Set(((depoSatirlari ?? []) as { warehouse_id: string }[]).map((d) => d.warehouse_id));
-          // Rota deposu ama kargo çıkışı DEĞİL: senaryonun tek ön koşulu bu depoların varlığı.
-          const yalnizRotaDepolari = [
-            ...new Set(((bolgeSatirlari ?? []) as { warehouse_id: string }[]).map((z) => z.warehouse_id)),
-          ].filter((id) => !kargoDepolari.has(id));
-          if (yalnizRotaDepolari.length === 0 || kargoDepolari.size === 0) return 0;
-
-          const kargolanabilir = new Set(((urunSatirlari ?? []) as { id: string }[]).map((p) => p.id));
-          const urunuyle = new Map(((varyantSatirlari ?? []) as { id: string; product_id: string }[]).map((v) => [v.id, v.product_id]));
-          const depoyaGore = new Map<string, Set<string>>();
-          for (const r of (stokSatirlari ?? []) as { variant_id: string; warehouse_id: string }[]) {
-            if (!depoyaGore.has(r.variant_id)) depoyaGore.set(r.variant_id, new Set());
-            depoyaGore.get(r.variant_id)!.add(r.warehouse_id);
-          }
-
-          let sayi = 0;
-          for (const [variantId, depolari] of depoyaGore) {
-            const urunId = urunuyle.get(variantId);
-            if (!urunId || !kargolanabilir.has(urunId)) continue;
-            const kargodaVar = [...kargoDepolari].some((id) => depolari.has(id));
-            const rotadaYok = yalnizRotaDepolari.some((id) => !depolari.has(id));
-            if (kargodaVar && rotadaYok) sayi += 1;
-          }
-          return sayi;
-        },
-      },
     ],
   },
   {
     baslik: 'Bölge · transfer',
     kovalar: [
       { ad: 'bölge aktif', zorunlu: true, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', true)) },
+      // Kodun işi bölgesinin deposundan gelir; QUALITE müşterisinin yeri yalnız bu kodlardan çözülür.
+      { ad: 'QUALITE bölge kodu', zorunlu: true, sayac: (db) => say(db, 'delivery_zone_postal_code', (q) => q.eq('business', 'qualite')) },
       /**
        * Pasif bölge zorunlu değildir, çünkü seed tek ve aktif bölge kurar; kova ölçmeye devam eder ki ikinci bölge eklenince pasif hâl buradan görülsün.
        * Bedeli: "bölge kapalı, talep birikiyor" hâli yerelde elle bölge kapatılmadan görülemez.
@@ -761,6 +747,19 @@ const KAPSAM: KapsamAlani[] = [
         zorunlu: true,
         // Rota dışı müşterinin TEK yolu. Yoksa çözüm `unresolved` döner ve senaryo yine doğmaz.
         sayac: (db) => say(db, 'warehouse_ship_country', (q) => q.eq('warehouse_active', true)),
+      },
+      {
+        ad: 'rota dışı Almanya adresi',
+        zorunlu: true,
+        // Almanya'nın kargo yolu (Kehl teslim noktası) ancak hiçbir bölgeye düşmeyen bir Almanya adresiyle denenir.
+        sayac: async (db) => {
+          const [{ data: rotaKodlari }, { data: adresler }] = await Promise.all([
+            db.from('delivery_zone_postal_code').select('postal_code').eq('country', 'DE'),
+            db.from('address').select('postal_code').eq('country', 'DE'),
+          ]);
+          const rota = new Set((rotaKodlari ?? []).map((r) => (r as { postal_code: string }).postal_code));
+          return (adresler ?? []).filter((r) => !rota.has((r as { postal_code: string }).postal_code)).length;
+        },
       },
     ],
   },

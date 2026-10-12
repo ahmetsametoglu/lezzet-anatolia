@@ -22,18 +22,20 @@ import { parisDateOf } from '@lezzet/helper';
 type ShippingQuote = Awaited<ReturnType<ShippingRateProvider['quote']>>[number];
 type ServicePoint = NonNullable<Awaited<ReturnType<ShippingRateProvider['servicePoint']>>>;
 import {
+  claimShipCountry,
   createTestWarehouse,
   purgeTestData,
   purgeVariantStock,
   mustDelete,
   settingsSnapshot,
   testPostalCode,
+  type ShipCountryClaim,
 } from '@lezzet/database/testing';
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
  * Kargo siparişi taslağı: rota içi adresten açılan kargo siparişi rota deposundan değil, malın durduğu kargo deposundan çıkar. Adres
- * Almanya'da, çünkü Fransa'ya kargo yapan beslemenin deposuyla yarışılmaz; depolar Fransa'dadır, satış yalnız oradan yazılır.
+ * Almanya'da ve Almanya'nın kargosunu test deposu alır (`claimShipCountry`); depolar Fransa'dadır, satış yalnız oradan yazılır.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -61,6 +63,7 @@ let b2bAddressId: string;
 let zoneId: string;
 let routeWarehouseId: string;
 let shippingWarehouseId: string;
+let almanyaKargosu: ShipCountryClaim | null = null;
 const createdProfiles: string[] = [];
 
 beforeAll(async () => {
@@ -78,7 +81,8 @@ beforeAll(async () => {
 
   // İki depo: biri rota (sınır ötesi bölgeye bağlı), biri Almanya'ya kargo yapan; aynı depo olsalardı "hangisinden çıktı" ölçülemezdi.
   routeWarehouseId = (await createTestWarehouse(db, { label: 'ROTA' })).id;
-  shippingWarehouseId = (await createTestWarehouse(db, { label: 'KARGO', shipsTo: ['DE'] })).id;
+  shippingWarehouseId = (await createTestWarehouse(db, { label: 'KARGO' })).id;
+  almanyaKargosu = await claimShipCountry(db, shippingWarehouseId, 'DE');
 
   // Stok YALNIZ kargo deposunda: kargo grubunun gerçek hâli.
   await new StockService(db).insert({
@@ -189,20 +193,24 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'order', (q) => q.in('customer_id', [customerId, b2bCustomerId]));
-  await purgeVariantStock(db, [variantId, localVariantId]);
-  await db.from('address').delete().in('customer_id', [customerId, b2bCustomerId]);
-  await db.from('delivery_zone').delete().eq('id', zoneId);
-  // Zil satırı seed yöneticilerine de yazılır ve profil purge'üyle gitmez; anahtar test varyantına bağlı.
-  const { data: ziller } = await db.from('notification').select('id').eq('dedupe_key', `shipping-data:unmeasured:${variantId}`);
-  await purgeTestData(db, {
-    notificationIds: ((ziller ?? []) as { id: string }[]).map((r) => r.id),
-    productIds: [productId, localProductId],
-    categoryIds: [categoryId],
-    profileIds: createdProfiles,
-    authUserIds: [authUserId, b2bAuthUserId],
-    warehouseIds: [routeWarehouseId, shippingWarehouseId],
-  });
+  try {
+    await mustDelete(db, 'order', (q) => q.in('customer_id', [customerId, b2bCustomerId]));
+    await purgeVariantStock(db, [variantId, localVariantId]);
+    await db.from('address').delete().in('customer_id', [customerId, b2bCustomerId]);
+    await db.from('delivery_zone').delete().eq('id', zoneId);
+    // Zil satırı seed yöneticilerine de yazılır ve profil purge'üyle gitmez; anahtar test varyantına bağlı.
+    const { data: ziller } = await db.from('notification').select('id').eq('dedupe_key', `shipping-data:unmeasured:${variantId}`);
+    await purgeTestData(db, {
+      notificationIds: ((ziller ?? []) as { id: string }[]).map((r) => r.id),
+      productIds: [productId, localProductId],
+      categoryIds: [categoryId],
+      profileIds: createdProfiles,
+      authUserIds: [authUserId, b2bAuthUserId],
+      warehouseIds: [routeWarehouseId, shippingWarehouseId],
+    });
+  } finally {
+    await almanyaKargosu?.restore();
+  }
   SettingsService.invalidate();
 });
 

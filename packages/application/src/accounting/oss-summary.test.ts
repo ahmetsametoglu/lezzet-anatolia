@@ -75,9 +75,9 @@ describe('OSS özeti okuması', () => {
 
     expect(await readOssSummary(db, { from: '2031-01-01', to: '2031-06-30' })).toEqual({
       lines: [
-        { year: 2031, quarter: 1, country: 'DE', vatRate: 7, netCents: 1_000, vatCents: 70 },
-        { year: 2031, quarter: 2, country: 'DE', vatRate: 7, netCents: 1_000, vatCents: 70 },
-        { year: 2031, quarter: 2, country: 'DE', vatRate: 19, netCents: 1_000, vatCents: 190 },
+        { year: 2031, quarter: 1, country: 'DE', vatRate: 7, netCents: 1_000, vatCents: 70, orderCount: 1 },
+        { year: 2031, quarter: 2, country: 'DE', vatRate: 7, netCents: 1_000, vatCents: 70, orderCount: 1 },
+        { year: 2031, quarter: 2, country: 'DE', vatRate: 19, netCents: 1_000, vatCents: 190, orderCount: 1 },
       ],
       originTotal: { netCents: 1_000, vatCents: 55 },
     });

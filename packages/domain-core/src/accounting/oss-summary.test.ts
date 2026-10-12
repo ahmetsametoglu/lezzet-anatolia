@@ -33,17 +33,18 @@ describe('OSS özeti', () => {
       { sale: satis({ saleDate: '2026-03-31' }), items: [yedi] },
       { sale: satis({ saleDate: '2026-04-01' }), items: [yedi, ondokuz] },
     ]);
+    // Sipariş sayısı satır başınadır: iki oranlı sipariş iki satıra da sayılır.
     expect(ozet.lines).toEqual([
-      { year: 2026, quarter: 1, country: 'DE', vatRate: 7, netCents: 2_000, vatCents: 140 },
-      { year: 2026, quarter: 2, country: 'DE', vatRate: 7, netCents: 1_000, vatCents: 70 },
-      { year: 2026, quarter: 2, country: 'DE', vatRate: 19, netCents: 1_000, vatCents: 190 },
+      { year: 2026, quarter: 1, country: 'DE', vatRate: 7, netCents: 2_000, vatCents: 140, orderCount: 2 },
+      { year: 2026, quarter: 2, country: 'DE', vatRate: 7, netCents: 1_000, vatCents: 70, orderCount: 1 },
+      { year: 2026, quarter: 2, country: 'DE', vatRate: 19, netCents: 1_000, vatCents: 190, orderCount: 1 },
     ]);
   });
 
   it('kargo payı malın oranıyla satıra girer, aktarım satırıyla aynı türetim', () => {
     // 10,70 € mal + 1,07 € kargo, ikisi de %7: KDV hariç 11,00 €, KDV 0,77 €.
     const ozet = ossSummary([{ sale: satis({ shippingFeeCents: 107 }), items: [yedi] }]);
-    expect(ozet.lines).toEqual([{ year: 2026, quarter: 1, country: 'DE', vatRate: 7, netCents: 1_100, vatCents: 77 }]);
+    expect(ozet.lines).toEqual([{ year: 2026, quarter: 1, country: 'DE', vatRate: 7, netCents: 1_100, vatCents: 77, orderCount: 1 }]);
   });
 
   it('eşikten önceki uzaktan satış ayrı toplamdır; hediye, yurt içi ve ters yüklemeli satış özete girmez', () => {

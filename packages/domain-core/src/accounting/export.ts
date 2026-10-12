@@ -4,7 +4,7 @@ import { chargedShippingParts } from '../delivery/shipping-fee';
 import { chargedQtyOf, fulfilledLineAmountCents, fulfilledLineOf } from '../payment/payment-status';
 import type { AccountingLine } from './line';
 import { vatByRate } from '../pricing/vat-base';
-import { isZeroRated } from '../tax/vat-treatment';
+import { isZeroRated, rateCountryOf } from '../tax/vat-treatment';
 
 /**
  * Muhasebe aktarımı (DOMAIN §9): hangi satış dışa gider ve satırın KDV kırılımı nedir; tutarlar TTC'dir, muhasebeci HT ve KDV
@@ -12,13 +12,18 @@ import { isZeroRated } from '../tax/vat-treatment';
  */
 
 /** Bir satırın tek KDV oranındaki payı. `net + vat === gross` her zaman tutar. */
-export interface ExportVatLine {
+export interface SaleVatLine {
   vatRate: number;
   /** TTC — müşterinin ödediği. */
   gross: number;
   /** HT — KDV hariç. */
   net: number;
   vat: number;
+}
+
+/** Aktarımın KDV payı, oranın ülkesiyle; aynı oran iki ülkede ayrı beyan edilir. `null` = ters yükleme, KDV ülkesi yok. */
+export interface ExportVatLine extends SaleVatLine {
+  country: Country | null;
 }
 
 export interface AccountingExportRow {
@@ -95,7 +100,8 @@ export function invoiceNoteOf(treatment: VatTreatment): AccountingExportRow['inv
  * %5,5'lik gıdada KDV'yi fazla beyan ederdi. Ters yüklemede KDV yoktur, satır net = brüt gider.
  */
 export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]): AccountingExportRow {
-  const vatLines = vatLinesOf(sale, items);
+  const country = rateCountryOf(sale.vatTreatment, sale.deliveryCountry);
+  const vatLines = vatLinesOf(sale, items).map((line) => ({ ...line, country }));
 
   return {
     orderId: sale.id,
@@ -141,7 +147,7 @@ export function vatLinesOf(
   items: readonly AccountingLine[],
   settled = true,
   keepZeroRatedRates = false,
-): ExportVatLine[] {
+): SaleVatLine[] {
   const charged = items
     .map((item) => ({ line: fulfilledLineOf(item), vatRate: item.vatRate }))
     .filter(({ line }) => chargedQtyOf(line, settled) > 0)
@@ -196,14 +202,16 @@ export function buildAccountingExport(
     giftListCents = giftListCents === null || listCents === null ? null : giftListCents + listCents;
   }
 
-  const byRate = new Map<number, { gross: number; net: number; vat: number }>();
+  // Oran ve ülke birlikte anahtardır: beyan ülke ülke verilir.
+  const byRate = new Map<string, { vatRate: number; country: Country | null; gross: number; net: number; vat: number }>();
   for (const exportRow of rows) {
     for (const line of exportRow.vatLines) {
-      const current = byRate.get(line.vatRate) ?? { gross: 0, net: 0, vat: 0 };
+      const key = `${line.vatRate}:${line.country ?? ''}`;
+      const current = byRate.get(key) ?? { vatRate: line.vatRate, country: line.country, gross: 0, net: 0, vat: 0 };
       current.gross += toCents(line.gross);
       current.net += toCents(line.net);
       current.vat += toCents(line.vat);
-      byRate.set(line.vatRate, current);
+      byRate.set(key, current);
     }
   }
 
@@ -217,9 +225,9 @@ export function buildAccountingExport(
       vat: sumOf(rows, 'vat'),
       shippingFee: sumOf(rows, 'shippingFee'),
       discountAmount: sumOf(rows, 'discountAmount'),
-      byVatRate: [...byRate.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([vatRate, t]) => ({ vatRate, gross: fromCents(t.gross), net: fromCents(t.net), vat: fromCents(t.vat) })),
+      byVatRate: [...byRate.values()]
+        .sort((a, b) => a.vatRate - b.vatRate || (a.country ?? '').localeCompare(b.country ?? ''))
+        .map((t) => ({ vatRate: t.vatRate, country: t.country, gross: fromCents(t.gross), net: fromCents(t.net), vat: fromCents(t.vat) })),
       excludedGiftCount,
       excludedGiftCost: giftCostCents === null ? null : fromCents(giftCostCents),
       excludedGiftListValue: giftListCents === null ? null : fromCents(giftListCents),

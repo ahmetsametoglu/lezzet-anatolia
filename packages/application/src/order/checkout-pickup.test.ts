@@ -12,7 +12,15 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, testPostalCode } from '@lezzet/database/testing';
+import {
+  claimShipCountry,
+  createTestWarehouse,
+  mustDelete,
+  purgeTestData,
+  purgeVariantStock,
+  testPostalCode,
+  type ShipCountryClaim,
+} from '@lezzet/database/testing';
 import { getCartView } from '../cart/read';
 import { readCheckoutSnapshot } from './checkout-snapshot';
 import { placeOrder } from './place-order';
@@ -197,16 +205,18 @@ describe('gel-al sepetin grubuna ve kapının asgari sepetine bağlı değildir'
   let sogukProductId = '';
   let sogukVariantId = '';
   let addressId = '';
+  let almanyaKargosu: ShipCountryClaim | null = null;
   const ikiKalem = () => [
     { kind: 'variant' as const, variantId: kargoVariantId, qty: 1, stockId: null },
     { kind: 'variant' as const, variantId: sogukVariantId, qty: 1, stockId: null },
   ];
 
-  // Kargo deposu Almanya'ya kargo yapar, çünkü Fransa'ya kargo yapan beslemenin deposuyla yarışmaz; depolar Fransa'dadır, satış yalnız
-  // satıcının ülkesindeki depodan yazılır.
+  // Kargo deposu Almanya'ya kargo yapar ve ülkeyi testin süresince beslemenin deposundan alır (`claimShipCountry`); depolar Fransa'dadır,
+  // satış yalnız satıcının ülkesindeki depodan yazılır.
   beforeAll(async () => {
     pickupId = (await createTestWarehouse(db, { label: 'GLD', pickupEnabled: true })).id;
-    shippingId = (await createTestWarehouse(db, { label: 'KRD', shipsTo: ['DE'] })).id;
+    shippingId = (await createTestWarehouse(db, { label: 'KRD' })).id;
+    almanyaKargosu = await claimShipCountry(db, shippingId, 'DE');
     const products = new ProductService(db);
     const kargo = await products.create({
       name: { tr: `Gel-al kargo ürünü ${stamp}` },
@@ -255,12 +265,16 @@ describe('gel-al sepetin grubuna ve kapının asgari sepetine bağlı değildir'
   });
 
   afterAll(async () => {
-    await mustDelete(db, 'settings', (q) => q.eq('key', 'min_basket_cents').eq('scope_type', 'warehouse').eq('scope_id', pickupId));
-    SettingsService.invalidate('min_basket_cents');
-    await mustDelete(db, 'order', (q) => q.eq('customer_id', allowedId).eq('warehouse_id', pickupId));
-    await purgeVariantStock(db, [kargoVariantId, sogukVariantId]);
-    await mustDelete(db, 'address', (q) => q.eq('id', addressId));
-    await purgeTestData(db, { productIds: [kargoProductId, sogukProductId], warehouseIds: [pickupId, shippingId] });
+    try {
+      await mustDelete(db, 'settings', (q) => q.eq('key', 'min_basket_cents').eq('scope_type', 'warehouse').eq('scope_id', pickupId));
+      SettingsService.invalidate('min_basket_cents');
+      await mustDelete(db, 'order', (q) => q.eq('customer_id', allowedId).eq('warehouse_id', pickupId));
+      await purgeVariantStock(db, [kargoVariantId, sogukVariantId]);
+      await mustDelete(db, 'address', (q) => q.eq('id', addressId));
+      await purgeTestData(db, { productIds: [kargoProductId, sogukProductId], warehouseIds: [pickupId, shippingId] });
+    } finally {
+      await almanyaKargosu?.restore();
+    }
   });
 
   it('adrese gidemeyen kalem de depodan alınır ve depo kapsamlı taban gel-al siparişini durdurmaz', async () => {

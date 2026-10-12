@@ -14,8 +14,11 @@ export interface OssSummaryLine {
 }
 
 export interface OssSummary {
-  /** Varış ülkesinin KDV'siyle yazılan satışlar (`intra_eu_distance_oss`), yıl, çeyrek, ülke ve oran sırasıyla. */
-  lines: OssSummaryLine[];
+  /**
+   * Varış ülkesinin KDV'siyle yazılan satışlar (`intra_eu_distance_oss`), yıl, çeyrek, ülke ve oran sırasıyla; `orderCount` satıra katkısı
+   * olan sipariş sayısıdır, iki oranlı sipariş iki satıra da sayılır.
+   */
+  lines: Array<OssSummaryLine & { orderCount: number }>;
   /** Eşikten önce satıcının KDV'siyle yazılan uzaktan satışlar (`intra_eu_distance_origin`); Fransa'nın beyanına girer, OSS'ye girmez. */
   originTotal: { netCents: number; vatCents: number };
 }
@@ -28,7 +31,7 @@ export type OssSale = SaleVatBasis & Pick<OrderSale, 'saleDate' | 'deliveryCount
  * satışın gerçekleştiği gündür (`saleDate`), çünkü KDV teslimle doğar.
  */
 export function ossSummary(sales: ReadonlyArray<{ sale: OssSale; items: readonly AccountingLine[] }>): OssSummary {
-  const lines = new Map<string, OssSummaryLine>();
+  const lines = new Map<string, OssSummary['lines'][number]>();
   const originTotal = { netCents: 0, vatCents: 0 };
 
   for (const { sale, items } of sales) {
@@ -45,9 +48,18 @@ export function ossSummary(sales: ReadonlyArray<{ sale: OssSale; items: readonly
         continue;
       }
       const key = `${year}-${quarter}-${sale.deliveryCountry}-${vatLine.vatRate}`;
-      const line = lines.get(key) ?? { year, quarter, country: sale.deliveryCountry, vatRate: vatLine.vatRate, netCents: 0, vatCents: 0 };
+      const line = lines.get(key) ?? {
+        year,
+        quarter,
+        country: sale.deliveryCountry,
+        vatRate: vatLine.vatRate,
+        netCents: 0,
+        vatCents: 0,
+        orderCount: 0,
+      };
       line.netCents += netCents;
       line.vatCents += vatCents;
+      line.orderCount += 1;
       lines.set(key, line);
     }
   }

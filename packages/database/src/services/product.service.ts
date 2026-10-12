@@ -78,6 +78,8 @@ interface ProductFilters {
    * tüketicisine satılmaz (`sellableIn`). Sunucuda süzülür (gerekçe `collectionId`te).
    */
   missingCountryRate?: ProductVatRate['country'];
+  /** Yalnız bu ülkeye özel fiyat satırı olan boyu bulunanlar, fiyat ekranının "Almanya fiyatı olan" süzgeci. */
+  hasCountryPrice?: ProductVatRate['country'];
 }
 
 interface ProductListOptions {
@@ -126,15 +128,18 @@ function productSelect(f?: ProductFilters): string {
   const collections = f?.collectionId
     ? 'collections:product_collections!inner(collection_id)'
     : 'collections:product_collections(collection_id)';
-  return `*,variants:product_variant(*),${collections},countryRates:product_vat_rate(country,vat_rate)${rateGapSelect(f)}`;
+  return `*,variants:product_variant(*),${collections},countryRates:product_vat_rate(country,vat_rate)${filterEmbeds(f)}`;
 }
 
-/** Oran boşluğu süzgecinin gömmesi; ad snake_case yazılır, çünkü süzgeç anahtarı kolon çevirisinden geçer. */
+/** Süzgeç gömmelerinin adları; snake_case yazılır, çünkü süzgeç anahtarı kolon çevirisinden geçer. */
 const RATE_GAP = 'rate_gap';
+const COUNTRY_PRICE = 'country_price';
 
 /** Gömülü ilişkide süzen sorgu, ilişki seçimde yoksa reddedilir; süzgeci taşıyan her projeksiyon bu parçayı ekler. */
-function rateGapSelect(f?: ProductFilters): string {
-  return f?.missingCountryRate ? `,${RATE_GAP}:product_vat_rate(country)` : '';
+function filterEmbeds(f?: ProductFilters): string {
+  const rateGap = f?.missingCountryRate ? `,${RATE_GAP}:product_vat_rate(country)` : '';
+  const countryPrice = f?.hasCountryPrice ? `,${COUNTRY_PRICE}:product_variant!inner(price!inner(country))` : '';
+  return `${rateGap}${countryPrice}`;
 }
 
 interface ProductQuery {
@@ -173,6 +178,8 @@ function buildProductQuery(f?: ProductFilters): ProductQuery {
     filters[`${RATE_GAP}.country`] = f.missingCountryRate;
     isNullFields.push(RATE_GAP);
   }
+  // İç birleşimli iki gömme: ülke satırı olmayan boy da ürün de düşer.
+  if (f?.hasCountryPrice) filters[`${COUNTRY_PRICE}.price.country`] = f.hasCountryPrice;
   return { filters, orFilters, isNullFields };
 }
 
@@ -305,7 +312,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   async list(opts: ProductListOptions = {}): Promise<Page<Product>> {
     const { filters, orFilters, isNullFields } = this.buildQuery(opts.filters);
     return this.getPage(filters, {
-      select: `*${rateGapSelect(opts.filters)}`,
+      select: `*${filterEmbeds(opts.filters)}`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
@@ -322,7 +329,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     const { filters, orFilters, isNullFields } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductStockRowSchema, filters, {
       // `sort_order` imleç için seçilir: dar şema onu düşürür, imleç ham satırdan kurulur (`pageOf`).
-      select: `id,sort_order,name,category_id,date_type,shelf_life_days,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,min_stock_qty,sku)${rateGapSelect(opts.filters)}`,
+      select: `id,sort_order,name,category_id,date_type,shelf_life_days,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,min_stock_qty,sku)${filterEmbeds(opts.filters)}`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
@@ -339,7 +346,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     const { filters, orFilters, isNullFields } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductPriceRowSchema, filters, {
       // Baştaki `sort_order` ürününkidir ve imleç ona dayanır; gömülü seçimdeki boyun sıra numarasıdır.
-      select: `id,sort_order,name,category_id,vat_rate,target_margin_percent,target_margin_b2b_percent,auto_price,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,sort_order)${rateGapSelect(opts.filters)}`,
+      select: `id,sort_order,name,category_id,vat_rate,target_margin_percent,target_margin_b2b_percent,auto_price,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,sort_order)${filterEmbeds(opts.filters)}`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,

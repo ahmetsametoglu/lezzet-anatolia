@@ -3,54 +3,45 @@ import { StorageAreaService, VehicleService, WarehouseService, WarehouseTransfer
 import { tabloDolu, type Db } from './shared';
 
 // ── Depo ağı ─────────────────────────────────────────────────────────────────────────────────────
-// Besleme birden çok depo açar, çünkü tek depolu veride depo süzgecini unutan sorgu doğru cevap verir ve yanlış depoya düşen sipariş
-// fark edilmez. STR Fransa'ya kargo yapar ve dört rotanın deposudur; KEHL Almanya'daki sınır deposudur (transfer hedefi, rotasız ve
-// kargosuz); BDX uzakta, rotası olan ama kargo yapmayan depodur ve karma sepeti (aynı sepette kapı ve kargo kalemi) mümkün kılar.
+// Strasbourg'da iki tesis: Lezzet'in tesisi (STR) Fransa'ya ve Almanya'ya kargo yapar ve dört rotanın deposudur, QUALITE'nin tesisi (QLT)
+// yalnız kendi rotasına dağıtır ve kargo yapmaz. İki tesis ve iki araç depo süzgecini unutan sorguyu görünür kılar, tek depolu veride o
+// sorgu doğru cevap verirdi.
 
 export interface Depolar {
-  /** Strasbourg — ana depo, Fransa'nın kargo deposu ve dört rotanın deposu. */
+  /** Strasbourg, Lezzet: kargo deposu (Fransa ve Almanya), dört rotanın deposu ve gel-al noktası. */
   str: string;
-  /** Kehl (DE) — sınır deposu: transfer hedefi ve ikinci ülke; rotası ve kargosu yok. */
-  kehl: string;
-  /** Bordeaux — rota deposu, kargo çıkışı değil; uzaklığı Strasbourg'un rota ağıyla kesişmesin diye. */
-  bdx: string;
-  /**
-   * VAN-1 — kurye aracı (`kind='vehicle'`); yerinde satışın depo çözümü araçtandır (`?place=van`). İçi boş başlar, çünkü araca mal
-   * koymak kuryenin adımıdır; satır türün üç kuralı (bölge, kargo, depo-üstü toplam) koşsun diye vardır.
-   */
+  /** Strasbourg, QUALITE: toptan müşterinin rotası ve stoğu; kargo yapmaz, kural veritabanındadır. */
+  qlt: string;
+  /** VAN-1, Lezzet'in kurye aracı (`kind='vehicle'`); yerinde satışın depo çözümü araçtandır (`?place=van`). İçi boş başlar. */
   van: string;
+  /** VAN-Q, QUALITE'nin aracı; işi evindeki tesisten gelir. */
+  qltVan: string;
 }
 
-/**
- * Depolar kod bazında kurulur, "tablo dolu mu" ile değil: testler ve operatör de depo açar ve listenin ilk satırına düşmek beslemeyi
- * yabancı bir depoya yazardı. Aracın plakası tek yerdedir, çünkü depo ve ölçüm noktası adımları aynı aracı ister.
- */
-const KURYE_ARACI_PLAKA = '67 LZT 01';
+/** Almanya'ya giden kolinin taşıyıcıya verildiği nokta; geliştirme verisinin uydurma adresi. */
+const KEHL_TESLIM_NOKTASI = { line1: 'Hauptstraße 8', postalCode: '77694', city: 'Kehl' };
+
+/** Araç kayıtları; depo ve ölçüm noktası adımları aynı aracı ister, plaka tek yerde durur. */
+const ARACLAR = {
+  // Frigo kamyonet günde bir ölçüm bekler: araç varsayılanı 0 ama bu araç soğuk taşır ve soğutucu bayrağı veride yok.
+  lezzet: { plate: '67 LZT 01', label: 'Frigo kamyonet', expectedDailyChecks: 1, sortOrder: 1 },
+  qualite: { plate: '67 QLT 02', label: 'QUALITE kamyoneti', expectedDailyChecks: 0, sortOrder: 2 },
+} as const;
 
 /** Aracı bul ya da aç — iki seed adımının ortak kapısı; ikinci çağrı mevcut satırı döndürür. */
-async function kuryeAraciKaydi(db: Db, homeWarehouseId: string): Promise<string> {
+async function aracKaydi(db: Db, arac: (typeof ARACLAR)[keyof typeof ARACLAR], homeWarehouseId: string): Promise<string> {
   const vehicles = new VehicleService(db);
-  const mevcut = (await vehicles.list()).find((v) => v.plate === KURYE_ARACI_PLAKA);
+  const mevcut = (await vehicles.list()).find((v) => v.plate === arac.plate);
   if (mevcut) return mevcut.id;
-  // Frigo kamyonet günde 1 ölçüm bekler: araç varsayılanı 0 ama bu araç soğuk taşır ve soğutucu bayrağı veride yok.
-  return (
-    await vehicles.insert({
-      plate: KURYE_ARACI_PLAKA,
-      label: 'Frigo kamyonet',
-      warehouseId: homeWarehouseId,
-      expectedDailyChecks: 1,
-      sortOrder: 1,
-    })
-  ).id;
+  return (await vehicles.insert({ ...arac, warehouseId: homeWarehouseId })).id;
 }
 
 export async function seedWarehouses(db: Db): Promise<Depolar> {
   const warehouses = new WarehouseService(db);
   const mevcut = await warehouses.list();
   const koduyla = new Map(mevcut.map((w) => [w.code, w.id]));
-  // Seed'in yönettiği kodlar tek yerde; kümede olmayan kendi kaydımız ikinci koşuda "yabancı" diye raporlanırdı. Yabancı depo
-  // silinmez, çünkü depo silmek kararın işidir.
-  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'BDX', 'VAN-1']);
+  // Seed'in yönettiği kodlar tek yerde; yabancı depo silinmez, çünkü depo silmek kararın işidir.
+  const SEED_DEPOLARI = new Set(['STR', 'QLT', 'VAN-1', 'VAN-Q']);
   const yabanci = mevcut.filter((w) => !SEED_DEPOLARI.has(w.code));
   if (yabanci.length > 0) {
     // Yabancı satır sessiz geçilmez: operasyon ekranında görünen her depo veriyi etkiler.
@@ -58,64 +49,53 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   }
 
   let strId = koduyla.get('STR');
-  let kehlId = koduyla.get('KEHL');
-  let bdxId = koduyla.get('BDX');
+  let qltId = koduyla.get('QLT');
   let vanId = koduyla.get('VAN-1');
-  if (strId && kehlId && bdxId && vanId) {
-    console.log('▸ depolar zaten kurulu (STR + KEHL + BDX + VAN-1) — atlandı');
-    return { str: strId, kehl: kehlId, bdx: bdxId, van: vanId };
+  let qltVanId = koduyla.get('VAN-Q');
+  if (strId && qltId && vanId && qltVanId) {
+    console.log('▸ depolar zaten kurulu (STR + QLT + VAN-1 + VAN-Q) — atlandı');
+    return { str: strId, qlt: qltId, van: vanId, qltVan: qltVanId };
   }
   console.log('▸ DEPO seed');
 
   if (!strId) {
     const str = await warehouses.insert({
       code: 'STR',
-      name: 'Strasbourg — ana depo',
+      name: 'Strasbourg — Lezzet deposu',
       countryCode: 'FR',
       address: { line1: '12 rue du Marché', postalCode: '67000', city: 'Strasbourg', country: 'FR' },
       // Rotanın çıpası; sabit yazılır, çünkü besleme çevrimdışı ve belirlenimci olmalı.
       lat: 48.5839,
       lng: 7.7455,
-      // Gel-al noktası: izinli müşteri hazır siparişini buradan alır (yalnız STR — KEHL ve BDX'te tezgâh yok).
+      // Gel-al noktası: izinli müşteri hazır siparişini buradan alır.
       pickupEnabled: true,
       sortOrder: 1,
     });
     strId = str.id;
-    await warehouses.setShipCountries(strId, [{ country: 'FR', handover: null }]);
-    console.log(`  ✓ ${str.code} · ${str.name} · kargo deposu (FR)`);
+    // Almanya paketi Strasbourg'da hazırlanır ve Kehl'de taşıyıcıya verilir; tarife oradan sorulur.
+    await warehouses.setShipCountries(strId, [
+      { country: 'FR', handover: null },
+      { country: 'DE', handover: KEHL_TESLIM_NOKTASI },
+    ]);
+    console.log(`  ✓ ${str.code} · ${str.name} · kargo deposu (FR · DE, teslim noktası Kehl)`);
   }
-  if (!kehlId) {
-    const kehl = await warehouses.insert({
-      code: 'KEHL',
-      name: 'Kehl — sınır deposu',
-      countryCode: 'DE',
-      address: { line1: 'Hauptstraße 8', postalCode: '77694', city: 'Kehl', country: 'DE' },
-      lat: 48.5735,
-      lng: 7.8148,
-      // Kargosuz: Almanya'daki depodan satış yerel satıştır ve desteklenmez (DOMAIN §5/§17).
+
+  if (!qltId) {
+    const qlt = await warehouses.insert({
+      code: 'QLT',
+      name: 'Strasbourg — QUALITE deposu',
+      business: 'qualite',
+      countryCode: 'FR',
+      address: { line1: '5 rue du Havre', postalCode: '67100', city: 'Strasbourg', country: 'FR' },
+      lat: 48.5717,
+      lng: 7.7964,
       sortOrder: 2,
     });
-    kehlId = kehl.id;
-    console.log(`  ✓ ${kehl.code} · ${kehl.name}`);
+    qltId = qlt.id;
+    console.log(`  ✓ ${qlt.code} · ${qlt.name} · QUALITE, rotası var, kargo YOK`);
   }
 
-  // Üçüncü depo: rotası var, kargo çıkışı yok. Noktası `postal_code_place`in 33000 satırıyla aynıdır.
-  if (!bdxId) {
-    const bdx = await warehouses.insert({
-      code: 'BDX',
-      name: 'Bordeaux — bölge deposu',
-      countryCode: 'FR',
-      address: { line1: '24 cours de l’Intendance', postalCode: '33000', city: 'Bordeaux', country: 'FR' },
-      lat: 44.8404,
-      lng: -0.5805,
-      sortOrder: 3,
-    });
-    bdxId = bdx.id;
-    console.log(`  ✓ ${bdx.code} · ${bdx.name} · rotası var, kargo çıkışı YOK`);
-  }
-
-  // Araç deposu: kurye fazlasını yükleyip yolda satabilir; türün kuralları (bölge, kargo, depo-üstü toplam) ancak bir araç satırı
-  // varken koşar.
+  // Araç deposu aracını söyler (`warehouse_vehicle_identity`); malın hangi araçtan çıkacağı bu bağdan okunur, işi evinden gelir.
   if (!vanId) {
     const arac = await warehouses.insert({
       code: 'VAN-1',
@@ -124,18 +104,30 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       countryCode: 'FR',
       // Adres yok: araç bir yerdir ama sabit adresi yoktur ve uydurma adres onu tesis gibi okuturdu.
       address: null,
-      // Aracın evi STR: hangi tesise ait olduğu künyenin parçasıdır, bağ olmadan tesisin paneli aracındakini soramaz.
       homeWarehouseId: strId,
-      // Araç deposu aracını söyler (`warehouse_vehicle_identity`); malın hangi araçtan çıkacağı bu bağdan okunur.
-      vehicleId: await kuryeAraciKaydi(db, strId),
-      sortOrder: 4,
+      vehicleId: await aracKaydi(db, ARACLAR.lezzet, strId),
+      sortOrder: 3,
     });
     vanId = arac.id;
-    console.log(`  ✓ ${arac.code} · ${arac.name} · ARAÇ (bölge bağlanamaz, kargo çıkışı olamaz)`);
+    console.log(`  ✓ ${arac.code} · ${arac.name} · ARAÇ (evi STR)`);
+  }
+  if (!qltVanId) {
+    const arac = await warehouses.insert({
+      code: 'VAN-Q',
+      name: 'QUALITE aracı',
+      kind: 'vehicle',
+      countryCode: 'FR',
+      address: null,
+      homeWarehouseId: qltId,
+      vehicleId: await aracKaydi(db, ARACLAR.qualite, qltId),
+      sortOrder: 4,
+    });
+    qltVanId = arac.id;
+    console.log(`  ✓ ${arac.code} · ${arac.name} · ARAÇ (evi QLT)`);
   }
 
-  console.log('✓ depo: STR (Fransa kargosu, dört rota) + KEHL (rotasız) + BDX (rota, kargosuz) + VAN-1 araç');
-  return { str: strId, kehl: kehlId, bdx: bdxId, van: vanId };
+  console.log('✓ depo: STR (Lezzet · kargo FR+DE · dört rota) + QLT (QUALITE · rota, kargosuz) + VAN-1 + VAN-Q');
+  return { str: strId, qlt: qltId, van: vanId, qltVan: qltVanId };
 }
 
 /**
@@ -145,7 +137,7 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
 export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
   // Muhafız "hedefi tesis olan transfer var mı"dır, "tablo dolu mu" değil: araç yüklemesi de bu tabloya yazar ve tabloyu doldurup
   // bu bloğu sessizce atlatırdı.
-  const tesisler = [depolar.str, depolar.kehl, depolar.bdx];
+  const tesisler = [depolar.str, depolar.qlt];
   const { count: tesisTransferi, error: muhafizHatasi } = await db
     .from('warehouse_transfer')
     .select('*', { count: 'exact', head: true })
@@ -187,12 +179,12 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
 
   const transfers = new WarehouseTransferService(db);
   const sonuc = await transfers.dispatch({
-    toWarehouseId: depolar.kehl,
+    toWarehouseId: depolar.qlt,
     lines: partiler.map((p) => ({ sourceStockId: p.id, qty: Math.min(4, p.physical_qty) })),
-    note: 'Kehl açılış sevkiyatı — kabul bekliyor.',
+    note: 'QUALITE takviyesi — kabul bekliyor.',
   });
 
-  console.log(`  ✓ ${sonuc.referenceNo} · ${partiler.length} kalem · STR → KEHL (yolda)`);
+  console.log(`  ✓ ${sonuc.referenceNo} · ${partiler.length} kalem · STR → QLT (yolda)`);
 
   // Kapanmış transferler: yalnız "yolda" bırakmak sevkiyat geçmişini, eksik kabulü ve geri alınmış sevki hiç göstermezdi.
   const digerPartiler = ((data ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
@@ -202,7 +194,7 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
   // 1) Kabul edilmiş ama biri eksik gelmiş: fark bir kayıptır ve kabul ekranının asıl sınavı odur.
   if (digerPartiler.length >= 2) {
     const kabul = await transfers.dispatch({
-      toWarehouseId: depolar.kehl,
+      toWarehouseId: depolar.qlt,
       lines: digerPartiler.slice(0, 2).map((p) => ({ sourceStockId: p.id, qty: Math.min(5, p.physical_qty) })),
       note: 'Haftalık ikmal.',
     });
@@ -219,7 +211,7 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
   const iptalParti = digerPartiler[2];
   if (iptalParti) {
     const iptal = await transfers.dispatch({
-      toWarehouseId: depolar.kehl,
+      toWarehouseId: depolar.qlt,
       lines: [{ sourceStockId: iptalParti.id, qty: Math.min(3, iptalParti.physical_qty) }],
       note: 'Haftalık ikmalin ikinci aracı.',
     });
@@ -231,7 +223,7 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
   const tamParti = digerPartiler[3];
   if (tamParti) {
     const tam = await transfers.dispatch({
-      toWarehouseId: depolar.kehl,
+      toWarehouseId: depolar.qlt,
       lines: [{ sourceStockId: tamParti.id, qty: Math.min(4, tamParti.physical_qty) }],
       note: 'Hafta sonu takviyesi.',
     });
@@ -248,7 +240,7 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
   const gecParti = digerPartiler[4];
   if (gecParti) {
     const gec = await transfers.dispatch({
-      toWarehouseId: depolar.kehl,
+      toWarehouseId: depolar.qlt,
       lines: [{ sourceStockId: gecParti.id, qty: Math.min(2, gecParti.physical_qty) }],
       note: 'Ek sipariş — araç dönüşte uğrayacak.',
     });
@@ -261,44 +253,41 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
     console.log(`  ✓ ${gec.referenceNo} · YOLDA ve GECİKMİŞ (4 gün)`);
   }
 
-  // 5) Gelen yoldaki (KEHL → STR): ana deponun ekranında "Gelen — kabul bekliyor" hâli de dolu olsun diye ters yönde bir sevkiyat.
-  const { data: kehlRezerveli, error: kehlRezerveHatasi } = await db
-    .from('reservation')
-    .select('variant_id')
-    .eq('warehouse_id', depolar.kehl);
-  if (kehlRezerveHatasi) throw kehlRezerveHatasi;
-  const kehlMesgul = new Set((kehlRezerveli ?? []).map((r) => (r as { variant_id: string }).variant_id));
-  const { data: kehlData, error: kehlHatasi } = await db
+  // 5) Gelen yoldaki (QLT → STR): Lezzet deposunun ekranında "Gelen — kabul bekliyor" hâli de dolu olsun diye ters yönde bir sevkiyat.
+  const { data: qltRezerveli, error: qltRezerveHatasi } = await db.from('reservation').select('variant_id').eq('warehouse_id', depolar.qlt);
+  if (qltRezerveHatasi) throw qltRezerveHatasi;
+  const qltMesgul = new Set((qltRezerveli ?? []).map((r) => (r as { variant_id: string }).variant_id));
+  const { data: qltData, error: qltHatasi } = await db
     .from('stock')
     .select('id,variant_id,physical_qty')
-    .eq('warehouse_id', depolar.kehl)
+    .eq('warehouse_id', depolar.qlt)
     .is('offer_price', null)
     .gt('physical_qty', 8)
     .order('physical_qty', { ascending: false })
     .limit(20);
-  if (kehlHatasi) throw kehlHatasi;
-  const kehlPartiler = ((kehlData ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
-    .filter((p) => !kehlMesgul.has(p.variant_id))
+  if (qltHatasi) throw qltHatasi;
+  const qltPartiler = ((qltData ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
+    .filter((p) => !qltMesgul.has(p.variant_id))
     .slice(0, 2);
-  if (kehlPartiler.length === 0) {
-    console.log('  ▸ KEHL\'de rezervasyonsuz uygun parti yok — gelen transfer atlandı');
+  if (qltPartiler.length === 0) {
+    console.log("  ▸ QLT'de rezervasyonsuz uygun parti yok — gelen transfer atlandı");
   } else {
     const gelen = await transfers.dispatch({
       toWarehouseId: depolar.str,
-      lines: kehlPartiler.map((p) => ({ sourceStockId: p.id, qty: Math.min(6, p.physical_qty) })),
-      note: 'Strasbourg takviyesi — kabul bekliyor.',
+      lines: qltPartiler.map((p) => ({ sourceStockId: p.id, qty: Math.min(6, p.physical_qty) })),
+      note: 'Lezzet takviyesi — kabul bekliyor.',
     });
-    console.log(`  ✓ ${gelen.referenceNo} · ${kehlPartiler.length} kalem · KEHL → STR (yolda, ana depoya GELEN)`);
+    console.log(`  ✓ ${gelen.referenceNo} · ${qltPartiler.length} kalem · QLT → STR (yolda, Lezzet deposuna GELEN)`);
   }
 
   // Araca yükleme beslenmez: araca mal koymak kuryenin adımıdır ve beslemenin yaptığı yükleme araçta kaynağı belirsiz mal bırakırdı.
 
-  console.log('✓ transfer: 6 kayıt (yolda · GECİKMİŞ yolda · KEHL → STR gelen yolda · tam kabul · eksikli kabul · geri alınmış)');
+  console.log('✓ transfer: 6 kayıt (yolda · GECİKMİŞ yolda · QLT → STR gelen yolda · tam kabul · eksikli kabul · geri alınmış)');
 }
 
 // ── Depo bazlı asgari stok eşiği ─────────────────────────────────────────────────────────────────
-// Varyantın eşiği varsayılandır, depo satırı onu ezer; ikinci katman veride olmasa ezme kuralı hiç görünmezdi. Kehl küçük depodur ve
-// aynı ürünün eşiği orada daha düşüktür.
+// Varyantın eşiği varsayılandır, depo satırı onu ezer; ikinci katman veride olmasa ezme kuralı hiç görünmezdi. QUALITE deposu küçüktür
+// ve aynı ürünün eşiği orada daha düşüktür.
 
 export async function seedThresholds(db: Db, depolar: Depolar): Promise<void> {
   if (await tabloDolu(db, 'warehouse_variant_threshold')) {
@@ -319,14 +308,14 @@ export async function seedThresholds(db: Db, depolar: Depolar): Promise<void> {
   const kayitlar: Array<{ warehouse_id: string; variant_id: string; min_stock_qty: number }> = [];
   const gorulen = new Set<string>();
   let strSayi = 0;
-  let kehlSayi = 0;
+  let qltSayi = 0;
   for (const s of satirlar) {
     const anahtar = `${s.warehouse_id}:${s.variant_id}`;
     if (gorulen.has(anahtar)) continue;
     gorulen.add(anahtar);
-    const kehl = s.warehouse_id === depolar.kehl;
-    if (kehl ? kehlSayi >= 6 : strSayi >= 12) continue;
-    if (kehl) kehlSayi += 1;
+    const qlt = s.warehouse_id === depolar.qlt;
+    if (qlt ? qltSayi >= 6 : strSayi >= 12) continue;
+    if (qlt) qltSayi += 1;
     else strSayi += 1;
     // Bir kısmı bilinçli eşiğin ALTINDA (uyarı yansın), kalanı rahat.
     const altinda = kayitlar.length % 2 === 0;
@@ -343,9 +332,7 @@ export async function seedThresholds(db: Db, depolar: Depolar): Promise<void> {
   }
   const { error: yazmaHatasi } = await db.from('warehouse_variant_threshold').insert(kayitlar);
   if (yazmaHatasi) throw yazmaHatasi;
-  console.log(
-    `✓ depo eşiği: ${kayitlar.length} satır (STR ${strSayi} · KEHL ${kehlSayi}) · yarısı eşiğin ALTINDA → yeniden sipariş uyarısı`,
-  );
+  console.log(`✓ depo eşiği: ${kayitlar.length} satır (STR ${strSayi} · QLT ${qltSayi}) · yarısı eşiğin ALTINDA → yeniden sipariş uyarısı`);
 }
 
 // ── Ölçüm noktaları ve partinin rafı ─────────────────────────────────────────────────────────────
@@ -356,8 +343,8 @@ export async function seedThresholds(db: Db, depolar: Depolar): Promise<void> {
 export interface Noktalar {
   /** STR'nin alanları: ad → kimlik. Ad anahtar, çünkü iki tüketici de adı biliyor. */
   strAlan: Map<string, string>;
-  /** KEHL'in tek alanı — ikinci deponun ölçümü ve partileri için. */
-  kehlAlan: string;
+  /** QLT'nin tek alanı — ikinci tesisin ölçümü ve partileri için. */
+  qltAlan: string;
   arac: string;
 }
 
@@ -381,7 +368,7 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
   const areas = new StorageAreaService(db);
 
   // Muhafız alan bazında: testler `storage_area` satırı bırakabilir ve "tablo dolu" diye atlamak partileri FK hatasıyla düşürürdü.
-  const mevcut = await areas.listByWarehouses([depolar.str, depolar.kehl]);
+  const mevcut = await areas.listByWarehouses([depolar.str, depolar.qlt]);
   const anahtar = (warehouseId: string, ad: string) => `${warehouseId}:${ad}`;
   const koduyla = new Map(mevcut.map((a) => [anahtar(a.warehouseId, a.name), a.id]));
 
@@ -404,12 +391,12 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
     strAlan.set(alan.ad, id);
   }
 
-  // Kehl'in alanı aynı adla: süzgeci unutan okuma iki tesisin dolabını karıştırır; ad yalnız depo içinde benzersizdir.
-  const kehlAlan =
-    koduyla.get(anahtar(depolar.kehl, 'Derin dondurucu 1')) ??
+  // QLT'nin alanı aynı adla: süzgeci unutan okuma iki tesisin dolabını karıştırır; ad yalnız depo içinde benzersizdir.
+  const qltAlan =
+    koduyla.get(anahtar(depolar.qlt, 'Derin dondurucu 1')) ??
     (
       await areas.insert({
-        warehouseId: depolar.kehl,
+        warehouseId: depolar.qlt,
         name: 'Derin dondurucu 1',
         kind: 'frozen',
         targetMinC: -20,
@@ -420,15 +407,15 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
     ).id;
 
   // Araç depo adımında açıldı (VAN-1 ona bağlıdır); burada yalnız bulunur.
-  const arac = await kuryeAraciKaydi(db, depolar.str);
+  const arac = await aracKaydi(db, ARACLAR.lezzet, depolar.str);
 
-  console.log(`✓ ölçüm noktası: ${strAlan.size} alan (STR) · 1 alan (KEHL) · 1 araç`);
-  return { strAlan, kehlAlan, arac };
+  console.log(`✓ ölçüm noktası: ${strAlan.size} alan (STR) · 1 alan (QLT) · 2 araç`);
+  return { strAlan, qltAlan, arac };
 }
 
 /**
- * Kargo kutuları şablondan benimsenir, elle yazılmaz, ki benimseme yolu her `db:refresh`te koşsun. STR'de biri kapalı üç kutu, KEHL'de
- * bir kutu, BDX'te hiç kutu yok: "bu depodan kargo etiketi alınamaz" uyarısı kargo yapmayan depoda sınanır.
+ * Kargo kutuları şablondan benimsenir, elle yazılmaz, ki benimseme yolu her `db:refresh`te koşsun. STR'de biri kapalı üç kutu var, QLT'de
+ * hiç kutu yok: "bu depodan kargo etiketi alınamaz" uyarısı kargo yapmayan depoda sınanır.
  */
 export async function seedShippingBoxes(db: Db, depolar: Depolar): Promise<void> {
   const svc = new ShippingBoxService(db);
@@ -441,7 +428,6 @@ export async function seedShippingBoxes(db: Db, depolar: Depolar): Promise<void>
 
   const plan: Array<{ depo: string; sablonlar: string[]; kapali?: string }> = [
     { depo: depolar.str, sablonlar: ['Küçük kutu', 'Orta kutu', 'Büyük kutu'], kapali: 'Büyük kutu' },
-    { depo: depolar.kehl, sablonlar: ['Orta kutu'] },
   ];
 
   for (const satir of plan) {

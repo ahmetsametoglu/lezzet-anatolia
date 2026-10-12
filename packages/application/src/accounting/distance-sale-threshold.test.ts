@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, OrderService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
 import { DISTANCE_SALE_SETTINGS } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import type { OrderStatus, VatTreatment } from '@lezzet/types';
+import { notifyDistanceSaleThreshold } from '../notification/staff-events';
 import { readDistanceSaleThreshold } from './distance-sale-threshold';
 
 /**
@@ -42,6 +44,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await settings.restore();
+  await mustDelete(db, 'notification', (q) => q.eq('kind', 'distance_sale_threshold').like('dedupe_key', 'distance-sale-threshold:2031%'));
   await purgeTestData(db, created);
 });
 
@@ -90,11 +93,43 @@ describe('uzaktan satış eşiği okuması', () => {
       thresholdCents: 2_500,
       yearTotalCents: 4_000,
       previousYearTotalCents: 1_000,
+      yearSystemCents: 4_000,
+      yearOpeningCents: 0,
+      previousYearSystemCents: 1_000,
+      previousYearOpeningCents: 0,
       warning: 'exceeded',
       destinationTaxation: true,
       sincePreviousYear: false,
       // 28 Şubat 23:30 UTC Paris'te 1 Mart'tır.
       crossingOrder: { id: asan.id, referenceNo: asan.referenceNo, day: '2031-03-01' },
+      notifiedOn: { first: null, second: null, exceeded: null },
+    });
+  });
+
+  // Açılış tutarı sistem toplamından ayrılmazsa kart iki kaynağı karıştırır; haber günü anahtardan okunmazsa kart seviyenin
+  // duyurulduğunu söyleyemez; kırmızıya döner.
+  it('sistem ve açılış toplamı ayrı okunur; seviyenin haber günü tekilleştirme anahtarından gelir', async () => {
+    await settings.override(DISTANCE_SALE_SETTINGS.openingYear.key, 2031);
+    await settings.override(DISTANCE_SALE_SETTINGS.openingCents.key, 500);
+    await settings.override(DISTANCE_SALE_SETTINGS.openingPreviousCents.key, 300);
+    await notifyDistanceSaleThreshold(db, {
+      year: 2031,
+      warning: 'first',
+      yearTotalCents: 4_500,
+      thresholdCents: 2_500,
+      sincePreviousYear: false,
+    });
+
+    const durum = await readDistanceSaleThreshold(db, new Date('2031-06-15T12:00:00Z'));
+
+    expect(durum).toMatchObject({
+      yearTotalCents: 4_500,
+      yearSystemCents: 4_000,
+      yearOpeningCents: 500,
+      previousYearTotalCents: 1_300,
+      previousYearSystemCents: 1_000,
+      previousYearOpeningCents: 300,
+      notifiedOn: { first: parisDateOf(new Date()), second: null, exceeded: null },
     });
   });
 });

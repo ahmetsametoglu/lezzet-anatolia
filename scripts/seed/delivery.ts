@@ -4,12 +4,10 @@ import { an, tabloDolu, type Db, type Kisiler } from './shared';
 import type { Depolar } from './warehouse';
 
 // ── Teslimat bölgesi + adres (07) ────────────────────────────────────────────────────────────────
-// Rota içi/dışı SAKLANMAZ: adresin posta kodu aktif bir bölgeye düşüyorsa rota içidir. Bu yüzden
-// adreslerin bir kısmı bilinçli olarak HİÇBİR bölgeye düşmez — "kargoya düşen adres" hâli.
+// Rota içi/dışı saklanmaz: adresin posta kodu aktif bir bölgeye düşüyorsa rota içidir, bu yüzden adreslerin bir kısmı bilerek hiçbir
+// bölgeye düşmez ("kargoya düşen adres" hâli).
 
-// Bölge TEK depoya bağlanır (DOMAIN §17): posta kodu → bölge → depo zincirinin orta halkası.
-// Kodlar artık bölgenin dizi kolonunda değil kendi tablosunda — aynı kod iki bölgeye yazılamaz
-// (tekillik veride) ve yer çözümü daima (ülke, kod) ikilisidir.
+// Bölge tek depoya bağlanır (DOMAIN §17) ve bir kod bir işte tek bölgededir (tekillik veride); yer çözümü daima (ülke, kod) ikilisidir.
 const BOLGELER: Array<{
   name: string;
   depo: keyof Depolar;
@@ -17,69 +15,21 @@ const BOLGELER: Array<{
   weekdays: number[];
   isActive?: boolean;
 }> = [
-  // ── DÖRT HAT, DÖRT YÖN (kullanıcı kararı 31.08) ─────────────────────────────────────────────
-  //
-  // **Önceki karar (16.08: "rota sayısını bire indirelim") YÜRÜRLÜKTEN KALKTI** ve gerekçesi
-  // ölçülmüş bir arıza: tek rotanın üç kodu da (67000/67100/67200) GeoNames dökümünde **aynı
-  // noktayı** taşıyor (`0034:4298-4315` — şehrin merkezi). Yani rota sıralaması (11.9) o veride
-  // hiç sınanamıyordu: bütün duraklar tek noktaya çöküyor, her sıralama aynı maliyeti veriyor ve
-  // motor haklı olarak "sıralayamadım" diyor (`indistinguishable`).
-  //
-  // Dört hat DÖRT AYRI YÖNE uzanıyor ve uçları birbirinden 100+ km ayrı — motorun kapalı tur
-  // hesabı ancak böyle bir yayılımda görünür hâle geliyor. Uzunluklar gerçek bir günlük rotadan
-  // FAZLA (Frankfurt 183 km) ve bu bilinçli: besleme, hesabın çalıştığını gösterebilmeli.
-  //
-  // Her hatta bir "şehir içi" kod + gittikçe uzaklaşan duraklar var; mesafeler depoya kuş uçuşu
-  // (ölçüldü 31.08, `postal_code_place`ten).
-  //
-  // ── DÖRDÜ DE STR'NİN, KEHL'İN ROTASI YOK (kullanıcı kararı 01.09) ───────────
-  // *"Strasbourg merkezli dört rota olsun, Kehl deposuna ait bir rota olmasın, dört farklı yöne
-  // olsun."* Doğu Hattının deposu bu yüzden KEHL'den STR'ye geçti; hat aynı yerden geçmeye devam
-  // ediyor (Kehl → Offenburg → Stuttgart) ama artık Strasbourg'un doğu koludur. Kural sadeleştirme
-  // değil, gerçeğe uyum: Kehl depoya 5 km ve iki tarafın rotaları aynı sokaklarda kesişiyordu —
-  // "hangi deponun hattı" sorusu ekrandan okunamıyordu.
-  //
-  // **Kuryenin işine yarayan yan etki:** dört hattın dördü de tek deponun olduğu için kuryenin
-  // kapsamı da tek tesistir ({str, van}) — rota listesi kapsamla süzülüyor (11.7) ve iki tesisli
-  // kapsam, ekranda hiçbir karşılığı olmayan bir yetki genişlemesiydi.
-  //
-  // ── KUZEY: Strasbourg → Haguenau → Wissembourg → Landau → Frankfurt ────────
+  // Lezzet'in dört hattı dört ayrı yöne uzanır ve uçları birbirinden 100+ km ayrıdır: duraklar tek noktaya çökseydi rota sıralaması
+  // sınanamazdı. Mesafeler depoya kuş uçuşudur (`postal_code_place`).
   { name: 'Kuzey Hattı — Frankfurt', depo: 'str', weekdays: [1, 4], // pazartesi + perşembe
     codes: [fr('67000'), fr('67500'), fr('67160'), de('76829'), de('60311')] }, // 0 · 22 · 48 · 71 · 183 km
-  // ── BATI: Strasbourg → Saverne → Sarrebourg → Metz ─────────────────────────
-  // İki şehir içi kod (67100 + 67200) BİLEREK aynı hatta: ikisi de aynı merkezde ve bu, kısmi
-  // çakışma hâlini (`precision: mixed` yolu) besleyen tek yer — hepsi çakışık olsaydı motor
-  // sıralamayı reddederdi, hiçbiri çakışık olmasaydı o dal hiç denenmezdi.
+  // İki şehir içi kod aynı merkezdedir: kısmi çakışma (`precision: mixed`) yolu ancak böyle beslenir.
   { name: 'Batı Hattı — Metz', depo: 'str', weekdays: [2, 5], // salı + cuma
     codes: [fr('67100'), fr('67200'), fr('67700'), fr('57400'), fr('57000')] }, // 0 · 0 · 30 · 54 · 130 km
-  // ── GÜNEY: Sélestat → Colmar → Mulhouse ────────────────────────────────────
-  // Deposu 01.09'a kadar COLMAR'dı; o depo Bordeaux'ya taşınınca hat STR'ye geçti (`warehouse.ts`
-  // baş künyesi). Colmar ve Mulhouse artık birer DURAK — bir zamanlar depo oldukları için değil,
-  // güney kolunun (98 km) gerçek şehirleri oldukları için buradalar.
   { name: 'Güney Hattı — Mulhouse', depo: 'str', weekdays: [3, 6], // çarşamba + cumartesi
     codes: [fr('67600'), fr('68000'), fr('68100')] }, // 39 · 63 · 98 km
-  // ── DOĞU: Kehl → Offenburg → Stuttgart ─────────────────────────────────────
-  // Gün seti Batı ile AYNI (salı+cuma) ve bu bilinçli: aynı gün iki rota koşmazsa kuryenin rota
-  // SEÇİMİ (K1) hiç sınanmaz — tek adayda ekran soru sormuyor. **İkisi de STR'nin olduğu için
-  // seçim TEK KAPSAMDA doğuyor**, yani seçim ekranı bir yetki genişlemesine değil gerçek bir güne
-  // dayanıyor. Sınır ötesi hat ADR-002'nin meşru saydığı şey; sınır rotanın değil devletin çizgisi.
+  // Gün seti Batı ile aynıdır: aynı gün iki rota koşmazsa kuryenin rota seçimi hiç sınanmaz.
   { name: 'Doğu Hattı — Stuttgart', depo: 'str', weekdays: [2, 5], // salı + cuma
     codes: [de('77694'), de('77652'), de('70173')] }, // 5 · 19 · 107 km
-
-  // ── BORDEAUX: kurye hattı DEĞİL, sepetin bölündüğü yer (19.25 · 01.09) ──────
-  //
-  // Öteki dört satır Strasbourg'un günlük araç turları; bu değil. Bordeaux 800 km ötede ve kendi
-  // şehrine dağıtıyor — beslemede var olma sebebi tek: **müşterinin ROTA deposu ile ülkenin KARGO
-  // çıkışının farklı olduğu tek adres.** Bordeaux'lu müşterinin sepetinde BDX'te bulunan kalem
-  // "kapıya geliyor", yalnız STR'de bulunan kalem "kargoyla gelecek" grubuna düşüyor.
-  //
-  // Kuryenin rota listesinde GÖRÜNMEZ: liste kapsamla süzülüyor (11.7) ve kuryenin kapsamı {str,
-  // van}. Yani "dört rota" kuralı ekranda birebir duruyor.
-  //
-  // Tek kod (33000) ve tek gün: bu bir tur değil, bir hâl. Duraklarını çoğaltmak rota sıralamasına
-  // hiçbir şey katmaz — o iş Strasbourg'un dört kolunda zaten yapılıyor.
-  { name: 'Bordeaux Hattı — şehir içi', depo: 'bdx', weekdays: [4], // perşembe
-    codes: [fr('33000')] },
+  // QUALITE'nin hattı şehrin restoran ve marketlerine gider; bir posta kodu her işte ayrı bölgede olabilir, Lezzet'in kodlarıyla örtüşür.
+  { name: 'QUALITE Hattı — Strasbourg', depo: 'qlt', weekdays: [2, 4], // salı + perşembe
+    codes: [fr('67000'), fr('67100'), fr('67200'), fr('67300'), fr('67400')] },
 ];
 
 function fr(postalCode: string) {
@@ -108,7 +58,7 @@ export async function seedDeliveryZones(db: Db, depolar: Depolar): Promise<void>
     const kodlar = b.codes.map((c) => `${c.country}-${c.postalCode}`).join(', ');
     console.log(`  ✓ ${b.name} · ${kodlar} · gün ${b.weekdays.join(',')}${b.isActive === false ? ' · PASİF' : ''}`);
   }
-  console.log(`✓ bölge: ${BOLGELER.length} kayıt (dört yön — künyedeki gerekçe)`);
+  console.log(`✓ bölge: ${BOLGELER.length} kayıt (Lezzet dört yön · QUALITE şehir içi)`);
 }
 
 export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
@@ -118,35 +68,25 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
   }
   console.log('▸ ADRES seed');
   const addresses = new AddressService(db);
-  // `label` = müşterinin kendi verdiği ad; checkout adres kartının başlığı odur. Bir adres
-  // BİLİNÇLİ etiketsiz, alıcısız ve telefonsuz: ekranın "boş alanı hiç çizme" hâlleri denenebilsin.
-  // Kalanlar TAM DOLU — kurye ekranı ve fatura, eksik alanla test edilirse yalancı bir sonuç verir.
+  // `label` müşterinin verdiği addır ve checkout adres kartının başlığıdır; bir adres bilerek etiketsizdir, kalanlar tam doludur, çünkü
+  // kurye ekranı ve fatura eksik alanla denenirse yalancı sonuç verir.
   const tanimlar: Array<{
     kisi: string;
     label?: string;
-    /* ZORUNLU (22.08): kolonlar `not null` — adres teslim alacak kişi ve numarayla birlikte
-       kaydediliyor. Besleme de bu değişmeze uyar; uymayan bir besleme, kuralı ilk delen yol olurdu. */
+    /** Zorunlu: adres teslim alacak kişi ve numarayla kaydedilir (`not null`); besleme de bu değişmeze uyar. */
     recipient: string;
     line1: string;
     line2?: string;
     postalCode: string;
     city: string;
-    /* E.164, boşluksuz — tek sütunda iki biçim biriktirmemek için (`0011` künyesi). Ekranda
-       okunaklı hâle çevirmek görünümün işi; DEPOLANAN biçim tektir. */
+    /** E.164, boşluksuz: tek sütunda iki biçim birikmesin; okunaklı hâl görünümün işidir. */
     phone: string;
     country?: 'FR' | 'DE';
     isDefault?: boolean;
-    /* ── KOORDİNAT SABİT YAZILIR (11.9 · 31.08) ─────────────────────────────
-       Besleme ağa çıkmaz ve belirlenimci olmalı — ama bunun sonucu "koordinat yazma" DEĞİL,
-       "koordinatı bir kez çek ve SABİTLE"dir. `postal_code_place` verisi de aynı yolla üretiliyor
-       (`postal:build` → dosyaya yazılıyor).
-       Aksi hâlde her `db:refresh` sonrası elle bir komut daha gerekirdi ve unutulduğu gün rota
-       sıralaması sessizce posta kodu merkezine düşerdi — yani özellik "çalışmıyor" görünürdü.
-
-       FR değerleri BAN'dan bir kez çekildi (31.08, skorlarıyla birlikte doğrulandı) ve
-       `housenumber` kademesinde. DE değerleri kod MERKEZİDİR (`postal_code_place`, GeoNames):
-       BAN yalnız Fransa'ya bakıyor ve uydurma bir kapı noktası yazmak yerine kademesi dürüstçe
-       `municipality` deniyor — kapı değil, yerleşimin ortası. */
+    /*
+      Koordinat bir kez çekilip sabit yazılır: besleme ağa çıkmaz ve belirlenimci olmalıdır, yazılmasaydı rota sıralaması posta kodu
+      merkezine düşerdi. FR değerleri BAN'dan (`housenumber`), DE değerleri kodun merkezidir (`municipality`), çünkü BAN yalnız Fransa'yı bilir.
+    */
     lat?: number;
     lng?: number;
     geoPrecision?: 'housenumber' | 'street' | 'locality' | 'municipality';
@@ -155,50 +95,28 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
     // Rota içi (aktif bölge posta kodları)
     { kisi: 'b2bOnayli', label: 'Dükkân', recipient: 'Mehmet Aydın', line1: '12 rue du Faubourg de Pierre', lat: 48.587548, lng: 7.746365, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67000', city: 'Strasbourg', phone: '+33388123456', isDefault: true },
     { kisi: 'b2bOnayli', label: 'Depo', recipient: 'Depo görevlisi', line1: '4 quai Kléber', lat: 48.586183, lng: 7.74191, geoPrecision: 'housenumber', geoSource: 'ban', line2: 'Dépôt arrière', postalCode: '67000', city: 'Strasbourg', phone: '+33388123457' }, // ikinci adres
-    // **Kodlar 67300/67400'den 67100/67200'e TAŞINDI (16.08, rota tek bölgeye inince).** İkisi de
-    // artık rota dışında kalırdı ve bu iki müşteri seed'in en çok sipariş veren kişileri: siparişleri
-    // `route` olarak yazılıyor, adresleri kargoya düşseydi veri kendi içinde çelişirdi.
     { kisi: 'b2cSadik', label: 'Ev', recipient: 'Ayşe Yılmaz', line1: '8 rue de Bischwiller', lat: 48.568726, lng: 7.763366, geoPrecision: 'housenumber', geoSource: 'ban', line2: '3. kat, zil: Yılmaz', postalCode: '67100', city: 'Strasbourg', phone: '+33612345678', isDefault: true },
     { kisi: 'b2cKapaliKapida', label: 'Ev', recipient: 'Fatma Demir', line1: '31 route de Lyon', lat: 48.56184, lng: 7.704935, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67200', city: 'Strasbourg', phone: '+33698765432', isDefault: true },
-    // Rota DIŞI — hiçbir aktif bölgeye düşmez → kargo yolu
-    // ALICI hesabın sahibi DEĞİL — hediye/iş adresi hâli (kurye kapıda bu adı sorar).
+    // QUALITE rotasının durağı; kod Lezzet'in hattında da var ve yer müşterinin işinin bölgelerinden çözülür.
+    { kisi: 'qualiteRestoran', label: 'Restoran', recipient: 'Jean-Marc Haller', line1: '6 place des Orphelins', lat: 48.578751, lng: 7.754382, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67000', city: 'Strasbourg', phone: '+33388327720', isDefault: true },
+    // Rota dışı, kargo yolu; alıcı hesabın sahibi değil (hediye ya da iş adresi hâli).
     { kisi: 'b2cSadik', label: 'İş', recipient: 'Zeynep Kaya', line1: '17 avenue Jean Jaurès', lat: 45.75259, lng: 4.846418, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '69007', city: 'Lyon', phone: '+33745221109' },
-    /* ETİKETSİZ adres — ekranın "etiket yoksa şehri başlık yap" hâli hâlâ buradan deneniyor.
-       ALICISIZ/TELEFONSUZ hâli 22.08'de KALKTI: kolonlar `not null` oldu, yani o hâl artık
-       veritabanında var olamıyor ve onu beslemede tutmak, üretilemeyecek bir ekranı denemek
-       olurdu. Alıcı hesabın sahibiyle AYNI (varsayılanın kaydedildiği yaygın hâl) — hediye
-       adresinin ayrı hâli bir üstteki Lyon satırında duruyor. */
+    // Etiketsiz adres: ekranın "etiket yoksa şehri başlık yap" hâli buradan denenir.
     { kisi: 'b2cAlman', recipient: 'Klaus Müller', line1: 'Hauptstraße 45', lat: 48.4765, lng: 7.9438, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '77652', city: 'Offenburg', country: 'DE', phone: '+49781223344', isDefault: true },
-    // Kehl (DE) — 31.08'e kadar bölgesizdi, artık DOĞU HATTININ ilk durağı. Rota dışı hâli Lyon
-    // (69007) taşımaya devam ediyor: kargo yolu tek bir adresle de sınanabiliyor.
+    // Kehl (DE), Doğu Hattının ilk durağı.
     { kisi: 'b2bAlman', label: 'Marktplatz', recipient: 'Stefan Weber', line1: 'Marktplatz 3', lat: 48.573, lng: 7.8152, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '77694', city: 'Kehl', country: 'DE', phone: '+497851445566', isDefault: true },
     { kisi: 'b2bBekleyen', label: 'Ev', recipient: 'Ali Şahin', line1: '22 rue de la Krutenau', lat: 48.581303, lng: 7.757079, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67000', city: 'Strasbourg', phone: '+33655443322', isDefault: true },
-    // Güney Hattının orta durağı. 19.25'e kadar karma sepetin de yaşadığı adresti; o rol 01.09'da
-    // Bordeaux'ya geçti (bir alttaki satır), adres durak olarak kaldı — ortada durağı olmayan bir
-    // hat rota sıralamasını sınamaz.
+    // Güney Hattının orta durağı: ortada durağı olmayan hat rota sıralamasını sınamaz.
     { kisi: 'b2cKapaliKapida', label: 'Colmar evi', recipient: 'Julien Fischer', line1: '5 rue des Marchands', lat: 48.077328, lng: 7.356656, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '68000', city: 'Colmar', phone: '+33698765432' },
-    /* KARMA SEPETİN ADRESİ (19.25 · 01.09) — buraya bir adres düşmezse Bordeaux bölgesi yalnız
-       kâğıt üstünde kalır: sepet ekranı yeri çerezden çözebilir ama CHECKOUT teslimatı ADRESTEN
-       çözüyor, yani iki gruplu bir siparişin gerçekten açılabilmesi bu satıra bağlı.
-
-       Sahibi bilerek `b2cKapaliKapida`: bayat sepetin müşterisi o (`cart.ts`) ve sepetin ikiye
-       bölünmesi ancak sepetin sahibi Bordeaux'lu bir adres seçebildiğinde görünür. Aynı müşterinin
-       Strasbourg ve Colmar adresleri de duruyor — adres DEĞİŞTİRİNCE grupların yeniden hesaplandığı
-       hâl de böylece tek hesapta denenebiliyor. */
+    // Rota dışı Fransız adresi: kargoyla Strasbourg'dan gider; aynı müşterinin rota içi adresleriyle yolun adres değişince yeniden
+    // hesaplandığı hâl tek hesapta denenir.
     { kisi: 'b2cKapaliKapida', label: 'Bordeaux dükkân', recipient: 'Julien Fischer', line1: '12 rue Sainte-Catherine', lat: 44.8404, lng: -0.5805, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '33000', city: 'Bordeaux', phone: '+33556334455' },
+    // Rota dışı Almanya adresi: Almanya'nın öteki adresleri Doğu ve Kuzey hatlarında olduğu için Kehl teslim noktalı kargo yolu ancak
+    // buradan denenir.
+    { kisi: 'b2cAlman', label: 'München', recipient: 'Klaus Müller', line1: 'Sendlinger Straße 12', lat: 48.1345, lng: 11.571, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '80331', city: 'München', country: 'DE', phone: '+49781223344' },
 
-    /* ── HATLARIN UÇLARI (31.08) ───────────────────────────────────────────────
-       Dört hat açıldı ama her hat tek duraklı kalsaydı rota sıralaması (11.9) yine sınanamazdı:
-       tek durakta sıralanacak bir şey yok. Bu satırlar hatları GERÇEKTEN uzatıyor — her birinin
-       posta kodu farklı bir noktada ve uçlar depoya 100+ km.
-
-       Şehir adları `postal_code_place`in kendi kayıtlarıyla birebir: uydurma bir şehir adı, "yazılan
-       şehir bu koda ait mi" doğrulamasını sessizce düşürürdü.
-
-       KOORDİNAT YAZILMIYOR ve bu bilinçli: besleme ağa çıkmaz, uydurma bir kapı koordinatı da
-       gerçek bir ölçüm gibi okunurdu. Adresler tarama işiyle (`geocode_addresses`) ya da elle
-       (`pnpm geo:backfill`) çözülür; o ana kadar sıra posta kodu merkezinden hesaplanır ve
-       `precision` bunu söyler. */
+    // Hatların uçları: tek duraklı hat rota sıralamasını sınamaz. Şehir adları `postal_code_place` kayıtlarıyla birebirdir, çünkü uydurma
+    // ad "şehir bu koda ait mi" doğrulamasını düşürürdü.
 
     // Kuzey Hattı — Frankfurt'a kadar
     { kisi: 'b2cSadik', label: 'Haguenau şubesi', recipient: 'Nathalie Roux', line1: '3 rue de la Gare', lat: 48.780466, lng: 7.710003, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67500', city: 'Batzendorf', phone: '+33388937711' },
@@ -220,8 +138,7 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
   ];
 
   let sayi = 0;
-  // Ölçümün ANI besleme anıdır: nokta sabit yazılıyor ama "ne zaman ölçüldü" sorusu boş kalmasın —
-  // tarama işi bu damgaya bakarak satırın çözülmüş olduğunu görüyor.
+  // Ölçüm anı besleme anıdır: tarama işi bu damgadan satırın çözülmüş olduğunu okur.
   const olcumAni = new Date().toISOString();
   for (const { kisi, ...alanlar } of tanimlar) {
     const customerId = kisiler.get(kisi);
@@ -235,22 +152,16 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
 }
 
 // ── Bölge dışı talep sayacı (0029) ───────────────────────────────────────────────────────────────
-// "Nereye getirelim" sorulan her posta kodu SAYILIR — kim sorduğu tutulmaz, tekilleştirilmez.
-// Panonun cevapladığı soru "yeni bölgeyi nereye açalım"dır; o cevap ancak talebin bir yerde
-// YOĞUNLAŞTIĞI görülebilirse verilebilir. Bu yüzden dağılım düz değil: bir kod açık ara önde, birkaçı
-// ortada, birkaçı tek tük — düz bir dağılımda pano hiçbir şey söylemez.
-//
-// Bölge İÇİ kodlar da sayılır (67000): talebin nerede yoğunlaştığı rota SIKLIĞININ da girdisidir,
-// yalnız yeni bölgenin değil.
+// "Nereye getirelim" sorulan her posta kodu sayılır, kim sorduğu tutulmaz; dağılım bilerek düz değildir, çünkü pano "yeni bölgeyi nereye
+// açalım" sorusunu ancak talebin yoğunlaştığı yeri görerek cevaplar. Bölge içi kodlar da sayılır: rota sıklığının girdisidir.
 
 const POSTA_TALEPLERI: Array<{ kod: string; adet: number; not: string }> = [
   { kod: '67500', adet: 47, not: 'Haguenau — açık ara önde, bölge açma adayı' },
   { kod: '67200', adet: 31, not: 'Strasbourg batı — bölge İÇİ, rota sıklığı sinyali' },
-  // 68000 COLMAR'dır (eski not "Mulhouse" diyordu — 68100'ün koduydu, düzeltildi 21.08). Bu satır
-  // "talep birikti, bölge AÇILDI" hâlini örnekliyor: kod Güney Hattının orta durağı.
+  // "Talep birikti, bölge açıldı" hâli: kod Güney Hattının orta durağı.
   { kod: '68000', adet: 18, not: 'Colmar — talep birikti, Güney Hattına girdi' },
   { kod: '67600', adet: 12, not: 'Sélestat' },
-  { kod: '77694', adet: 9, not: 'Kehl (DE) — deposu var ama rotası YOK; talep birikiyor' },
+  { kod: '77694', adet: 9, not: 'Kehl (DE) — Doğu Hattının durağı, rota sıklığı sinyali' },
   { kod: '54000', adet: 4, not: 'Nancy — tek tük' },
   { kod: '75011', adet: 2, not: 'Paris — kargo müşterisi' },
 ];
@@ -264,8 +175,7 @@ export async function seedPostalDemand(db: Db): Promise<void> {
   const zones = new DeliveryZoneService(db);
   let toplam = 0;
   for (const t of POSTA_TALEPLERI) {
-    // Sayaç ATOMİK olarak artar (RPC) ve seed de tek tek artırır — toplu bir insert, sayacın
-    // gerçekte nasıl dolduğunu atlar ve normalleştirme (boşluk/büyük harf) kuralını denemeden bırakır.
+    // Sayaç tek tek, RPC'den artar: toplu yazım sayacın normalleştirme kuralını denemeden bırakırdı.
     for (let i = 0; i < t.adet; i += 1) await zones.recordDemand(t.kod);
     toplam += t.adet;
     console.log(`  ✓ ${t.kod} · ${t.adet} talep — ${t.not}`);
@@ -277,11 +187,8 @@ export async function seedPostalDemand(db: Db): Promise<void> {
 }
 
 // ── "Bölge açılınca haber ver" (0030) ────────────────────────────────────────────────────────────
-// Talep sayacından FARKLI bir şeydir: sayaç anonimdir ve yalnız sayar; burada müşteri adını bırakır
-// ve bir SÖZ verilmiştir. Bölge açıldığında bu listeye haber gider (`notified_at` damgalanır).
-//
-// Kayıtlar posta kodu + e-posta çiftinde tekildir (DB indeksi, harf ayrımsız): aynı kişi iki kez
-// yazılınca iki mektup gitmemeli.
+// Talep sayacından farklıdır: müşteri adını bırakır ve bir söz verilmiştir, bölge açılınca listeye haber gider. Kayıt posta kodu ve
+// e-posta çiftinde tekildir ki aynı kişiye iki mektup gitmesin.
 
 export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
   if (await tabloDolu(db, 'zone_notice')) {
@@ -290,8 +197,7 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
   }
   console.log('▸ BÖLGE HABER-VER seed');
 
-  // `country` · `place_name` · `source` · `locale` 21.16'da eklendi. Dördü de ÇEŞİTLENDİRİLİYOR:
-  // hepsi aynı değeri taşısaydı ekranlar ve haber işi tek dalı görürdü.
+  // Ülke, yer adı, kaynak ve dil çeşitlendirilir: hepsi aynı değeri taşısaydı ekranlar ve haber işi tek dalı görürdü.
   type Kayit = {
     postal_code: string;
     country: 'FR' | 'DE';
@@ -306,20 +212,14 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
   const kayitlar: Kayit[] = [
     // En çok talep gören kodda BEKLEYEN liste — bölge açılınca gidecek mektupların kuyruğu.
     { postal_code: '67500', country: 'FR', place_name: 'Haguenau', locale: 'fr', email: 'nathalie.roux@example.fr', not: 'bekliyor · kayıtsız ziyaretçi' },
-    // Dil KAYITSIZ (null): 14.10 öncesi kayıtların hâli — haber işi profile, sonra fr'ye düşer.
+    // Dili kayıtsız: haber işi profile, sonra fr'ye düşer.
     { postal_code: '67500', country: 'FR', place_name: 'Haguenau', locale: null, email: 'kemal.ozturk@example.fr', not: 'bekliyor · dili bilinmiyor' },
     { postal_code: '67500', country: 'FR', place_name: 'Haguenau', locale: 'tr', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
     // Yer adı ÇÖZÜLEMEMİŞ kayıt — kolonun null hâli de görünsün.
     { postal_code: '68000', country: 'FR', place_name: null, locale: 'fr', email: 'sophie.klein@example.fr', not: 'bekliyor · yer adı yok' },
-    // ALMAN kod: ülke ayrımının tek gerçek denek taşı — kod FR'de de geçerli olsa haber işi bunu
-    // Fransız bölge açılışında GÖNDERMEMELİ (21.16).
-    { postal_code: '77694', country: 'DE', place_name: 'Kehl', locale: 'de', source: 'app-onboarding', email: 'einkauf.vihado@example.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMAN kayıt, Kehl deposu var ama rota yok' },
-    // HABER VERİLMİŞ kayıt: bölge açıldı, mektup gitti. Listenin "bitmiş" ucu da görünsün —
-    // hepsi bekliyorsa gönderim akışının çalıştığı hiç görülmez.
-    //
-    // **Kod 67400'den 67200'e taşındı (16.08):** rota tek bölgeye inince 67400 hiçbir bölgeye
-    // düşmez oldu ve "bölge açıldı, haber verildi" diyen bir kayıt kapalı bir kodda duruyordu —
-    // kendi cümlesini yalanlayan bir satır. 67200 gerçekten aktif bölgede.
+    // Alman kod, ülke ayrımının denek taşı: Fransız bölge açılışında bu kayda haber gitmemeli.
+    { postal_code: '77694', country: 'DE', place_name: 'Kehl', locale: 'de', source: 'app-onboarding', email: 'einkauf.vihado@example.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMAN kayıt (ülke ayrımı)' },
+    // Haber verilmiş kayıt, kodu aktif bölgede: hepsi bekliyor olsaydı gönderim akışının çalıştığı hiç görülmezdi.
     { postal_code: '67200', country: 'FR', place_name: 'Strasbourg', locale: 'fr', source: 'app-account', email: 'julien.fischer@example.fr', customer_id: kisiler.get('b2cKapaliKapida') ?? null, notified_at: an(-15), not: 'HABER VERİLDİ (bölge açıldı)' },
   ];
 
@@ -333,9 +233,7 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
       email: k.email,
       customer_id: k.customer_id ?? null,
       notified_at: k.notified_at ?? null,
-      // Tercih bağının anahtarı (22.08) — kayıtla birlikte doğar. Beslemede de yazılmalı: hesapsız
-      // kaydın tercih sayfası YALNIZ bununla açılıyor ve jetonsuz satır o yolu yerelde
-      // denenemez bırakırdı.
+      // Tercih bağının anahtarı kayıtla doğar: hesapsız kaydın tercih sayfası yalnız bununla açılır.
       token: notificationToken(),
       created_at: an(-30),
     })),
@@ -345,17 +243,9 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
   console.log(`✓ haber-ver: ${kayitlar.length} kayıt (${kayitlar.filter((k) => !k.notified_at).length} bekliyor · 1 gönderildi · kayıtlı + kayıtsız)`);
 }
 
-// ── "Stok gelince haber ver" (0045 · 19.9) ───────────────────────────────────────────────────────
-// Bölge bildirimiyle (`zone_notice`) karıştırılmamalı: orada SEMT kapalıdır, burada ÜRÜN yoktur.
-// İkisi de bir söz verir ama farklı sorulara — biri "buraya ne zaman geleceksiniz", diğeri "bu boy
-// ne zaman gelecek".
-//
-// Kayıt VARYANT düzeyindedir: 700 g'ı bekleyene 1,5 kg geldi diye haber vermek sözü tutmak değil
-// bozmaktır. Yer de saklanır (ülke + posta kodu), çünkü mal bir depoya gelir ve o depo her yere
-// bakmaz — Kehl'e gelen mal Lyon'daki bekleyene "geldi" dedirtmemeli.
-//
-// KİMLİK ZORUNLU DEĞİL: "haber ver"in önüne giriş duvarı koymak, tam da vazgeçmeye en yakın anda
-// ikinci bir engel çıkarmaktır. Bu yüzden kayıtların bir kısmı bilinçli ziyaretçi (customerId null).
+// ── "Stok gelince haber ver" (0045) ──────────────────────────────────────────────────────────────
+// Kayıt varyant düzeyindedir ve yeri saklar, çünkü mal bir depoya gelir ve o depo her yere bakmaz; kimlik zorunlu değildir, "haber ver"in
+// önüne giriş duvarı koymak vazgeçmeye en yakın anda ikinci bir engel olurdu.
 
 export async function seedStockNotices(db: Db, kisiler: Kisiler): Promise<void> {
   if (await tabloDolu(db, 'variant_stock_notice')) {
@@ -392,7 +282,7 @@ export async function seedStockNotices(db: Db, kisiler: Kisiler): Promise<void> 
     { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67000', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
     { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67300', email: 'passant@example.fr', not: 'bekliyor · ziyaretçi (kimliksiz)' },
     { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67000', email: 'compta.oberjaegerhof@example.fr', customer_id: kisiler.get('b2bOnayli') ?? null, not: 'bekliyor · B2B müşteri' },
-    // BAŞKA ÜLKE: mal Strasbourg'a gelirse bu kayda haber gitmemeli — yer süzgecinin sınavı.
+    // Başka ülke: yer süzgeci posta kodunu ülkesiyle birlikte okur.
     ...(varyantlar[1]
       ? [{ variant_id: varyantlar[1], country: 'DE' as const, postal_code: '77694', email: 'einkauf.vihado@example.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMANYA (yer süzgeci)' }]
       : []),
