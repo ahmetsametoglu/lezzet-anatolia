@@ -20,6 +20,36 @@ import type { ProductTab } from './products-paths';
 // — burada yalnız yeniden dışa verilir ki sayfa dosyaları tek yerden (products-types) alsın.
 export { type ProductStatus } from '@lezzet/types';
 
+/**
+ * Satırın STOK özeti — boyların toplamı. Parti ayrıntısı (son tarih, parti numarası) burada YOK:
+ * onu okumak partileri çekmek demek ve liste bunu satır başına ödeyemez — satır açılınca gelir.
+ * `null` "okunmadı" demektir (ölçülemeyen değer sıfır değildir, CLAUDE §1).
+ */
+export interface ProductStockSummary {
+  /** Kapsamdaki depolarda kullanılabilir toplam (fiili eksi ayrılmış). */
+  availableQty: number;
+  /** Malı olan depo sayısı; 0 ise hiçbir depoda yok. */
+  warehouseCount: number;
+  /** En az bir boy asgari eşiğin altında mı — eşik kuralı `toLevelRows`ta, burada yeniden yazılmaz. */
+  belowMin: boolean;
+}
+
+/**
+ * Satırın FİYAT özeti — birincil boyun (ilk aktif boy) satırı. Marj ve hedef karşılaştırması
+ * `toPriceRows`tan gelir; fiyat ekranı ile ürünler ekranı aynı marjı iki ayrı formülle hesaplamaz.
+ * `null` yalnız yöneticide dolar: fiyat ve maliyet başka role çizilmez.
+ */
+export interface ProductPriceSummary {
+  /** Kanal tabanında tutarlar: b2c KDV dahil, b2b KDV hariç (DOMAIN §5). */
+  b2cCents: number | null;
+  b2bCents: number | null;
+  /** Birincil boyun marjı; maliyet bilinmiyorsa `null` ("sıfır marj" değil). */
+  marginPercent: number | null;
+  /** Hedef marjın altında mı; hedef yoksa `null`. */
+  belowTarget: boolean | null;
+  autoPrice: boolean;
+}
+
 /** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */
 export type ProductView = Product & {
   imageUrl: string | null; // R2 public okuma URL'i, `?v=` sürüm damgalı (yoksa placeholder) — ÖZGÜN dosya, düzenleme formu bununla
@@ -27,6 +57,8 @@ export type ProductView = Product & {
   categoryName: string; // çözülmüş kategori adı ya da '—' (join)
   variants: ProductVariant[]; // ürünün varyantları
   collectionNames: string[]; // girdiği koleksiyon adları (join)
+  stock: ProductStockSummary | null; // depo kapsamındaki toplam (okunmadıysa null)
+  price: ProductPriceSummary | null; // birincil boyun fiyat/marj özeti (yalnız yöneticide)
 };
 
 // Kategori view-model — `count` bu kategorideki ürün sayısı; `imageUrl` görselin public okuma URL'i

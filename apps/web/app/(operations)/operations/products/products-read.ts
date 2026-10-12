@@ -1,8 +1,11 @@
 import { publicImageUrl } from '@lezzet/storage';
-import { frameSourcesOf, thumbnailImageUrl } from '@lezzet/application';
+import { frameSourcesOf, readCostBasis, thumbnailImageUrl } from '@lezzet/application';
+import { PriceService, StockService, type Db } from '@lezzet/database';
 import { titleOf } from '@/lib/catalog/title';
 import { resolveLocalizedText, type BundleListRow, type ProductWithRelations } from '@lezzet/types';
-import type { BundleView, ProductView } from './products-types';
+import { toChannelMaps, toPriceRows, type PriceRow } from '@/lib/pricing/price-rows';
+import { toLevelRows, type StockLevelRow } from '@/lib/stock/level-rows';
+import type { BundleView, ProductPriceSummary, ProductStockSummary, ProductView } from './products-types';
 
 // Sunucu-tarafı okuma yardımcıları. Ürün sayfası İKİ yerden okunur — ilk sayfa RSC'de (page.tsx),
 // devamı action'da (actions/list.ts) — ve ikisi de aynı indirgemeyi yapar: public görsel URL'i +
@@ -36,7 +39,98 @@ export function toBundleViews(rows: BundleListRow[]): BundleView[] {
 // `toVariantOptions` BURADAN TAŞINDI (22.18) → `@/lib/catalog/variant-options`. Tek çağıranı paket
 // eylemleriydi ve o eylemler ortak alana çıktı (kuyruk da aynı formu açıyor); türev onlarla gitti.
 
-export function toProductViews(rows: ProductWithRelations[], names: NameMaps): ProductView[] {
+/**
+ * Satıra iliştirilen ÖZETLER — ürün kimliğiyle anahtarlı. Haritada karşılığı olmayan ürün `null`
+ * alır: "okunmadı" ile "sıfır" aynı şey değildir (CLAUDE §1) ve fiyat yalnız yöneticide okunur.
+ */
+export interface ProductSummaries {
+  stock?: ReadonlyMap<string, ProductStockSummary>;
+  price?: ReadonlyMap<string, ProductPriceSummary>;
+}
+
+/** Özet okumasının bağlamı — çağıran zaten elinde olanı geçer, ikinci kez okunmaz. */
+interface SummaryDeps {
+  categoryNames: Map<string, string>;
+  /** Stok kırılımının evreni (odak depo varsa yalnız o) — `readWarehouseContext().visibleWarehouseIds`. */
+  warehouseIds: readonly string[];
+  warehouseLabels: Map<string, { id: string; code: string; name: string }>;
+}
+
+/**
+ * Satır özetlerinin TEK kurulumu: ilk sayfa (RSC) ile sonraki sayfalar (action) aynı sayıları
+ * üretsin diye burada durur. Okuma VERİLEN BOYLARLA sınırlıdır — dört sorgu, satır sayısıyla
+ * artmaz; parti çekilmez, çünkü son tarih satır açılınca kendi turunda gelir.
+ */
+export async function readRowSummaries(db: Db, rows: ProductWithRelations[], deps: SummaryDeps): Promise<ProductSummaries> {
+  const variantIds = rows.flatMap((row) => row.variants.map((variant) => variant.id));
+  const priceSvc = new PriceService(db);
+  const [available, b2c, b2b, costs] = await Promise.all([
+    variantIds.length > 0 ? new StockService(db).listAvailableAcross(deps.warehouseIds, variantIds) : [],
+    priceSvc.findApplicableMap(variantIds, 'b2c'),
+    priceSvc.findApplicableMap(variantIds, 'b2b'),
+    readCostBasis(db, variantIds),
+  ]);
+
+  return {
+    // `batches: []` BİLİNÇLİ: parti okunmadı ve bu özet yalnız miktar ile eşik alanlarını kullanır.
+    // Eşik ağ toplamına bakar (odak depo geçilmiyor) — burası bir tarama listesidir, depo bazlı
+    // sipariş kararı Tedarik ekranının işi (`toLevelRows` künyesi).
+    stock: summarizeStock(
+      toLevelRows({ products: rows, batches: [], available, categoryNames: deps.categoryNames, warehouseLabels: deps.warehouseLabels }),
+    ),
+    price: summarizePrices(toPriceRows({ products: rows, prices: toChannelMaps(b2c, b2b), costs, categoryNames: deps.categoryNames })),
+  };
+}
+
+/**
+ * Boy satırlarını ÜRÜN özetine toplar. Kaynak `toLevelRows`tur: "asgari eşiğin altında" kararı
+ * orada yaşar ve liste onu yeniden hesaplamaz. Depo sayısı malı OLAN depolardan sayılır — satırın
+ * kırılımı (`warehouses`) zaten boş depoyu taşımaz.
+ */
+export function summarizeStock(rows: readonly StockLevelRow[]): Map<string, ProductStockSummary> {
+  const byProduct = new Map<string, { availableQty: number; warehouses: Set<string>; belowMin: boolean }>();
+  for (const row of rows) {
+    const acc = byProduct.get(row.productId) ?? { availableQty: 0, warehouses: new Set<string>(), belowMin: false };
+    acc.availableQty += row.availableQty;
+    acc.belowMin = acc.belowMin || row.belowMin;
+    for (const split of row.warehouses) {
+      if (split.availableQty > 0) acc.warehouses.add(split.warehouseId);
+    }
+    byProduct.set(row.productId, acc);
+  }
+  return new Map(
+    [...byProduct].map(([productId, acc]) => [
+      productId,
+      { availableQty: acc.availableQty, warehouseCount: acc.warehouses.size, belowMin: acc.belowMin },
+    ]),
+  );
+}
+
+/**
+ * Fiyat satırlarını ürünün BİRİNCİL boyuna indirger: ilk aktif boy, hiç aktif yoksa ilk boy.
+ * Sıra `toPriceRows`un verdiği sıradır (boylar `sortOrder` ile gelir), yani liste her yenilemede
+ * aynı boyu gösterir. Marj ve hedef karşılaştırması satırdan OLDUĞU GİBİ alınır — fiyat ekranıyla
+ * aynı tanım.
+ */
+export function summarizePrices(rows: readonly PriceRow[]): Map<string, ProductPriceSummary> {
+  const byProduct = new Map<string, ProductPriceSummary>();
+  const chosenActive = new Set<string>();
+  for (const row of rows) {
+    const already = byProduct.get(row.productId);
+    if (already && (chosenActive.has(row.productId) || !row.variantActive)) continue;
+    byProduct.set(row.productId, {
+      b2cCents: row.b2c.amountCents,
+      b2bCents: row.b2b.amountCents,
+      marginPercent: row.marginPercent,
+      belowTarget: row.belowTarget,
+      autoPrice: row.autoPrice,
+    });
+    if (row.variantActive) chosenActive.add(row.productId);
+  }
+  return byProduct;
+}
+
+export function toProductViews(rows: ProductWithRelations[], names: NameMaps, summaries: ProductSummaries = {}): ProductView[] {
   return rows.map((row) => {
     const { collections, ...product } = row;
     return {
@@ -45,6 +139,8 @@ export function toProductViews(rows: ProductWithRelations[], names: NameMaps): P
       thumbUrl: thumbnailImageUrl(product),
       categoryName: product.categoryId ? (names.category.get(product.categoryId) ?? '—') : '—',
       collectionNames: collections.map((c) => names.collection.get(c.collectionId) ?? '').filter(Boolean),
+      stock: summaries.stock?.get(product.id) ?? null,
+      price: summaries.price?.get(product.id) ?? null,
     };
   });
 }

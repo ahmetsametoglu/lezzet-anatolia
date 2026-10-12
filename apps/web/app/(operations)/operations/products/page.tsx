@@ -2,8 +2,9 @@ import { BundleService, CategoryService, CollectionService, ProductFamilyService
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { publicImageUrl } from '@lezzet/storage';
 import { frameSourcesOf, thumbnailImageUrl } from '@lezzet/application';
+import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { ProductsClient } from './products-client';
-import { toBundleViews, toProductViews } from './products-read';
+import { readRowSummaries, toBundleViews, toProductViews } from './products-read';
 import { parseProductsUrl, toProductFilters } from './products-url';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { guarded, requireAdmin } from '@/lib/guard';
@@ -46,10 +47,22 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   // Paketler ÖZET olarak okunur (`bundle_list_rows()`): satır başına kaç kalem, atanmış toplam, "ayrı
   // ayrı alınsa", maliyet, KDV'siz gelir. Kalemlerin kendisi burada YOK — onlar paket diyaloğu
-  // açılınca, yalnız o paket için okunur. Fiyat ve parti verisi de sayfaya hiç gelmez: listenin
-  // ihtiyacı birkaç sayı, oysa uygulamada hesaplamak katalogun tamamını taşımayı gerektiriyordu.
-  // Ürün formu da bu satırlardan besleniyor ("bu ürün N pakette kullanılıyor" — `variantIds`).
-  const [productPage, { byCategory, ...counts }, categories, collectionRows, bundleRows, families, pinnedPage] = await Promise.all([
+  // açılınca, yalnız o paket için okunur. PARTİLER de gelmez: son tarih satır açılınca, o boyların
+  // kendi turunda okunur. Ürün formu bu satırlardan besleniyor ("bu ürün N pakette kullanılıyor").
+  //
+  // Depo bağlamı ve depo adları ürün okumasıyla PARALEL alınır: satırın stok özeti ikisine de bağlı
+  // ama hiçbiri ürün listesini beklemek zorunda değil.
+  const [
+    productPage,
+    { byCategory, ...counts },
+    categories,
+    collectionRows,
+    bundleRows,
+    families,
+    pinnedPage,
+    warehouseCtx,
+    warehouseLabels,
+  ] = await Promise.all([
     productSvc.listWithRelations({ filters, limit: DEFAULT_PAGE_SIZE }),
     // Dört sayı TEK okumada (`product_counts`): başlık sayaçları + kategori başına ürün sayısı.
     productSvc.counts(filters),
@@ -61,6 +74,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     // ürünü ilk sayfada olmayabilir ve önizleme o zaman sessizce İLK satırı gösterirdi (URL başka
     // ürünü söylerken). Tek satırlık ek okuma; parametre yokken hiç yapılmaz.
     urlState.selected ? productSvc.listWithRelations({ filters: { ids: [urlState.selected] }, limit: 1 }) : null,
+    readWarehouseContext(),
+    readWarehouseLabels(),
   ]);
 
   // Üyeler aile başına okunuyor. **N+1 ama bilinçli:** aile operatörün elle kurduğu, doğal tavanlı
@@ -75,7 +90,15 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     category: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
     collection: new Map(collectionRows.map((c) => [c.id, resolveLocalizedText(c.name)])),
   };
-  const productViews = toProductViews(productPage.rows, names);
+  // Satırın stok ve fiyat özetleri — kurulum `products-read`te, çünkü sonraki sayfaları getiren
+  // action da aynı sayıları üretmek zorunda. Hedefli okunan `?p=` ürünü de kümeye girer, yoksa
+  // paylaşılan bağlantının satırı özetsiz kalırdı.
+  const summaries = await readRowSummaries(db, [...productPage.rows, ...(pinnedPage?.rows ?? [])], {
+    categoryNames: names.category,
+    warehouseIds: warehouseCtx.visibleWarehouseIds,
+    warehouseLabels,
+  });
+  const productViews = toProductViews(productPage.rows, names, summaries);
 
   // Görsel URL'i public bucket'tan saf birleştirmeyle kurulur (05.11) — ne async çağrı ne ağ turu;
   // `?v=<damga>` sayesinde dosya değişince adres de değişir, arada tam cache.
@@ -122,7 +145,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       data={{
         products: productViews,
         nextCursor: productPage.nextCursor,
-        pinned: pinnedPage ? (toProductViews(pinnedPage.rows, names)[0] ?? null) : null,
+        pinned: pinnedPage ? (toProductViews(pinnedPage.rows, names, summaries)[0] ?? null) : null,
         counts,
         categories: categoryViews,
         collections: collectionViews,

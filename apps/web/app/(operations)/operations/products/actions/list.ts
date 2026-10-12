@@ -4,7 +4,8 @@ import { CategoryService, CollectionService, ProductService, serviceDb } from '@
 import { DEFAULT_PAGE_SIZE, KeysetCursorSchema, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { toProductViews } from '../products-read';
+import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
+import { readRowSummaries, toProductViews } from '../products-read';
 import { parseProductsUrl, toProductFilters } from '../products-url';
 import type { ProductView } from '../products-types';
 
@@ -38,14 +39,26 @@ export async function loadMoreProductsAction(search: string, cursor: KeysetCurso
     const page = await productSvc.listWithRelations({ filters, cursor: safeCursor, limit: DEFAULT_PAGE_SIZE });
 
     // Ad çözümleri için kategori/koleksiyon adları — tavanı onlarla sınırlı iki küçük okuma.
-    const [categories, collections] = await Promise.all([new CategoryService(db).list(), new CollectionService(db).list()]);
+    // Depo bağlamı ve adları da burada: stok özeti ikisine bağlı ve ürün sayfasıyla aynı evreni ister.
+    const [categories, collections, warehouseCtx, warehouseLabels] = await Promise.all([
+      new CategoryService(db).list(),
+      new CollectionService(db).list(),
+      readWarehouseContext(),
+      readWarehouseLabels(),
+    ]);
     const names = {
       category: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
       collection: new Map(collections.map((c) => [c.id, resolveLocalizedText(c.name)])),
     };
 
-    // İndirgeme page.tsx ile PAYLAŞILIR → ilk sayfa ve sonraki sayfalar aynı şekli üretir.
-    const products = toProductViews(page.rows, names);
+    // İndirgeme VE özet kurulumu page.tsx ile PAYLAŞILIR → ilk sayfa ile sonraki sayfalar aynı şekli
+    // ve aynı sayıları üretir; aşağı kaydırınca stok/fiyat kolonu boşalmaz.
+    const summaries = await readRowSummaries(db, page.rows, {
+      categoryNames: names.category,
+      warehouseIds: warehouseCtx.visibleWarehouseIds,
+      warehouseLabels,
+    });
+    const products = toProductViews(page.rows, names, summaries);
     return { data: { products, nextCursor: page.nextCursor }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

@@ -11,9 +11,23 @@ import type { ColumnTrack } from '@/components/operation/ui/table-columns';
  * Dosya JSX TAŞIMAZ ve `'use client'` DEĞİL: sunucuda çizilen `loading.tsx` bunu ek bir istemci
  * paketi sürüklemeden okuyabilsin.
  */
+/**
+ * Kolonlar KARARIN alanları: operatör "bu ürün satılabilir mi, nesi eksik" sorusunu satırdan
+ * yanıtlayabilmeli. Eski şerit dört kolondu (ürün · varyant sayısı · diller · durum) ve cevabı
+ * yalnız seçip sağ panele, oradan iki ayrı bakış diyaloğuna giderek veriyordu.
+ *
+ * "Diller" kolonu KALKTI, yerine `decl` geldi: dil doluluğu beyanın beş parçasından biridir ve
+ * göstergenin ilk harfi (D) onu zaten söyler — ayrı kolon aynı gerçeği iki kez çizerdi.
+ *
+ * En yakın son tarih burada YOK (kullanıcı kararı): onu okumak parti satırlarını çekmek demek ve
+ * liste bunu satır başına ödeyemez — satır açılınca boy boy gelir.
+ */
 export const PRODUCTS_COLUMN_TRACKS: ColumnTrack[] = [
-  { key: 'name', header: 'Ürün', width: 'minmax(120px,1fr)' },
-  { key: 'variants', header: 'Varyant', width: '66px', align: 'center' },
-  { key: 'langs', header: 'Diller', width: '88px', align: 'center' },
-  { key: 'status', header: 'Durum', width: '80px', align: 'right' },
+  { key: 'name', header: 'Ürün', width: 'minmax(240px,1.6fr)' },
+  { key: 'variants', header: 'Boylar', width: '150px' },
+  { key: 'stock', header: 'Stok', width: '132px', align: 'right' },
+  { key: 'price', header: 'Fiyat · marj', width: '158px', align: 'right' },
+  { key: 'decl', header: 'Beyan', width: '126px', align: 'center' },
+  { key: 'ship', header: 'Sevk', width: '116px' },
+  { key: 'status', header: 'Durum', width: '94px', align: 'right' },
 ];
