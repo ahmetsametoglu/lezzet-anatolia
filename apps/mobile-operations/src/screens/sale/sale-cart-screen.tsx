@@ -145,6 +145,12 @@ export function SaleCartScreen() {
                   ) : null}
                 </View>
               )}
+              {/* Kart satış yazıldıktan sonra çekilir, çünkü kesin tutar sunucudan gelir; fiş o tutarı söyler. */}
+              {sale.payment === 'card' ? (
+                <Text style={styles.hint} testID="sale-card-note">
+                  {t.payment.cardNote}
+                </Text>
+              ) : null}
               {/* Açık vadelinin sonucu seçilince, kapalı vadelinin sebebi müşteri seçiliyken yazar. */}
               {credit === null ? null : credit.open ? (
                 sale.payment === 'credit' ? (

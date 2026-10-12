@@ -168,7 +168,7 @@ export function PickupScreen() {
             {pickup.dueCents === 0 ? (
               <View style={styles.settled} testID="warehouse-pickup-settled">
                 <Text style={styles.settledLabel}>{t.pickup.deliver.settled}</Text>
-                <Text style={styles.settledNote}>{t.pickup.deliver.settledNote}</Text>
+                <Text style={styles.note}>{t.pickup.deliver.settledNote}</Text>
               </View>
             ) : (
               <View style={styles.collection} testID="warehouse-pickup-collection">
@@ -199,6 +199,10 @@ export function PickupScreen() {
                 {pickup.collectionBlocked && !pickup.doorCollection[pickup.method] ? (
                   <Text style={styles.errorText} accessibilityRole="alert" testID="warehouse-pickup-collection-blocked">
                     {t.pickup.deliver.blocked}
+                  </Text>
+                ) : pickup.method === 'card' ? (
+                  <Text style={styles.note} testID="warehouse-pickup-card-note">
+                    {fillCopy(t.pickup.deliver.cardNote, { amount: `${pickup.amountText} €` })}
                   </Text>
                 ) : null}
               </View>
@@ -336,7 +340,7 @@ const styles = StyleSheet.create({
   boxStateDone: { color: operationsTheme.colors['olive-dark'], fontFamily: operationsTheme.font.body['700'] },
   settled: { gap: operationsTheme.space.xs },
   settledLabel: { fontFamily: operationsTheme.font.body['700'], fontSize: operationsTheme.text['body-sm'], color: operationsTheme.colors['olive-dark'] },
-  settledNote: { fontFamily: operationsTheme.font.body['400'], fontSize: operationsTheme.text.helper, color: operationsTheme.colors.muted },
+  note: { fontFamily: operationsTheme.font.body['400'], fontSize: operationsTheme.text.helper, color: operationsTheme.colors.muted },
   collection: { gap: operationsTheme.space.md },
   amountInput: {
     flexDirection: 'row',

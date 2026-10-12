@@ -70,7 +70,8 @@
     "heading": "TAHSİLAT",
     "cash": "Nakit",
     "card": "Kart",
-    "credit": "Vadeli"
+    "credit": "Vadeli",
+    "cardNote": "Kesin tutar satış yazılınca fişte çıkar; kartı o tutarla Revolut Business uygulamasında Tap to Pay ile çekin."
   },
   "cta": {
     "idle": "Sepet boş",
@@ -103,7 +104,8 @@
     "note": "Stok hareketi işlendi. Fiş yazdırma bu sürümde bağlı değil.",
     "again": "Yeni satış",
     "leave": "Depoya dön",
-    "creditNote": "Vadeli satış: tutar müşterinin açık bakiyesine eklendi, kapıda para alınmadı."
+    "creditNote": "Vadeli satış: tutar müşterinin açık bakiyesine eklendi, kapıda para alınmadı.",
+    "cardNote": "Bu tutarı şimdi Revolut Business uygulamasında Tap to Pay ile çekin."
   },
   "addClosed": "Sepete ekleme kapalı",
   "offline": {

@@ -84,7 +84,13 @@ export function SaleReceiptScreen() {
             <Text style={[styles.meta, styles.centered]} testID="sale-receipt-credit">
               {t.receipt.creditNote}
             </Text>
-          ) : receipt.paymentRecorded ? null : (
+          ) : receipt.paymentRecorded ? (
+            receipt.method === 'card' ? (
+              <Text style={[styles.meta, styles.centered]} testID="sale-receipt-card">
+                {t.receipt.cardNote}
+              </Text>
+            ) : null
+          ) : (
             <Text style={styles.warn} testID="sale-receipt-payment-missing">
               {t.result.paymentMissing}
             </Text>

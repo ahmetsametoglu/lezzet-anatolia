@@ -73,6 +73,12 @@ export function DeliveryCollectionStep({ delivery, n, locked }: DeliveryCollecti
           {t.delivery.collection.cashWarning}
         </StepNote>
       ) : null}
+      {/* Kart Revolut'un uygulamasında çekilir; bu ekran yalnız tutarı söyler, ödeme eşleştirme işiyle tahsilata bağlanır. */}
+      {delivery.method === 'card' ? (
+        <StepNote tone="hint" testID="courier-card-note">
+          {fillCopy(t.delivery.collection.cardNote, { amount: `${delivery.amountText} €` })}
+        </StepNote>
+      ) : null}
       <StepNote tone="hint">{t.delivery.collection.note}</StepNote>
       {delivery.collectionBlocked ? (
         <StepNote tone="error" testID="courier-collection-blocked">

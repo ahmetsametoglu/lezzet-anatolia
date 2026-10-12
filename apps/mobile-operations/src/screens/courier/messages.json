@@ -333,6 +333,7 @@
       "increase": "Tutarı artır",
       "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
       "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
+      "cardNote": "Kartı Revolut Business uygulamasında Tap to Pay ile çekin: {amount}. Ödeme onaylanınca teslimi burada kapatın.",
       "note": "Ödeme durumu tahsilattan türetilir; \"tekrar dene\" güvenlidir, para iki kez yazılmaz.",
       "blocked": "Tahsilat YAZILAMIYOR: bu yöntemin hesabı ayarlanmamış (sistem ayarı boş ya da geçersiz). Para yazılmadan teslim kapatılmaz — operasyonu arayın.",
       "settled": "✓ Borç yok",
