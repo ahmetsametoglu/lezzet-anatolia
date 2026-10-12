@@ -6,6 +6,7 @@ import { z } from 'zod';
  */
 export const DeliveryProofRecordSchema = z.object({
   /** Kanıtın türü; `box_scan` görselsizdir, kanıt kapıda okutulan kutu kodlarıdır. */
+  // BEKLEYEN(K.75): imza ve fotoğraf türleri kapı kodundan sonra yazılmıyor; okuyan operasyon detayıyla birlikte sökülür.
   kind: z.enum(['signature', 'photo', 'box_scan']),
   /** Private kovadaki anahtar (`delivery/proofs/{orderId}/…`), public adresi yoktur; `null` yalnız `box_scan`da, çünkü o kanıtın kodları vardır. */
   imageKey: z.string().nullable(),
