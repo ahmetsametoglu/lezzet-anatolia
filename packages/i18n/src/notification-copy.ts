@@ -331,6 +331,8 @@ const PENNYLANE_ENGELI: Record<string, string> = {
   foreign_matches: "Pennylane'de bizde olmayan bir faturaya da eşli, eşleşme elle düzeltilmeli",
   billing_address: 'müşterinin fatura adresi yok',
   total_mismatch: "Pennylane'in hesapladığı toplam bizimkinden farklı, taslak kesinleşmedi",
+  customer_ambiguous: "Pennylane'de bu firmaya uyan birden çok müşteri var",
+  customer_taken: "Pennylane'deki müşteri bizde başka bir müşteriye bağlı",
 };
 
 /** Pennylane engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */

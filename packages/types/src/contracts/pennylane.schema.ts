@@ -60,12 +60,16 @@ export const PennylaneApiInvoicePageSchema = pageOf(PennylaneApiInvoiceSchema);
 /** Satırların yalnız kimliği okunur: güncellemede eski satırlar kimlikle silinir. */
 export const PennylaneApiInvoiceLinePageSchema = pageOf(z.object({ id: z.number().int() }));
 
-/** Müşteri kaydı; alanlar Pennylane başvuru belgesinden, cevap biçimi ölçülmedi. */
+/** Müşteri kaydı; alanlar Pennylane başvuru belgesinden, cevap biçimi ölçülmedi. Elle açılmış kayıtta kimlik ve adres boş olabilir. */
 export const PennylaneApiCustomerSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   external_reference: z.string().nullable(),
+  reg_no: z.string().nullish(),
+  vat_number: z.string().nullish(),
+  billing_address: z.object({ address: z.string(), postal_code: z.string(), city: z.string(), country_alpha2: z.string() }).nullish(),
 });
+export type PennylaneApiCustomer = z.infer<typeof PennylaneApiCustomerSchema>;
 export const PennylaneApiCustomerPageSchema = pageOf(PennylaneApiCustomerSchema);
 
 /** Müşteri faturası (başvuru belgesinden, cevap biçimi ölçülmedi); tutarlar ondalık dize, numara fatura kesinleşince dolar. */

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { UserProfile } from '@lezzet/types';
 import type { SaleVatBasis } from '../export';
 import {
+  pennylaneCustomerCandidates,
   pennylaneCustomerDraft,
+  pennylaneCustomerPatch,
   pennylaneSalesInvoiceDraft,
   pennylaneSalesInvoiceLines,
   pennylaneTotalsMatch,
@@ -54,6 +56,52 @@ describe('Pennylane müşteri kaydı', () => {
       billingAddress: { address: '12 rue du Faubourg de Pierre', postalCode: '67000', city: 'Strasbourg', countryAlpha2: 'FR' },
       language: 'fr_FR',
     });
+  });
+});
+
+describe("Pennylane'de aynı firma", () => {
+  const record = (over: { regNo?: string | null; vatNumber?: string | null; name?: string }) => ({
+    id: 1,
+    name: over.name ?? 'Restaurant Oberjaegerhof',
+    externalReference: null,
+    regNo: over.regNo ?? null,
+    vatNumber: over.vatNumber ?? null,
+    billingAddress: null,
+  });
+
+  // Ad eşleşseydi aynı adlı başka firmanın kaydına fatura kesilirdi; SIREN ve KDV numarası tutmasaydı aynı firma ikinci kez açılırdı.
+  it("SIRET ya da FR KDV numarası tutan kayıt SIREN'le, Alman kaydı KDV numarasıyla bulunur; yalnız adı tutan kayıt aday değildir", () => {
+    const bySiret = record({ regNo: '732 829 320 00074' });
+    const byVat = record({ vatNumber: 'FR 40 732829320' });
+    const byName = record({});
+    const german = record({ vatNumber: 'DE123456789' });
+    expect(pennylaneCustomerCandidates([bySiret, byVat, byName, german], { regNo: '732829320', vatNumber: null })).toEqual([
+      bySiret,
+      byVat,
+    ]);
+    expect(pennylaneCustomerCandidates([bySiret, german], { regNo: null, vatNumber: 'de 123456789' })).toEqual([german]);
+    expect(pennylaneCustomerCandidates([byName], { regNo: null, vatNumber: null })).toEqual([]);
+  });
+
+  const draft = pennylaneCustomerDraft(
+    {
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'Ahmet Yılmaz',
+      email: null,
+      companyInfo: { legalName: 'Restaurant Oberjaegerhof', siret: '73282932000074' },
+      vatNumber: null,
+      preferredLanguage: 'fr',
+    } as Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber' | 'preferredLanguage'>,
+    { line1: '12 rue du Faubourg de Pierre', line2: null, postalCode: '67000', city: 'Strasbourg', country: 'FR' },
+  );
+
+  // Fark yazılmasaydı taşınan müşterinin faturası eski adrese kesilirdi; SIRET SIREN'le ezilseydi muhasebenin kaydı bozulurdu.
+  it("kayıtla fark yalnız değişen alandır; SIRET tutan kaydın SIREN'i aynıysa kimlik değişmiş sayılmaz", () => {
+    const same = { ...record({ regNo: '73282932000074' }), billingAddress: draft.billingAddress };
+    expect(pennylaneCustomerPatch(same, draft)).toBeNull();
+    const moved = { ...same, billingAddress: { ...draft.billingAddress, address: '3 place Kléber', postalCode: '67000' } };
+    expect(pennylaneCustomerPatch(moved, draft)).toEqual({ billingAddress: draft.billingAddress });
+    expect(pennylaneCustomerPatch({ ...same, billingAddress: null }, draft)).toEqual({ billingAddress: draft.billingAddress });
   });
 });
 

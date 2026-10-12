@@ -5,6 +5,7 @@ import type {
   PennylaneCategory,
   PennylaneCategoryGroup,
   PennylaneChange,
+  PennylaneCustomer,
   PennylaneCustomerDraft,
   PennylaneCustomerInvoice,
   PennylaneCustomerInvoiceDraft,
@@ -34,6 +35,18 @@ export type MemoryInvoice = Omit<PennylaneInvoiceDraft, 'externalReference'> & {
   paymentStatus: PennylanePaymentStatus | null;
 };
 
+/** İkizdeki müşteri: Pennylane'in döndürdüğü kayıt ve bizim yazdığımız e-posta ve dil; elle açılmış kayıtta ikisi yoktur. */
+export type MemoryCustomer = PennylaneCustomer & Partial<Pick<PennylaneCustomerDraft, 'emails' | 'language'>>;
+
+const customerView = ({ id, name, externalReference, regNo, vatNumber, billingAddress }: MemoryCustomer): PennylaneCustomer => ({
+  id,
+  name,
+  externalReference,
+  regNo,
+  vatNumber,
+  billingAddress,
+});
+
 /** İkizde kestiğimiz müşteri faturası: taslağı, Pennylane'in verdiği numara ve toplamlar, gönderildiği alıcılar. */
 export type MemoryCustomerInvoice = PennylaneCustomerInvoiceDraft &
   Omit<PennylaneCustomerInvoice, 'externalReference'> & {
@@ -52,7 +65,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   const bankAccounts = new Map<number, PennylaneBankAccount>();
   const transactions = new Map<number, PennylaneTransaction>();
   const suppliers = new Map<number, PennylaneSupplierDraft & { id: number }>();
-  const customers = new Map<number, PennylaneCustomerDraft & { id: number }>();
+  const customers = new Map<number, MemoryCustomer>();
   const customerInvoices = new Map<number, MemoryCustomerInvoice>();
   const files = new Map<number, string>();
   const invoices = new Map<number, MemoryInvoice>();
@@ -166,14 +179,30 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     findCustomer: async (externalReference) => {
       failing('findCustomer');
       const found = [...customers.values()].find((row) => row.externalReference === externalReference);
-      return found ? { id: found.id, name: found.name, externalReference: found.externalReference } : null;
+      return found ? customerView(found) : null;
+    },
+    listCustomers: async () => {
+      failing('listCustomers');
+      return [...customers.values()].map(customerView);
+    },
+    getCustomer: async (id) => {
+      failing('getCustomer');
+      const row = customers.get(id);
+      return row ? customerView(row) : null;
     },
     createCustomer: async (draft) => {
       failing('createCustomer');
       if ([...customers.values()].some((row) => row.externalReference === draft.externalReference)) throw taken(draft.externalReference);
       const id = (nextId += 1);
-      customers.set(id, { ...draft, id });
-      return { id, name: draft.name, externalReference: draft.externalReference };
+      const row: MemoryCustomer = { ...draft, id };
+      customers.set(id, row);
+      return customerView(row);
+    },
+    updateCustomer: async (id, patch) => {
+      failing('updateCustomer');
+      const row = customers.get(id);
+      if (!row) throw notFound();
+      customers.set(id, { ...row, ...patch });
     },
     findCustomerInvoice: async (externalReference) => {
       failing('findCustomerInvoice');
@@ -370,6 +399,21 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     invoices: () => [...invoices.values()],
     suppliers: () => [...suppliers.values()],
     customers: () => [...customers.values()],
+    /** Pennylane'de muhasebenin elle açtığı müşteri: dış referansı yoktur, adresi olmayabilir. */
+    addForeignCustomer(
+      row: Pick<PennylaneCustomer, 'name'> & Partial<Pick<PennylaneCustomer, 'regNo' | 'vatNumber' | 'billingAddress'>>,
+    ): number {
+      const id = (nextId += 1);
+      customers.set(id, {
+        id,
+        name: row.name,
+        externalReference: null,
+        regNo: row.regNo ?? null,
+        vatNumber: row.vatNumber ?? null,
+        billingAddress: row.billingAddress ?? null,
+      });
+      return id;
+    },
     customerInvoices: () => [...customerInvoices.values()],
     /** Pennylane'e başkasının girdiği fatura: dış referansı bizim değildir, dosyası yoktur. */
     addForeignInvoice(

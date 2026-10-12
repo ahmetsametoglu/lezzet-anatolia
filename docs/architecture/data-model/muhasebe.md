@@ -122,8 +122,9 @@ Satış faturasının müşterisinin Pennylane'deki müşteri kaydı.
 
 **Kararlar**
 
-- **Fatura kesilmeden önce açılır** — müşteri Pennylane'de yoksa satış faturası kesilmez; kayıt bir kez açılır, sonraki faturalar aynı
-  kayda gider.
+- **Fatura kesilmeden önce bulunur ya da açılır** — dış referansla, yoksa aynı SIREN ya da KDV numaralı elle açılmış kayıt bağlanır
+  (uyan birden çok kayıt ya da bizde başka müşteriye bağlı kayıt seçilmez, fatura bekler); hiçbiri yoksa fatura adresiyle açılır.
+  Bağlı kaydın unvanı, kimliği ve adresi bizden güncellenir, e-postalarına dokunulmaz.
 
 ## PennylaneQueue (yazım kuyruğu)
 

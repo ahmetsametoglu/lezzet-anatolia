@@ -168,8 +168,9 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
   önce aynı firmanın elle açılmış kaydı aranıp bağlanır, Pennylane'e elle girilmiş fatura sahiplenilmez. Bizde olmayan faturaya
   kurulan eşleşmeye dokunulmaz; o hareket işaretlenir ve belgesi bizde girilene kadar izah bekler.
 - B2B satış faturası bizde açılır (`sales-invoice-open`, on dakikada bir) ve aynı kuyrukla Pennylane'de kesilir: müşteri dış
-  referansla (`cus:<kimlik>`) bulunur ya da fatura adresiyle açılır, fatura taslak açılır (`sinv:<belge>`), Pennylane'in toplamı
-  bizimkiyle aynıysa kesinleşir ve müşteriye e-postayla gider (`docs/feature/profesyonel-satis.md`, Faz 4).
+  referansla (`cus:<kimlik>`), yoksa aynı SIREN ya da KDV numarasıyla bulunur, hiçbiri yoksa fatura adresiyle açılır; unvanı ve
+  adresi bizden güncellenir. Fatura taslak açılır (`sinv:<belge>`), Pennylane'in toplamı bizimkiyle aynıysa kesinleşir ve müşteriye
+  e-postayla gider (`docs/feature/profesyonel-satis.md`, Faz 4).
 - Raporlar ekranındaki satış dosyası ve hareket dökümü genel amaçlı dışa aktarımdır, muhasebe akışının parçası değildir.
 - e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası muhasebecinin platformuna gelir;
   Lezzet'in alış belgesi Pennylane'e kopyasından bizden yüklenir.

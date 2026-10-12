@@ -84,14 +84,6 @@ export type PennylaneInvoicePatch = z.infer<typeof PennylaneInvoicePatchSchema>;
 export const PennylaneLanguageEnum = z.enum(['fr_FR', 'de_DE', 'en_GB', 'es_ES']);
 export type PennylaneLanguage = z.infer<typeof PennylaneLanguageEnum>;
 
-/** Pennylane'deki müşteri; bizim müşterimize dış referansla bağlanır (`cus:<kimlik>`). */
-export const PennylaneCustomerSchema = z.object({
-  id: z.number().int(),
-  name: z.string(),
-  externalReference: z.string().nullable(),
-});
-export type PennylaneCustomer = z.infer<typeof PennylaneCustomerSchema>;
-
 /** Açılacak şirket müşterisi; fatura adresi Pennylane'in şartıdır, SIREN `regNo`dur. */
 export const PennylaneCustomerDraftSchema = z.object({
   name: z.string().min(1),
@@ -108,6 +100,27 @@ export const PennylaneCustomerDraftSchema = z.object({
   language: PennylaneLanguageEnum,
 });
 export type PennylaneCustomerDraft = z.infer<typeof PennylaneCustomerDraftSchema>;
+
+/**
+ * Pennylane'deki müşteri; bizim müşterimize dış referansla (`cus:<kimlik>`) ya da SIREN ve KDV numarasıyla bağlanır. Elle açılmış
+ * kayıtta referans ve adres boş olabilir.
+ */
+export const PennylaneCustomerSchema = PennylaneCustomerDraftSchema.pick({ regNo: true, vatNumber: true }).extend({
+  id: z.number().int(),
+  name: z.string(),
+  externalReference: z.string().nullable(),
+  billingAddress: PennylaneCustomerDraftSchema.shape.billingAddress.nullable(),
+});
+export type PennylaneCustomer = z.infer<typeof PennylaneCustomerSchema>;
+
+/** Müşteri kaydının bizden güncellenen alanları: unvan, kimlik ve fatura adresi. */
+export const PennylaneCustomerPatchSchema = PennylaneCustomerDraftSchema.pick({
+  name: true,
+  regNo: true,
+  vatNumber: true,
+  billingAddress: true,
+}).partial();
+export type PennylaneCustomerPatch = z.infer<typeof PennylaneCustomerPatchSchema>;
 
 /** Müşteri faturasının satırı: adet, KDV hariç birim fiyat (Pennylane'in ondalık dizesi) ve oran kodu. */
 export const PennylaneCustomerInvoiceLineSchema = z.object({

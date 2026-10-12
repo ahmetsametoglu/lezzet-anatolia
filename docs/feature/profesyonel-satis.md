@@ -32,6 +32,7 @@ uygundur. Sistemde ayrı bir satış rolü yoktur: siparişi personel girer, tes
 | 17 | **Bilgisi tam satış faturası teslimde kendiliğinden kesilir; eksik olan onay bekler** | Fatura teslim edilen miktarlardan hazırlanır, hemen kesinleşir ve müşteriye gider. SIREN ya da fatura adresi yoksa ya da kayıt B2B onayı almamışsa "Kesilecek faturalar" listesinde onay bekler (§5, Faz 4). Kesinleşen fatura düzenlenmez; düzeltme alacak notu ve yeni faturadır. |
 | 18 | **Varsayılan fatura modu teslim başına** | Her teslimden sonra bir fatura; ay sonu toplu fatura müşteri başına seçilen bir ayardır. |
 | 19 | **Fatura iki görünümle, tek numara sırasıyla kesilir** | QUALITE ve Lezzet Anatolie için ayrı Pennylane şablonu (logo, ticari ad); numara sırası ortak. Mevzuat tek ve kesintisiz sırayı ister; Pennylane'de numaralandırma şablondan bağımsızdır (§3). |
+| 20 | **Pennylane'de aynı firma SIREN ya da KDV numarasıyla bulunur; kaydı bizden güncellenir** (12.10) | Elle açılmış kayıt ikinci kez açılmaz, satış faturası ona kesilir; uyan birden çok kayıt varsa fatura bekler. Unvan, kimlik ve fatura adresi bizden yazılır; e-postalar muhasebenindir. |
 
 ## 2. Saha akışları
 
@@ -157,9 +158,9 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   B2B nakdi kasaya fiş olarak değil kasa girişi olarak gider (`register/plan.ts`, `sync.ts`).
 
 **Faz 4 — satış faturası Pennylane'de**
-- S0 (kullanıcı): Pennylane anahtarına müşteri ve müşteri faturası yetkileri; iki işin şablonu (logo, ticari ad, IBAN,
-  "açıklamaya fatura numarasını yazın"). Şablon kimlikleri Ayarlar › Pennylane'e girilir; boşsa fatura Pennylane'in varsayılan
-  şablonuyla kesilir.
+- S0 (kullanıcı): iki işin şablonu (logo, ticari ad, IBAN, "açıklamaya fatura numarasını yazın"). Şablon kimlikleri Ayarlar ›
+  Pennylane'e girilir; boşsa fatura Pennylane'in varsayılan şablonuyla kesilir. Anahtar bütün yetkilerle açıldı (kullanıcı, 12.10);
+  müşteri ve müşteri faturası erişimi ilk okumada ölçülür.
 - Satış faturası bizde belge olur: `money_document` (karşı taraf müşteri, yön giriş), siparişleri `money_document_order`, akışı
   `sales_invoice` (onay bekliyor · kuyrukta · kesildi) ([`data-model/para.md`](../architecture/data-model/para.md)).
 - **Açılış (tamamlandı):** backend işi on dakikada bir faturası açılmamış satışları tarar. Aday, kasanın yazmadığı satıştır (kanal
@@ -168,8 +169,9 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   toplar. Tutar ve KDV kırılımı dökümün hesabından, teslim edilen adetten çıkar; siparişin tahsil edilmiş parası faturaya bağlanır.
   Bilgisi eksik fatura (SIREN, fatura adresi, B2B onayı; Alman şirket SIREN yerine geçerli KDV numarasıyla tanınır) onay bekler ve
   her turda müşteri kaydından yeniden hesaplanır.
-- **Kesim (tamamlandı, Pennylane'de ölçülmedi):** kuyruğa giren fatura için müşteri Pennylane'de bulunur ya da fatura adresiyle
-  açılır. Fatura taslak açılır: kalem başına KDV hariç birim fiyat, kargo oran payı başına bir satır, çok siparişli faturada satır
+- **Kesim (tamamlandı, Pennylane'de ölçülmedi):** kuyruğa giren fatura için müşteri Pennylane'de dış referansla, yoksa aynı SIREN
+  ya da KDV numarasıyla bulunur (karar 20), hiçbiri yoksa fatura adresiyle açılır; bağlı kaydın unvanı, kimliği ya da adresi bizden
+  ayrıysa fatura kesilmeden önce güncellenir. Fatura taslak açılır: kalem başına KDV hariç birim fiyat, kargo oran payı başına bir satır, çok siparişli faturada satır
   sipariş numarasını taşır, ters yüklemede dökümün ibaresi ("Autoliquidation") basılır. Pennylane'in hesapladığı toplam bizimkiyle
   aynıysa fatura kesinleşir, numarası belgeye ve siparişlere (`order.invoice_no`) yazılır, fatura müşteriye e-postayla gider.
   Toplam farklıysa taslak bekler ve muhasebeye bir kez haber gider. Fatura günü kesildiği gündür, vade o günden hesaplanır.
@@ -198,9 +200,6 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
    ([CCI Paris](https://www.entreprises.cci-paris-idf.fr/fiches-pratiques/factures-quelles-sont-les-mentions-obligatoires),
    [Legifiscal](https://www.legifiscal.fr/tva/tva-internationale/facture-mentions-obligatoires-operations-internationales.html)).
    Kesinleşen fatura değişmediği için Almanya'ya ilk faturadan önce netleşmeli.
-4. Pennylane'de elle açılmış müşteriler: sistem müşteriyi dış referansıyla arar, bulamazsa yeni kayıt açar; aynı firma için eski
-   kayıt varsa birleştirmek muhasebecinin işi mi? Pennylane'de açılmış müşterinin adresi ya da unvanı bizde değişirse
-   güncellenmiyor.
 
 ## 7. Ölçülecekler
 
@@ -210,6 +209,8 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - Müşteri faturası (sandbox): toplamın yuvarlaması (satır başına mı, oran başına mı; bellek içi ikiz satır başına varsayar),
   cevapların biçimi ve taslağın durum adı, dış referansla arama, kesinleştirmenin fatura gününü değiştirip değiştirmediği, AB içi
   %20 ters yüklemenin kodu, alacak notunun açılışı.
+- Müşteri kaydı (sandbox): listede ve kayıtta `reg_no`, `vat_number` ve fatura adresinin biçimi, elle açılmış kaydın türü
+  (şirket ya da kişi), güncelleme ucunun yalnız gönderilen alanları değiştirip değiştirmediği.
 
 ## 8. Kaynaklar
 

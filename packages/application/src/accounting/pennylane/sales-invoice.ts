@@ -15,7 +15,10 @@ import {
   PAYMENT_TERM_DAYS_KEY,
   PENNYLANE_INVOICE_TEMPLATE_KEYS,
   SALES_INVOICE_SHIPPING_LABEL,
+  pennylaneCustomerCandidates,
   pennylaneCustomerDraft,
+  pennylaneCustomerIdentity,
+  pennylaneCustomerPatch,
   pennylaneCustomerReference,
   pennylaneSalesInvoiceDraft,
   pennylaneSalesInvoiceLines,
@@ -55,8 +58,9 @@ export async function writeSalesInvoice(
     new MoneyDocumentOrderService(db).ordersOf([document.id]),
   ]);
   if (!customer) return { status: 'skipped' };
-  const customerId = await ensureCustomer(db, pennylane, customer, addresses.find((address) => address.isBilling) ?? null);
-  if (customerId === null) return { status: 'blocked', reason: 'billing_address' };
+  const ensured = await ensureCustomer(db, pennylane, customer, addresses.find((address) => address.isBilling) ?? null);
+  if (ensured.status === 'blocked') return ensured;
+  const customerId = ensured.id;
 
   let draft = await pennylane.findCustomerInvoice(pennylaneSalesInvoiceReference(document.id));
   if (!draft) {
@@ -142,20 +146,40 @@ async function createDraft(
 }
 
 /**
- * Müşterinin Pennylane kaydı: aynada yoksa dış referansla aranır, o da yoksa fatura adresiyle açılır. Fatura adresi olmayan müşteri
- * açılamaz, `null` döner.
+ * Müşterinin Pennylane kaydı: aynada yoksa dış referansla, o da yoksa aynı firmanın SIREN ya da KDV numaralı elle açılmış kaydı
+ * aranır, hiçbiri yoksa fatura adresiyle açılır; uyan birden çok kayıt ya da bizde başka müşteriye bağlı kayıt seçilemez. Bağlı
+ * kaydın unvanı, kimliği ya da adresi bizden ayrıysa fatura kesilmeden önce güncellenir.
  */
-async function ensureCustomer(db: Db, pennylane: PennylanePort, customer: UserProfile, billing: Address | null): Promise<number | null> {
+async function ensureCustomer(
+  db: Db,
+  pennylane: PennylanePort,
+  customer: UserProfile,
+  billing: Address | null,
+): Promise<{ status: 'ok'; id: number } | { status: 'blocked'; reason: PennylaneSalesInvoiceBlock }> {
   const mirrors = new PennylaneCustomerService(db);
+  const draft = billing ? pennylaneCustomerDraft(customer, billing) : null;
   const mirror = await mirrors.findByCustomer(customer.id);
-  if (mirror) return mirror.pennylaneId;
-  let found = await pennylane.findCustomer(pennylaneCustomerReference(customer.id));
-  if (!found) {
-    if (!billing) return null;
-    found = await pennylane.createCustomer(pennylaneCustomerDraft(customer, billing));
+  let current = mirror ? await pennylane.getCustomer(mirror.pennylaneId) : null;
+  if (mirror && !current) throw new Error(`Pennylane müşteri kaydı bulunamadı: ${mirror.pennylaneId}`);
+  if (!current) {
+    current = await pennylane.findCustomer(pennylaneCustomerReference(customer.id));
+    if (!current) {
+      const candidates = pennylaneCustomerCandidates(await pennylane.listCustomers(), pennylaneCustomerIdentity(customer));
+      if (candidates.length > 1) return { status: 'blocked', reason: 'customer_ambiguous' };
+      current = candidates[0] ?? null;
+    }
+    if (current && (await mirrors.findByPennylaneId(current.id))) return { status: 'blocked', reason: 'customer_taken' };
+    if (!current) {
+      if (!draft) return { status: 'blocked', reason: 'billing_address' };
+      const created = await pennylane.createCustomer(draft);
+      await mirrors.save({ pennylaneId: created.id, customerId: customer.id });
+      return { status: 'ok', id: created.id };
+    }
+    await mirrors.save({ pennylaneId: current.id, customerId: customer.id });
   }
-  await mirrors.save({ pennylaneId: found.id, customerId: customer.id });
-  return found.id;
+  const patch = draft ? pennylaneCustomerPatch(current, draft) : null;
+  if (patch) await pennylane.updateCustomer(current.id, patch);
+  return { status: 'ok', id: current.id };
 }
 
 /** İşin şablon ayarı; boş ya da sayı olmayan değer Pennylane'in varsayılan şablonudur. */

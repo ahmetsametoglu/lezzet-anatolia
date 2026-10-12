@@ -22,6 +22,7 @@ import {
   PennylaneApiTransactionMatchPageSchema,
   PennylaneApiTransactionPageSchema,
   PennylaneApiTransactionSchema,
+  type PennylaneApiCustomer,
   type PennylaneApiCustomerInvoice,
   type PennylaneApiTransaction,
   type PennylaneCategory,
@@ -29,6 +30,7 @@ import {
   type PennylaneCompany,
   type PennylaneCustomer,
   type PennylaneCustomerInvoice,
+  type PennylaneCustomerPatch,
   type PennylaneInvoice,
   type PennylaneInvoiceLine,
   type PennylaneMode,
@@ -227,24 +229,26 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       const page = parse(PennylaneApiCustomerPageSchema, await read(`/customers?${query({ filter, limit: 2 })}`), 'müşteriler');
       return page.items[0] ? customerOf(page.items[0]) : null;
     },
+    async listCustomers() {
+      return (await readAll('/customers', PennylaneApiCustomerPageSchema, 'müşteriler')).map(customerOf);
+    },
+    async getCustomer(id) {
+      const body = await orNull(() => read(`/customers/${id}`));
+      return body === null ? null : customerOf(parse(PennylaneApiCustomerSchema, body, 'müşteri'));
+    },
     async createCustomer(draft) {
       const body = await write('POST', '/company_customers', {
         json: {
-          name: draft.name,
+          ...customerFields(draft),
           external_reference: draft.externalReference,
-          ...(draft.regNo ? { reg_no: draft.regNo } : {}),
-          ...(draft.vatNumber ? { vat_number: draft.vatNumber } : {}),
           emails: draft.emails,
-          billing_address: {
-            address: draft.billingAddress.address,
-            postal_code: draft.billingAddress.postalCode,
-            city: draft.billingAddress.city,
-            country_alpha2: draft.billingAddress.countryAlpha2,
-          },
           billing_language: draft.language,
         },
       });
       return customerOf(parse(PennylaneApiCustomerSchema, body, 'müşteri'));
+    },
+    async updateCustomer(id, patch) {
+      await write('PUT', `/company_customers/${id}`, { json: customerFields(patch) });
     },
     async findCustomerInvoice(externalReference) {
       const filter = JSON.stringify([{ field: 'external_reference', operator: 'eq', value: externalReference }]);
@@ -397,8 +401,37 @@ function supplierOf(row: { id: number; name: string; external_reference: string 
   return { id: row.id, name: row.name, externalReference: row.external_reference, vatNumber: row.vat_number || null };
 }
 
-function customerOf(row: { id: number; name: string; external_reference: string | null }): PennylaneCustomer {
-  return { id: row.id, name: row.name, externalReference: row.external_reference };
+function customerOf(row: PennylaneApiCustomer): PennylaneCustomer {
+  const address = row.billing_address;
+  return {
+    id: row.id,
+    name: row.name,
+    externalReference: row.external_reference,
+    regNo: row.reg_no || null,
+    vatNumber: row.vat_number || null,
+    billingAddress: address
+      ? { address: address.address, postalCode: address.postal_code, city: address.city, countryAlpha2: address.country_alpha2 }
+      : null,
+  };
+}
+
+/** Müşterinin yazılan alanları; boş kimlik gönderilmez, çünkü Pennylane'deki değeri silerdi. */
+function customerFields(fields: PennylaneCustomerPatch): Record<string, unknown> {
+  return {
+    ...(fields.name ? { name: fields.name } : {}),
+    ...(fields.regNo ? { reg_no: fields.regNo } : {}),
+    ...(fields.vatNumber ? { vat_number: fields.vatNumber } : {}),
+    ...(fields.billingAddress
+      ? {
+          billing_address: {
+            address: fields.billingAddress.address,
+            postal_code: fields.billingAddress.postalCode,
+            city: fields.billingAddress.city,
+            country_alpha2: fields.billingAddress.countryAlpha2,
+          },
+        }
+      : {}),
+  };
 }
 
 function customerInvoiceOf(row: PennylaneApiCustomerInvoice): PennylaneCustomerInvoice {

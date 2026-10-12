@@ -190,7 +190,8 @@ export function pennylaneDocumentStatus(input: {
   return difference === null ? { kind: 'uploaded' } : { kind: 'different', pennylaneOpenCents: difference };
 }
 
-const normalizedVat = (vat: string | null): string | null => vat?.replace(/[\s.-]/g, '').toUpperCase() || null;
+/** KDV numarasının karşılaştırılan biçimi: boşluk, nokta ve tire atılır, harfler büyür. */
+export const normalizedVat = (vat: string | null): string | null => vat?.replace(/[\s.-]/g, '').toUpperCase() || null;
 /** Türkçe adın Fransızca yazılışı da tutsun: noktasız ı ayrışmayla i'ye inmez, ayrıca eşlenir. */
 const normalizedName = (name: string): string =>
   name

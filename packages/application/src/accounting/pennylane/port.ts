@@ -9,6 +9,7 @@ import type {
   PennylaneCustomerDraft,
   PennylaneCustomerInvoice,
   PennylaneCustomerInvoiceDraft,
+  PennylaneCustomerPatch,
   PennylaneInvoice,
   PennylaneInvoiceDraft,
   PennylaneInvoicePatch,
@@ -66,8 +67,14 @@ export interface PennylanePort {
   unmatchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
   /** Dış referansla müşteri; referans tekil olduğu için en çok bir tane. */
   findCustomer(externalReference: string): Promise<PennylaneCustomer | null>;
+  /** Şirketin bütün müşterileri; aynı firmanın elle açılmış kaydı SIREN ya da KDV numarasıyla listeden bulunur. */
+  listCustomers(): Promise<PennylaneCustomer[]>;
+  /** Olmayan ya da başka şirketin müşterisi `null` döner. */
+  getCustomer(id: number): Promise<PennylaneCustomer | null>;
   /** Aynı dış referansla ikinci açılış reddedilir (`validation`); çağıran önce arar. */
   createCustomer(draft: PennylaneCustomerDraft): Promise<PennylaneCustomer>;
+  /** Yalnız verilen alanlar yazılır. */
+  updateCustomer(id: number, patch: PennylaneCustomerPatch): Promise<void>;
   /** Dış referansla müşteri faturası; yarıda kalmış kesme denemesinin faturası ikinci kez açılmasın diye önce aranır. */
   findCustomerInvoice(externalReference: string): Promise<PennylaneCustomerInvoice | null>;
   /** Faturayı taslak açar; toplamları Pennylane satırlardan hesaplar ve kesinleştirmeden önce bizimkiyle karşılaştırılır. */

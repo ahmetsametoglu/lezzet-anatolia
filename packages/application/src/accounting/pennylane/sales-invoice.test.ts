@@ -1,5 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { MoneyDocumentService, OrderService, PennylaneQueueService, SalesInvoiceService, serviceDb } from '@lezzet/database';
+import {
+  AddressService,
+  MoneyDocumentService,
+  OrderService,
+  PennylaneQueueService,
+  SalesInvoiceService,
+  serviceDb,
+} from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { openSalesInvoices } from '../sales-invoice';
 import { salesInvoiceGround } from '../sales-invoice.testkit';
@@ -116,6 +123,50 @@ describe('satış faturasının Pennylane kesimi', () => {
     expect(await run(documentId)).toBe('blocked');
     expect(await stuckAlerts(documentId)).toHaveLength(alerts.length);
     expect(twin.customerInvoices()).toHaveLength(1);
+  });
+
+  // Elle açılmış kayıt bulunmasaydı aynı firma Pennylane'de ikinci kez açılırdı; güncellenmeseydi fatura eski unvanla kesilirdi.
+  it("Pennylane'de elle açılmış aynı firma SIREN'iyle bulunur, kaydı bizden güncellenir ve fatura ona kesilir", async () => {
+    const customer = await ground.company();
+    const foreignId = twin.addForeignCustomer({ name: 'OBERJAEGERHOF SARL', regNo: '73282932000074' });
+    const { documentId } = await queuedInvoice(customer.id);
+
+    expect(await run(documentId)).toBe('issued');
+    expect(twin.customers()).toHaveLength(1);
+    expect(twin.customers()[0]).toMatchObject({
+      id: foreignId,
+      name: customer.companyInfo!.legalName,
+      regNo: '73282932000074',
+      billingAddress: { address: '12 rue du Faubourg de Pierre', postalCode: '67000', city: 'Strasbourg', countryAlpha2: 'FR' },
+    });
+    expect(twin.customerInvoices()).toMatchObject([{ customerId: foreignId, status: 'upcoming' }]);
+  });
+
+  // Uyan iki kayıttan biri seçilseydi fatura başka bir firmanın kaydına kesilebilirdi.
+  it('aynı firmaya uyan iki kayıt varsa fatura kesilmez ve bekler', async () => {
+    const customer = await ground.company();
+    twin.addForeignCustomer({ name: 'Oberjaegerhof', regNo: '732829320' });
+    twin.addForeignCustomer({ name: 'Oberjaegerhof Strasbourg', vatNumber: 'FR40732829320' });
+    const { documentId } = await queuedInvoice(customer.id);
+
+    expect(await run(documentId)).toBe('blocked');
+    expect(await queue.findByDocument(documentId)).toMatchObject({ lastError: 'blocked:customer_ambiguous' });
+    expect(twin.customers()).toHaveLength(2);
+    expect(twin.customerInvoices()).toEqual([]);
+  });
+
+  // Adres yazılmasaydı taşınan müşterinin sonraki faturaları eski adrese kesilirdi.
+  it('fatura adresi değişince sonraki fatura kesilmeden önce Pennylane kaydı güncellenir', async () => {
+    const customer = await ground.company();
+    const first = await queuedInvoice(customer.id);
+    expect(await run(first.documentId)).toBe('issued');
+
+    const addresses = new AddressService(db);
+    const billing = (await addresses.listByCustomer(customer.id)).find((address) => address.isBilling)!;
+    await addresses.update({ id: billing.id, line1: '3 place Kléber' });
+    const second = await queuedInvoice(customer.id);
+    expect(await run(second.documentId)).toBe('issued');
+    expect(twin.customers()).toMatchObject([{ billingAddress: { address: '3 place Kléber' } }]);
   });
 
   // Yarıda kalan deneme yeni fatura açsaydı aynı satış Pennylane'de iki kez faturalanırdı.

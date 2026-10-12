@@ -209,6 +209,10 @@ export class PennylaneCustomerService extends BaseDbService<PennylaneCustomerMir
     return this.getOneBy({ customerId });
   }
 
+  findByPennylaneId(pennylaneId: number): Promise<PennylaneCustomerMirror | null> {
+    return this.getOneBy({ pennylaneId });
+  }
+
   save(row: PennylaneCustomerMirrorInsert): Promise<PennylaneCustomerMirror> {
     return this.upsert(row, 'pennylane_id');
   }

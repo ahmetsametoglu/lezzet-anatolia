@@ -5,10 +5,12 @@ import {
   type Business,
   type DocumentVatRegime,
   type MoneyDocument,
+  type PennylaneCustomer,
   type PennylaneCustomerDraft,
   type PennylaneCustomerInvoice,
   type PennylaneCustomerInvoiceDraft,
   type PennylaneCustomerInvoiceLine,
+  type PennylaneCustomerPatch,
   type PennylaneLanguage,
   type PreferredLanguage,
   type UserProfile,
@@ -19,7 +21,7 @@ import { chargedQtyOf, fulfilledLineAmountCents, fulfilledLineOf } from '../../p
 import { invoiceNoteOf, type SaleVatBasis } from '../export';
 import type { AccountingLine } from '../line';
 import { sirenOfSiret, sirenOfVatNumber } from '../sales-invoice';
-import { pennylaneVatCode } from './document';
+import { normalizedVat, pennylaneVatCode } from './document';
 
 /**
  * Satış faturasının Pennylane'e yazımı; saf karar. Satırlar muhasebe dökümünün kalem ve kargo hesabından kurulur, Pennylane toplamı
@@ -27,7 +29,7 @@ import { pennylaneVatCode } from './document';
  */
 
 /** Satış faturasının Pennylane'e yazılamama sebebi; kesilmemiş fatura kuyrukta bekler ve muhasebeye bir kez haber gider. */
-export type PennylaneSalesInvoiceBlock = 'billing_address' | 'vat_code' | 'total_mismatch';
+export type PennylaneSalesInvoiceBlock = 'billing_address' | 'vat_code' | 'total_mismatch' | 'customer_ambiguous' | 'customer_taken';
 
 /** İşin satış faturası şablonu ayardır (Pennylane şablon kimliği); boşsa fatura Pennylane'in varsayılan şablonuyla kesilir. */
 export const PENNYLANE_INVOICE_TEMPLATE_KEYS: Record<Business, string> = {
@@ -55,6 +57,13 @@ export function pennylaneLanguageOf(language: PreferredLanguage): PennylaneLangu
   return salesInvoiceLocaleOf(language) === 'de' ? 'de_DE' : 'fr_FR';
 }
 
+/** Müşterinin Pennylane'deki kimliği: SIRET'ten ya da FR KDV numarasından SIREN ve KDV numarası. */
+export function pennylaneCustomerIdentity(
+  customer: Pick<UserProfile, 'companyInfo' | 'vatNumber'>,
+): Pick<PennylaneCustomerDraft, 'regNo' | 'vatNumber'> {
+  return { regNo: sirenOfSiret(customer.companyInfo?.siret) ?? sirenOfVatNumber(customer.vatNumber), vatNumber: customer.vatNumber };
+}
+
 /** Şirket müşterisinin Pennylane kaydı: yasal ad, SIREN, KDV numarası ve fatura adresi; Pennylane fatura adresiz müşteri açmaz. */
 export function pennylaneCustomerDraft(
   customer: Pick<UserProfile, 'id' | 'name' | 'email' | 'companyInfo' | 'vatNumber' | 'preferredLanguage'>,
@@ -63,8 +72,7 @@ export function pennylaneCustomerDraft(
   return {
     name: customer.companyInfo?.legalName || customer.name,
     externalReference: pennylaneCustomerReference(customer.id),
-    regNo: sirenOfSiret(customer.companyInfo?.siret) ?? sirenOfVatNumber(customer.vatNumber),
-    vatNumber: customer.vatNumber,
+    ...pennylaneCustomerIdentity(customer),
     emails: customer.email ? [customer.email] : [],
     billingAddress: {
       address: [billing.line1, billing.line2].filter(Boolean).join(', '),
@@ -74,6 +82,53 @@ export function pennylaneCustomerDraft(
     },
     language: pennylaneLanguageOf(customer.preferredLanguage),
   };
+}
+
+/** Pennylane kayıt numarasındaki SIREN; kayıt SIREN ya da SIRET tutabilir. */
+function sirenOfRegNo(regNo: string | null): string | null {
+  const digits = (regNo ?? '').replace(/\D/g, '');
+  return digits.length === 9 ? digits : sirenOfSiret(digits);
+}
+
+/** Kaydın kimlik anahtarları: kayıt numarasındaki ve FR KDV numarasındaki SIREN, KDV numarası. */
+function identityKeys(party: Pick<PennylaneCustomer, 'regNo' | 'vatNumber'>): string[] {
+  const vat = normalizedVat(party.vatNumber);
+  const sirens = [sirenOfRegNo(party.regNo), sirenOfVatNumber(vat)].filter((siren): siren is string => siren !== null);
+  return [...sirens.map((siren) => `siren:${siren}`), ...(vat ? [`vat:${vat}`] : [])];
+}
+
+/**
+ * Pennylane'de aynı firmanın müşteri kayıtları: SIREN ya da KDV numarası tutanlar. Ad eşleştirilmez, çünkü aynı adı taşıyan iki firma
+ * olabilir ve yanlış müşteriye kesilen fatura düzeltilemez.
+ */
+export function pennylaneCustomerCandidates<T extends Pick<PennylaneCustomer, 'regNo' | 'vatNumber'>>(
+  customers: readonly T[],
+  party: Pick<PennylaneCustomer, 'regNo' | 'vatNumber'>,
+): T[] {
+  const wanted = new Set(identityKeys(party));
+  if (wanted.size === 0) return [];
+  return customers.filter((customer) => identityKeys(customer).some((key) => wanted.has(key)));
+}
+
+/**
+ * Pennylane'deki kaydın bizden farkı, fark yoksa `null`: unvan, kimlik ve fatura adresi bizdendir. SIRET tutan kaydın SIREN'i aynıysa
+ * kimlik değişmiş sayılmaz; bizde boş olan alan Pennylane'deki değeri silmez, e-posta hiç karşılaştırılmaz.
+ */
+export function pennylaneCustomerPatch(current: PennylaneCustomer, draft: PennylaneCustomerDraft): PennylaneCustomerPatch | null {
+  const patch: PennylaneCustomerPatch = {};
+  if (current.name.trim() !== draft.name.trim()) patch.name = draft.name;
+  if (draft.regNo && sirenOfRegNo(current.regNo) !== draft.regNo) patch.regNo = draft.regNo;
+  if (draft.vatNumber && normalizedVat(current.vatNumber) !== normalizedVat(draft.vatNumber)) patch.vatNumber = draft.vatNumber;
+  const address = current.billingAddress;
+  const wanted = draft.billingAddress;
+  const sameAddress =
+    address !== null &&
+    address.address.trim() === wanted.address.trim() &&
+    address.postalCode.trim() === wanted.postalCode.trim() &&
+    address.city.trim() === wanted.city.trim() &&
+    address.countryAlpha2.toUpperCase() === wanted.countryAlpha2.toUpperCase();
+  if (!sameAddress) patch.billingAddress = wanted;
+  return Object.keys(patch).length > 0 ? patch : null;
 }
 
 /** Faturanın kalemi: muhasebe kalemi ve faturada okunacak adı. */
