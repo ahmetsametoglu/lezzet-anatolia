@@ -52,6 +52,11 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
   Bulgu: yazılar küçük, örneği sipariş detayındaki "Bağlı talepler" kartı (12–13px); istek operasyonun geneli. Ölçek iki kez
   bir kademe büyütüldü; ölçek dışı yazı boyu kalmadı. Genel +1px yoğun tablolarda sütun kırıyor (sipariş no iki satır). Kişisel
   yazı boyu seçimi yalnız müşteri tarafında var; operasyona kurulabilir.
+- (K.75) **Ürünler listesinde toplu eylem** — çoklu seçim ve seçili ürünlere toplu işlem: durum değiştir · kategoriye taşı ·
+  koleksiyona ekle · hedef marj kur · kargo iznini aç · toplu fiyat (yazmadan önce "şimdi → olacak" önizlemesi, maliyeti
+  bilinmeyen boy atlanır). Tasarımı var (Claude Design, 1a ve 2c kareleri), uygulaması kullanıcı kararıyla ertelendi; kolon
+  şeridi onsuz kuruldu, eklendiğinde başa 22 px'lik seçim sütunu girer ve geri kalan düzen değişmez. Yeni yazma yolları
+  gerekir: bugün yalnız tekil `updateProductAction` var.
 
 ## İçerik
 
