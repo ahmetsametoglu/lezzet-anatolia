@@ -45,6 +45,25 @@ export async function saveAiModelAction(input: {
   }
 }
 
+/** Sağlayıcıların model kimliği biçimi (`claude-sonnet-5-5`, `gemini-3.8-flash`); tarife tablosuna başka bir anahtar girmesin. */
+const MODEL_ID = /^[a-z0-9][a-z0-9.-]*$/;
+
+/** Yalnız tarifeyi yazar; seçime dokunmaz ki varsayılan modelle koşan katman, tarifesi değişti diye seçilmiş sayılmasın. */
+export async function saveAiModelPriceAction(input: { model: string; price: { input: string; output: string } }): Promise<ActionResult> {
+  try {
+    const staff = await requireAdmin();
+    if (!MODEL_ID.test(input.model)) return { data: null, error: 'Geçersiz model kimliği.' };
+    const price = parseAiModelPrice(input.price.input, input.price.output);
+    if (!price.ok) return { data: null, error: price.error };
+    if (!price.price) return { data: null, error: 'Girdi ve çıktı fiyatı girilmeli.' };
+    await saveAiModelPrice(serviceDb(), input.model, price.price, staff.profileId);
+    revalidatePath(SETTINGS_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 /** Seçimi kaldırır; katman anahtarı tanımlı ilk sağlayıcının varsayılan modeline döner. */
 export async function resetAiModelAction(input: { tier: string }): Promise<ActionResult> {
   try {

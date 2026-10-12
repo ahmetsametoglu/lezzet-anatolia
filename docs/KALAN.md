@@ -170,7 +170,7 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 ## 20 · Yapay Zekâ
 
-- [ ] (K.76) **Gemini 3.8 Flash ve 3.6 Flash tarifesi 1 Ocak 2027'de iki katına çıkıyor** (girdi 0,75 → 1,50 $, çıktı 3,75 → 7,50 $ / milyon jeton) — `settings.ai_model_prices_usd`teki iki satır o gün güncellenmeli; Kurulum › Yapay zekâ modeli penceresi yalnız tarifesi olmayan modelin tarifesini yazar. Neden: tablo tarihe bağlı fiyat taşımaz; güncellenmezse kullanım defterine yazılan maliyet gerçek faturanın yarısı kalır.
+- [ ] (K.76) **Gemini 3.8 Flash ve 3.6 Flash tarifesi 1 Ocak 2027'de iki katına çıkıyor** (girdi 0,75 → 1,50 $, çıktı 3,75 → 7,50 $ / milyon jeton) — kullanılan Gemini Flash modelinin tarifesi o gün Ayarlar › Kurulum › Yapay zekâ modeli penceresinden güncellenmeli. Neden: tablo tarihe bağlı fiyat taşımaz; güncellenmezse kullanım defterine yazılan maliyet gerçek faturanın yarısı kalır.
 - [~] (20.3) **Maliyet görünürlüğü:** tarife `settings`'ten okunur, ~~çağrı başına yaklaşık maliyet `job_run`/`error_log` bağlamına yazılır~~ → her koşu kendi defterine (`ai_usage`, 15.27); operasyonda basit bir "bu ay AI" satırı
 
 ## 21 · Mobil Uygulama

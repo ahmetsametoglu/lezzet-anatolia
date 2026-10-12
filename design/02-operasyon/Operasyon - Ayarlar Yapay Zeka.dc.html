@@ -59,7 +59,7 @@
   <div style="display:flex;flex-direction:column;gap:16px">
     <div style="display:flex;align-items:baseline;gap:14px;max-width:1360px;flex-wrap:wrap">
       <span style="font:700 20px 'Space Grotesk';color:#22251f">Ayarlar · Yapay zekâ modeli · web</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065;max-width:820px">Model seçimi ortam dosyasından Kurulum sekmesine geçer, çünkü yapay zekâyı müşteri yazışması kadar çeviri, banka dosyası ve analitik de kullanır: iki iş, iki satır. Liste sağlayıcıdan canlı okunur; tarifesi olmayan modelin tarifesi seçim penceresinde girilir.</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065;max-width:820px">Model seçimi ortam dosyasından Kurulum sekmesine geçer, çünkü yapay zekâyı müşteri yazışması kadar çeviri, banka dosyası ve analitik de kullanır: iki iş, iki satır. Liste sağlayıcıdan canlı okunur; modelin tarifesi seçim penceresinden girilir ve değiştirilir.</span>
     </div>
 
     <div data-screen-label="Ayarlar · Yapay zekâ modeli" style="width:100%;max-width:1360px;box-sizing:border-box;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
@@ -117,7 +117,7 @@
       <li>İki satır iki iştir: "Yazan model" müşteriye ve yöneticiye giden metni yazar, "Hacimli işler modeli" çeviri, ses çözümü ve özet gibi çok tekrarlanan işleri yapar.</li>
       <li>Liste sağlayıcıdan canlı okunur; yalnız anahtarı tanımlı sağlayıcının metin modelleri görünür. Liste okunamazsa seçici kapanır, kayıtlı seçim değişmez.</li>
       <li>İki satır ayrı sağlayıcıdan seçilebilir; sağlayıcı seçilen modelden türer. Seçim yoksa anahtarı tanımlı ilk sağlayıcının varsayılanı çalışır.</li>
-      <li>Tarifesi olmayan model seçilince tarife alanı açılır; boş bırakılırsa maliyet "bilinmiyor" yazılır. Tarife yeni çağrılara uygulanır, geçmiş yeniden yazılmaz.</li>
+      <li>Tarife alanı her modelde açıktır: kayıtlı tarife dolu gelir ve değiştirilebilir; tarifesi olmayan modelde boş kalırsa maliyet "bilinmiyor" yazılır. Yalnız tarife değişirse model seçimi değişmez; tarife yeni çağrılara uygulanır, geçmiş yeniden yazılmaz.</li>
       <li>Değişiklik en geç bir dakikada bütün süreçlere geçer; ortam dosyasındaki <span style="font-family:'IBM Plex Mono'">AI_PROVIDER</span> ve <span style="font-family:'IBM Plex Mono'">AI_MODEL_*</span> kalkar.</li>
     </ul>
   </div>
@@ -158,16 +158,14 @@
             <span class="f-k">Tarife</span><span class="f-v" style="color:{{ dlg.tariffFg }}">{{ dlg.tariff }}</span>
           </div>
 
-          <sc-if value="{{ dlg.askTariff }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;flex-direction:column;gap:6px">
-              <span class="fld-l">Tarife — milyon jeton başına USD</span>
-              <div style="display:flex;gap:10px">
-                <div class="money"><span style="font:500 11px 'Karla';color:#8b9086">Girdi</span><span style="margin-left:auto">—</span><span>$</span></div>
-                <div class="money"><span style="font:500 11px 'Karla';color:#8b9086">Çıktı</span><span style="margin-left:auto">—</span><span>$</span></div>
-              </div>
-              <span style="font:400 10.5px 'Karla';color:#9aa094">Sağlayıcının fiyat sayfasındaki değer. Boş kalırsa kullanım defterinde maliyet "bilinmiyor" yazılır.</span>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span class="fld-l">Tarife — milyon jeton başına USD</span>
+            <div style="display:flex;gap:10px">
+              <div class="money"><span style="font:500 11px 'Karla';color:#8b9086">Girdi</span><span style="margin-left:auto;color:{{ dlg.priceFg }}">{{ dlg.priceIn }}</span><span>$</span></div>
+              <div class="money"><span style="font:500 11px 'Karla';color:#8b9086">Çıktı</span><span style="margin-left:auto;color:{{ dlg.priceFg }}">{{ dlg.priceOut }}</span><span>$</span></div>
             </div>
-          </sc-if>
+            <span style="font:400 10.5px 'Karla';color:#9aa094">{{ dlg.priceHint }}</span>
+          </div>
 
           <div style="display:flex;align-items:flex-start;gap:9px;background:#fdf7ec;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px">
             <span style="color:#9a6416;flex:none;margin-top:1px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
@@ -199,7 +197,7 @@ class Component extends DCLogic {
       { provider: 'Google', models: [
         { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', tariff: null },
         { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', tariff: null },
-        { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', tariff: '0,30 $ / 2,50 $' },
+        { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', tariff: '0,30 $ / 2,50 $', rate: ['0,30', '2,50'] },
       ] },
     ];
     const find = (id) => {
@@ -240,8 +238,12 @@ class Component extends DCLogic {
     const dlg = current ? {
       title: ROWS[tier].label, sub: ROWS[tier].help, name: current.name, provider: current.provider, id: current.id,
       tariff: current.tariff ? current.tariff + ' (girdi / çıktı, milyon jeton)' : 'yok', tariffFg: current.tariff ? '#22251f' : '#9a6416',
-      askTariff: !current.tariff, impact: ROWS[tier].impact,
-    } : { title: '', sub: '', name: '', provider: '', id: '', tariff: '', tariffFg: '#22251f', askTariff: false, impact: '' };
+      priceIn: current.rate ? current.rate[0] : '—', priceOut: current.rate ? current.rate[1] : '—', priceFg: current.rate ? '#22251f' : '#9aa094',
+      priceHint: current.rate
+        ? 'Sağlayıcının fiyat sayfasındaki değer; değişiklik yeni çağrılara uygulanır, geçmiş yeniden yazılmaz.'
+        : 'Sağlayıcının fiyat sayfasındaki değer. Boş kalırsa kullanım defterinde maliyet "bilinmiyor" yazılır.',
+      impact: ROWS[tier].impact,
+    } : { title: '', sub: '', name: '', provider: '', id: '', tariff: '', tariffFg: '#22251f', priceIn: '', priceOut: '', priceFg: '#9aa094', priceHint: '', impact: '' };
     const groups = CATALOG.map((g) => ({
       provider: g.provider,
       options: g.models.map((m) => ({

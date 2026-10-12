@@ -13,7 +13,7 @@ import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { JoinedField, JoinedSuffix } from '@/components/operation/form/joined-field';
 import { triggerClass } from '@/components/operation/form/trigger';
-import { resetAiModelAction, saveAiModelAction } from './ai-model-actions';
+import { resetAiModelAction, saveAiModelAction, saveAiModelPriceAction } from './ai-model-actions';
 import type { AiModelPanelData, AiModelTierView } from './ai-model-read';
 import { DialogError, SettingsCard, pressable } from './settings-sections';
 
@@ -39,6 +39,13 @@ const NO_TARIFF_NOTE = 'Tarifesi yok: kullanım defterinde maliyet "bilinmiyor" 
 function tariffOf(prices: AiModelPrices | null, model: string): string | null {
   const rate = prices?.[model];
   return rate ? `${decimal(rate.inputPerMillion)} $ / ${decimal(rate.outputPerMillion)} $` : null;
+}
+
+/** Kutuya yazılan fiyat: ondalık virgüllü ve gruplamasız, ki geri okunabilsin; kesirli tarife (0,125) kırpılmaz. */
+function priceText(value: number | undefined): string {
+  return value === undefined
+    ? ''
+    : value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 4, useGrouping: false });
 }
 
 interface AiModelCardProps {
@@ -110,9 +117,10 @@ interface AiModelDialogProps {
 function AiModelDialog({ view, data, onClose }: AiModelDialogProps) {
   const router = useRouter();
   const copy = TIER_COPY[view.tier];
+  const rateOf = (model: string | undefined) => (model ? data.prices?.[model] : undefined);
   const [selected, setSelected] = useState(view.current ? { provider: view.current.provider, model: view.current.model } : null);
-  const [priceInput, setPriceInput] = useState('');
-  const [priceOutput, setPriceOutput] = useState('');
+  const [priceInput, setPriceInput] = useState(priceText(rateOf(view.current?.model)?.inputPerMillion));
+  const [priceOutput, setPriceOutput] = useState(priceText(rateOf(view.current?.model)?.outputPerMillion));
   const [busy, setBusy] = useState<'save' | 'reset' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,22 +130,25 @@ function AiModelDialog({ view, data, onClose }: AiModelDialogProps) {
   const selectedName = selected
     ? (options.find((option) => option.id === selected.model)?.name ?? view.current?.name ?? selected.model)
     : null;
+  const rate = rateOf(selected?.model);
   const tariff = selected ? tariffOf(data.prices, selected.model) : null;
-  const askTariff = selected !== null && data.prices !== null && tariff === null;
   const changed = selected !== null && (selected.model !== view.current?.model || selected.provider !== view.current?.provider);
-  const typedPrice = priceInput.trim() !== '' || priceOutput.trim() !== '';
+  // İki kutu da boşsa tarife değişmez; dolu kutu kayıtlı fiyattan farklıysa yeni tarife yazılır.
+  const typed = [priceInput.trim(), priceOutput.trim()];
+  const priceDirty =
+    typed.some((value) => value !== '') &&
+    (typed[0] !== priceText(rate?.inputPerMillion) || typed[1] !== priceText(rate?.outputPerMillion));
 
   const run = async (kind: 'save' | 'reset') => {
     setBusy(kind);
     setError(null);
+    const price = { input: priceDirty ? priceInput : '', output: priceDirty ? priceOutput : '' };
     const result =
-      kind === 'save' && selected
-        ? await saveAiModelAction({
-            tier: view.tier,
-            ...selected,
-            price: { input: askTariff ? priceInput : '', output: askTariff ? priceOutput : '' },
-          })
-        : await resetAiModelAction({ tier: view.tier });
+      kind === 'reset' || !selected
+        ? await resetAiModelAction({ tier: view.tier })
+        : changed
+          ? await saveAiModelAction({ tier: view.tier, ...selected, price })
+          : await saveAiModelPriceAction({ model: selected.model, price });
     setBusy(null);
     if (result.error) {
       setError(result.error);
@@ -168,7 +179,7 @@ function AiModelDialog({ view, data, onClose }: AiModelDialogProps) {
             variant="primary"
             className="ml-auto"
             loading={busy === 'save'}
-            disabled={busy !== null || selected === null || (!changed && !typedPrice)}
+            disabled={busy !== null || selected === null || (!changed && !priceDirty)}
             onClick={() => void run('save')}
           >
             Kaydet
@@ -185,8 +196,8 @@ function AiModelDialog({ view, data, onClose }: AiModelDialogProps) {
             selectedName={selectedName}
             onPick={(next) => {
               setSelected(next);
-              setPriceInput('');
-              setPriceOutput('');
+              setPriceInput(priceText(rateOf(next.model)?.inputPerMillion));
+              setPriceOutput(priceText(rateOf(next.model)?.outputPerMillion));
             }}
             disabled={options.length === 0 || busy !== null}
           />
@@ -206,7 +217,7 @@ function AiModelDialog({ view, data, onClose }: AiModelDialogProps) {
           </dl>
         ) : null}
 
-        {askTariff ? (
+        {selected && data.prices !== null ? (
           <div className="flex flex-col gap-1.5">
             <span className="font-ops-body text-ops-xs font-medium text-ops-body">Tarife — milyon jeton başına USD</span>
             <div className="flex gap-2.5">
@@ -214,7 +225,9 @@ function AiModelDialog({ view, data, onClose }: AiModelDialogProps) {
               <PriceBox label="Çıktı" value={priceOutput} onChange={setPriceOutput} />
             </div>
             <span className="font-ops-body text-ops-micro text-ops-faint">
-              Sağlayıcının fiyat sayfasındaki değer. Boş kalırsa kullanım defterinde maliyet &quot;bilinmiyor&quot; yazılır.
+              {rate
+                ? 'Sağlayıcının fiyat sayfasındaki değer; değişiklik yeni çağrılara uygulanır, geçmiş yeniden yazılmaz.'
+                : 'Sağlayıcının fiyat sayfasındaki değer. Boş kalırsa kullanım defterinde maliyet "bilinmiyor" yazılır.'}
             </span>
           </div>
         ) : null}
