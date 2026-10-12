@@ -42,7 +42,7 @@ function StockCell({ stock }: { stock: ProductStockSummary | null }) {
     <div className="flex flex-col items-end gap-0.5">
       <span className={['font-ops-mono text-ops-sm font-semibold', empty ? 'text-ops-red' : 'text-ops-ink'].join(' ')}>{stock.availableQty}</span>
       <span className={['font-ops-body text-ops-xs', empty || stock.belowMin ? 'text-ops-amber' : 'text-ops-muted'].join(' ')}>
-        {empty ? 'hiç stok yok' : stock.belowMin ? 'asgari eşik altında' : `${stock.warehouseCount} depo`}
+        {empty ? 'hiç stok yok' : stock.belowMin ? 'eşik altında' : `${stock.warehouseCount} depo`}
       </span>
     </div>
   );
@@ -80,7 +80,7 @@ function ShipCell({ product }: { product: ProductView }) {
   const missingDims = product.variants.some(
     (v) => v.isActive && (v.packedWeightG === null || v.packedLengthMm === null || v.packedWidthMm === null || v.packedHeightMm === null),
   );
-  return missingDims ? <Badge tone="amber">ölçü eksik</Badge> : <Badge tone="olive">kargoya hazır</Badge>;
+  return missingDims ? <Badge tone="amber">ölçü eksik</Badge> : <Badge tone="olive">kargo ✓</Badge>;
 }
 
 const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TRACKS, {
@@ -207,7 +207,9 @@ export function ProductsTab(props: ProductsViewProps) {
       </div>
 
       {/* Liste + seçili panel */}
-      <div className="grid min-h-0 flex-1 grid-cols-[1.95fr_1fr] overflow-hidden">
+      {/* Panel SABİT genişlikte, tablo kalanı alır. Oranlı düzen (1.95fr/1fr) kolonlar artınca
+          paneli eziyordu: başlık iki satıra kırılıyor, rozetler sıkışıyordu (dev modda ölçüldü). */}
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px] overflow-hidden">
         <div className="flex min-h-0 flex-col border-r border-ops-line">
           <Table
             busy={props.navPending}

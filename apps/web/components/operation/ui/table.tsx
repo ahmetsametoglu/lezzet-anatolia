@@ -172,8 +172,10 @@ export function Table<Row>({
         ) : sortable && onReorder ? (
           <SortableList items={rows} getId={rowKey} onReorder={onReorder} renderItem={(row, handle) => renderRow(row, handle)} />
         ) : (
+          // Sarmalayıcının `min-w-0`ı: alt satır (ör. boy kırılımı) tablodan genişse KENDİ İÇİNDE
+          // kaydırılır. Onsuz gövdeyi genişletiyor ve bütün satırlar yatay kayıp ilk kolonu kesiyordu.
           rows.map((row) => (
-            <div key={rowKey(row)}>
+            <div key={rowKey(row)} className="min-w-0">
               {renderRow(row)}
               {renderSubRow?.(row)}
             </div>

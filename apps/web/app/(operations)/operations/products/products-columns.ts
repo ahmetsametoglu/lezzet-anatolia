@@ -22,14 +22,19 @@ import type { ColumnTrack } from '@/components/operation/ui/table-columns';
  * En yakın son tarih burada YOK (kullanıcı kararı): onu okumak parti satırlarını çekmek demek ve
  * liste bunu satır başına ödeyemez — satır açılınca boy boy gelir.
  */
+/**
+ * Genişlikler ESNEK (`minmax`) ve alt sınırları dar: sabit şeritle toplam 1162 px'e çıkıyor ve
+ * 1512 px'lik ekranda (14" dizüstü) tablo gövdesi yatay kayıyordu — ürün adları soldan kesiliyordu.
+ * Ölçüldü: gövde 957 px, içerik 1130 px. Geniş ekranda kolonlar yine açılır.
+ */
 export const PRODUCTS_COLUMN_TRACKS: ColumnTrack[] = [
-  { key: 'name', header: 'Ürün', width: 'minmax(240px,1.6fr)' },
-  { key: 'variants', header: 'Boylar', width: '150px' },
-  { key: 'stock', header: 'Stok', width: '132px', align: 'right' },
-  { key: 'price', header: 'Fiyat · marj', width: '158px', align: 'right' },
-  { key: 'decl', header: 'Beyan', width: '126px', align: 'center' },
-  { key: 'ship', header: 'Sevk', width: '116px' },
-  { key: 'status', header: 'Durum', width: '94px', align: 'right' },
+  { key: 'name', header: 'Ürün', width: 'minmax(160px,1.7fr)' },
+  { key: 'variants', header: 'Boylar', width: 'minmax(110px,1fr)' },
+  { key: 'stock', header: 'Stok', width: '104px', align: 'right' },
+  { key: 'price', header: 'Fiyat · marj', width: '134px', align: 'right' },
+  { key: 'decl', header: 'Beyan', width: '112px', align: 'center' },
+  { key: 'ship', header: 'Sevk', width: '92px' },
+  { key: 'status', header: 'Durum', width: '84px', align: 'right' },
   // Boy kırılımını açan düğmenin sütunu; başlığı yok, çünkü başlık bir şey söylemezdi.
-  { key: 'expand', header: '', width: '28px', align: 'center' },
+  { key: 'expand', header: '', width: '24px', align: 'center' },
 ];

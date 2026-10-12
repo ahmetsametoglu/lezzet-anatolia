@@ -102,6 +102,9 @@ export function PriceEditCell({ row, channel, onSaved, onOpenForm }: PriceEditCe
           inputMode="decimal"
           value={draft}
           disabled={busy}
+          // Açılışta tutarın TAMAMI seçili gelir: operatör yeni fiyatı yazmaya başlar. Seçilmeden
+          // açıldığında yazılan rakam eskisinin sonuna ekleniyordu (11,43 + 9,90 → 11.439,90).
+          onFocus={(event) => event.target.select()}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={() => void commit()}
           onKeyDown={(event) => {

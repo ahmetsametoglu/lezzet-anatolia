@@ -22,7 +22,17 @@ import type { RowDetailState } from './use-row-detail.hook';
 // barkod · stok/depo · en yakın son tarih · fiyatlar. Satır sayısı da boy sayısı kadardır (o da
 // biliniyor), böylece veri düşünce hiçbir şey zıplamaz.
 
-const TRACKS = '104px 94px 58px 92px 128px 96px 124px 150px 104px 104px 44px';
+/**
+ * Dokuz sütun, ikisi SABİT: fiyat hücreleri düzenlenebilir kutudur ve daraldıkça rakam kırpılırdı.
+ * Gerisi ESNER, çünkü sabit şerit 1512 px'lik ekranda tablo alanından taşıyor ve tabloyu yatay
+ * kaydırıyordu — ürün adları soldan kesiliyordu (dev modda ölçüldü). Sıkışan metin `truncate` ile
+ * kırpılır; tam değeri hücrenin başlığı (title) ve ürün formu söyler.
+ *
+ * Net ile porsiyon tek hücrede ("810 g · 9 adet") ve aktiflik boy adının yanında — ikisi de ayrı
+ * sütunken şerit 200 px daha genişti.
+ */
+const TRACKS =
+  'minmax(92px,1.1fr) minmax(74px,0.85fr) minmax(86px,1fr) minmax(88px,1.05fr) minmax(78px,0.9fr) minmax(90px,1fr) minmax(108px,1.3fr) 104px 104px';
 
 function netLabel(variant: ProductVariant): string {
   return variant.netQuantity != null && variant.netUnit ? `${variant.netQuantity} ${variant.netUnit}` : '—';
@@ -172,20 +182,20 @@ export function VariantBreakdown({ product, state, onRefresh }: VariantBreakdown
     router.refresh();
   };
 
+  // On bir sütunlu kırılım tablo alanından geniş olabilir: dar ekranda kendi içinde kaydırılır,
+  // satırları sıkıştırıp okunmaz hâle getirmez.
   return (
-    <div className="border-b border-ops-line bg-ops-subtle py-1.5 pl-[68px] pr-6">
+    <div className="w-full min-w-0 max-w-full overflow-x-auto border-b border-ops-line bg-ops-subtle py-1.5 pl-7 pr-4">
       <div className="grid items-center gap-2.5 py-1.5 font-ops-display text-ops-micro font-semibold uppercase tracking-[0.07em] text-ops-muted" style={{ gridTemplateColumns: TRACKS }}>
         <span>Boy</span>
         <span>SKU</span>
-        <span>Net</span>
-        <span>Porsiyon</span>
+        <span>Net · porsiyon</span>
         <span>Ambalaj (g · mm)</span>
         <span>Barkod</span>
         <span className="text-right">Stok · depo</span>
         <span className="text-right">En yakın son tarih</span>
         <span className="text-right">B2C · KDV dahil</span>
         <span className="text-right">B2B · KDV hariç</span>
-        <span className="text-center">Aktif</span>
       </div>
 
       {product.variants.map((variant) => (
@@ -194,15 +204,18 @@ export function VariantBreakdown({ product, state, onRefresh }: VariantBreakdown
           className="grid min-h-[46px] items-center gap-2.5 border-t border-ops-line py-1.5 font-ops-body text-ops-sm text-ops-strong"
           style={{ gridTemplateColumns: TRACKS }}
         >
-          <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{sizeLabel(variant)}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{sizeLabel(variant)}</span>
+            {variant.isActive ? null : <Badge tone="neutral">kapalı</Badge>}
+          </span>
           <span className="truncate font-ops-mono text-ops-xs">{variant.sku ?? '—'}</span>
-          <span className="font-ops-mono text-ops-xs">{netLabel(variant)}</span>
-          <span className="font-ops-body text-ops-xs">{portionLabel(variant)}</span>
+          {/* Net ile porsiyon aynı hücrede: ikisi de "bu pakette ne kadar var" sorusunun parçası. */}
+          <span className="truncate font-ops-body text-ops-xs">
+            <span className="font-ops-mono">{netLabel(variant)}</span>
+            {variant.piecesCount == null ? null : ` · ${portionLabel(variant)}`}
+          </span>
           <PackedCell variant={variant} />
           <DetailCells detail={byVariant.get(variant.id)} pending={pending} onSaved={refreshAll} onOpenForm={setFormRow} />
-          <span className="text-center">
-            {variant.isActive ? <Badge tone="olive">aktif</Badge> : <Badge tone="neutral">kapalı</Badge>}
-          </span>
         </div>
       ))}
 
