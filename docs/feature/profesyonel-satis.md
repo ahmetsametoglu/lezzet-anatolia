@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2'de ortak katman ve mobil uçlar tamamlandı, ekranın seçim düzeni onay bekliyor.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 tamamlandı (ortak katman, mobil uçlar ve mobil ekran).** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -130,16 +130,20 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   Akış B'nin müşteri seçimiyle birlikte. Öneri panosu Claude Design'da (`07-kesif/Kesif - Operasyon Mobil Siparis.dc.html`).
   **Seçilen akış tek sayfa (1b), hâlleri 2a'da onaylandı.** Dört bölüm (müşteri, teslim, ürünler, ödeme) aynı ekranda; alttaki
   düğme eksik olanı söyler; duraktan açılınca müşteri ve adres gelir, gün kendiliğinden seçilmez.
-  **Seçim düzeni 3a (onay bekliyor):** ekranda hiçbir öğe yerinden oynamaz. Müşteri, adres ve ürün sayfanın üstüne açılan tam
+  **Seçim düzeni 3a (onaylandı):** ekranda hiçbir öğe yerinden oynamaz. Müşteri, adres ve ürün sayfanın üstüne açılan tam
   ekran seçicide seçilir; arama kutusu, yeni kayıt düğmesi ve liste başı her hâlde aynı yerdedir. Sayfa bölümleri sabit boydadır,
   kapanıp açılmaz; uyarı ve kapalı seçeneğin sebebi satırın kendi ikinci satırında yazar; sıfıra inen kalem yerinde kalır.
-  Müşteri araması iki harften başlar, 20'şer sayfalanır.
+  Müşteri araması iki harften başlar, 20'şer sayfalanır; ürün seçici arama boşken kataloğun tamamını sırasıyla gösterir.
 - Web masasının okumaları ve yazımı ortak katmanda (`packages/application/src/order/staff-order.ts`); web aynı fonksiyonları
   çağırır, ret cümlesi iki yüzeyde aynıdır.
 - Mobil uçlar `/api/v1/staff-order` altında: müşteri arama (kalan vade limitiyle), resmî kayıt önizlemesi, kayıt açma, adresler,
   teslim bağlamı ve sepet tutarına göre ödeme ön izlemesi, kalem seçicisi, sipariş. Kurye, depocu ve yönetici girer;
-  pazarlıklı fiyatı yalnız yönetici yazar, maliyet ve hedef marj yalnız yöneticiye gider.
-- Kalan: mobil ekran (3a onayından sonra), depo merkezinde "Yeni sipariş" kutusu ve kurye durağından giriş.
+  pazarlıklı fiyatı yalnız yönetici yazar, maliyet ve hedef marj yalnız yöneticiye gider. Barkod, SKU ya da tedarikçi koduyla
+  okutma koli çarpanını sayar; duraktan açılan siparişin müşterisi ve adresi sunucuda durağın siparişinden çözülür; stok reddinde
+  sepetteki boyların kalanı siparişin deposundan yeniden okunur.
+- Mobil ekran `apps/mobile-operations/src/screens/staff-order/`: girişler depo merkezindeki D10 "Yeni sipariş" kutusu ve kurye
+  durağındaki "Bu müşteriye sipariş aç" bağlantısı. Yeni profesyonel kayıt sahada SIRET'le açılır (aynı SIRET varsa o seçilir),
+  yeni adres müşterinin defterine eklenir.
 
 **Faz 3 — araçtan profesyonele vadeli satış**
 - Yerinde satışa isteğe bağlı müşteri: seçilirse fiyat, kanal ve KDV tabanı müşteriden gelir; müşterinin işi aracın işiyle tutar.

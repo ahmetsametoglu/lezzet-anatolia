@@ -1,20 +1,25 @@
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Linking, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { navigationLink } from '@lezzet/domain-core';
 
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { courierCopy as t } from '../copy';
 import { StepNote, type DeliveryState } from './delivery-step';
 
 interface DeliveryStopInfoProps {
   stop: NonNullable<DeliveryState['stop']>;
+  /** Durağın seferdeki sırası; yeni siparişin başlığı hangi duraktan açıldığını söyler. */
+  stopNo: number;
 }
 
 /** Adres ve kapıya varış eylemleri; telefon ya da WhatsApp verisi yoksa o düğme çizilmez, çünkü işe yaramayan düğme yanlış bir şey söyler. */
-export function DeliveryStopInfo({ stop }: DeliveryStopInfoProps) {
+export function DeliveryStopInfo({ stop, stopNo }: DeliveryStopInfoProps) {
+  const router = useRouter();
   /** Navigasyon açılamadıysa sebebi yazılır, çünkü sessizce hiçbir şey yapmayan düğme sahada en kötüsüdür. */
   const [navFailed, setNavFailed] = useState(false);
   /** Kapıyı açan adresin alıcısıdır, hesabın sahibi değil. */
@@ -86,6 +91,15 @@ export function DeliveryStopInfo({ stop }: DeliveryStopInfoProps) {
           {t.delivery.navigateFailed}
         </StepNote>
       ) : null}
+      {/* Müşteri ve adres sunucuda durağın siparişinden çözülür; kurye aramadan sipariş girer. */}
+      <View style={styles.newOrder}>
+        <TextAction
+          label={t.delivery.newOrder}
+          onPress={() => router.push({ pathname: '/order', params: { fromOrder: stop.orderId, stop: String(stopNo) } })}
+          compactEdges="all"
+          testID="courier-delivery-new-order"
+        />
+      </View>
     </>
   );
 }
@@ -113,6 +127,7 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   contactRow: { flexDirection: 'row', gap: operationsTheme.space.md },
+  newOrder: { alignItems: 'flex-start' },
   /** Navigasyon yatay ve sabit boylu, çünkü dikey dizilim düğmeyi yanındaki ikon kareleriyle hizasız bir karoya çeviriyordu. */
   contact: {
     flexDirection: 'row',

@@ -434,7 +434,8 @@
       "network": "Bağlantı yok — kayıt gönderilemedi. Bağlantı gelince tekrar deneyin (kuyruk YOK, işaret yalnız gönderilince yazılır).",
       "unknown": "Kayıt gönderilemedi ({error})."
     },
-    "navigateFailed": "Harita uygulaması açılamadı"
+    "navigateFailed": "Harita uygulaması açılamadı",
+    "newOrder": "Bu müşteriye sipariş aç"
   },
   "dayClose": {
     "back": "Geri",

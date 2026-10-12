@@ -6,31 +6,8 @@ import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { OperationsIconButton } from './icon-button';
 
 /*
-  YIĞIN BAŞLIĞI — bölüm kökünün ÜSTÜNE açılan her ekranın tepesi: geri düğmesi + Lora başlık +
-  künye satırı. v2'de bildirimler (784), kurye teslimat (100), para gün sonu (761) ve depo/yönetim
-  alt ekranlarının hepsi aynı üçlüyü çiziyor.
-
-  BÖLÜM KÖKÜ BAŞLIĞINDAN (`OperationsSectionHeader`) AYRI: orada üstbaşlık BÖLÜMÜN KİMLİĞİDİR
-  (renkli, büyük harf, .18em) ve altındaki Lora 24'tür; burada künye satırı EKRANIN DURUMUDUR
-  (gri, cümle biçimli) ve başlık Lora 20'dir — yani kademeler ve anlamlar farklı. Tek
-  komponentte birleştirmek, "bu ekran nerede duruyor" ile "bu ekran neyi gösteriyor" sorularını
-  aynı kutuya koymak olurdu.
-
-  MÜŞTERİ KİTİNDEKİ `AppBar` de kullanılMADI: o krem cam + bulanıklık + alt çizgi taşıyan YAPIŞKAN
-  bir çubuktur (kaydırma alanının dışında durur); operasyonun başlığı zeminle aynı renkte,
-  çizgisiz ve sayfayla birlikte kayan sıradan bir satırdır.
-
-  Üst güvenli alan başlığın içinde — gerekçe `section-header.tsx`te, aynı karar.
-
-  ── v3 ÖLÇÜMÜ (30.08): BAŞLIK BİR KADEME BÜYÜDÜ, KÜNYE İNCELDİ ─────────────
-  Şablonda bu üçlü 25 ekranda BİREBİR aynı: `gap:12px;padding:18px 20px 12px`, 38×38 geri
-  düğmesi, `600 20px 'Lora'` başlık (23/25 ekran), `400 11.5px 'Karla'` künye (23/25).
-  v2'den üç fark ölçüldü ve üçü de aynı yöne bakıyor — başlık ekranın konusu, künye onun dipnotu:
-    · başlık 17 → 20 (`screen-title` → `h2-sm`)
-    · künye 700/10,5 → 400/11,5 (`meta` demeti → `micro`): kalın-küçükten ince-büyüğe. Kalın
-      künye başlıkla yarışıyordu; v3 onu bir NOT hâline getirmiş.
-    · sayfa kenarı 22 → 20 (`6xl` → `5xl`), üst nefes 12 → 18 (`xl` → `4xl`)
-  `meta` (10,5) token'ı BURADAN düştü ama yerinde kalıyor: sekme çubuğunun etiketi hâlâ o durak.
+  Bölüm kökünün üstüne açılan ekranların başlığı: geri düğmesi, Lora başlık ve ekranın durumunu söyleyen künye satırı. Bölüm kökü
+  başlığından ayrıdır, çünkü orada üstbaşlık bölümün kimliğidir, burada künye ekranın dipnotudur.
 */
 
 interface OperationsStackHeaderProps {
@@ -41,25 +18,15 @@ interface OperationsStackHeaderProps {
   onBack: () => void;
   /** Geri düğmesinin ekran okuyucu adı. */
   backLabel: string;
-  /**
-   * Başlık satırının SAĞ yuvası — ekranın konusuna ait tek bir işaret (v3:20'nin kanal rozeti
-   * "B2B", başlıkla aynı satırda ve sağa yaslı).
-   *
-   * Yuva 31.08'de açıldı: rozet durak ekranında ADRESİN yanına çizilmişti ve orada adresin bir
-   * niteliği gibi okunuyordu — oysa kanal DURAĞIN kimliği, adresin değil. Başlıkta durması aynı
-   * zamanda kaydırma sırasında görünür kalmasını sağlıyor.
-   */
+  /** Başlık satırının sağ yuvası: ekranın konusuna ait tek işaret (durağın kanal rozeti gibi), kaydırırken de görünür kalır. */
   right?: ReactNode;
   /**
-   * Geri düğmesi ile başlık ARASINA giren yuva — bugün tek kullanıcısı yazışma ekranlarının karşı
-   * taraf avatarı (v3:30 · 32: geri · daire · ad).
-   *
-   * `right` yuvasından ayrı durmasının sebebi anlamı: sağdaki işaret ekranın KONUSUNA ait bir
-   * niteliktir (kanal rozeti), buradaki ise başlığın KİMLİĞİdir — başlık "Mehmet Aydın" diyorsa
-   * avatar o adın parçasıdır, ayrı bir bilgi değil. Sağa konsaydı satırın iki ucu da rozet taşır,
-   * hangisinin adı nitelediği okunmazdı.
+   * Geri düğmesi ile başlık arasındaki yuva (yazışmada karşı tarafın avatarı). Sağ yuvadan ayrıdır, çünkü buradaki işaret başlığın
+   * kimliğinin parçasıdır, sağdaki ise ekranın konusunun niteliği.
    */
   leading?: ReactNode;
+  /** Verilirse künye bu kadar satırda kesilir; künyesi veriyle uzayan ekranda başlığın boyu sabit kalır. */
+  subtitleLines?: number;
   testID?: string;
 }
 
@@ -70,14 +37,11 @@ export function OperationsStackHeader({
   backLabel,
   right,
   leading,
+  subtitleLines,
   testID,
 }: OperationsStackHeaderProps) {
   return (
     <View style={styles.header} testID={testID}>
-      {/* Geri düğmesi operasyonun KUM KUTUCUĞUDUR ve o kutu artık kitte tek yerde
-          (`OperationsIconButton`) — müşteri kitindeki `BackButton`ın `operations` varyantı aynı
-          kutuyu ikinci kez tarif ediyordu ve o varyant söküldü. Yan kazanç: paylaşılan kit artık
-          `operationsTheme`i hiç okumuyor. */}
       <OperationsIconButton
         icon="arrow-left"
         onPress={onBack}
@@ -89,7 +53,11 @@ export function OperationsStackHeader({
         <Text style={styles.title} accessibilityRole="header">
           {title}
         </Text>
-        {subtitle === undefined ? null : <Text style={styles.subtitle}>{subtitle}</Text>}
+        {subtitle === undefined ? null : (
+          <Text style={styles.subtitle} numberOfLines={subtitleLines}>
+            {subtitle}
+          </Text>
+        )}
       </View>
       {right === undefined ? null : <View style={styles.right}>{right}</View>}
     </View>
@@ -107,8 +75,7 @@ const styles = StyleSheet.create((_theme, rt) => ({
   },
   titles: {
     flexShrink: 1,
-    /* Sağ yuva varken başlık ARTAN alanı alır, yoksa içeriği kadar kalır — `flex:1` koşulsuz
-       verilseydi yuvasız başlıklarda geri düğmesiyle arasındaki boşluk açılırdı. */
+    /* Sağ yuva varken başlık artan alanı alır; koşulsuz `flex: 1` yuvasız başlıkta geri düğmesiyle arasındaki boşluğu açardı. */
     flexGrow: 1,
   },
   right: { flexShrink: 0 },
@@ -118,7 +85,7 @@ const styles = StyleSheet.create((_theme, rt) => ({
     fontSize: operationsTheme.text['h2-sm'],
     color: operationsTheme.colors.ink,
   },
-  /** v3: `400 11.5px 'Karla'` — kalın değil İNCE; başlıkla yarışmayan bir dipnot. */
+  /** Künye ince yazılır ki başlıkla yarışmasın. */
   subtitle: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,

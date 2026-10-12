@@ -106,7 +106,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 testID="courier-delivery-header"
               />
             </OperationsHeadBleed>
-            <DeliveryStopInfo stop={stop} />
+            <DeliveryStopInfo stop={stop} stopNo={delivery.order} />
             <DeliveryBoxesStep delivery={delivery} boxesLeft={boxesLeft} />
             {delivery.doorCodeAsked ? <DeliveryCodeStep delivery={delivery} n={stepNo(1)} locked={stepsLocked} /> : null}
             <DeliveryGoodsStep delivery={delivery} n={afterCode(1)} locked={stepsLocked} />

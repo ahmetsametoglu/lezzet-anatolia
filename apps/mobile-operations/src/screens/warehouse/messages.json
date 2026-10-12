@@ -115,6 +115,11 @@
         "title": "Yerinde satış",
         "subtitle": "kapıya gelen müşteri"
       },
+      "newOrder": {
+        "code": "D10",
+        "title": "Yeni sipariş",
+        "subtitle": "müşteri adına · teslim gününe"
+      },
       "pickup": {
         "code": "D9",
         "title": "Gel-al teslim",

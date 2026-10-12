@@ -31,62 +31,13 @@ import { useWarehouseHub } from './use-warehouse-hub.hook';
 import { resetWarehouseStatus, useWarehouseStatus } from './warehouse-status';
 
 /*
-  DEPO HUB (Operasyon Mobil v3:35-174) — bölümün kökü, sekiz işin kapısı.
-
-  ── v3 HUB'I DÜZ LİSTE DEĞİL, ÜÇ KATMAN (30.08) ─────────────────────────────
-  v2 sekiz işi eşit ağırlıkta satırlara diziyordu. v3 onları işin ACİLİYETİNE göre ayırdı:
-
-    1. ÖZET KARTI ("BUGÜN DEPODA") — üç sayı, koyu zemin. Depocunun ekrana bakıp iki saniyede
-       cevaplaması gereken soru: bugün ne kadar iş var? Sayılar hiçbir yere GİTMEZ; tıklanabilir
-       olsalardı üçü de zaten altta duran kartların kopyası olurdu.
-    2. D1 BÜYÜK KART — toplama kuyruğu, ilk iki siparişin önizlemesiyle. Günün asıl işi budur ve
-       tek başına bir katman hak ediyor: hangi siparişin yarım kaldığı, listeyi açmadan görünür.
-    3. D2…D8 IZGARA — iki sütun, ikonlu kutucuklar. Hepsi "gerektiğinde açılan" işler.
-    + Altta yazıcı şeridi: kurulum, günlük iş değil.
-
-  ── SAYILAR YİNE LİSTEDEN SAYILIYOR ─────────────────────────────────────────
-  Özet kartı YENİ BİR UÇ İSTEMİYOR: üç sayı da bölümün zaten okuduğu iki listeden ve devir
-  sayacından çıkıyor (hook künyesi). "Yarım kutu" mühürlenmemiş kutudur (`sealedAt === null`) —
-  sözleşmede zaten var, ayrıca sorulmuyor.
-
-  ── OKUNAMADI ≠ SIFIR, ÖZET KARTINDA DA ─────────────────────────────────────
-  Üç sayının her biri `null` olabilir ve o zaman "—" yazılır, "0" DEĞİL (CLAUDE §1). Koyu kartta
-  büyük bir "0", depocuya "bugün iş yok" der ve o cümlenin yanlış olması pahalıdır.
-
-  ── ÜSTBAŞLIĞIN KUYRUĞU HÂLÂ YAZILMADI ──────────────────────────────────────
-  v3 "DEPO · STRASBOURG MERKEZ" diyor; o kuyruk VERİDİR — personelin sabit deposunun ADI. O adı
-  veren bir kapı bugün yok: `/me` sözleşmesi `warehouseIds`i taşımıyor ve depo uçlarının hiçbiri
-  deponun adını döndürmüyor. Uydurma bir şehir adı, depocuya YANLIŞ deponun ekranındaymış gibi bir
-  güvence verirdi. (Kurye tarafında ad VAR — `courier-api` `warehouseName` döndürüyor; depo
-  sözleşmesinde yok. Açık geçiş günlüğüne yazıldı.)
-
-  ── BAĞLAM SATIRI GELDİ ─────────────────────────────────────────────────────
-  v3 başlığın altına "Deniz Arslan · depo" koyuyor. Bu veri VAR (`useOperationsIdentity`), yazıldı.
-
-  ── TASARIMDAN BİLİNÇLİ SAPMALAR ────────────────────────────────────────────
-  1. **Yükleniyor hâli eklendi** (şablon veriyi yerel dizeden okur, yükleme diye bir hâli yok).
-  2. **Boş durum bloğu ÇİZİLMEDİ.** Hub'ın işlerinden ikisi (D3 turu, D4 sayım) her zaman açıktır;
-     bütün listeyi bir "iş yok" kutusuna çevirmek çalışan iki kapıyı kapatırdı. Boşluk kartın ALT
-     METNİNDE söyleniyor.
-  3. **D8 alt metni "verilen"i değil BEKLEYENİ sayıyor.** Şablon "2 kutu verildi" diyor; kodun
-     ölçtüğü şey rampada taşıyıcıyı bekleyen kutudur (21.134) ve depocunun sorusu odur — "bitti
-     mi?". Verilen kutu geçmiştir, bekleyen kutu iştir.
-  4. **Kapsam belirsizken tam ekran blok kalıyor.** Şablon kapsam sorusunu hub'ın ÜSTÜNDE ince bir
-     şerit yapıp altında dolu bir hub çiziyor; bizde o mümkün değil, çünkü kapsam çözülmeden
-     uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak,
-     "okunamadı"yı "iş yok" diye göstermek olurdu.
+  Depo bölümünün kökü: üstte günün üç sayısı, ortada toplama kuyruğu, altta gerektiğinde açılan işlerin ızgarası. Sayılar bölümün
+  zaten okuduğu listelerden çıkar; okunamayan sayı "0" değil "—" yazar, çünkü büyük bir sıfır depocuya "bugün iş yok" der.
 */
 
 const t = warehouseCopy;
 
-/**
- * İlk yükün yer tutucu blokları — hub üç bloktan oluşuyor ve üçü de farklı boyda.
- *
- * Ölçüler blokların KENDİ yüksekliklerinden: özet kartı üç sayı taşıyan koyu blok, D1 kartı iki
- * önizleme satırıyla en yüksek olan, ızgara ise iki sıra `size.tile` (132) + aralarındaki
- * boşluk. Tek bir ortalama yükseklik vermek, veri gelince sayfayı yine zıplatırdı — skeletonun
- * tek işi bunu önlemek (`skeleton-list.tsx` künyesi).
- */
+/** İlk yükün yer tutucuları blokların kendi boyundadır (özet, D1 kartı, iki sıra kutucuk); tek ortalama boy veri gelince sayfayı zıplatırdı. */
 const HUB_SKELETON = { overview: 108, hero: 196, grid: 274 } as const;
 const shell = operationsCopy;
 
@@ -94,7 +45,7 @@ const shell = operationsCopy;
 interface HubTile {
   key: string;
   code: string;
-  icon: 'intake' | 'near-expiry' | 'stock-count' | 'stock-write-off' | 'transfer' | 'courier-return' | 'sale' | 'handover';
+  icon: 'intake' | 'near-expiry' | 'stock-count' | 'stock-write-off' | 'transfer' | 'courier-return' | 'sale' | 'plus' | 'handover';
   /** İkonun rengi — şablonda kutucuk başına AYRI ve rastgele değil: terracotta olanlar bekleyen iş. */
   tone: string;
   title: string;
@@ -102,14 +53,8 @@ interface HubTile {
   /** Alt metin DİKKAT rengiyle mi yazılıyor (şablonun `d3Rengi`/`d6Rengi` kuralı). */
   alert: boolean;
   /**
-   * Kutucuğun BEKLEYEN İŞİ var mı — yoksa çerçeve KESİKLİ çizilir (görsel ajanı ölçümü 30.08,
-   * hub farkı #3). Tasarımın kuralı: dolu kart düz, boş kart kesikli.
-   *
-   * "Boş" ile "okunamadı" AYRI: sayı `null` iken kesikli çizmek, ölçülemeyen bir şeyi "iş yok"
-   * diye göstermek olurdu (CLAUDE §1). O yüzden bayrak yalnız SAYI BİLİNİYOR ve SIFIR iken açılır.
-   *
-   * Sayısı olmayan kutucuklarda (mal kabul, sayım, yerinde satış) bayrak yok: onlar bir kuyruk
-   * değil bir KAPI — depocu iş olmasa da oraya girer.
+   * Bekleyen iş yoksa çerçeve kesiklidir; bayrak yalnız sayı biliniyor ve sıfırken açılır, çünkü okunamayanı kesikli çizmek "iş yok"
+   * demek olurdu. Sayısı olmayan kutucuk (mal kabul, sayım, yerinde satış) kuyruk değil kapıdır ve bayrak taşımaz.
    */
   empty?: boolean;
   onPress: () => void;
@@ -127,13 +72,8 @@ export function WarehouseHubScreen() {
   const { width } = useWindowDimensions();
 
   /**
-   * **Depoyu seç** — kapsam belirsizliğinin çıkış yolu (kullanıcı bulgusu 30.08).
-   *
-   * Üç adım ve üçü de gerekli: seçim yazılır (senkron — `chooseWarehouse` künyesi), bölümün
-   * kapsam ölçümü SIFIRLANIR (yoksa ekran "ambiguous" dalında kalır ve yeniden okuma hiç
-   * çizilmez), sonra hub yeniden okur. Ölçümü sıfırlamak bir varsayım değil: kapsam sorusunun
-   * cevabı ancak bir sonraki cevaptan öğrenilir (`warehouse-status.ts` künyesi) ve o cevap henüz
-   * gelmedi.
+   * Seçim yazılır, bölümün kapsam ölçümü sıfırlanır ve hub yeniden okur. Ölçüm sıfırlanmazsa ekran belirsiz kapsam dalında kalır ve
+   * yeniden okuma hiç çizilmez.
    */
   const pickWarehouse = (warehouseId: string) => {
     chooseWarehouse(warehouseId);
@@ -141,23 +81,15 @@ export function WarehouseHubScreen() {
     hub.reload();
   };
 
-  /* IZGARANIN SÜTUN GENİŞLİĞİ HESAPLANIR, YÜZDEYLE VERİLMEZ (ölçüldü 30.08, OPPO CPH1907).
-     Önce `flexBasis: '48%'` + `flexGrow` denendi: kutucuklar İÇERİĞE göre boyutlandı, uzun alt
-     metinli "Mal kabul" satırı tek başına kaplayıp öbürlerini aşağı itti. Sonra `width: '48%'`
-     denendi: bu kez yüzde beklenmedik bir tabana çözüldü ve kutucuklar ekranın beşte birine
-     düştü, her kelime alt alta sardı. Ekran genişliğinden çıkarmak ikisini de bitiriyor —
-     `discover-screen`in kart yolu hesabıyla aynı yol. */
+  /* Sütun eni ekran genişliğinden hesaplanır: yüzdeli `flexBasis` kutucukları içeriğe göre boyutlandırır, yüzdeli `width` ise
+     beklenmedik bir tabana çözülür. */
   const tileWidth = (width - 2 * operationsTheme.space['6xl'] - operationsTheme.space.lg) / 2;
 
   const header = (
     <OperationsSectionHeader
       section="warehouse"
-      /* "DEPO · STRASBOURG MERKEZ" (v3:37) — üstbaşlık NEREDE olduğunu söyler, künye satırı KİM
-         olduğunu. Tesisin adı bu yüzden buraya geliyor, aşağıdaki bağlam satırına değil: depocu
-         ekrana bakıp önce doğru tesiste olduğunu görmeli.
-         Ad YOKSA üstbaşlık "DEPO" olarak kuyruksuz kalır (`captionOf`) — kapsamı tek tesis
-         olmayan personele tesislerden birinin adını yazmak, yanlış deponun ekranındaymış gibi
-         güvence vermek olurdu (CLAUDE §1). */
+      /* Üstbaşlık nerede olunduğunu, künye satırı kim olunduğunu söyler. Tesis adı yoksa üstbaşlık kuyruksuz kalır, çünkü tek tesisli
+         olmayan personele tesislerden birinin adını yazmak yanlış güvence verirdi. */
       eyebrow={captionOf(t.hub.eyebrow, workplace) ?? t.hub.eyebrow}
       title={t.hub.title}
       context={`${identity.name} · ${shell.sections.warehouse.tab}`}
@@ -175,9 +107,7 @@ export function WarehouseHubScreen() {
   );
 
   if (hub.status === 'loading') {
-    /* İLK YÜK SKELETON, HALKA DEĞİL (kullanıcı kararı 30.08) — halka yerleşim tutmaz ve söndüğü
-       an sayfa zıplar. Üç kutu hub'ın üç bloğunun yerini tutuyor: özet kartı, D1 büyük kartı ve
-       kutucuk ızgarası (ölçüler bloklarının kendi yüksekliklerinden). */
+    /* İlk yükte halka değil iskelet çizilir: halka yerleşimi tutmaz ve söndüğü an sayfa zıplar. */
     return (
       <View style={styles.screen} testID="operations-section-warehouse">
         {header}
@@ -193,22 +123,8 @@ export function WarehouseHubScreen() {
   }
 
   /*
-    KAPSAM SORUSU İKİ YOLDAN DOĞAR (30.08) ve ikisi de gerçek bir ölçüm:
-
-    1. `scope === 'ambiguous'` — kapı sordu (`400 warehouse_required`). Bugüne kadarki tek yol.
-    2. `workplace === null` + seçilebilecek tesis VAR — kapıya hiç gitmeden biliyoruz: kapsam tek
-       tesis değil (`resolvedWarehouseId === null`) ve personel henüz seçmedi.
-
-    İkincisi eklendi çünkü birincisi GEÇ: üç istek düşene kadar depocu boş bir hub'a bakıyordu, ve
-    "depo değiştir"den sonra soru ancak bir sonraki okumada geri gelirdi. Bu bir tahmin değil —
-    seçimin yokluğu istemcinin kendi bildiği bir gerçek; kimin hangi depoya yazabileceği kararı ise
-    hâlâ tamamen kapının (her istekte `?warehouseId=` kapsama karşı sınanıyor).
-
-    ── AMA TEK TESİSTE HİÇ SORULMAZ (kullanıcı kararı 01.09) ─────────────────────────────────
-    Seçenek tekse cevap da tek: seçim kapsamdan türetiliyor (`loadWarehouseChoice`), ekran soruyu
-    hiç sormuyor. Süzgeç kapının hâline DEĞİL seçenek sayısına bakıyor — `ambiguous` yolu da
-    kapanıyor, çünkü tek satırlık bir seçici sormak değil, sormuş gibi yapmaktı. Kapının 400'ü bu
-    hâlde zaten doğmaz: adrese artık türetilmiş kimlik yazılıyor.
+    Kapsam sorusu iki yoldan doğar: kapı depo istediğinde ya da personelin birden çok tesisi olup henüz seçmediğinde. Tek tesiste hiç
+    sorulmaz; seçim kapsamdan türetilir ve tek satırlık seçici sormuş gibi yapmak olurdu.
   */
   if (warehouseOptions.length !== 1 && (scope === 'ambiguous' || (workplace === null && warehouseOptions.length > 0))) {
     return (
@@ -216,16 +132,8 @@ export function WarehouseHubScreen() {
         {header}
         <View style={styles.block}>
           {/*
-            İKİ AYRI CÜMLE, ÇÜNKÜ İKİ AYRI HÂL (kullanıcı bulgusu 30.08).
-
-            Eskiden tek cümle vardı — *"yönetici seni bir depoya atadığında bu bölüm kendiliğinden
-            açılır"* — ve çok depolu personel için YANLIŞTI: atama zaten yapılmıştı, hatta İKİ kez.
-            Ölçülen hâl `hepsi@lezzetanatolia.fr` (kapsam: bir tesis + bir araç): ekran doğru bir
-            şey söylüyor ama yanlış kişiye söylüyordu ve çıkış yolu yoktu.
-
-            Ayrım seçeneklerin VARLIĞINDAN geliyor, rolden değil: seçenek varsa soru "hangisi",
-            yoksa cevap "atama bekleniyor". Kapsam okunamadığında da ikinci cümle geçerlidir —
-            olmayan bir listeden seçim istemek, personeli boş bir ekrana bakmaya bırakırdı.
+            Seçenek varsa soru "hangisi", yoksa cevap "atama bekleniyor"; ayrım rolden değil seçeneklerin varlığından gelir, çünkü
+            ataması yapılmış çok depolu personele "atama bekleniyor" demek yanlıştır.
           */}
           <OperationsNoticeBlock
             variant="empty"
@@ -235,10 +143,8 @@ export function WarehouseHubScreen() {
           />
 
           {/*
-            SEÇİCİ (v3 ekran 10) — kapsamdaki TESİSLER, araçlar süzülmüş (`useWarehouseOptions`).
-            Seçim sunucuya bir yetki olarak gitmiyor: adrese `?warehouseId=` yazılıyor ve kapı onu
-            her istekte kapsama karşı sınıyor (`403 warehouse_out_of_scope`). Yani ekran bir kapı
-            AÇMIYOR, var olan kapıya hangi anahtarla gireceğini söylüyor.
+            Seçim bir yetki değildir: adrese `?warehouseId=` yazılır ve kapı onu her istekte kapsama karşı sınar. Araçlar süzülür,
+            liste yalnız tesislerdir.
           */}
           {warehouseOptions.map((option) => (
             <PressableSurface
@@ -257,13 +163,8 @@ export function WarehouseHubScreen() {
           ))}
 
           {/*
-            ÇIKIŞ YOLLARI (v3:1057) — kapsam belirsizken depo bölümü kullanılamaz ama personelin
-            BAŞKA bölümleri açık olabilir ("Ayşe Demir · depo + para"). Şablonun "Para bölümüne
-            geç" düğmesi işte bu: kullanıcıyı kapalı bir kapının önünde bırakmamak.
-
-            YALNIZ GERÇEKTEN AÇIK bölümler çizilir. Şablon "Para"yı sabit yazıyor; sabit yazmak,
-            para yetkisi olmayan bir depocuya açamayacağı bir kapı göstermek olurdu — ve o kapı
-            "yetkin yok" diye geri atardı. Bölüm listesi kapıdan geliyor (`useOperationsSections`).
+            Kapsam belirsizken personelin açık olan öteki bölümlerine çıkış verilir ki kapalı kapının önünde kalmasın. Yalnız
+            gerçekten açık bölümler çizilir; yetkisi olmayan bölüm geri atardı.
           */}
           {sections
             .filter((section) => section !== 'warehouse')
@@ -321,10 +222,7 @@ export function WarehouseHubScreen() {
 
   return (
     <View style={styles.screen} testID="operations-section-warehouse">
-      {/* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08): hub günün sayılarını gösteriyor ve
-          depocu onları tazelemek için ekrandan çıkıp giriyordu. */}
-      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (M1b · M1c): kap hem yapışkan mikro başlığı çizer hem
-          kaydırma olayını kabuğa bağlar. Ekranın yazdığı tek şey ekran adı. */}
+      {/* Aşağı çekince yenilenir, çünkü hub günün sayılarını gösterir. Kap yapışkan mikro başlığı çizer ve kaydırmayı kabuğa bağlar. */}
       <OperationsScreenScroll
         title={t.hub.title}
         caption={shell.sections.warehouse.tab}
@@ -332,16 +230,12 @@ export function WarehouseHubScreen() {
         refreshControl={<RefreshControl refreshing={hub.reloading} onRefresh={hub.refresh} />}
         testID="warehouse-hub-list"
       >
-        {/* BAŞLIK KAYDIRICININ İÇİNDE (M1a → M1b devri): tam başlık sayfayla birlikte yukarı
-            kayar, 44px'i geçince yerini mikro başlık alır. Dışarıda kalsaydı ikisi üst üste
-            binerdi — cihazda ölçüldü 30.08: mikro şerit indi, altında tam başlık asılı kaldı. */}
+        {/* Başlık kaydırıcının içindedir: dışarıda kalsaydı mikro başlık inince tam başlık altında asılı kalırdı. */}
         {header}
 
         {offlineBanner}
 
-        {/* ── 1. ÖZET KARTI ─────────────────────────────────────────────────
-            Tıklanabilir DEĞİL: üç sayının da gideceği yer zaten altta bir kart olarak duruyor.
-            Aynı yere iki kapı açmak, hangisinin "asıl" olduğunu belirsizleştirirdi. */}
+        {/* ── 1. ÖZET KARTI · tıklanmaz: üç sayının gideceği yer altta zaten bir kart olarak durur. */}
         <View style={styles.overview} testID="warehouse-hub-overview">
           <Text style={styles.overviewLabel}>{t.hub.overview.label}</Text>
           <View style={styles.overviewRow}>
@@ -429,14 +323,7 @@ export function WarehouseHubScreen() {
           ))}
         </View>
 
-        {/* ── Yazıcı şeridi — kurulum, günlük iş değil; ızgaranın DIŞINDA.
-
-            Kullanıcı bulgusu N6 (30.08): tasarımdaki düğmeden farklı görünüyordu. Ölçüm beş
-            ayrım gösterdi — zemin `neutral-bg` (belirgin kum) iken tasarım `cream`, kenar
-            `sand-300` iken tasarım `neutral-bg` (yani neredeyse görünmez), yarıçap bir kademe
-            küçük, alt metin `muted` iken tasarım `tab-inactive`, yön oku bir punto büyük.
-            Toplamı: sessiz olması gereken şerit, ızgaranın kutucuklarından DAHA yüksek sesle
-            çiziliyordu. Artık kitin `quiet` tonu — tasarımda 37 kullanımı olan yüzey. */}
+        {/* ── Yazıcı şeridi · kurulumdur, günlük iş değil; ızgaranın dışında ve kitin sessiz tonunda durur. */}
         <OperationsSurface
           tone="quiet"
           padding="md"
@@ -449,10 +336,7 @@ export function WarehouseHubScreen() {
             <Icon name="settings" size={operationsTheme.size.stripIcon} color={operationsTheme.colors.muted} />
             <View style={styles.printersBody}>
               <Text style={styles.printersTitle}>{t.hub.rows.printers.title}</Text>
-              {/* Şerit "bu cihaz" diyorsa CİHAZIN HÂLİNİ söylemeli (görsel ajanı ölçümü 30.08,
-                  hub farkı #4): tasarım "kutu etiketi QL-1110NWB · kargo etiketi tanımsız" yazıyor,
-                  bizde ne işe yaradığını anlatan bir cümle vardı — ayarı açmadan hiçbir şey
-                  öğretmiyordu. Okuma düşerse (`null`) o cümleye geri düşülür. */}
+              {/* Şerit cihazın hâlini söyler (hangi amaca hangi yazıcı); okuma düşerse açıklama cümlesine geri düşülür. */}
               <Text style={styles.printersSubtitle} testID="warehouse-hub-printers-state">
                 {printerSummary(hub.printers)}
               </Text>
@@ -467,11 +351,8 @@ export function WarehouseHubScreen() {
 }
 
 /**
- * ÖZET KARTININ ÜÇ SAYISI — hepsi zaten okunan veriden.
- *
- * `null` = OKUNAMADI ve "—" yazılır; sıfıra düşürmek "bugün iş yok" demek olurdu (CLAUDE §1).
- * "Yarım kutu": mühürlenmemiş kutusu olan sipariş — `sealedAt === null`. Kutuyu değil SİPARİŞİ
- * sayıyoruz, çünkü depocunun bitirmesi gereken şey siparişin kendisidir.
+ * Özet kartının üç sayısı okunan veriden; `null` okunamadı demektir ve "—" yazılır. Yarım kutu mühürlenmemiş kutusu olan siparişi
+ * sayar, çünkü depocunun bitireceği şey siparişin kendisidir.
  */
 function buildOverview(
   orders: readonly PreparationOrderContract[] | null,
@@ -507,12 +388,8 @@ function buildPicking(orders: readonly PreparationOrderContract[] | null): {
   if (orders === null) return { badge: null, subtitle: copy.errorCta, preview: [] };
   if (orders.length === 0) return { badge: null, subtitle: copy.emptyCta, preview: [] };
 
-  /* İLK İKİSİ — şablonun sayısı. Önizleme bir LİSTE DEĞİL, kartın "içeride ne var" cümlesidir;
-     üçüncü satır kartı listeye çevirir ve altındaki ızgarayı ekrandan atardı.
-
-     SIRA KUYRUĞUN SIRASIDIR (`orderPickingQueue`), ucun sırası değil: kuyruk ekranı yarım kalanı
-     en üste alıyor ve hub burada başka bir "ilk ikisi" gösterseydi, aynı listenin iki ekranda iki
-     farklı başı olurdu — depocu kartta gördüğü siparişi listenin başında bulamazdı. */
+  /* Önizleme ilk iki siparişi kuyruğun sırasıyla gösterir; üçüncü satır kartı listeye çevirirdi, başka bir sıra da kartta görülen
+     siparişi listenin başında bulunamaz kılardı. */
   const preview = orderPickingQueue(orders)
     .slice(0, 2)
     .map((order) => {
@@ -533,15 +410,8 @@ function buildPicking(orders: readonly PreparationOrderContract[] | null): {
 }
 
 /**
- * **Yazıcı şeridinin künyesi** — cihazın o anki kurulumu (v3:01 · görsel ajanı farkı #4).
- *
- * Tasarımın cümlesi iki yarımdan kurulu: *"kutu etiketi QL-1110NWB · kargo etiketi tanımsız"*.
- * Her yarım bir AMACIN karşılığı ve ikisi ayrı ayrı tanımsız olabilir — KEHL'de kutu yazıcısı var,
- * kargo yok (tohumun kendi üç hâli). Tek bir "2 yazıcı" sayısı bu bilgiyi taşımazdı: depocunun
- * sorusu "kaç tane" değil, "kargo etiketi basabilir miyim".
- *
- * `null` (okunamadı) → açıklama metnine düşülür. Boş liste ("hiç yazıcı yok") ondan AYRI ve kendi
- * cümlesini alır: biri ölçüm düşüşü, öteki gerçek bir kurulum hâli (CLAUDE §1).
+ * Yazıcı şeridinin cümlesi amaç başına iki yarımdır, çünkü depocunun sorusu "kaç yazıcı" değil "kargo etiketi basabilir miyim".
+ * Okunamayan liste açıklama cümlesine düşer; boş liste kendi cümlesini alır.
  */
 function printerSummary(printers: readonly BoxPrinterContract[] | null): string {
   if (printers === null) return t.hub.rows.printers.subtitle;
@@ -550,12 +420,7 @@ function printerSummary(printers: readonly BoxPrinterContract[] | null): string 
   return fillCopy(t.hub.rows.printers.state, { box: nameOf('box'), shipping: nameOf('shipping') });
 }
 
-/**
- * IZGARANIN YEDİ KUTUCUĞU. Sıra TASARIMIN sırasıdır (D2…D8), okuma sırası değil.
- *
- * `null` liste = OKUNAMADI ve "yok" ile karıştırılmaz: birinde alt metin "okunamadı" der,
- * ötekinde "bekleyen sipariş yok".
- */
+/** Izgaranın kutucukları tasarımın sırasıyla; okunamayan liste "okunamadı", boş liste "yok" der. */
 function buildTiles(
   orders: readonly PreparationOrderContract[] | null,
   transfers: readonly { referenceNo: string }[] | null,
@@ -582,8 +447,7 @@ function buildTiles(
           ? pickup.one
           : fillCopy(pickup.some, { n: String(pickupWaiting) });
 
-  /* D6 ALTYAZISI ARTIK OLGU (04.09): satır *"1 döküm bekliyor"* yazıyordu ve o sayı hiçbir yerden
-     gelmiyordu — kodun içine yazılmış bir cümleydi. Rampa boşken bile "1 döküm" diyordu. */
+  /* Dönüş sayısı rampa kapısından gelir; okunamazsa sayı yazılmaz. */
   const returnSubtitle =
     returningCouriers === null
       ? ramp.unknown
@@ -610,9 +474,7 @@ function buildTiles(
           ? fillCopy(transfer.some, { ref: firstTransfer.referenceNo })
           : fillCopy(transfer.someMany, { ref: firstTransfer.referenceNo, n: String(transfers.length) });
 
-  /* D3 SAYAÇLARI ARTIK GERÇEK (21.187): fikstür söküldü, sayı kapıdan geliyor. Okunamadıysa
-     `null` gelir ve alt metin sayı YAZMAZ — "0 parti" demek, listeyi okuyamadığımız hâlde "iş yok"
-     demekti (CLAUDE §1). */
+  /* Okunamayan liste sayı yazmaz: "0 parti" okunamayanı "iş yok" diye gösterirdi. */
   const discardCount = nearExpiry === null ? null : nearExpiry.filter((batch) => batch.decision === 'must_discard').length;
 
   return [
@@ -639,10 +501,7 @@ function buildTiles(
               n: String(nearExpiry.length),
               discard: String(discardCount),
             }),
-      /* Şablonun `d3Rengi` kuralı: liste DOLUYKEN alt metin dikkat rengine geçer. İmhalık parti
-         bekleyen bir karardır; gri yazılsaydı öteki altı kutucukla aynı sesle konuşurdu. */
-      /* OKUNAMAYAN SAYI DİKKAT ÇEKMEZ: `null` iken kart sakin kalır. Kırmızıya boyamak, ölçemediğimiz
-         bir şeyi "acil" diye göstermek olurdu — ve kart zaten "okunamadı" diyor. */
+      /* İmhalık parti bekleyen bir karardır ve alt metin dikkat rengine geçer; okunamayan sayı dikkat çekmez, kart zaten "okunamadı" der. */
       alert: discardCount !== null && discardCount > 0,
       onPress: () => router.navigate('/near-expiry'),
     },
@@ -657,13 +516,10 @@ function buildTiles(
       onPress: () => router.navigate('/stock-count'),
     },
     {
-      /* D4b · STOK DÜŞÜMÜ (v3:01, 02.09) — sayımdan AYRI kutucuk, çünkü ayrı iş: sayım kaydı
-         düzeltir, düşüm malın gerçekten eksildiğini yazar. Rengi terracotta: hub'da stok DÜŞÜREN
-         tek iş bu ve zeytin kutucuklarla aynı sesle konuşmamalı. */
+      /* Düşüm sayımdan ayrı iştir: sayım kaydı düzeltir, düşüm malın gerçekten eksildiğini yazar. Stok düşüren tek iş olduğu için terracotta. */
       key: 'writeOff',
       code: t.hub.rows.writeOff.code,
-      /* İkonu SAYIMINKİ değil (kullanıcı bulgusu 03.09): iki kutucuk aynı liste şeklini
-         gösteriyordu. Tasarımın kendi ikonu raftan aşağı inen ok — `icon-paths` künyesi. */
+      /* İkon sayımınkinden ayrıdır (raftan inen ok), iki kutucuk aynı şekli göstermemeli. */
       icon: 'stock-write-off',
       tone: operationsTheme.colors.terracotta,
       title: t.hub.rows.writeOff.title,
@@ -691,10 +547,7 @@ function buildTiles(
       tone: operationsTheme.colors.terracotta,
       title: t.hub.rows.return.title,
       subtitle: returnSubtitle,
-      /* `d6Rengi` — bekleyen dönüş bir karar değil, bekleyen bir İŞTİR. Uyarı artık SAYIYA bağlı
-         (04.09, rampa kapısı yazıldı): rampa boşken kırmızı yakmak, her gün yanan ve bu yüzden
-         hiçbir şey söylemeyen bir işaret olurdu. Okunamadıysa da yanmaz — ölçülemeyeni "iş var"
-         diye göstermek, sıfıra düşürmenin ters yönden aynı hatası. */
+      /* Bekleyen dönüş bir iştir ve uyarı sayıya bağlıdır: her gün yanan işaret bir şey söylemez, okunamayan sayı da yanmaz. */
       alert: (returningCouriers ?? 0) > 0,
       onPress: () => router.navigate('/courier-return'),
     },
@@ -708,12 +561,19 @@ function buildTiles(
       alert: false,
       onPress: () => router.navigate('/sale'),
     },
+    {
+      key: 'new-order',
+      code: t.hub.rows.newOrder.code,
+      icon: 'plus',
+      tone: operationsTheme.colors.olive,
+      title: t.hub.rows.newOrder.title,
+      subtitle: t.hub.rows.newOrder.subtitle,
+      alert: false,
+      onPress: () => router.navigate('/order'),
+    },
     /*
-      KARGO DEVRİ (07.12 · tasarım §8.6) — kutuların taşıyıcıya verildiği an.
-
-      Sayaç kendi ucundan geliyor ve bu bir istisna: bekleyen kutuları hiçbir liste taşımıyor.
-      Duyurulmuş bir siparişin kutuları hazırlık kuyruğundan DÜŞMÜŞTÜR (sipariş `ready`), yani
-      hub'ın "listeden say" kuralı burada uygulanamıyordu.
+      Kargo devri: kutuların taşıyıcıya verildiği an. Sayaç kendi ucundan gelir, çünkü duyurulmuş siparişin kutuları hazırlık
+      kuyruğunda artık yoktur.
     */
     {
       key: 'handover',
@@ -728,9 +588,8 @@ function buildTiles(
       onPress: () => router.navigate('/handover'),
     },
     /*
-      GEL-AL TESLİM (D9, 22.09) — izinli müşterinin hazır siparişini tezgâhtan alması. Rampanın
-      aynası: orada kutu taşıyıcıya, burada müşteriye verilir; tahsilat da burada olabilir.
-      Bekleyen müşteri bir iştir: sayı sıfırdan büyükse alt metin dikkat rengine geçer.
+      Gel-al teslim: hazır sipariş tezgâhtan müşteriye verilir, tahsilat da burada olabilir. Bekleyen müşteri bir iştir ve alt metin
+      dikkat rengine geçer.
     */
     {
       key: 'pickup',
@@ -840,11 +699,7 @@ const styles = StyleSheet.create({
   overviewLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    /* Harf aralığı TOKEN'dan, ham çarpandan değil: token `em` (yazı boyuna göreli), RN mutlak dp
-       ister — çeviri `parse.ts`te, tek yerde. Şablon burada 0.2em, kod chip'lerinde 0.14em
-       yazıyor; ikisi de ölçeğin `eyebrow--letter-spacing` durağının (0.18em) etrafında ve o durak
-       kullanılıyor. Ara değer için yeni durak AÇILMADI — üstbaşlık aralığı tek bir karardır,
-       kullanıldığı yere göre değişmez (`section-header.tsx`in aynı yolu). */
+    /* Harf aralığı ölçeğin üstbaşlık durağıdır; üstbaşlık aralığı kullanıldığı yere göre değişmez, ara değer için durak açılmaz. */
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     textTransform: 'uppercase',
     color: operationsTheme.colors['on-ink-label'],
@@ -922,13 +777,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.card,
   },
-  /* "tüm kuyruğu aç →" — kullanıcı bulgusu N5 (30.08): tasarımdakinden farklı görünüyordu.
-     Ölçüldü, dördü birden ayrılmış: tasarım `700 12px · #5f7a2c · align-self:flex-end`,
-     kod `400 · micro · muted · sola yaslı`. Yani bir EYLEM cümlesi, gri bir dipnot gibi
-     çiziliyordu — kartın ne yaptığını söyleyen tek satır okunmuyordu.
-
-     Dokunulabilir DEĞİL ve tasarımda da değil: satırın kendi `onClick`i yok, kartın var.
-     Zeytin renk burada "bu bir bağlantı" demez, "bu kart seni oraya götürür" der. */
+  /* Kuyruğu açan satır bir eylem cümlesidir: zeytin ve sağa yaslı, ama dokunuş satırın değil kartındır. */
   heroFoot: {
     alignSelf: 'flex-end',
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -984,11 +833,7 @@ const styles = StyleSheet.create({
     padding: operationsTheme.space['2xl'],
     gap: operationsTheme.space.md,
   },
-  /* BOŞ KUTUCUK KESİKLİ (görsel ajanı ölçümü 30.08, hub farkı #3): tasarımın kuralı "dolu kart
-     düz, boş kart kesikli". Kesik çizgi "burada bir şey OLABİLİR ama bugün yok" der; düz çerçeve
-     boş bir kutuyu dolu kardeşleriyle aynı ağırlıkta gösteriyordu ve depocu ızgarayı tararken
-     hangisinde iş olduğunu ancak alt metni okuyarak anlıyordu. Kitin `blank` tonuyla aynı karar
-     (`surface.tsx`); kutucuk kendi yüzeyini çizdiği için ton oradan alınmıyor, kural tekrarlanıyor. */
+  /* Boş kutucuk kesiklidir: kesik çizgi "burada iş olabilir ama bugün yok" der, depocu ızgarayı alt metni okumadan tarar. */
   tileEmpty: {
     borderStyle: 'dashed',
     borderColor: operationsTheme.colors['sand-500'],
@@ -1035,9 +880,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.note,
     color: operationsTheme.colors.body,
   },
-  /* Alt metin `tab-inactive` (#a8a191): tasarımın en sessiz mürekkebi ve v3'te 91 kez geçiyor.
-     `muted` (#8a8270) buradaki başlıkla neredeyse aynı ağırlıkta okunuyordu — şerit tek satır
-     gibi görünüyor, hangisinin başlık olduğu ayırt edilemiyordu. */
+  /* Alt metin en sessiz mürekkeple yazılır; `muted` başlıkla aynı ağırlıkta okunur ve hangisinin başlık olduğu ayırt edilmez. */
   printersSubtitle: {
     fontFamily: operationsTheme.font.body['400'],
     fontSize: operationsTheme.text.tag,
