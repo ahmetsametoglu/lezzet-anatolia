@@ -70,6 +70,7 @@ export {
   type OrderListFilters,
 } from './services/order.service';
 export { OrderItemReturnService } from './services/order-item-return.service';
+export { OrderDeliveryCodeService } from './services/order-delivery-code.service';
 export { StockService, LOT_SEARCH_LIMIT } from './services/stock.service';
 export { ReservationService, type ReserveInput } from './services/reservation.service';
 export {

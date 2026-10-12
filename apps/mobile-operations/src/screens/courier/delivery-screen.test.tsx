@@ -619,15 +619,6 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     expect(screen.getByTestId('courier-delivery-cta')).toBeOnTheScreen();
   });
 
-  it('`proof_required` kanalıyla birlikte ve "hiçbir kayıt yazılmadı" diye gösterilir', async () => {
-    await renderScannedStop({}, undefined, { deliver: { ok: { status: 'proof_required', channel: 'b2b' } } });
-    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-
-    await waitFor(() =>
-      expect(lastToast.at(-1) ?? '').toMatch(/\(B2B\).*HİÇBİR kayıt yazılmadı/),
-    );
-  });
-
   it('`collection_unavailable` yöntemin adıyla ve "hiçbir kayıt yazılmadı" diye gösterilir', async () => {
     await renderScannedStop({}, undefined, { deliver: { ok: { status: 'collection_unavailable', method: 'card' } } });
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
@@ -662,6 +653,70 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     // "İkilenmedi" bilgisi yutulmaz: iş bittiği için mesaj toast'a çıkar ve kurye listeye döner.
     await waitFor(() => expect(lastToast.at(-1)).toMatch(/para İKİLENMEDİ/));
     expect(mockBack).toHaveBeenCalled();
+  });
+});
+
+describe('kapı kodu', () => {
+  /*
+    Bu testler şu hatalarda kırmızıya döner: kod sorulan durakta kod girilmeden teslim gider, kodsuz teslim kodu boş taşımaz, yanlış kod
+    cevabı kalan hakkı söylemez, kilitli kod yine sorulur ya da kod sorulmayan durağın isteğine kod alanı karışır.
+  */
+  const codeStop: Partial<CourierStopContract> = { doorCode: { sentVia: 'whatsapp', locked: false } };
+
+  it('kod girilmeden teslim kapalı; altı hane girilince açılır ve istek kodu taşır', async () => {
+    await renderScannedStop(codeStop);
+
+    expect(screen.getByTestId('courier-code-heading')).toHaveTextContent(/2/);
+    expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
+    expect(screen.getByTestId('courier-delivery-gate')).toHaveTextContent(`${t.delivery.cta.gateBoxedCode}${t.delivery.cta.gateCode}`);
+
+    await fireEvent.changeText(screen.getByTestId('courier-code-input'), '48 29 13');
+    expect(screen.getByTestId('courier-delivery-cta')).not.toBeDisabled();
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).toMatchObject({ doorCode: '482913' });
+  });
+
+  it('kodsuz teslim seçilince istek kodu boş taşır', async () => {
+    await renderScannedStop(codeStop);
+    await fireEvent.press(screen.getByTestId('courier-code-skip'));
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).toMatchObject({ doorCode: null });
+  });
+
+  it('yanlış kodda alan boşalır, kalan hak alanın altında yazılır ve ekran açık kalır', async () => {
+    await renderScannedStop(codeStop, undefined, { deliver: { ok: { status: 'door_code_mismatch', attemptsLeft: 3 } } });
+    await fireEvent.changeText(screen.getByTestId('courier-code-input'), '000000');
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(screen.getByTestId('courier-code-error')).toHaveTextContent(/3 hak kaldı/));
+    expect(screen.getByTestId('courier-code-input')).toHaveDisplayValue('');
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it('kilitli kod sorulmaz; yalnız kodsuz teslim açılır', async () => {
+    await renderScannedStop({ doorCode: { sentVia: 'email', locked: true } });
+
+    expect(screen.queryByTestId('courier-code-input')).toBeNull();
+    expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
+    await fireEvent.press(screen.getByTestId('courier-code-skip'));
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).toMatchObject({ doorCode: null });
+  });
+
+  it('kod sorulmayan durakta adım çizilmez ve istek kod alanı taşımaz', async () => {
+    await renderScannedStop();
+
+    expect(screen.queryByTestId('courier-code')).toBeNull();
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).not.toHaveProperty('doorCode');
   });
 });
 

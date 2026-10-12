@@ -275,14 +275,14 @@ describe('parseSettingValue — sınır', () => {
   });
 
   it('kanal bayrakları mantıksala indirgenir', () => {
-    const def = SETTING_BY_KEY.get('delivery_proof_required')!;
+    const def = SETTING_BY_KEY.get('delivery_code_channels')!;
     expect(parseSettingValue(def, { b2b: true, b2c: false })).toEqual({ ok: true, value: { b2b: true, b2c: false } });
   });
 });
 
 describe('formatSettingValue', () => {
   it('kanal bayrağının hepsi kapalıyken TAM cümle yazar — tire iki ayrı hâli gizlerdi', () => {
-    const def = SETTING_BY_KEY.get('delivery_proof_required')!;
+    const def = SETTING_BY_KEY.get('delivery_code_channels')!;
     expect(formatSettingValue(def, { b2b: false, b2c: false })).toBe('Hiçbir kanalda istenmiyor');
     expect(formatSettingValue(def, { b2b: true, b2c: false })).toBe('B2B (toptan)');
   });

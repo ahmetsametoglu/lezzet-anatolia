@@ -4,42 +4,11 @@ import type { Order } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyStatusEffect, type OrderEffects } from '../order/effects';
 import { refundShortfallOnDeparture } from '../order/refund';
+import { issueDoorCode } from './door-code';
 
 /**
- * **ARACA YÜKLEME OKUTMASI** (23.8 · karar §1.11) — kurye kutunun QR'ını okutur; kutu rotasına
- * aitse `loaded_at/by` damgalanır, değilse GÖRÜNÜR reddedilir.
- *
- * Kararın iki yarısı: rota onayı NİYET doğrulamasıdır (yorgun bir sabahta gözü kapalı basılır),
- * garanti KUTU kontrolüdür — yanlış kutu araca hiç binmez. Sayaç ("5/8 bindi") damgalardan türer,
- * ayrı tablo yok.
- *
- * ── YÜKLEME "YOLDA" DEMEK DEĞİLDİR (kullanıcı kararı 31.08) ─────────────────
- * Bu kapı 30.08'e kadar son kutuda `ready → out_for_delivery` de yazıyordu; yükleme ile sefer
- * başlatma tek ele bağlıydı. Kullanıcı modeli ayırdı: **araç bir ara depodur** ve içinde birden
- * çok seferin — bugünün de yarının da — kutuları durabilir. Yükleme malın depodan araca geçmesi,
- * yani bir EMANET değişimidir; müşteri bundan haberdar olmaz. Siparişi "yolda" yapan ve müşteriye
- * haber gönderen şey seferin BAŞLATILMASIDIR (`startCourierDay`).
- *
- * Kaynaşmanın somut bedeli ölçüldü: yarının seferinin kutusunu bugün okutmak, o siparişleri bugün
- * yola çıkarırdı. Ayrıca `startCourierDay`ın `started` listesi ULAŞILAMAZ hâle gelmişti — kutu
- * yüklenen sipariş buradan çoktan çıkmış oluyordu, sefer başlatmaya iş kalmıyordu.
- *
- * Geçişin sahibi `startCourierDay`: kutuları tam olan durağı o yola çıkarır, olmayanı
- * `awaitingBoxes`ta gösterir.
- *
- * ── TEK İSTİSNA: SEFER ZATEN YOLDAYSA SON KUTU DURAĞI AÇAR (kullanıcı kararı 03.09) ─────────
- * Eksik kutuyla başlatılan seferde kurye eksik kutuyu sonradan okutuyordu ve durak `ready`de
- * kalıyordu: gün ekranında sürülen seferin düğmesi "kapat", araçtaki seferlerde "duraklara git",
- * yeniden başlatmaya giden yol yok — teslimat ekranı kapıyı açıyor, sunucu `stale` diyordu.
- * Denetim 03.09, bulgu 3. Yukarıdaki gerekçe ("yarının kutusu bugün yola çıkmasın") burada
- * geçerli değil: sefer çoktan yolda, müşterilere haber gitti; bu durağın haberi de tam şimdi,
- * bir kez gider. Kararı yine motor verir (`canTransition`), geçiş koşullu yazılır (`stale` yutulur:
- * araya başka bir yazım girdiyse durum zaten değişmiştir).
- *
- * ── ROTA KONTROLÜNÜN KAYNAĞI SİPARİŞİN DAMGASIDIR ───────────────────────────
- * `start_delivery_run` seferi açarken siparişlere `courier_id` yazar ("siparişin kuryesi seferin
- * kuryesinden gelir" — 0046). Kutu → sipariş → kurye zinciri bu damgayı okur; ayrı bir rota
- * hesabı yapılmaz — yapılsaydı iki kaynak bir gün ayrışırdı.
+ * Araca yükleme okutması: kutu kuryenin seferine damgalı siparişin malıysa yüklendi damgası yazılır, değilse görünür biçimde reddedilir.
+ * Yükleme siparişi yola çıkarmaz, çünkü araç birden çok seferin kutusunu taşıyabilir; geçişin sahibi sefer başlatmadır.
  */
 
 export type LoadBoxOutcome =
@@ -50,23 +19,16 @@ export type LoadBoxOutcome =
       boxNo: number;
       loadedBoxes: number;
       boxCount: number;
-      /**
-       * Bu okutma siparişin SON kutusuydu — siparişin tamamı artık araçta. **Yola çıktı demek
-       * DEĞİL** (31.08): durumu değiştiren kapı sefer başlatmadır — tek istisna aşağıda.
-       */
+      /** Siparişin son kutusu da araçta; yola çıktı demek değildir, durumu sefer başlatma değiştirir. */
       allBoxesLoaded: boolean;
-      /** Sefer zaten yoldaydı ve bu son kutu durağı AÇTI (`out_for_delivery`, haber gitti) — 03.09. */
+      /** Sefer zaten yoldaydı ve bu son kutu durağı açtı (`out_for_delivery`, haber gitti). */
       stopOpened: boolean;
     }
   | { status: 'already_loaded'; orderId: string; boxNo: number; loadedBoxes: number; boxCount: number }
   | {
       status: 'wrong_route';
       referenceNo: string | null;
-      /**
-       * **Kutunun AİT OLDUĞU rota** (kullanıcı kararı 01.09) — "hangi sefer" değil "hangi rota":
-       * `SF-26-…` bir kayıt numarası, "Kuzey Hattı — Frankfurt" kuryenin kafasındaki şey.
-       * `null` = sipariş hiçbir sefere damgalı değil (henüz kurulmamış ya da başkasınınki de değil).
-       */
+      /** Kutunun ait olduğu rotanın adı, çünkü kurye seferi kayıt numarasıyla değil rota adıyla tanır; `null` = siparişin seferi yok. */
       routeName: string | null;
       /** Seferin künyesi — rampada kâğıtla eşleştirmek için; rota adının yanında ikincil. */
       runReferenceNo: string | null;
@@ -88,16 +50,8 @@ export async function loadBox(
   if (!order) return { status: 'unknown_code' };
 
   /*
-    Sipariş bu kuryenin seferine damgalı değil → kutu bu rotanın malı değil.
-
-    ── RET, KUTUNUN NEREYE AİT OLDUĞUNU DA SÖYLER (kullanıcı kararı 01.09) ────
-    Eskiden yalnız siparişin referansı dönüyordu ve kurye "peki bu kutu kimin" sorusuyla kalıyordu.
-    Tasarımın kendi kırmızı kartı bunu zaten yazıyor (v3:18): *"KT-26-8891 · SF-26-TTLM40'a ait, o
-    sefer bu araçta yok."* Rota adı SEFERDEN çözülüyor; sipariş hiçbir sefere damgalı değilse ikisi
-    de `null` kalır — bilinmeyen bir şeyi uydurmaktansa söylememek doğru (CLAUDE §1).
-
-    Okuma İKİ EK TURA mal oluyor ve yalnız bu dalda: reddedilen okutma nadir bir hâl, mutlu yol
-    (yükleme) hiçbir şey ödemiyor.
+    Sipariş bu kuryenin seferine damgalı değilse kutu bu rotanın malı değildir; ret kutunun ait olduğu rotayı da söyler ki kurye kutuyu
+    nereye götüreceğini bilsin. Rota adı seferden çözülür ve iki ek tur yalnız bu nadir dalda ödenir.
   */
   if (order.courierId !== input.courierId) {
     const run = order.deliveryRunId === null ? null : await new DeliveryRunService(db).getById(order.deliveryRunId);
@@ -149,12 +103,8 @@ export async function loadBox(
 }
 
 /**
- * Son kutu okutuldu; sefer ZATEN YOLDAYSA durağı aç (künyedeki tek istisna, 03.09).
- *
- * Üç koşul: sipariş hâlâ `ready` (yola çıkmamış), bir sefere damgalı, o sefer yola çıkmış. Sefer
- * kurulmuş ama başlamamışsa `false` — yarının kutusu bugün yola çıkmaz (31.08). Geçiş koşullu:
- * `stale` (araya başka yazım girdi) sessizce `false`dur, çünkü durum zaten bu kapının kararı olmaktan
- * çıkmıştır; ekran bir sonraki okumada gerçeği görür.
+ * Son kutu okutuldu ve sefer zaten yoldaysa durak açılır, çünkü eksik kutuyla başlatılan seferde durağı yola çıkaracak başka kapı yoktur.
+ * Sefer başlamamışsa açılmaz ki yarının kutusu bugün yola çıkmasın; araya başka yazım girdiyse `false`, ekran gerçeği sonraki okumada görür.
  */
 async function openStopIfRunDeparted(
   db: SupabaseClient,
@@ -173,7 +123,8 @@ async function openStopIfRunDeparted(
     actorId: input.courierId,
   });
   if (!transitioned.ok) return false;
-  // Haber TAM ŞİMDİ ve bir kez: durak yola çıktı. Tekrar kilidi `notifyOrderStatus`ta (geçiş başına tek).
+  // Kod haberden önce üretilir, çünkü "yolda" mesajı kodu taşır; haberin tekrar kilidi `notifyOrderStatus`ta.
+  await issueDoorCode(db, order.id);
   await notifyStatusEffect(input.effects, order.id, 'out_for_delivery');
   await refundShortfallOnDeparture(db, order.id, input.effects);
   return true;

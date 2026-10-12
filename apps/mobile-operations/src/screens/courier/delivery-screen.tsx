@@ -13,6 +13,7 @@ import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { courierCopy } from './copy';
 import { DeliveryBoxesStep } from './components/delivery-boxes-step';
+import { DeliveryCodeStep } from './components/delivery-code-step';
 import { DeliveryCollectionStep } from './components/delivery-collection-step';
 import { DeliveryGoodsStep } from './components/delivery-goods-step';
 import { DeliveryOutcome } from './components/delivery-outcome';
@@ -78,6 +79,8 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
   const stepsLocked = boxesLeft > 0;
   /* Adım numarası kutuya göre kayar: kutulu durakta kutular birinci adımdır. */
   const stepNo = (n: number): number => (delivery.boxes.length === 0 ? n : n + 1);
+  /* Kapı kodu kutulardan hemen sonra sorulur, çünkü kod malı teslim alan kişinin kanıtıdır; sonraki adımlar bir kayar. */
+  const afterCode = (n: number): number => stepNo(n) + (delivery.doorCodeAsked ? 1 : 0);
 
   return (
     <View style={styles.screen} testID="courier-delivery">
@@ -105,8 +108,9 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             </OperationsHeadBleed>
             <DeliveryStopInfo stop={stop} />
             <DeliveryBoxesStep delivery={delivery} boxesLeft={boxesLeft} />
-            <DeliveryGoodsStep delivery={delivery} n={stepNo(1)} locked={stepsLocked} />
-            <DeliveryCollectionStep delivery={delivery} n={stepNo(2)} locked={stepsLocked} />
+            {delivery.doorCodeAsked ? <DeliveryCodeStep delivery={delivery} n={stepNo(1)} locked={stepsLocked} /> : null}
+            <DeliveryGoodsStep delivery={delivery} n={afterCode(1)} locked={stepsLocked} />
+            <DeliveryCollectionStep delivery={delivery} n={afterCode(2)} locked={stepsLocked} />
           </FormScroll>
         )}
       </OperationsScreenChrome>

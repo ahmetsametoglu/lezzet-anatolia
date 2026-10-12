@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { FulfillmentAdjustmentSchema } from '../entities/order.schema';
-import { ChannelEnum, OrderStatusEnum, PaymentStatusEnum } from '../primitives/enums.schema';
+import { DoorCodeSchema } from '../entities/order-delivery-code.schema';
+import { OrderStatusEnum, PaymentStatusEnum } from '../primitives/enums.schema';
 import { DoorCollectionInputSchema, DoorCollectionUnavailableSchema } from './courier-api.schema';
 
 /** Kapıdaki sonuç: teslim, tahsilat ve ulaşılamadı/reddedildi uçlarının şemaları. */
@@ -55,6 +56,8 @@ export const ConfirmDoorDeliveryRequestSchema = z.object({
    * Kapıda okutulan kutu kodları: kutulu siparişte teslimin ön koşuludur, eksik kutuda `boxes_missing` döner ve hiçbir yazım yapılmaz.
    */
   scannedBoxCodes: z.array(z.string()).optional(),
+  /** Müşterinin söylediği kapı kodu; boş = kodsuz teslim. Kod üretilmemiş siparişte yok sayılır. */
+  doorCode: DoorCodeSchema.nullish(),
 });
 export type ConfirmDoorDeliveryRequest = z.infer<typeof ConfirmDoorDeliveryRequestSchema>;
 
@@ -72,12 +75,11 @@ export const ConfirmDoorDeliveryResponseSchema = z.discriminatedUnion('status', 
     /** Tahsilat bu istekte yazılmadı; aynı anahtarla zaten yazılmıştı. */
     collectionDeduped: z.literal(true).optional(),
   }),
-  /** Kanıt zorunlu ama gelmedi — HİÇBİR yazım yapılmadı, sipariş hâlâ yolda. */
-  z.object({ status: z.literal('proof_required'), channel: ChannelEnum }),
-  /**
-   * Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI (etüt 2.5: tüm kutular okutulmadan
-   * tamamlanmaz). Kalan kutuların numarası döner: ekran "Kutu 2 ve 3 okutulmadı" der.
-   */
+  /** Kapı kodu tutmadı ve hiçbir yazım yapılmadı; `attemptsLeft` sıfırsa sonraki deneme kilitlenir. */
+  z.object({ status: z.literal('door_code_mismatch'), attemptsLeft: z.number().int() }),
+  /** Kod hakları doldu; kurye kodsuz teslim edebilir. */
+  z.object({ status: z.literal('door_code_locked') }),
+  /** Okutulmamış kutu var ve teslim yazılmadı; kalan kutuların numarası döner ki ekran hangilerinin eksik olduğunu söylesin. */
   z.object({ status: z.literal('boxes_missing'), remainingBoxNos: z.array(z.number().int()) }),
   DoorCollectionUnavailableSchema,
   z.object({ status: z.literal('forbidden'), reason: z.literal('not_assigned') }),

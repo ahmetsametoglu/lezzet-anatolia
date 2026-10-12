@@ -139,8 +139,8 @@ Kurye kapı önünde kutuyu okutur; sistem kutunun o siparişe ait olduğunu ve 
 olduğunu doğrular, **teslim kaydını kendiliğinden düşer** — ayrıca "teslim ettim" ekranı
 doldurulmaz. `deliver_order` yalnız `out_for_delivery`den teslim eder ve aksi hâlde `stale` döner
 (`0016:36`), yani yanlış anda okutulan kutu sessizce geçmez. Okutulan kod `delivery_proof`a yazılır:
-bu, B2C'de bugün **hiç kanıt istemeyen** teslime bedava bir kanıt kazandırır (`delivery_proof_required`
-= `{b2b: true, b2c: false}`). **Tüm kutular okutulmadan teslim tamamlanmaz.**
+bu, kapı kodu sorulmayan teslime de bedava bir kanıt kazandırır (kapı kodu `teslim-kodu.md`).
+**Tüm kutular okutulmadan teslim tamamlanmaz.**
 
 ### Kullanılmaması gereken yer
 **Müşteri yüzeyinde yeri yok** ve **satış kararı barkodla verilmez** — barkod kimlik bulur,

@@ -73,9 +73,10 @@ insert into public.settings (key, value, description) values
   ('transfer_transit_days',        '1',      'Depolar arası ulaşım süresi (gün). FEFO önerisi yolda ömrü yanacak partiyi uyarır; gecikme rozeti bu eşiği okur.'),
   ('near_expiry_discount_percent', '30',     'Yaklaşan son tarih için ÖNERİLEN indirim %. Karar insanın.'),
   ('mlor_percent',                 '75',     'Mal kabulde asgari kalan raf ömrü %. Altında uyarır, kabulü engellemez.'),
-  -- Teslim kanıtı kutu okutmasıdır (`box_scan`), çünkü parmakla çizilen imza kimliği kanıtlamaz; ayar kapsam kanal bazında yine
-  -- açılabilsin diye durur.
-  ('delivery_proof_required',      '{"b2b": false, "b2c": false}', 'Teslim onayı (imza/foto) kapsamı — kanal bazında; ikisi de kapalı (kanıt kutu okutmasıdır).'),
+  -- Kapı kodu yalnız kendi aracımızla teslimde üretilir; kurye kodu alamazsa kodsuz teslim eder, çünkü kodu olmayan müşteriyi kapıda
+  -- bırakmak teslimi kanıtlamaktan pahalıdır.
+  ('delivery_code_channels',       '{"b2b": true, "b2c": false}', 'Teslim kodu hangi kanalda üretilsin (rota teslimi); kod WhatsApp''tan, numara yoksa e-postayla gider.'),
+  ('delivery_code_max_attempts',   '5',      'Kapıda yanlış kod hakkı; dolunca kod kilitlenir ve kurye kodsuz teslim eder.'),
   ('delivery_summary_email',       'true',   'Teslimde teslimat özeti e-postası otomatik gönderilsin mi.'),
   ('route_delivery_unit_cost_cents','250',   'Rota teslimat birim maliyeti (cent) — kâr hesabı.'),
   ('packaging_unit_cost_cents',    '120',    'Paketleme (soğuk zincir) birim maliyeti (cent) — kâr hesabı.'),

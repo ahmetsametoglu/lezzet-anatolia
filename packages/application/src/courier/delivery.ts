@@ -1,4 +1,5 @@
 import { OrderBoxService, OrderService, SettingsService } from '@lezzet/database';
+import type { DoorCodeCheck } from '@lezzet/domain-core';
 import type {
   DeliveryProofRecord,
   DoorCollectionInputContract,
@@ -13,10 +14,11 @@ import type { OrderEffects } from '../order/effects';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
 import { deliverOrderWithAdjustments } from '../order/refund';
 import { kickOrderRegister } from '../register/sync';
+import { verifyDoorCode } from './door-code';
 
 /**
- * Kapıda teslim: sıra kuralın kendisidir: önce kanıt ve hesap kapısı (hiçbir yazım yapılmadan), sonra mal ve teslim tek yazımda, en sonda para; teslim `stale` dönerse karşılıksız para yazılmaz.
- * Kurye hesap yapmaz: eksik işaretlenince tahsil edilecek tutarı ödeme durumu türetimi düşürür, tutar tek yerde hesaplanır.
+ * Kapıda teslim: önce kutu, kapı kodu ve hesap kapısı (hiçbir yazım yapılmadan), sonra mal ve teslim tek yazımda, en sonda para; teslim
+ * `stale` dönerse karşılıksız para yazılmaz. Kurye hesap yapmaz: tahsil edilecek tutarı ödeme durumu türetimi tek yerde hesaplar.
  */
 
 /** Teslim onayı: müşteri ekranda imzalar ya da kurye fotoğraf çeker (DOMAIN §6). */
@@ -40,14 +42,13 @@ export type DoorDeliveryOutcome =
       cashLimitExceeded: boolean;
       /** Eksik/reddedilen kalem yazıldı mı — tutar buna göre kendiliğinden düştü. */
       adjustedLines: number;
-      /**
-       * Tahsilat bu çağrıda YAZILMADI; aynı `idempotencyKey` ile zaten yazılmıştı (K4). Sonucun
-       * geri kalanı gerçektir — tekrar eden istek ilk isteğin cevabını görür.
-       */
+      /** Tahsilat bu çağrıda yazılmadı, aynı `idempotencyKey` ile zaten yazılmıştı; sonucun geri kalanı gerçektir. */
       collectionDeduped?: true;
     }
-  /** Kanıt zorunlu ama gelmedi — HİÇBİR yazım yapılmadı. */
-  | { status: 'proof_required'; channel: Order['channel'] }
+  /** Kapı kodu tutmadı; hiçbir yazım yapılmadı. `attemptsLeft` sıfırsa sonraki deneme kilitlenir. */
+  | { status: 'door_code_mismatch'; attemptsLeft: number }
+  /** Kod hakları doldu; kurye kodsuz teslim edebilir. */
+  | { status: 'door_code_locked' }
   /** Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI. */
   | { status: 'boxes_missing'; remainingBoxNos: number[] }
   /** Tahsilatın yönteminin hesabı ayarlı değil — HİÇBİR yazım yapılmadı. */
@@ -70,6 +71,8 @@ export async function confirmDoorDelivery(
      */
     adjustments?: readonly FulfillmentAdjustment[];
     proof?: DeliveryProofInput | null;
+    /** Müşterinin söylediği kapı kodu; boş = kodsuz teslim. Kod üretilmemiş siparişte yok sayılır. */
+    doorCode?: string | null;
     collection?: DoorCollectionInputContract | null;
     /**
      * Kapıda okutulan kutu kodları: kutulu siparişte teslimin ön koşulu; set kutuları kapsamıyorsa hiçbir yazım yapılmadan `boxes_missing` döner.
@@ -95,10 +98,11 @@ export async function confirmDoorDelivery(
     return { status: 'boxes_missing', remainingBoxNos: remaining.map((box) => box.boxNo) };
   }
 
-  // ── Kanıt kapısı: yazımdan önce ────────────────────────────────────────────
-  if (!input.proof && (await proofRequired(db, order.channel))) {
-    return { status: 'proof_required', channel: order.channel };
-  }
+  // Kod yazımdan önce sınanır, çünkü yanlış kodla yazılmış teslim geri alınamaz.
+  const door = await verifyDoorCode(db, input.orderId, input.doorCode ?? null);
+  if (door.kind === 'mismatch') return { status: 'door_code_mismatch', attemptsLeft: door.attemptsLeft };
+  if (door.kind === 'locked') return { status: 'door_code_locked' };
+  const doorCode = doorCodeResult(door);
 
   // Hesap da yazımdan önce çözülür, çünkü teslim yazılıp para yazılamasaydı mal gitmiş, tahsilat kayıtsız kalırdı.
   const accountId = input.collection ? await readDoorAccountId(db, input.collection.method) : null;
@@ -106,16 +110,16 @@ export async function confirmDoorDelivery(
 
   /*
     Düzeltme ve teslim tek yazımdır (`deliverOrderWithAdjustments`), çünkü ardışık iki çağrıda teslim `stale` dönünce düzeltme ve müşteriye giden "eksik" haberi geri alınamıyordu.
-    Okutulan kutu kodları kanıta yazılır: görselli kanıt varsa onun içine, yoksa görselsiz `box_scan` kaydı olarak.
+    Okutulan kutu kodları ve kapı kodunun sonucu kanıta yazılır: görselli kanıt varsa onun içine, yoksa görselsiz `box_scan` kaydı olarak.
   */
   const adjustments = input.adjustments ?? [];
   const boxCodes = boxes.length > 0 ? boxes.map((box) => box.code) : null;
   const written = await deliverOrderWithAdjustments(db, input.orderId, adjustments, {
     actorId: input.courierId,
     deliveryProof: input.proof
-      ? proofRecord(input.proof, input.courierId, boxCodes)
+      ? proofRecord(input.proof, input.courierId, boxCodes, doorCode)
       : boxCodes
-        ? boxScanRecord(boxCodes, input.courierId)
+        ? boxScanRecord(boxCodes, input.courierId, doorCode)
         : null,
     effects: input.effects,
   });
@@ -173,17 +177,10 @@ export async function confirmDoorDelivery(
   };
 }
 
-/**
- * Kanıt bu kanalda zorunlu mu. Kapsam parametriktir (B2B zorunlu, B2C kapalı — varsayılan); ayar
- * okunamazsa **zorunlu değil** kabul edilir: eksik ayar yüzünden kuryenin kapıda kilitlenmesi,
- * kanıtsız bir teslimattan daha pahalıdır.
- */
-async function proofRequired(db: SupabaseClient, channel: Order['channel']): Promise<boolean> {
-  const scope = await new SettingsService(db).get<Record<string, boolean>>('delivery_proof_required', {
-    b2b: true,
-    b2c: false,
-  });
-  return scope?.[channel] === true;
+/** Kanıta yazılan kod sonucu; kod üretilmemiş siparişte alan hiç yazılmaz. */
+function doorCodeResult(check: DoorCodeCheck): DeliveryProofRecord['doorCode'] {
+  if (check.kind === 'verified') return 'verified';
+  return check.kind === 'skipped' ? 'skipped' : null;
 }
 
 /** Nakit yasal sınırı (cent) — ayardan; kodda sabit yok (CLAUDE.md §4). Gel-al tezgâhı da aynı sınırı okur. */
@@ -195,7 +192,12 @@ export function cashLegalLimitCents(db: SupabaseClient): Promise<number> {
  * Siparişe yazılan kanıt (ne, kim, ne zaman): "eksik geldi" ihtilafının tek sigortası.
  * Şekil `packages/types`tan gelir, çünkü elle yazıldığında okuyan ekran başka alan adları arıyor ve hata vermiyordu.
  */
-function proofRecord(proof: DeliveryProofInput, courierId: string, boxCodes: string[] | null = null): DeliveryProofRecord {
+function proofRecord(
+  proof: DeliveryProofInput,
+  courierId: string,
+  boxCodes: string[] | null,
+  doorCode: DeliveryProofRecord['doorCode'],
+): DeliveryProofRecord {
   return {
     kind: proof.kind,
     imageKey: proof.imageKey,
@@ -203,6 +205,7 @@ function proofRecord(proof: DeliveryProofInput, courierId: string, boxCodes: str
     courierId,
     at: new Date().toISOString(),
     ...(boxCodes ? { boxCodes } : {}),
+    ...(doorCode ? { doorCode } : {}),
   };
 }
 
@@ -210,7 +213,7 @@ function proofRecord(proof: DeliveryProofInput, courierId: string, boxCodes: str
  * Görselsiz kanıt: kapıda okutulan kodlar; yalnız kutulu siparişin görselsiz tesliminde doğar, görselli kanıt varken kodlar onun içine yazılır.
  * Gel-al tezgâhı da bu kaydı yazar; `courierId` orada teslim eden depocudur.
  */
-export function boxScanRecord(boxCodes: string[], courierId: string): DeliveryProofRecord {
+export function boxScanRecord(boxCodes: string[], courierId: string, doorCode: DeliveryProofRecord['doorCode'] = null): DeliveryProofRecord {
   return {
     kind: 'box_scan',
     imageKey: null,
@@ -218,5 +221,6 @@ export function boxScanRecord(boxCodes: string[], courierId: string): DeliveryPr
     courierId,
     at: new Date().toISOString(),
     boxCodes,
+    ...(doorCode ? { doorCode } : {}),
   };
 }

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  DoorCodeSchema,
   ORDER_STATUS_LABELS,
   type ConfirmDoorDeliveryResponse,
   type CourierStopContract,
   type DoorCollectionInputContract,
   type DoorCollectionMethods,
+  type DoorCodeVia,
   type DoorMethod,
   type FulfillmentAdjustment,
   type MarkUndeliveredResponse,
@@ -23,7 +25,7 @@ import { refusedGrossCents } from '@lezzet/domain-core';
 import { centsToAmountText, money, parseAmountToCents } from './courier-format';
 
 /*
-  Teslimat ekranının motoru: durak kuryenin kendi gün listesinden okunur (sahiplik sorgunun içindedir), kanıt → mal → teslim → para sırası kapıdadır ve ekran tek istek gönderir.
+  Teslimat ekranının motoru: durak kuryenin kendi gün listesinden okunur (sahiplik sorgunun içindedir), kutu → kapı kodu → mal → para sırası kapıdadır ve ekran tek istek gönderir.
   Hangi yöntemle tahsilat yazılabileceği gün cevabından gelir; hesabı olmayan yöntemde panel çalışır ama teslim kapısı kapanır, çünkü parayı yazmadan kapanan teslim siparişi borçlu gösterir.
 */
 
@@ -35,8 +37,9 @@ const t = courierCopy;
  */
 const CASH_LIMIT_CENTS = 100_000;
 
-/** Tutar ±/− adımı — v2 bir euro artırıp azaltıyor (`gercek - 1`). */
+/** Tutar ±/− adımı: bir euro. */
 const AMOUNT_STEP_CENTS = 100;
+
 
 /** Kalemin üç hâli: işaretsiz → teslim → reddedildi → işaretsiz. */
 
@@ -98,6 +101,16 @@ interface UseDeliveryResult {
   collectionBlocked: boolean;
   amountStepCents: number;
 
+  /** Bu durakta kapı kodu soruluyor mu; kodun gittiği kanal ipucuyla söylenir. */
+  doorCodeAsked: boolean;
+  doorCodeSentVia: DoorCodeVia | null;
+  doorCode: string;
+  setDoorCode: (value: string) => void;
+  doorCodeSkipped: boolean;
+  setDoorCodeSkipped: (skipped: boolean) => void;
+  doorCodeLocked: boolean;
+  doorCodeError: string | null;
+
   gateOpen: boolean;
   /**
    * Olumsuz sonuç (ulaşılamadı, kabul etmedi) yazılabilir mi: durak yola çıkmış olmalı, çünkü kapıya hiç gidilmemiş durağa "ulaşılamadı" yazılmaz.
@@ -123,8 +136,10 @@ interface UseDeliveryResult {
 /** Kapının ret dallarını ekranın diline çevirir — hiçbiri YUTULMAZ, hepsi bir cümleye çıkar. */
 function refusalText(result: CourierRefusal): string {
   switch (result.status) {
-    case 'proof_required':
-      return fillCopy(t.delivery.refusal.proofRequired, { channel: t.channel[result.channel] });
+    case 'door_code_mismatch':
+      return result.attemptsLeft > 0 ? fillCopy(t.delivery.code.mismatch, { n: String(result.attemptsLeft) }) : t.delivery.code.mismatchLast;
+    case 'door_code_locked':
+      return t.delivery.code.locked;
     case 'boxes_missing':
       // Ekran zaten yerelde kilitliyor; bu dal yarışın (başka cihaz, bayat liste) son savunması.
       return fillCopy(t.delivery.refusal.boxesMissing, { boxes: result.remainingBoxNos.join(', ') });
@@ -165,6 +180,13 @@ export function useDelivery(orderId: string): UseDeliveryResult {
 
   const [amountText, setAmountText] = useState('');
   const [method, setMethod] = useState<DoorMethod>('cash');
+
+  /** Müşterinin söylediği kapı kodu ya da kodsuz teslim kararı; kod sorulmayan durakta ikisi de kullanılmaz. */
+  const [doorCode, setDoorCodeText] = useState('');
+  const [doorCodeSkipped, setDoorCodeSkipped] = useState(false);
+  const [doorCodeError, setDoorCodeError] = useState<string | null>(null);
+  /** Sunucu kodun kilitlendiğini bu ekranda söylediyse; liste tazelenene kadar durak bunu bilmez. */
+  const [doorCodeLockedHere, setDoorCodeLockedHere] = useState(false);
 
   const [outcome, setOutcome] = useState<'unreachable' | 'refused' | null>(null);
   const [outcomeNote, setOutcomeNote] = useState('');
@@ -217,7 +239,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     setTotal(ownRun.length > 0 ? ownRun.length : result.data.stops.length);
     setDoorCollection(result.data.doorCollection);
     setStatus('ready');
-    // Tutar alanı MOTORUN tutarıyla açılır (K4: "alan onunla açılır"); kurye gerçekleşeni düzeltir.
+    // Tutar alanı motorun tutarıyla açılır; kurye gerçekleşeni düzeltir.
     setAmountText(found.payment.dueAmountCents === null ? '' : centsToAmountText(found.payment.dueAmountCents));
     const expected = found.payment.expectedMethod;
     // Kuryenin eline yalnız nakit ve kart girer; `online`/`bank_transfer` beklentisi segmenti değiştirmez.
@@ -333,8 +355,13 @@ export function useDelivery(orderId: string): UseDeliveryResult {
    */
   const collectionBlocked = dueCents !== null && !doorCollection[method];
 
-  /* Kapı üç şeyi sorar: kutular okutuldu mu, kanıt alındı mı, para yazılabilir mi; hepsi geri verilmişse bu teslim değil "kabul etmedi"dir. */
-  const gateOpen = loadedOnVan && boxesSatisfied && !allRefused && !collectionBlocked && !finished;
+  const doorCodeAsked = stop?.doorCode != null;
+  const doorCodeLocked = (stop?.doorCode?.locked ?? false) || doorCodeLockedHere;
+  /** Kod sorulan durakta teslim, altı hane girilmeden ya da kodsuz teslim seçilmeden açılmaz; kilitli kod yalnız kodsuz teslime izin verir. */
+  const doorCodeReady = !doorCodeAsked || doorCodeSkipped || (!doorCodeLocked && DoorCodeSchema.safeParse(doorCode).success);
+
+  /* Kapı dört şeyi sorar: kutular okutuldu mu, kapı kodu girildi mi, para yazılabilir mi; hepsi geri verilmişse bu teslim değil "kabul etmedi"dir. */
+  const gateOpen = loadedOnVan && boxesSatisfied && doorCodeReady && !allRefused && !collectionBlocked && !finished;
   /* Olumsuz sonucun kapısı DAHA DAR değil daha GENİŞ: kutuların kapıda okutulması gerekmiyor
      (mal verilmedi ki), ama durak yola çıkmış olmalı — yoksa yazılacak bir geçiş yok. */
   const outcomeOpen = loadedOnVan && !finished;
@@ -349,7 +376,9 @@ export function useDelivery(orderId: string): UseDeliveryResult {
           ? t.delivery.cta.notLoaded
           : /* Kutulu durakta sıra cümlesi kutuyla başlar, çünkü ekranın numaralı adımları da kutuyla başlıyor; iki ayrı sıra
              anlatan ekran kuryeye hangisine uyacağını sordurur. */
-          `${boxes.length === 0 ? t.delivery.cta.gate : t.delivery.cta.gateBoxed}${boxesSatisfied ? '' : t.delivery.cta.gateBoxes}`;
+          `${boxes.length === 0 ? t.delivery.cta.gate : doorCodeAsked ? t.delivery.cta.gateBoxedCode : t.delivery.cta.gateBoxed}${
+            !boxesSatisfied ? t.delivery.cta.gateBoxes : doorCodeReady ? '' : t.delivery.cta.gateCode
+          }`;
 
   const ctaLabel = allRefused
     ? t.delivery.cta.allRefused
@@ -370,20 +399,27 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     setNotice(null);
 
     void (async () => {
-      /* Üç alan da sözleşmede OPSİYONEL ve yalnız gerçekten bir şey söylüyorsa doğuyor: kanıt
-         alındıysa `proof`, kalem reddedildiyse `adjustments`, para alındıysa `collection`. Boş bir
-         dizi ya da sıfırlı bir gövde göndermek, olmayan bir düzeltmeyi kapıya iş olarak vermekti. */
+      /* Alanlar yalnız bir şey söylüyorsa gider, çünkü boş dizi ya da sıfırlı gövde olmayan bir düzeltmeyi kapıya iş olarak verirdi. */
       const collection = buildCollection();
       const result = await submitDoorDelivery(orderId, {
         ...(adjustments.length === 0 ? {} : { adjustments }),
         ...(collection === null ? {} : { collection }),
         // Kutulu durakta okutulan kodlar teslimin ön koşulu — kutusuz durakta alan gitmez.
         ...(scannedBoxCodes.length === 0 ? {} : { scannedBoxCodes }),
+        // Kod sorulan durakta boş kod kodsuz teslimdir; kilitli kod da kodsuz gider.
+        ...(doorCodeAsked ? { doorCode: doorCodeSkipped || doorCodeLocked ? null : doorCode } : {}),
       });
       setSending(false);
 
       if (result.error !== null) {
         setNotice({ tone: 'error', text: wireErrorText(result.error) });
+        return;
+      }
+      if (result.data.status === 'door_code_mismatch' || result.data.status === 'door_code_locked') {
+        // Kod hatası alanın altında kalır, çünkü kurye müşteriye sorup yeniden yazacak; toast kaybolurdu.
+        if (result.data.status === 'door_code_locked') setDoorCodeLockedHere(true);
+        setDoorCodeText('');
+        setDoorCodeError(refusalText(result.data));
         return;
       }
       if (result.data.status !== 'ok') {
@@ -407,7 +443,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       });
       setFinished(true);
     })();
-  }, [adjustments, buildCollection, gateOpen, orderId, scannedBoxCodes, sending]);
+  }, [adjustments, buildCollection, doorCode, doorCodeAsked, doorCodeLocked, doorCodeSkipped, gateOpen, orderId, scannedBoxCodes, sending]);
 
   const confirmOutcome = useCallback(() => {
     if (outcome === null || sending) return;
@@ -486,6 +522,18 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     cashLimitWarning,
     collectionBlocked,
     amountStepCents: AMOUNT_STEP_CENTS,
+
+    doorCodeAsked,
+    doorCodeSentVia: stop?.doorCode?.sentVia ?? null,
+    doorCode,
+    setDoorCode: (value) => {
+      setDoorCodeText(value.replace(/\D/g, '').slice(0, 6));
+      setDoorCodeError(null);
+    },
+    doorCodeSkipped,
+    setDoorCodeSkipped,
+    doorCodeLocked,
+    doorCodeError,
 
     gateOpen,
     outcomeOpen,

@@ -4,6 +4,7 @@ import {
   DeliveryRunService,
   DeliveryZoneService,
   OrderBoxService,
+  OrderDeliveryCodeService,
   OrderItemService,
   OrderService,
   OrderStatusLogService,
@@ -17,12 +18,14 @@ import {
   canAccessWarehouse,
   canTransition,
   deliveryRunReferenceNo,
+  doorCodeLocked,
   sortBySequence,
   warehouseScope,
   whatsAppLink,
   type MessageLocale,
 } from '@lezzet/domain-core';
 import { parisDateOf } from '@lezzet/helper';
+import { doorCodeMaxAttempts, issueDoorCode } from './door-code';
 import { amountDueCents } from './door-payment';
 import { vehicleLabelOf } from './vehicle-label';
 import { customerCardsOf } from './names';
@@ -34,7 +37,9 @@ import { resolveLocalizedText } from '@lezzet/types';
 import type {
   DiscardDeliveryRunResult,
   DoorCheck,
+  DoorCodeVia,
   Order,
+  OrderDeliveryCode,
   OrderItem,
   OrderStatusLog,
   StopOrderMetric,
@@ -90,6 +95,8 @@ export interface CourierStop {
   outcomeNote: string | null;
   /** Kutu okutması sayılmaz: onu sunucu kurar, kapıda kimse imzalamaz. */
   hasProof: boolean;
+  /** Kapı kodunun hâli; kodun kendisi kuryeye gelmez, çünkü gelirse doğrulama anlamsızlaşır. `null` = bu durakta kod yok. */
+  doorCode: { sentVia: DoorCodeVia | null; locked: boolean } | null;
   /** Ulaşılamayan durak listede kalır ve yeniden denenir. */
   attempts: number;
   /** Yükleme sayacı `loadedAt` damgalarından türer; kapıdaki okutma kodu bu listeyle yerelde eşler, son doğrulama sunucuda. */
@@ -146,12 +153,14 @@ export async function listCourierDay(
 
   const orderIds = orders.map((order) => order.id);
   // Kutular da aynı paralel turda okunur, ardından değil.
-  const [items, logs, customers, addresses, allBoxes] = await Promise.all([
+  const [items, logs, customers, addresses, allBoxes, doorCodes, maxCodeAttempts] = await Promise.all([
     new OrderItemService(db).listByOrders(orderIds),
     new OrderStatusLogService(db).listByOrders(orderIds),
     customerCardsOf(db, orders),
     addressTexts(db, orders),
     new OrderBoxService(db).listByOrders(orderIds),
+    new OrderDeliveryCodeService(db).listByOrders(orderIds),
+    doorCodeMaxAttempts(db),
   ]);
   const names = await variantNames(db, items);
 
@@ -230,6 +239,7 @@ export async function listCourierDay(
       settledAt: settled?.createdAt ?? null,
       outcomeNote: settled?.note ?? null,
       hasProof: hasVisualProof(order),
+      doorCode: doorCodeView(doorCodes, order.id, maxCodeAttempts),
       attempts,
       boxes: allBoxes
         .filter((box) => box.orderId === order.id)
@@ -536,6 +546,8 @@ export async function startCourierDay(
     });
     if (transitioned.ok) {
       result.started.push(claim.orderId);
+      // Kod haberden önce üretilir, çünkü "yolda" mesajı kodu taşır.
+      await issueDoorCode(db, claim.orderId);
       /* Haber durak başına; zaten yoldaki durak `alreadyOut`a düştüğü için yeniden başlatmada haber tekrarlanmaz. */
       await notifyStatusEffect(input.effects, claim.orderId, 'out_for_delivery');
       await refundShortfallOnDeparture(db, claim.orderId, input.effects);
@@ -696,6 +708,11 @@ function settlementLog(
     (latest, log) => (latest === null || log.createdAt > latest.createdAt ? log : latest),
     null,
   );
+}
+
+function doorCodeView(codes: readonly OrderDeliveryCode[], orderId: string, maxAttempts: number): CourierStop['doorCode'] {
+  const row = codes.find((code) => code.orderId === orderId);
+  return row ? { sentVia: row.sentVia, locked: doorCodeLocked({ failedAttempts: row.failedAttempts, maxAttempts }) } : null;
 }
 
 /**

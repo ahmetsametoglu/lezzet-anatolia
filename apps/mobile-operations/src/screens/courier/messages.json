@@ -348,7 +348,9 @@
       "sending": "Kaydediliyor…",
       "gate": "Sıra: mal → tahsilat",
       "gateBoxed": "Sıra: kutular → mal → tahsilat",
+      "gateBoxedCode": "Sıra: kutular → kapı kodu → mal → tahsilat",
       "gateBoxes": " — kutuları okut",
+      "gateCode": " — kapı kodunu girin ya da kodsuz teslimi seçin",
       "unreachable": "Ulaşılamadı",
       "refused": "Kabul etmedi",
       "notLoaded": "Bu durağın kutuları araca binmemiş — rampada okutulmadan teslim edilemez."
@@ -406,9 +408,22 @@
       "complete": "Tüm kutular müşteriye verildi — teslim adımı açıldı.",
       "pending": "Kutular okutulmadan kanıt ve tahsilat adımları AÇILMAZ — okutulmayan kutu müşteriye verilmiş sayılmaz, dönüş dökümüne “araçta kaldı” diye düşer."
     },
+    "code": {
+      "heading": "KAPI KODU",
+      "hintWhatsapp": "Müşteriye WhatsApp'tan giden 6 haneli kodu sorun.",
+      "hintEmail": "Müşteriye e-postayla giden 6 haneli kodu sorun.",
+      "hintUnsent": "Kodun müşteriye gittiği kayıtlı değil; müşteri kodu bilmiyorsa kodsuz teslim edin.",
+      "label": "Kapı kodu",
+      "placeholder": "6 hane",
+      "skip": "Kod alınamadı — kodsuz teslim et",
+      "skipped": "Kodsuz teslim edilecek; kayıt öyle düşer.",
+      "undoSkip": "Kodu gir",
+      "mismatch": "Kod tutmadı — {n} hak kaldı. Müşteriye yeniden sorun.",
+      "mismatchLast": "Kod tutmadı ve haklar doldu — kodsuz teslim edin.",
+      "locked": "Kod hakları doldu — kodsuz teslim edin."
+    },
     "refusal": {
       "boxesMissing": "Okutulmamış kutu var: {boxes}. Tüm kutular okutulmadan teslim yazılmaz — HİÇBİR kayıt yazılmadı.",
-      "proofRequired": "Bu teslimat ({channel}) imza ya da fotoğraf ister; kanıt alınmadan kapanmaz. HİÇBİR kayıt yazılmadı.",
       "collectionUnavailable": "Seçilen yöntemin ({method}) hesabı ayarlanmamış; para yazılmadan teslim kapatılmaz. HİÇBİR kayıt yazılmadı — operasyonu arayın.",
       "stale": "Sipariş artık \"{status}\" durumunda — bu durak başkası tarafından kapatılmış olabilir. Para ve kayıt İKİLENMEDİ.",
       "notAssigned": "Bu durak size atanmamış.",

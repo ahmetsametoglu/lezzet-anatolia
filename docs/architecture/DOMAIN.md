@@ -290,8 +290,8 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 
 "Eksik geldi" ihtilafının tek sigortası teslim anındaki kanıttır. Resmî belge kararına dokunmaz — bu bir **operasyon belgesi**dir, fatura değildir (üstünde ibaresi vardır).
 
-- **Dijital teslim onayı:** kurye ekranında teslimatta kalem listesi çıkar; müşteri ekranda **imzalar** (veya kurye foto çeker). Onay siparişe kaydedilir (`Order.delivery_proof`: kim, ne zaman, imza/foto).
-- **Kapsam parametrik:** B2B'de **zorunlu** (varsayılan), B2C'de **kapalı** (varsayılan) — `Setting`'ten değiştirilir.
+- **Dijital teslim onayı:** kurye kapıda kutuları okutur. Kendi aracımızla teslimde müşteriye yola çıkışta altı haneli **kapı kodu** gider — doğrulanmış WhatsApp numarası varsa WhatsApp'tan, yoksa e-postayla — ve kurye kodu sorar. Kodu alamayan kurye **kodsuz teslim eder**; kodu olmayan müşteriyi kapıda bırakmak teslimi kanıtlamaktan pahalıdır. Sonuç siparişe kaydedilir (`Order.delivery_proof`: kutu kodları, kod doğrulandı ya da kodsuz, teslim eden, zaman). Parmakla çizilen imza ve fotoğraf kimliği kanıtlamadığı için yoktur. Ayrıntı `docs/feature/teslim-kodu.md`.
+- **Kapsam parametrik:** kod varsayılan B2B'de açık, B2C'de kapalı (`delivery_code_channels`); kargo ve gel-al kod almaz. Yanlış kod hakkı `delivery_code_max_attempts` (varsayılan 5); hak dolunca kod kilitlenir, kodsuz teslim açık kalır.
 - **Teslimat özeti (PDF):** teslimde, e-postası olan **tüm müşterilere otomatik** gönderilir (parametrik, varsayılan açık). Kurye isterse aynı PDF'in **çıktısını alıp elden de verebilir**. İçerik: kalemler + karşılanan miktarlar + `reference_no`; "resmî fatura değildir" ibaresi.
 
 ### Durak sırası (11.9)

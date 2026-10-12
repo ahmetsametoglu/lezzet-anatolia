@@ -183,3 +183,27 @@ create trigger order_status_cogs
 
 revoke execute on function public.deliver_order(uuid, uuid, jsonb) from public, anon, authenticated;
 revoke execute on function public.refresh_order_cogs(uuid) from public, anon, authenticated;
+
+-- ── Kapı kodu ─────────────────────────────────────────────────────────────────
+-- Rota teslimindeki kod sefer yola çıkınca üretilir ve müşteriye gider, kurye kapıda sorar. Politika yok, çünkü kurye ya da müşteri
+-- jetonuyla okunabilen kod doğrulamayı anlamsız kılardı; yalnız servis rolü okur ve yazar.
+create table public.order_delivery_code (
+  order_id uuid primary key references public.order (id) on delete cascade,
+  code text not null check (code ~ '^[0-9]{6}$'),
+  -- Kodun gittiği kanal; boş = gönderilemedi ve kurye kodsuz teslim eder.
+  sent_via text check (sent_via in ('whatsapp', 'email')),
+  failed_attempts smallint not null default 0,
+  created_at timestamptz not null default now()
+);
+alter table public.order_delivery_code enable row level security;
+
+-- Yanlış denemeyi tek ifadede sayar ki aynı anda gelen iki deneme birbirini ezmesin; yeni sayıyı döndürür.
+create or replace function public.order_delivery_code_fail(p_order_id uuid)
+returns smallint
+language sql
+security invoker
+set search_path = public
+as $$
+  update public.order_delivery_code set failed_attempts = failed_attempts + 1 where order_id = p_order_id returning failed_attempts;
+$$;
+revoke all on function public.order_delivery_code_fail(uuid) from public, anon, authenticated;

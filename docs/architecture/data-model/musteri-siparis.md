@@ -318,7 +318,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`shipping_fee`** — müşteriden alınan kargo ücreti (varsayılan 0); KDV'ye tabi ve **her siparişte KDV dahil**, kalem fiyatı KDV hariç olsa da (bkz. `DOMAIN.md §5–6`). Uygulamadaki adı `shippingFeeCents`, birimi **cent** (`STACK §8`)
 - **`reference_no`** — sistemin ürettiği referans — marka+yıl+**rastgele** (ör. `LA-26-7K4M2P`), hacim sızdırmaz; **ilk kalıcı duruma geçişte** üretilir (`confirmed`, hızlı satışta `completed`); resmî fatura no değil
 - **`idempotency_key`** — **çift sipariş kalkanı** — istemcinin o checkout denemesi için ürettiği anahtar; aynı istek ikinci kez ulaşırsa (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ, var olan döner. Kısmi unique: anahtarsız satırlar (operasyon girişi, hızlı satış) birbirini engellemez
-- **`delivery_proof`** — teslim onayı: imza görüntüsü/foto (storage yolu), onaylayan, zaman — B2B varsayılan zorunlu, B2C kapalı (parametrik; bkz. `DOMAIN.md §6`)
+- **`delivery_proof`** — teslim kanıtı: kapıda okutulan kutu kodları, kapı kodunun sonucu (doğrulandı ya da kodsuz), teslim eden, zaman — şekli `DeliveryProofRecordSchema` (bkz. `DOMAIN.md §6`)
 - **`carrier`** — kargo taşıyıcısı (`colissimo · chronopost · dhl · ups · other`). **Tanımlı küme, serbest metin değil:** takip bağlantısı taşıyıcının URL kalıbından üretilir. `other` kümeyi kapatmamak için — yeni taşıyıcı migration beklemez; seçilince bağlantı gösterilmez, numara düz metin durur
 - **`tracking_number`** — kargo takip numarası. `carrier` ile birlikte **yalnız `delivery_type = 'shipping'`** siparişlerde dolar — kural veride (`order_carrier_only_shipping`): kendi aracımızla giden malın taşıyıcısı yoktur ve ekran unutsa bile yazılamaz
 - **`invoice_no`** — dış muhasebeden sonradan eşleşir
@@ -473,6 +473,26 @@ Bizim bastığımız QR'ın kaydı ("bu hangi kayıt" — ürün barkodunun "bu 
 - **`qty`** — > 0
 
 **Yazma yolu yalnız `seal_order_box` RPC'si** (kutu içeriği + `record_preparation` + mühür TEK transaction — "kutu var ama parti izi yok" doğamaz). RPC kapanışta **Σ kutu = `fulfilled_qty`** eşitliğini denetler: çok kutulu birleşimi `sealBox` kapısı kurar (0015'in absolüt yazımı), eksik kurulmuş birleşim tümüyle geri alınır. Kutulanmış kalem kutusuz akışla karışamaz — çift akış sipariş düzeyinde meşru, kalem düzeyinde değil.
+
+## OrderDeliveryCode (kapı kodu — 0016)
+
+<!-- alanlar:order_delivery_code -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `order_id` | uuid |  |  |
+| `code` | text |  |  |
+| `sent_via` | text | • |  |
+| `failed_attempts` | smallint |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **Politika yok, yalnız servis rolü okur:** kurye ya da müşteri jetonuyla okunabilen kod doğrulamayı anlamsız kılardı. Kod düz metin
+  durur, çünkü "yolda" bildirimi geçişten sonra gider ve kodu bu satırdan okur.
+- **`order_id`** — birincil anahtar: siparişin tek kodu vardır; ikinci kez yola çıkan siparişte kod değişmez, çünkü müşteri ilk kodu almıştır
+- **`sent_via`** — kodun gittiği kanal (`whatsapp` · `email`); boş = gönderilemedi, kurye kodsuz teslim eder
+- **`failed_attempts`** — yanlış deneme sayısı; tek ifadede `order_delivery_code_fail` ile artar ki eş zamanlı iki deneme birbirini ezmesin
 
 ## Shipment (taşıyıcıdaki gönderi partisi — 0053 · 07.12)
 

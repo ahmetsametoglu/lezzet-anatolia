@@ -698,7 +698,8 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 | `near_expiry_percent` | 25 | Yaklaşan son tarih eşiği (kalan raf ömrü %) |
 | `near_expiry_discount_percent` | 30 | Önerilen near-expiry indirimi — karar insanın |
 | `mlor_percent` | 75 | Mal kabulde asgari kalan raf ömrü %; altında uyarır, engellemez |
-| `delivery_proof_required` | `{"b2b":true,"b2c":false}` | Teslim onayı kapsamı |
+| `delivery_code_channels` | `{"b2b":true,"b2c":false}` | Kapı kodu kapsamı (rota teslimi) |
+| `delivery_code_max_attempts` | 5 | Kapıda yanlış kod hakkı; dolunca kod kilitlenir |
 | `delivery_summary_email` | true | Teslimde özet e-postası otomatik gitsin mi |
 | `route_delivery_unit_cost_cents` | 250 | Rota teslimat birim maliyeti (kâr hesabı) |
 | `packaging_unit_cost_cents` | 120 | Paketleme birim maliyeti (kâr hesabı) |

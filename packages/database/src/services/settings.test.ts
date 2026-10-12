@@ -151,9 +151,10 @@ describe('seed varsayılanları (02.7)', () => {
     expect(await settings.getNumber('cod_max_cents', 0)).toBe(30000);
   });
 
-  it('teslim onayı kapsamı kanal bazında: B2B zorunlu, B2C kapalı', async () => {
-    /* Teslim kanıtı kutu okutmasıdır (`box_scan`), fabrika değeri iki kanalda da kapalı; ayar kapsam yine açılabilsin diye durur. */
-    expect(await settings.get('delivery_proof_required', {})).toEqual({ b2b: false, b2c: false });
+  it('teslim kodu kapsamı kanal bazında yüklü: B2B açık, B2C kapalı', async () => {
+    /* Satır migration'dan düşerse kod sessizce hiç üretilmez, çünkü okuyan kapı ayar yokken kodsuz teslime düşer. */
+    expect(await settings.get('delivery_code_channels', {})).toEqual({ b2b: true, b2c: false });
+    expect(await settings.getNumber('delivery_code_max_attempts', 0)).toBe(5);
   });
 });
 

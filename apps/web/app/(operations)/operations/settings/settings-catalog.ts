@@ -235,15 +235,25 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     fallback: DAY_HOUR_FALLBACK.courier_close_time,
   },
   {
-    key: 'delivery_proof_required',
-    label: 'Teslim onayı kapsamı',
-    /* Kurye ekranında imza adımı yok, yerine kutu okutması var; ayar durur ki kapsam gerekirse açılabilsin, yardım metni de açıldığında
-       alınacak kanıt olmadığını söyler. */
-    help: 'Kanıt hangi kanalda zorunlu olsun. Bugün ikisi de kapalı: kanıt kutu okutmasının kendisidir (imza adımı kaldırıldı).',
+    key: 'delivery_code_channels',
+    label: 'Teslim kodu kapsamı',
+    help: 'Kendi aracımızla teslimde kapı kodu hangi kanalda üretilsin. Kod müşteriye WhatsApp\'tan, numarası yoksa e-postayla gider; kurye kodu alamazsa kodsuz teslim eder.',
     section: 'delivery',
     kind: 'channelFlags',
     exceptionScopes: NONE,
-    fallback: { b2b: false, b2c: false },
+    fallback: { b2b: true, b2c: false },
+  },
+  {
+    key: 'delivery_code_max_attempts',
+    label: 'Teslim kodu deneme hakkı',
+    help: 'Kapıda yanlış kod hakkı. Dolunca kod kilitlenir ve kurye kodsuz teslim eder.',
+    section: 'delivery',
+    kind: 'integer',
+    unit: 'deneme',
+    min: 1,
+    max: 10,
+    exceptionScopes: NONE,
+    fallback: 5,
   },
   {
     key: 'delivery_summary_email',

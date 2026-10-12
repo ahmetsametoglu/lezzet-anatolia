@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, MoneyMovementService, OrderItemBatchService, OrderItemReturnService, OrderService, ProductService,
+  AccountService, CategoryService, MoneyMovementService, OrderDeliveryCodeService, OrderItemBatchService, OrderItemReturnService, OrderService, ProductService,
   ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import type { DoorCollectionInputContract } from '@lezzet/types';
 import { confirmDoorDelivery, type DeliveryProofInput } from './delivery';
+import { issueDoorCode } from './door-code';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { advanceOrder } from '../order/advance.testkit';
 import { deliverOrder } from '../order/fulfillment';
@@ -127,59 +128,84 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
   return { orderId: order.id, itemId: items[0]!.id, boxCode: box.box.code };
 }
 
-describe('teslim onayı (11.2)', () => {
+describe('kapı kodu', () => {
   /*
-    Kanıt kapısı ayara bağlı ve fabrika değeri kapalı; test kapsamı kendi içinde açar, çünkü ölçülen şey ayarın değeri değil
-    kapının çalışıp çalışmadığı.
+    Bu testler şu hatalarda kırmızıya döner: kapsam dışı siparişe kod üretilir ya da ikinci yola çıkışta kod değişir, yanlış kodla teslim
+    yazılır ya da hak düşmez, hak dolduktan sonra doğru tahmin kabul edilir, kanıta kodun sonucu yazılmaz.
   */
-  it('kanıt kapsamı AÇIKKEN B2B teslimatı imzasız KAPANMAZ ve hiçbir yazım yapılmaz', async () => {
-    const settings = settingsSnapshot(db);
-    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
-    try {
-      const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
+  const codes = new OrderDeliveryCodeService(db);
+  const wrongOf = (code: string) => (code === '000000' ? '111111' : '000000');
 
-      const outcome = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode] });
+  beforeAll(async () => {
+    await doorSettings.override('delivery_code_channels', { b2b: true, b2c: false });
+    await doorSettings.override('delivery_code_max_attempts', 2);
+  });
 
-      expect(outcome).toEqual({ status: 'proof_required', channel: 'b2b' });
-      // Kanıt kapısı yazımdan ÖNCE: sipariş hâlâ yolda, stok el değmemiş.
-      expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
-      expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(30);
-    } finally {
-      await settings.restore();
+  it('kapsamdaki B2B rota siparişine kod üretilir ve ikinci yola çıkışta değişmez; B2C kod almaz', async () => {
+    const b2b = await atTheDoor({ channel: 'b2b' });
+    const first = await issueDoorCode(db, b2b.orderId);
+    expect(first?.code).toMatch(/^\d{6}$/);
+    expect((await issueDoorCode(db, b2b.orderId))?.code).toBe(first?.code);
+
+    const b2c = await atTheDoor();
+    expect(await issueDoorCode(db, b2c.orderId)).toBeNull();
+    expect(await codes.getByOrder(b2c.orderId)).toBeNull();
+  });
+
+  it('yanlış kodla teslim yazılmaz ve hak düşer; doğru kodla kapanır, kanıt "doğrulandı" yazar', async () => {
+    const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
+    const issued = (await issueDoorCode(db, orderId))!;
+
+    expect(await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], doorCode: wrongOf(issued.code) })).toEqual({
+      status: 'door_code_mismatch',
+      attemptsLeft: 1,
+    });
+    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+    expect((await codes.getByOrder(orderId))?.failedAttempts).toBe(1);
+
+    expect((await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], doorCode: issued.code })).status).toBe('ok');
+    expect((await orders.getById(orderId))?.deliveryProof).toMatchObject({ kind: 'box_scan', doorCode: 'verified' });
+  });
+
+  it('haklar dolunca doğru kod da reddedilir; kodsuz teslim kapanır ve kanıt "kodsuz" yazar', async () => {
+    const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
+    const issued = (await issueDoorCode(db, orderId))!;
+    for (let i = 0; i < 2; i += 1) {
+      await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], doorCode: wrongOf(issued.code) });
     }
+
+    expect(await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], doorCode: issued.code })).toEqual({
+      status: 'door_code_locked',
+    });
+    expect((await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], doorCode: null })).status).toBe('ok');
+    expect((await orders.getById(orderId))?.deliveryProof).toMatchObject({ doorCode: 'skipped' });
+  });
+
+  it('kod üretilmemiş siparişte girilen kod yok sayılır ve kanıta kod sonucu yazılmaz', async () => {
+    const { orderId, boxCode } = await atTheDoor();
+
+    expect((await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], doorCode: '123456' })).status).toBe('ok');
+    expect((await orders.getById(orderId))?.deliveryProof).not.toHaveProperty('doorCode');
   });
 
   it('imzayla B2B teslimatı kapanır, kanıt siparişe yazılır', async () => {
-    const settings = settingsSnapshot(db);
-    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
-    try {
-      const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
-      // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat iki yöntemle sınırlıdır.
-      const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
-      const collection: DoorCollectionInputContract = { method: 'cash', amountCents: 4000 };
+    const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
+    // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat iki yöntemle sınırlıdır.
+    const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
+    const collection: DoorCollectionInputContract = { method: 'cash', amountCents: 4000 };
 
-      const outcome = await confirmDoorDelivery(db, {
-        orderId,
-        courierId,
-        scannedBoxCodes: [boxCode],
-        proof,
-        collection,
-      });
+    const outcome = await confirmDoorDelivery(db, {
+      orderId,
+      courierId,
+      scannedBoxCodes: [boxCode],
+      proof,
+      collection,
+    });
 
-      expect(outcome.status).toBe('ok');
-      const order = await orders.getById(orderId);
-      expect(order?.status).toBe('completed'); // kapıda tamamen tahsil edildi → teslimle kapandı
-      expect(order?.deliveryProof).toMatchObject({ kind: 'signature', receivedBy: 'Şef Murat', courierId });
-    } finally {
-      await settings.restore();
-    }
-  });
-
-  it('B2C kanıtsız teslim edilebilir — kapsam parametrik, varsayılan kapalı', async () => {
-    const { orderId, boxCode } = await atTheDoor();
-
-    expect((await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode] })).status).toBe('ok');
-    expect((await orders.getById(orderId))?.status).toBe('delivered');
+    expect(outcome.status).toBe('ok');
+    const order = await orders.getById(orderId);
+    expect(order?.status).toBe('completed'); // kapıda tamamen tahsil edildi → teslimle kapandı
+    expect(order?.deliveryProof).toMatchObject({ kind: 'signature', receivedBy: 'Şef Murat', courierId });
   });
 
   it('başka kuryenin siparişi bu ekrandan teslim edilemez', async () => {

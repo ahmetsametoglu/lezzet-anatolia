@@ -8,6 +8,7 @@ import {
   DeliveryZoneService,
   MoneyMovementService,
   OrderBoxService,
+  OrderDeliveryCodeService,
   OrderItemReturnService,
   OrderService,
   ProductService,
@@ -635,23 +636,24 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
   });
 
-  it('kanıt kapsamı AÇIKKEN B2B kanalında kanıt yoksa `proof_required` — ve HİÇBİR yazım yapılmaz', async () => {
-    /* Fabrika değeri iki kanalda kapalı; test kapsamı kendisi açar ve `finally`de geri koyar (`settings` küresel tekil satır). */
+  it('kapı kodu gövdeden kapıya geçer: yanlış kod `door_code_mismatch` döner ve hiçbir yazım yapılmaz', async () => {
+    // Kod fikstürde bilinen değerle yazılır; üretimin kendisi uygulama testinde ölçülür.
     const settings = settingsSnapshot(db);
-    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
+    await settings.override('delivery_code_max_attempts', 3);
     try {
-    const orderId = await dispatched({ channel: 'b2b' });
+      const orderId = await dispatched({ channel: 'b2b' });
+      await new OrderDeliveryCodeService(db).issue({ orderId, code: '482913' });
 
-    const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
-      collection: { method: 'cash', amountCents: 2000 },
-      scannedBoxCodes: [await boxCodeOf(orderId)],
-    });
+      const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
+        collection: { method: 'cash', amountCents: 2000 },
+        scannedBoxCodes: [await boxCodeOf(orderId)],
+        doorCode: '000000',
+      });
 
-    expect(res.status).toBe(200);
-    expect(await dataOf<ConfirmDoorDeliveryResponse>(res)).toEqual({ status: 'proof_required', channel: 'b2b' });
-    // Kapı SIRAsının sözü: kanıt kapısı yazımdan önce. Sipariş hâlâ yolda, para yazılmadı.
-    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
-    expect(await new MoneyMovementService(db).listByOrder(orderId)).toHaveLength(0);
+      expect(res.status).toBe(200);
+      expect(await dataOf<ConfirmDoorDeliveryResponse>(res)).toEqual({ status: 'door_code_mismatch', attemptsLeft: 2 });
+      expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+      expect(await new MoneyMovementService(db).listByOrder(orderId)).toHaveLength(0);
     } finally {
       await settings.restore();
     }

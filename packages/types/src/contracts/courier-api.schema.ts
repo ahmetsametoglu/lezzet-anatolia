@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DeliveryRunCloseSchema } from '../entities/delivery-run.schema';
+import { DoorCodeViaEnum } from '../entities/order-delivery-code.schema';
 import {
   ChannelEnum,
   DoorCheckEnum,
@@ -111,6 +112,8 @@ export const CourierStopSchema = z.object({
    * Görselin kendisi taşınmaz: liste satırının sorusu "kanıt var mı".
    */
   hasProof: z.boolean(),
+  /** Kapı kodunun hâli; kodun kendisi kuryeye gelmez. `null` = bu durakta kod yok. */
+  doorCode: z.object({ sentVia: DoorCodeViaEnum.nullable(), locked: z.boolean() }).nullable(),
   /** Kaç kez yola çıkılıp dönüldü — ulaşılamayan durak listede kaybolmaz. */
   attempts: z.number().int(),
   /**

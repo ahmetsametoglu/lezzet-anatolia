@@ -82,6 +82,8 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     settledAt: null,
     outcomeNote: null,
     hasProof: false,
+    /* Varsayılan kod sorulmayan durak; kapı kodunu ölçen test onu `overrides` ile verir. */
+    doorCode: null,
     attempts: 0,
     /* Kutu zorunludur; varsayılan tek kutu araçtadır, çünkü fikstürün kurduğu hâl yoldaki duraktır. */
     boxes: [{ boxNo: 1, code: `KT-26-${String(index).padStart(4, '0')}`, loadedAt: '2026-08-08T07:10:00.000Z' }],
@@ -121,7 +123,7 @@ export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): Couri
 }
 
 /**
- * Seçim listesindeki rota. `run` doluysa rota o gün BAŞLATILMIŞTIR ve ikinci kez açılamaz (K3) —
+ * Seçim listesindeki rota. `run` doluysa rota o gün BAŞLATILMIŞTIR ve ikinci kez açılamaz —
  * ekran onu pasif gösterip kimin sürdüğünü yazar.
  */
 export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRoute {
@@ -133,7 +135,7 @@ export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRout
     warehouseId: uuid(810),
     warehouseName: 'Strasbourg deposu',
     stopCount: 3,
-    /* Seçim kartının üç sayısı (v3:17): durak · kutu · tahsilat. Kutu sayısı durak sayısından
+    /* Seçim kartının üç sayısı: durak · kutu · tahsilat. Kutu sayısı durak sayısından
        BÜYÜK — gerçek veride de öyle ve eşit yazılırsa "kutu" sütunu hiç sınanmamış olurdu. */
     boxCount: 5,
     /* Geri getirilecek kutu varsayılanı sıfırdır; o hâli sınayan test kendisi verir. */
