@@ -681,12 +681,8 @@ kullanılır (XS ve üstü, iOS 16.4+).
 5. Eşleşmeyen iki durum yönetime bildirilir: Revolut'ta olup bizde karşılığı olmayan ödeme (kart yazılmamış) ve bizde kart diye
    yazılıp Revolut'ta olmayan tahsilat (para çekilmemiş).
 
-**Hazırlık (kullanıcı):**
-- Canlı Merchant hesabı yüz yüze ödemeye açık; canlı Merchant API anahtarı kök `.env`'e yazılır (değer paylaşılmaz).
-- Revolut Business'ta "Kapı tahsilatı" özel rolü: yalnız Merchant yetkisi, para hesaplarına erişim kapalı.
-- Kart alacak her personel bu rolle ekip üyesi olarak davet edilir.
-- Şirket iPhone'larına Revolut Business uygulaması kurulur.
-- Revolut ↔ Pennylane bağlantısında yalnız banka akışı açık kalır (8. karar); uygulamanın satışı Pennylane'e satış olarak gitmez.
+**Hazırlık (kullanıcı):** rol, ekip daveti, iPhone kurulumu ve günlük kullanım `docs/runbook/kapida-kart.md`'de. Revolut ↔
+Pennylane bağlantısında yalnız banka akışı açık kalır (8. karar); uygulamanın satışı Pennylane'e satış olarak gitmez.
 
 **İlk canlı ödemede ölçülecek** (1 €'luk ödeme ve iadesi):
 - Ödemenin göründüğü yer: sipariş listesi (`GET /api/orders`), ödeme raporu (`payments_report`: `order_channel`,
@@ -697,14 +693,25 @@ kullanılır (XS ve üstü, iOS 16.4+).
   sağlayıcıdan yapılır.
 - Komisyon satırı.
 
-**Bizde yapılacak:**
-1. Eşleştirme kuralı (domain-core): tutar birebir, zaman penceresi ve ödemeyi alan kişi; tek aday bağlanır, birden çok aday
-   elle eşlenir, adayı olmayan bildirilir. Pencere ve alanlar ölçümden sonra kesinleşir.
-2. Eşleştirme işi (backend): yüz yüze ödemeleri Revolut'tan okur, eşler, tahsilata kimliği yazar, eşleşmeyeni bildirir.
-3. Kurye, gel-al ve kapı önü satış ekranlarında kart seçilince çekilecek tutar ve kısa yönlendirme.
-4. Operasyonda eşleşmeyen ödemeler listesi ve elle eşleme.
-5. Sefer kapanışında kart toplamı Revolut'taki eşleşmiş ödemelerden gelir, kurye elle yazmaz (ölçüm olumluysa).
-6. Runbook: Revolut rolü, ekip daveti ve iPhone kurulumu.
+**Bizde:**
+- Eşleştirme kuralı (`domain-core/payment/door-card-match.ts`): tutar birebir ve anlar 30 dakika içinde; yalnız birbirinin tek
+  adayı olan ödeme ile tahsilat bağlanır, birden çok aday tahmin edilmez.
+- Eşleştirme işi (`door_card_match`, saatin 12, 27, 42 ve 57. dakikası): son üç günün tamamlanmış yüz yüze ödemelerini okur
+  (`GET /api/orders`; künyesinde bizim `order_id`'miz olmayan ödeme siparişi), tahsilata `providerRef` yazar ve komisyonu siparişe
+  yazar. İki saat sonra hâlâ eşleşmeyen ödeme (`door_card_unmatched`) ve tahsilat (`door_card_missing`) yönetime ve muhasebeye
+  birer kez bildirilir.
+- Elle eşleme: Para › Eylemler › Kapıda kart eşleştirme, son 14 gün. Aday tutarı birebir tutan tahsilattır, saat aranmaz; zil
+  pencereyi açık getirir.
+- Mobil: kurye tahsilatı, gel-al tezgâhı ve yerinde satışta "kart" seçilince çekilecek tutar ve Tap to Pay yönlendirmesi. Yerinde
+  satışta kesin tutar satış yazılınca fişte çıktığı için kart satıştan sonra çekilir.
+
+**Açık:**
+- Ödemeyi alan kişinin alanı eşleştirmeye eklenir (ilk canlı ödemede ölçülürse); pencere ve bekleme ilk haftanın verisiyle
+  gözden geçirilir.
+- Sefer kapanışında kart toplamı Revolut'taki eşleşmiş ödemelerden gelir, kurye elle yazmaz (ölçüm olumluysa).
+- Kapı kartı iadesi sağlayıcıdan yapılır (API iadesi ölçüm olumluysa).
+- Yanlış yöntemle yazılan tahsilatın düzeltme yolu yok: yerinde satış karttan önce yazıldığı için kart reddedilse de "kart" kalır;
+  kartla çekilip nakit yazılan ya da hiç yazılmayan tahsilat yalnız bildirilir. Yol kararlaştırılacak.
 
 **Değişmeyen:** kasa yazımı (satış Hiboutik'e bugünkü gibi "kart" yöntemiyle), kapıda kart hesabı, çevrim içi ödeme.
 

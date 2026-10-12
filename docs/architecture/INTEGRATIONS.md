@@ -17,7 +17,7 @@ veritabanı adresi, servis anahtarı ve Vault'un ana anahtarı ortamda kalır.
 ## Ödeme
 
 - **Faz 1:** online kart ödemesi — **Revolut Merchant** (`STACK` §Ödeme) + kapıda ödeme (nakit/kart, sistem içinde kaydedilir).
-- Kapıda kart için basit bir cihaz (ör. SumUp) kullanılabilir; sistem yalnızca sonucu kaydeder ve parayı nakit kasadan ayrı, kapıda kart hesabına (`door_card_account_id`) yazar.
+- Kapıda kart şirket iPhone'unda Revolut Business uygulamasının Tap to Pay'iyle çekilir; sistem tahsilatı nakit kasadan ayrı, kapıda kart hesabına (`door_card_account_id`) yazar ve eşleştirme işi (`door_card_match`) Revolut'un yüz yüze ödemesini o tahsilata bağlar. Eşleşmeyen ödeme Para › Eylemler › Kapıda kart eşleştirme'de elle bağlanır (`docs/feature/kasa-muhasebe.md` §9, kurulum `docs/runbook/kapida-kart.md`).
 - Ödeme sağlayıcı bir arayüz arkasında; kapıda ödeme zaten iç mantık.
 - Webhook (ödeme onayı) `apps/web/app/api/webhooks/revolut` — `apps/backend` yerine, gerekçesi `ARCHITECTURE_DECISIONS` Sapma 5. Webhook kaydında dinlenecek olaylar: `ORDER_COMPLETED` · `ORDER_CANCELLED` · `ORDER_FAILED` · `ORDER_PAYMENT_DECLINED` · `ORDER_PAYMENT_FAILED` · `PAYOUT_COMPLETED` (düşen iade son ikisiyle gelir); gövde yalnız olay ve kimlik taşır, tutar ve komisyon siparişi okuyarak alınır; ödeme anında boş gelen komisyon aktarım raporundan (`payout_statement_report`) saatlik işle okunur. İmza anahtarı bağlantı anahtarlarından okunur (yoksa `REVOLUT_WEBHOOK_SECRET`). Muhasebe modeli (brüt tahsilat · ödeme başına komisyon · aktarım transferi) `data-model/para.md`'de.
 
