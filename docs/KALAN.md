@@ -20,6 +20,7 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (K.69) **Kontrast açıkları — `scripts/contrast-baseline.json`taki çiftler** (web müşteri, web operasyon açık/koyu, native müşteri/operasyon) okunabilirlik eşiğinin (4,5:1) altında; renk kademesi kararıyla kapanır, her değişiklik önce/sonra görüntüsüyle kullanıcıya sorulur. Düzelen çift listeden çıkar; `scripts/contrast.test.ts` listede olmayan yeni açığı düşürür.
 - [ ] (K.70) [hedef: web] **Sayfa taraması: ekranda çizilen yazının kontrastı** — müşteri ve operasyon sayfaları açık/koyu temada, masaüstü ve telefonda tarayıcıyla taranır (axe-core gibi). Neden: `scripts/contrast.test.ts` yalnız aynı sınıf dizisindeki ya da aynı stil nesnesindeki çifti görür; üst üste binen ayrı öğelerin gerçek rengini tarayıcı ölçer.
 - [ ] (K.73) **Kontrast testi kapalı (`scripts/contrast.test.ts`, `describe.skip`)** — kullanıcıya göre ölçüm sağlıklı çalışmıyor; dosya silinmedi, yalnız koşudan çıktı. Neyi yanlış ölçtüğü bulununca yeniden açılır; o zamana dek K.69'un tabanı kendiliğinden korunmuyor.
+- [ ] (K.74) **Native müşteri: "sunucuya ulaşılamadı" görünümü 14 yerde elle kurulu** — `OfflineNotice` (`apps/mobile-customer/src/components/ui/offline-notice.tsx`) yalnız vitrin ve hesapta; katalog, siparişler, talepler, tarifler, paketler, puan geçmişi, bildirimler ve detay ekranları aynı ikon-başlık-düğme kalıbını elle yazıyor. Neden: ikon boyu, rengi ve düğme biçimi bir yerde değişince ötekiler ayrı düşer; "bulunamadı" dalı olan detay ekranları için bileşen ikonsuz hâli de almalı.
 
 ## 04 · Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama
 
@@ -196,8 +197,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (21.48) **CİHAZ TURU — MİSAFİR VE MÜŞTERİ YÜZEYİ, KAPSAMLI** (kullanıcı kararı 12.08).
 - [~] (21.78) **CİHAZ TURUNUN A BÖLÜMÜ İLK KEZ KOŞULDU — misafir yüzeyi (kullanıcı onayı 18.08)** → A1…A13 ve A15–A16 tamam; **A17 ile A14'ün giriş duvarı açık kaldı.**
 - [ ] (21.88) **NATIVE BİLDİRİM ALTYAPISI — kurulacak, kullanımı sonraya** *(kullanıcı kararı 19.08: "biz bir kere native notifikasyon özelliğini ekleyeceğiz, bunun kaçarı yok. Diğer taraftan bunu kullanmayı sonraya erteleyebiliriz")*
-- [x] (21.91) **SUNUCUYA ULAŞILAMAYINCA EKRAN SUSUYORDU — vitrin ve hesap konuşmaya başladı (20.08).**
-  - Görev kapandı; koddaki `BEKLEYEN(21.91)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [x] (21.103) **NATIVE ARTIK ÖLÇÜLÜYOR — tek defter, `surface` boyutu, sekiz atıcı (MB-63)**
   - Görev kapandı; koddaki `BEKLEYEN(21.103)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [x] (21.110) **SEPET UÇLARI TESTLENDİ — ve testler GERÇEK bir sızıntı buldu (13 iddia)**

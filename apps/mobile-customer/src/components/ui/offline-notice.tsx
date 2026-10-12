@@ -5,21 +5,8 @@ import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 
 /*
-  SUNUCUYA ULAŞILAMADI — tek görünüm, tek yerde.
-
-  NEDEN AYRI BİR BİLEŞEN: bu kalıp (ikon `connection-off` → başlık → açıklama → "Tekrar dene")
-  uygulamada 13 ekranda ELLE tekrar ediyordu ve künyeleri onu zaten bir sözleşme gibi anlatıyor
-  ("aynı arıza üç ekranda üç ayrı görünüme sahip olmasın" — `orders-screen`). Sözleşme varsa
-  bileşeni de olmalı: ikon boyu, rengi ve düğme biçimi 13 yerde ayrı ayrı yazıldığı sürece biri
-  bir gün ötekinden ayrı düşer.
-
-  METİN DIŞARIDAN GELİR, İÇERİDE DURMAZ: her sayfanın kendi `messages.json`u var (CLAUDE §2) ve
-  "paketleri getiremedik" ile "vitrini getiremedik" aynı cümle değildir. Ortak olan GÖRÜNÜM,
-  ortak olan metin değil.
-
-  BEKLEYEN(21.91): mevcut 13 çağrı henüz göç etmedi — bu bileşen yeni iki yerde (vitrin · hesap)
-  kullanılıyor, ötekiler hâlâ kalıbı elle kuruyor. Göç tek turda yapılmalı ki ikisi bir arada
-  yaşadığı süre kısa olsun.
+  "Sunucuya ulaşılamadı" görünümünün tek yeri; metin çağırandan gelir, çünkü her sayfa neyi getiremediğini kendi cümlesiyle söyler.
+  BEKLEYEN(K.74): müşteri ekranlarının çoğu bu görünümü hâlâ elle kuruyor; göç tek turda yapılır.
 */
 
 interface OfflineNoticeProps {
