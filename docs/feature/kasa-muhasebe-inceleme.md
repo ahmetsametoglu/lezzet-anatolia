@@ -22,7 +22,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 | 12 | İptal edilmiş siparişe gelen geç ödeme defterde iz bırakmıyor | Düşük | Yapıldı |
 | 13 | Hediye siparişin değeri aktarıma 0 € gidiyor | Düşük | Yapıldı |
 | 14 | Revolut'a giden iade anahtarı kırpılıyor | Düşük | Yapıldı |
-| 15 | Para ekranının yöntem dökümü siparişin son yönteminden okunuyor | Düşük | Konuşulacak |
+| 15 | Para ekranının yöntem dökümü siparişin son yönteminden okunuyor | Düşük | Yapıldı |
 | 16 | İşlenirken süreci kapanan bildirim bir daha işlenmiyor | Düşük | Konuşulacak |
 
 **İnceleme dışı not:** şirket kârı dönemin para hareketlerini tek istekte okuyor (`money.service.ts:364`); yerel okuma tavanı
@@ -339,12 +339,15 @@ rota ücreti `delivery/shipping-fee.ts:32` · tabanı kanaldan okuyan üç yer `
 
 ## 15. Para ekranının yöntem dökümü siparişin son yönteminden okunuyor
 
-**Durum:** Konuşulacak · **Ağırlık:** düşük
+**Durum:** Yapıldı (12.10) · **Ağırlık:** düşük
 
 - **Mevcut durum:** Para ekranındaki "bugün yöntem başına" dökümü her tahsilatın yöntemini siparişe en son yazılan yöntemden
   okur; hareketin kendi yöntemi var ama okunmaz. Bekleyen kalan da iade ve eksik karşılamayı saymaz.
 - **Problem:** 10 € online kapora ve 25 € kapıda nakit ödenen sipariş ekranda 35 € nakit görünür. Yalnız gösterimdir.
 - **Olması gereken:** Döküm hareketin yönteminden, kalan ödeme durumu türetiminden okunur.
+- **Karar ve çözüm (12.10):** Kapora yok; siparişin parası tek yoldan alınır, döküm bu yüzden doğru çıkıyordu. Döküm yine de
+  hareketin kendi yönteminden okunur (bir sorgu eksildi). Bekleyen kalan ödeme durumunun türetiminden gelir: eksik karşılanan
+  kalem ve iade düşülür.
 - **Kanıt:** `packages/application/src/accounting/money.ts:45-67`.
 
 ## 16. İşlenirken süreci kapanan bildirim bir daha işlenmiyor

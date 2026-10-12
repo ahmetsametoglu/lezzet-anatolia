@@ -4,12 +4,14 @@ import {
   DeliveryRunCollectionService,
   DeliveryRunService,
   MoneyMovementService,
+  OrderItemService,
   OrderService,
   UserProfileService,
   type Db,
 } from '@lezzet/database';
+import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import { parisDateOf } from '@lezzet/helper';
-import type { MethodTotal, MoneyDayEnd, MoneyOverview, PaymentMethod, PendingCollection } from '@lezzet/types';
+import type { MethodTotal, MoneyDayEnd, MoneyOverview, OrderItem, PaymentMethod, PendingCollection } from '@lezzet/types';
 
 /*
   Para bölümü okumaları salt okumadır: para hesaplanmaz, defterden toplanır; tahsilat kapıda, mutabakat kapanışta yazılır.
@@ -39,8 +41,13 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
   ]);
 
   // Bekleyen satırın adı sipariş sahibinden — yerinde satış deseniyle aynı kapı (profil listesi).
-  const names = await new UserProfileService(db).listByIds([...new Set(unpaid.map((o) => o.customerId))]);
+  const [names, unpaidItems] = await Promise.all([
+    new UserProfileService(db).listByIds([...new Set(unpaid.map((o) => o.customerId))]),
+    new OrderItemService(db).listByOrders(unpaid.map((o) => o.id)),
+  ]);
   const nameOf = new Map(names.map((profile) => [profile.id, profile.name]));
+  const itemsOf = new Map<string, OrderItem[]>();
+  for (const item of unpaidItems) itemsOf.set(item.orderId, [...(itemsOf.get(item.orderId) ?? []), item]);
 
   const pending: PendingCollection[] = unpaid.map((order) => ({
     orderId: order.id,
@@ -48,22 +55,20 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
     customerName: nameOf.get(order.customerId) ?? '—',
     status: order.status,
     kind: order.paymentStatus === 'partial' ? 'partial' : 'door',
-    remainingCents: order.orderedTotalCents - order.amountCollectedCents,
+    // Kalan ödeme durumunun türetiminden gelir: sipariş toplamı eksik karşılanan kalemi ve iadeyi saymaz.
+    remainingCents: derivePaymentStatusForOrder(order, itemsOf.get(order.id) ?? [], {
+      collectedCents: order.amountCollectedCents,
+      refundedCents: order.amountRefundedCents,
+    }).amountToCollectCents,
     method: order.paymentMethod,
   }));
 
-  // Yöntem, HAREKETİN siparişinden okunur: hareket tablosu yöntem taşımaz (hesap taşır) ve
-  // hesaptan yönteme dönmek bir eşleme uydurmak olurdu. Siparişsiz sipariş-hareketi olamaz.
+  // Yöntem hareketin kendisinden okunur; sipariş yalnız son yöntemini taşır.
   const paymentMovements = movements.filter((m) => m.type === 'order_payment' && m.direction === 'in');
-  const movementOrders = await orders.listByIds([
-    ...new Set(paymentMovements.map((m) => m.orderId).filter((id): id is string => id !== null)),
-  ]);
-  const methodOf = new Map(movementOrders.map((order) => [order.id, order.paymentMethod]));
   const todayByMethod = totalsByMethod(
-    paymentMovements.flatMap((movement) => {
-      const method = movement.orderId ? methodOf.get(movement.orderId) : null;
-      return method ? [{ method, cents: movement.amountCents }] : [];
-    }),
+    paymentMovements.flatMap((movement) =>
+      movement.paymentMethod ? [{ method: movement.paymentMethod, cents: movement.amountCents }] : [],
+    ),
   );
 
   // Float: bugünün kapanmamış seferlerinin beklenen tahsilatı. Kapanan seferin parası sayılıp
