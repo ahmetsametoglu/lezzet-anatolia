@@ -66,7 +66,8 @@ Fiyatın okunacağı ülke tek kuraldan gelir: yerin ülkesi; yer yoksa Almanca 
 oranını tutar. KDV kararı çıkış deposunun fiziksel ülkesini, varış ülkesini, kanalı, vergi numarasını ve eşik durumunu alır;
 `treatment` ve oranın hangi ülkeden okunacağını döner. Yeni türler: `intra_eu_distance_origin` (eşik altı, FR oranı) ve
 `intra_eu_distance_oss` (eşik üstü, varış oranı). Çıkış ülkesi FR değilse karar reddeder. Alman oranı eksik ürün Almanya'daki
-tüketiciye satılmaz: vitrin bugünkü "satışa kapalı" yolunu kullanır, checkout ve personel siparişi aynı kararla reddeder.
+tüketiciye satılmaz: vitrin bugünkü "satışa kapalı" yolunu kullanır, checkout ve personel siparişi aynı kararla reddeder. Gerçek
+beslemede iki ülkenin oranı `scripts/seed-real/kdv.ts`teki tablodan gelir: kategorinin oranı ve ondan ayrılan ürünler.
 
 **Eşik.** Toplam, iptal edilmemiş uzaktan satış siparişlerinin KDV hariç ücretlenen tutarıdır, iade düşülür; aktarımın tutarıyla
 aynı kaynaktan türer. Karar sipariş yazılırken verilir. Eşiğe aynı anda düşen iki siparişin ikisi de Fransız oranıyla yazılabilir;

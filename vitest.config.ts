@@ -159,6 +159,8 @@ export default defineConfig({
             'scripts/seed/packing.test.ts',
             // Görsel künyesi saf: JSON girer, künye çıkar.
             'scripts/seed/image-manifest.test.ts',
+            // Gerçek beslemenin KDV tablosu saf: veri dosyasını okur, veritabanına gitmez.
+            'scripts/seed-real/kdv.test.ts',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
             // Sunucu hata kancası: hangi hata listeye yazılır, hangisi ağ olayı diye düşer.

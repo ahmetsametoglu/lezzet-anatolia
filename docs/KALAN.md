@@ -299,7 +299,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 - [ ] Ana logo seçimi + renk paleti → `packages/brand`, Tailwind token _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
 - [~] Kategori yapısı: **düz (tek seviye) + koleksiyon** kararı verildi; nihai kategori/koleksiyon **içeriği** (isimler) bekliyor _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
-- [ ] Ürün bazında KDV oranları _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
 - [ ] Raf ömrü bilgisi (DLC uyarı eşiği için) _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
 
 ## BACKLOG-musteri.md (eski docs/uygulama/BACKLOG-musteri.md)

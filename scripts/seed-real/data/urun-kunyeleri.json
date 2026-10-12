@@ -43,7 +43,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -112,7 +111,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -181,7 +179,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -250,7 +247,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -326,7 +322,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "kuru-meyve-kuruyemis",
     "variants": [
       {
@@ -392,7 +387,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -458,7 +452,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -539,7 +532,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": [
       {
@@ -599,7 +591,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -671,7 +662,6 @@
     "storageType": "ambient",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -749,7 +739,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -819,7 +808,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -889,7 +877,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -958,7 +945,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1027,7 +1013,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1102,7 +1087,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "et-tavuk",
     "variants": [
       {
@@ -1174,7 +1158,6 @@
     "storageType": "ambient",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1245,7 +1228,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1322,7 +1304,6 @@
     "storageType": "ambient",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1389,7 +1370,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -1450,7 +1430,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1524,7 +1503,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1594,7 +1572,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -1663,7 +1640,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1726,7 +1702,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1800,7 +1775,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1862,7 +1836,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1924,7 +1897,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -1994,7 +1966,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -2076,7 +2047,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "et-tavuk",
     "variants": [
       {
@@ -2137,7 +2107,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -2199,7 +2168,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -2273,7 +2241,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "kuru-meyve-kuruyemis",
     "variants": [
       {
@@ -2347,7 +2314,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "kuru-meyve-kuruyemis",
     "variants": [
       {
@@ -2421,7 +2387,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "kuru-meyve-kuruyemis",
     "variants": [
       {
@@ -2495,7 +2460,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "kuru-meyve-kuruyemis",
     "variants": [
       {
@@ -2569,7 +2533,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "kuru-meyve-kuruyemis",
     "variants": [
       {
@@ -2650,7 +2613,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": [
       {
@@ -2720,7 +2682,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -2789,7 +2750,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -2869,7 +2829,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -2934,7 +2893,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -3011,7 +2969,6 @@
     "storageType": "ambient",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -3081,7 +3038,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -3156,7 +3112,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "et-tavuk",
     "variants": [
       {
@@ -3226,7 +3181,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -3292,7 +3246,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -3359,7 +3312,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": [
       {
@@ -3433,7 +3385,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {
@@ -3517,7 +3468,6 @@
     "storageType": "ambient",
     "shippable": true,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "dogal-geleneksel",
     "variants": [
       {

@@ -1,21 +1,10 @@
 /*
-  ── ÜRÜN KÜNYELERİ: VERİTABANI AYNASI ────────────────────────────────────────
+  Ürün künyelerinin veritabanı aynası: beyanların tek kaynağı test veritabanıdır, `urun-kunyeleri.json` elle yazılmaz ve
+  `scripts/seed-real-ayna.ts` onu veritabanından baştan yazar. Dosyada durur, çünkü besleme çevrimdışı koşup sıfırlanmış bir
+  veritabanını yeniden kurabilmeli.
 
-  **Beyanların tek kaynağı TEST VERİTABANIDIR** (işletmeci kararı, 19.09): künyeler oraya etiket
-  fotoğrafıyla, asistanın dilekçesi panelden onaylanarak girdi. `urun-kunyeleri.json` o kayıtların
-  aynasıdır — elle yazılmaz, `scripts/seed-real-ayna.ts` veritabanından baştan yazar; çelişkide kazanan veritabanıdır.
-
-  Neden dosyada duruyor: besleme çevrimdışı koşmalı ve sıfırlanmış bir veritabanını yeniden
-  kurabilmeli. Aynı desen katalogda da var (`seed/data/lezza-catalog.json`, kaynağın aynası).
-
-  **Fatura bilgisi buraya GİRMEZ** (adet, alış fiyatı, tedarikçideki ad): o veri faturadan gelir ve
-  `data.ts`te durur. Burada ürünün kendi künyesi vardır: ad, beyanlar, boy, barkod, ambalaj ölçüsü.
-
-  ── AYNANIN TEK DOKUNUŞU: ALERJEN VURGUSU ───────────────────────────────────
-  İşletmeci kararı (19.09): alerjen KALIN gösterilir. Panelden gelen kayıtların bir kısmı vurguyu
-  büyük harfle taşıyordu ("BUĞDAY unu"), deponun işareti ise `**` (`parseEmphasis`). Aynaya çekilirken
-  yalnız bu işaret çevrildi — beyanın kendisi, sırası ve sayıları değişmedi. Sonraki sıfırlamada
-  veritabanı da aynadan yazıldığı için iki taraf yine aynı biçimi taşır.
+  Fatura bilgisi (adet, alış fiyatı, tedarikçideki ad) `data.ts`te, KDV sınıflandırması `kdv.ts`te durur; künye yalnız ürünün
+  kendi beyanını taşır.
 */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -48,14 +37,9 @@ export interface UrunKunyesi {
   /** Saklama KOŞULUNUN beyanı — sıcaklık, kap, uyarı ve "doğaldır" gözlemi. Hazırlama buraya girmez. */
   storage?: LocalizedText;
   /**
-   * Hazırlama adımları — müşterinin SIRAYLA yaptığı hareketler; sıra dizinin kendisidir, numarayı ekran basar.
-   * Raf ürününün çoğunda boş: pekmezin, sirkenin, macunun hazırlanması yoktur ve boş dizi "adım girilmedi" demektir.
-   * Zorunlu takviye ibareleri (doz, "ilaç değildir") adım DEĞİL beyandır; `storage`ta kalır.
-   *
-   * **EN ÇOK ÜÇ ADIM** (işletmeci kararı 20.09): tasarımın saklama kartı üç satır çiziyor ve kart, künyenin
-   * öteki iki kartıyla aynı ızgarada (`repeat(3,1fr)`) duruyor — dördüncü satır ötekileri de uzatırdı.
-   * Etiket daha çok adım yazıyorsa İÇERİK KORUNUR, sınır kaydırılır: birbirini izleyen iki hareket virgülle
-   * tek adıma alınır ("10 dakika haşlayın, sonra suyunu süzün"). Etiketten cümle ATILMAZ.
+   * Müşterinin sırayla yaptığı hareketler; boş dizi "adım girilmedi" demektir, takviye ibareleri (doz, "ilaç değildir") adım değil
+   * beyandır ve `storage`ta kalır. En çok üç adım: saklama kartı künyenin öteki iki kartıyla aynı ızgarada üç satır çizer, fazlası
+   * komşusuyla virgülle birleşir ve etiketten cümle atılmaz.
    */
   preparationSteps?: LocalizedText[];
   shelfLifeDays?: number;
@@ -63,7 +47,6 @@ export interface UrunKunyesi {
   storageType?: 'ambient' | 'chilled' | 'frozen';
   shippable?: boolean;
   dateType?: 'DLC' | 'DDM';
-  vatRate?: number;
   /** Beslemenin kategori anahtarı (`CATEGORIES[].key`); veritabanında doğan ürünün faturası olmadığı için kategori de buradan gelir. */
   category?: string;
   variants: KunyeVaryanti[];

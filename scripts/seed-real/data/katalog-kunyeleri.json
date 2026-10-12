@@ -24,7 +24,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "et-tavuk",
     "variants": {
       "312341": {
@@ -74,7 +73,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "et-tavuk",
     "variants": {
       "312442": {
@@ -123,7 +121,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700301": {
@@ -166,7 +163,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "601102": {
@@ -230,7 +226,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900201": {
@@ -273,7 +268,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "902301": {
@@ -309,7 +303,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "600903": {
@@ -367,7 +360,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "901024B": {
@@ -440,7 +432,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900105": {
@@ -506,7 +497,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "901015B": {
@@ -548,7 +538,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "111112": {
@@ -582,7 +571,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "600807": {
@@ -646,7 +634,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "901804": {
@@ -688,7 +675,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700905": {
@@ -751,7 +737,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "meze",
     "variants": {
       "200301": {
@@ -822,7 +807,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900411": {
@@ -862,7 +846,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "111107": {
@@ -924,7 +907,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900401": {
@@ -967,7 +949,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900808": {
@@ -1001,7 +982,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "600601": {
@@ -1037,7 +1017,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "601201": {
@@ -1072,7 +1051,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "111113": {
@@ -1133,7 +1111,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900901": {
@@ -1175,7 +1152,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700914": {
@@ -1209,7 +1185,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900801": {
@@ -1267,7 +1242,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "901016B": {
@@ -1338,7 +1312,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "901809": {
@@ -1380,7 +1353,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "111131": {
@@ -1436,7 +1408,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "901023B": {
@@ -1479,7 +1450,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "600802": {
@@ -1514,7 +1484,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700911": {
@@ -1547,7 +1516,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700904": {
@@ -1587,7 +1555,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700501": {
@@ -1650,7 +1617,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DLC",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "111106": {
@@ -1697,7 +1663,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700201": {
@@ -1740,7 +1705,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "901807": {
@@ -1804,7 +1768,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "meze",
     "variants": {
       "201301": {
@@ -1878,7 +1841,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700101": {
@@ -1948,7 +1910,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "firin",
     "variants": {
       "700402": {
@@ -2027,7 +1988,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "500103": {
@@ -2074,7 +2034,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "601402": {
@@ -2118,7 +2077,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "et-tavuk",
     "variants": {
       "312241": {
@@ -2160,7 +2118,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "tatli",
     "variants": {
       "900308": {
@@ -2218,7 +2175,6 @@
     "storageType": "frozen",
     "shippable": false,
     "dateType": "DDM",
-    "vatRate": 5.5,
     "category": "meze",
     "variants": {
       "200201": {

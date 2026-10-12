@@ -7,9 +7,10 @@
 
 - **Depolar › Strasbourg (Lezzet) › künye:** Almanya'yı kargo ülkesi olarak aç ve teslim noktasını gir (paketin Almanya'da
   taşıyıcıya verildiği adres). Bir ülkeye yalnız bir aktif depo kargo yapabilir; QUALITE deposu kargo yapmaz.
-- **Ürünler:** Almanya'daki tüketiciye satılacak her ürüne Almanya KDV oranı gir (ürün formu, "Almanya KDV"). Oran Almanya'nın
-  sınıflamasıdır, Fransa'dakinden türetilmez: şekerleme %7, şişe su ve alkolsüz içecek %19 gibi. "Almanya oranı eksik" süzgeci
-  oransız ürünleri listeler; oransız ürün Almanya'daki tüketiciye satılmaz, işletmeye satılır.
+- **Ürünler:** Beslemeyle kurulan ürünün Almanya KDV oranı kurulumda yazılır (`scripts/seed-real/kdv.ts`); sonradan açılan
+  ürüne oranı ürün formundan gir ("Almanya KDV"). Oran Almanya'nın sınıflamasıdır, Fransa'dakinden türetilmez: şekerleme %7,
+  şişe su ve alkolsüz içecek %19 gibi. "Almanya oranı eksik" süzgeci oransız ürünleri listeler; oransız ürün Almanya'daki
+  tüketiciye satılmaz, işletmeye satılır.
 - **Fiyatlar:** Almanya'ya özel fiyat yalnız genel fiyattan farklı olacaksa girilir (kırılımda ya da fiyat penceresinde
   "B2C (DE)" / "B2B (DE)"); girilmezse genel fiyat geçer. Otomatik fiyatlı üründe Almanya fiyatı kendiliğinden hesaplanır.
 - **Ayarlar › Para › AB uzaktan satış eşiği:** eşik 10.000 € (KDV hariç), uyarılar %80 ve %95. Bu sistemden önce ya da dışında

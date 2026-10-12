@@ -13,6 +13,7 @@ import {
   ProductImageService,
   ProductService,
   ProductVariantService,
+  ProductVatRateService,
   PurchaseOrderService,
   RecipeService,
   SettingsService,
@@ -65,6 +66,7 @@ import {
   WAREHOUSE,
   ZONES,
 } from './seed-real/data';
+import { KDV_ORANLARI, kdvSorunlari, type KdvUrunu } from './seed-real/kdv';
 import { KATALOG_KUNYELERI, KUNYELER, STOK_SAYIMI, type SayimBoyu, type UrunKunyesi } from './seed-real/kunye';
 
 const KOK = dirname(fileURLToPath(import.meta.url));
@@ -326,7 +328,6 @@ function checkInvoiceTotals(): void {
   }
 }
 
-/** Kategorisiz ürün olmamalı: eşlemesi yazılmamış taslak beslemeyi DURDURUR, sessizce kategorisiz doğmaz. */
 /**
  * Her taslağın künye aynasında karşılığı olmalı; fazlası da olmamalı. Eksikse besleme DURUR:
  * ürünü önce panelde/asistanla açıp veritabanına girmek, sonra aynaya çekmek gerekir (künye uydurulmaz).
@@ -350,12 +351,19 @@ function checkKunyeler(): void {
   }
 }
 
+/** Kategorisiz ürün olmamalı: eşlemesi yazılmamış taslak beslemeyi DURDURUR, sessizce kategorisiz doğmaz. */
 function checkDraftCategories(): void {
   const gecerli = new Set(CATEGORIES.map((c) => c.key));
   const eksik = TASLAKLAR.filter(({ draft }) => !gecerli.has(kategoriOf(draft) ?? '')).map(({ draft }) => draft.name);
   if (eksik.length > 0) {
     throw new Error(`kategorisi yazılmamış taslak (${eksik.length}): ${eksik.join(' · ')} — panelde kategori seç ya da DRAFT_CATEGORY'ye ekle`);
   }
+}
+
+/** KDV tablosu beslemeyle tutmalı: oranı olmayan kategori ya da beslemede olmayan istisna yazmaya başlamadan yakalanır. */
+function checkKdvOranlari(): void {
+  const sorunlar = kdvSorunlari();
+  if (sorunlar.length > 0) throw new Error(`KDV tablosu beslemeyle tutmuyor: ${sorunlar.join(' · ')} — seed-real/kdv.ts`);
 }
 
 /** Fiyat sözlüğü faturayla birebir olmalı: fiyatsız kalem de faturada olmayan fiyat da sessizce geçmez. */
@@ -536,11 +544,11 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
 }
 
 /**
- * Katalog ürününe aynanın kurulumda yazılamayan kısmı: ambalaj ölçüsü, barkod, KDV ve kategori. Kurulum bunları kaynaktan türetir;
+ * Katalog ürününe aynanın kurulumda yazılamayan kısmı: ambalaj ölçüsü, barkod, kategori ve durum. Kurulum bunları kaynaktan türetir;
  * panelde düzeltilen ya da depoda okutulan değer burada üstüne yazılır, yoksa sıfırlamada kaybolurdu.
  */
 async function seedKatalogAynasi(db: Db, catId: Map<string, string>): Promise<void> {
-  console.log('▸ katalog aynası — ölçü · barkod · KDV · kategori');
+  console.log('▸ katalog aynası — ölçü · barkod · kategori');
   const variants = new ProductVariantService(db);
   const products = new ProductService(db);
   const barcodes = new VariantBarcodeService(db);
@@ -574,10 +582,9 @@ async function seedKatalogAynasi(db: Db, catId: Map<string, string>): Promise<vo
       kod += yeniKodlar.length;
     }
     const kategori = kunye.category ? catId.get(kunye.category) : undefined;
-    if (!urunId || DRY_RUN || (kunye.vatRate === undefined && !kategori && !kunye.status)) continue;
+    if (!urunId || DRY_RUN || (!kategori && !kunye.status)) continue;
     await products.update({
       id: urunId,
-      ...(kunye.vatRate === undefined ? {} : { vatRate: kunye.vatRate }),
       ...(kategori ? { categoryId: kategori } : {}),
       ...(kunye.status ? { status: kunye.status } : {}),
     });
@@ -644,7 +651,6 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
       ...(kunye.storageType ? { storageType: kunye.storageType } : {}),
       ...(kunye.shippable === undefined ? {} : { shippable: kunye.shippable }),
       ...(kunye.dateType ? { dateType: kunye.dateType } : {}),
-      ...(kunye.vatRate === undefined ? {} : { vatRate: kunye.vatRate }),
       ...(kunye.nutrition ? { nutrition: kunye.nutrition } : {}),
       ...(kunye.allergens ? { allergens: kunye.allergens } : {}),
       ...(kunye.traces?.length ? { traces: kunye.traces } : {}),
@@ -680,6 +686,77 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
         await barcodes.insert({ variantId: satir.id, code: b.code, kind: b.kind, qtyPerCode: b.qtyPerCode });
     }
   }
+}
+
+/** `product.vat_rate` kolonunun varsayılanı (0005_catalog_product.sql); bu değerde duran Fransa oranı sınıflanmamış sayılır. */
+const FR_KOLON_ORANI = 5.5;
+
+/**
+ * KDV tablosunu (`seed-real/kdv.ts`) yazar: Fransa oranı ürünün kendi alanına, Almanya oranı ülke oranına. Varsayılanda duran
+ * Fransa oranı ve eksik Almanya oranı tamamlanır; panelde verilmiş farklı oran ezilmez, raporlanır.
+ */
+async function seedKdvOranlari(db: Db, catId: Map<string, string>): Promise<void> {
+  console.log('▸ KDV — Fransa ürünün oranı, Almanya ülke oranı');
+  const products = new ProductService(db);
+  const variants = new ProductVariantService(db);
+  const ulkeOranlari = new ProductVatRateService(db);
+  const urunler = await products.listAll();
+  if (urunler.length === 0) {
+    console.log(`  ○ ürün yok${DRY_RUN ? '; önceki adımlar yazılınca kurulur' : ', oran yazılmadı'}`);
+    return;
+  }
+  const yuzde = (oran: number) => `%${String(oran).replace('.', ',')}`;
+  const adi = (p: Product) => p.name.tr ?? p.slug;
+  // İstisna ürünün kimliğine çözülür; çözülemeyen istisna sessizce kategorinin oranına düşmesin diye söylenir.
+  const istisna = { FR: new Map<string, number>(), DE: new Map<string, number>() };
+  for (const ulke of ['FR', 'DE'] as const) {
+    for (const { oran, urunler: grup } of KDV_ORANLARI[ulke].istisna) {
+      for (const urun of grup) {
+        const id = await kdvUrunuId(urun, variants, urunler);
+        if (id) istisna[ulke].set(id, oran);
+        else console.log(`  ⚠ ${ulke} · ${'sku' in urun ? urun.sku : urun.draft} — ürünü kurulmamış, istisnası yazılmadı`);
+      }
+    }
+  }
+  const kategoriAnahtari = new Map(CATEGORIES.map((c) => [catId.get(c.key), c.key]));
+  const almanya = new Map(
+    (await ulkeOranlari.listByProducts(urunler.map((p) => p.id))).filter((r) => r.country === 'DE').map((r) => [r.productId, r.vatRate]),
+  );
+  const eksikAlmanya: Array<{ productId: string; vatRate: number }> = [];
+  for (const p of urunler) {
+    const kategori = p.categoryId ? kategoriAnahtari.get(p.categoryId) : undefined;
+    const fr = istisna.FR.get(p.id) ?? (kategori ? KDV_ORANLARI.FR.kategori[kategori] : undefined);
+    const de = istisna.DE.get(p.id) ?? (kategori ? KDV_ORANLARI.DE.kategori[kategori] : undefined);
+    if (fr === undefined || de === undefined) {
+      console.log(`  ⚠ ${adi(p)} — kategorisi beslemenin kategorisi değil, KDV yazılmadı`);
+      continue;
+    }
+    if (p.vatRate !== fr && p.vatRate !== FR_KOLON_ORANI) {
+      console.log(`  ⚠ ${adi(p)} · FR panelde ${yuzde(p.vatRate)}, tabloda ${yuzde(fr)} — dokunulmadı`);
+    } else if (p.vatRate !== fr) {
+      plan(`${adi(p)} · FR ${yuzde(fr)}`);
+      if (!DRY_RUN) await products.update({ id: p.id, vatRate: fr });
+    }
+    const mevcut = almanya.get(p.id);
+    if (mevcut === undefined) eksikAlmanya.push({ productId: p.id, vatRate: de });
+    else if (mevcut !== de) console.log(`  ⚠ ${adi(p)} · DE panelde ${yuzde(mevcut)}, tabloda ${yuzde(de)} — dokunulmadı`);
+  }
+  if (eksikAlmanya.length === 0) {
+    done('Almanya oranları');
+    return;
+  }
+  const dagilim = [...new Set(eksikAlmanya.map((e) => e.vatRate))]
+    .map((oran) => `${eksikAlmanya.filter((e) => e.vatRate === oran).length} × ${yuzde(oran)}`)
+    .join(' · ');
+  plan(`${eksikAlmanya.length} ürüne Almanya oranı · ${dagilim}`);
+  if (DRY_RUN) return;
+  for (const e of eksikAlmanya) await ulkeOranlari.set({ ...e, country: 'DE' });
+}
+
+/** İstisnanın ürünü: Lezza ürünü varyant kodundan, taslak Türkçe adından (`seedFamilies` ile aynı eşleme). */
+async function kdvUrunuId(urun: KdvUrunu, variants: ProductVariantService, urunler: Product[]): Promise<string | undefined> {
+  if ('sku' in urun) return (await variants.findBySku(urun.sku))?.productId;
+  return urunler.find((p) => p.name.tr === TASLAK_ADI.get(urun.draft))?.id;
 }
 
 /**
@@ -1196,6 +1273,7 @@ async function main(): Promise<void> {
   checkDraftCategories();
   checkSalePrices();
   checkRecipeLines();
+  checkKdvOranlari();
   const db = createServiceRoleClient();
   console.log(`▸ GERÇEK BESLEME${DRY_RUN ? ' · KURU KOŞU (yazılmaz)' : ''} · ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(adres yok)'}`);
   await waitForRest(db);
@@ -1209,6 +1287,8 @@ async function main(): Promise<void> {
   await seedCatalog(db, catId);
   await seedKatalogAynasi(db, catId);
   await seedDrafts(db, catId);
+  // Katalog ve taslak ürünler kategorileriyle kurulduktan sonra: oran kategoriden çıkar.
+  await seedKdvOranlari(db, catId);
   await seedFamilies(db);
   await seedCollections(db);
   await seedPurchases(db);

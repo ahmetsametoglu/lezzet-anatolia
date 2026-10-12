@@ -25,9 +25,10 @@ const OUT = process.argv.find((a) => a.startsWith('--out='))?.slice(6) ?? VERI;
 const KOLONLAR: Record<string, { ayna: string[]; disarida: Record<string, string> }> = {
   product: {
     ayna: ['name', 'description', 'ingredients', 'nutrition', 'storage_instructions', 'preparation_steps', 'allergens', 'traces',
-      'date_type', 'shelf_life_days', 'shippable', 'storage_type', 'vat_rate', 'category_id'],
+      'date_type', 'shelf_life_days', 'shippable', 'storage_type', 'category_id'],
     disarida: {
       id: 'kimlik', slug: 'addan türer', created_at: 'kayıt anı', sort_order: 'kuruluş sırası',
+      vat_rate: 'KDV sınıflandırması seed-real/kdv.ts',
       image_key: 'görsel besleme klasöründen kurulur', image_focal_x: 'görsel', image_focal_y: 'görsel', image_zoom: 'görsel',
       image_alt: 'görsel', image_updated_at: 'görsel', image_width: 'görsel', image_height: 'görsel',
       is_incomplete: 'beyandan türer', status: 'beyan ve fiyattan türer',
@@ -173,7 +174,6 @@ async function main(): Promise<void> {
       storageType: u.storage_type,
       shippable: u.shippable,
       dateType: u.date_type,
-      vatRate: sayi(u.vat_rate),
       category: kategori,
     };
 
