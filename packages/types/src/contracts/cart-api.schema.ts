@@ -3,7 +3,7 @@ import { BundleSchema } from '../entities/bundle.schema';
 import { CartItemSchema } from '../entities/cart.schema';
 import { ProductVariantSchema } from '../entities/product-variant.schema';
 import { StockSchema } from '../entities/stock.schema';
-import { CartLineRouteEnum, CouponRejectionEnum } from '../primitives/enums.schema';
+import { CartLineRouteEnum, CountryEnum, CouponRejectionEnum } from '../primitives/enums.schema';
 import { CatalogImageSchema } from './catalog-api.schema';
 
 /**
@@ -157,6 +157,11 @@ const CartLineViewShape = {
   vatRate: z.number(),
   /** Bu satır çıkarılmadan checkout'a geçilemez: tükenmiş ya da satışa kapanmış. */
   blocked: z.boolean(),
+  /**
+   * Ürün bu ülkenin tüketicisine satılmıyor (o ülkenin KDV oranı yok); doluyken satır engellidir. İsteğe bağlı, çünkü uygulama ile
+   * sunucu ayrı yayına çıkar.
+   */
+  notSoldIn: CountryEnum.nullable().optional(),
   /** Kalem hangi yoldan gelir; **`null` = yer bilinmiyor** ve o hâlde ayrım YAPILMAZ. */
   route: CartLineRouteEnum.nullable(),
   /**

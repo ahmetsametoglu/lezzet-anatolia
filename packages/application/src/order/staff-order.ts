@@ -127,6 +127,7 @@ function toStaffAddressOption(row: Address): StaffAddressOption {
     cityLine,
     recipient: row.recipient,
     isBilling: row.isBilling,
+    country: row.country,
   };
 }
 

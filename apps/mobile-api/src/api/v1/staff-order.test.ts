@@ -22,6 +22,7 @@ import {
 } from '@lezzet/database/testing';
 import type {
   StaffAddressCreateResponse,
+  StaffAddressOption,
   StaffCustomerPage,
   StaffDeliveryContext,
   StaffOrderOrigin,
@@ -292,5 +293,23 @@ describe('adres', () => {
     if (gecerli.status !== 'ok') return;
     const liste = await envelopeData<{ addresses: { id: string }[] }>(await istek(kurye, yol));
     expect(liste.addresses.map((a) => a.id)).toContain(gecerli.address.id);
+  });
+
+  // Seçenek adresin ülkesini taşımaz ya da sabit yazarsa personelin kalem seçicisi Almanya adresine Fransa fiyatını sorar; kırmızıya döner.
+  it('adres seçeneği adresin ülkesini taşır', async () => {
+    const almanya = await new AddressService(db).addForCustomer({
+      customerId: vadeliId,
+      recipient: 'Lager',
+      phone: '+49781223344',
+      line1: 'Hauptstraße 45',
+      postalCode: '77652',
+      city: 'Offenburg',
+      country: 'DE',
+    });
+
+    const liste = await envelopeData<{ addresses: StaffAddressOption[] }>(await istek(kurye, `/customers/${vadeliId}/addresses`));
+    const ulkesi = (id: string) => liste.addresses.find((a) => a.id === id)?.country;
+    expect(ulkesi(almanya.id)).toBe('DE');
+    expect(ulkesi(vadeliAdresId)).toBe('FR');
   });
 });

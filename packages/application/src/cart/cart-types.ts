@@ -1,6 +1,6 @@
 import { checkoutButtonCents, freeShippingOf, meetsMinBasket, minBasketBaseOf, undeliverableTotalOf } from '@lezzet/domain-core';
 import type { CouponRejection, DiscountRule } from '@lezzet/domain-core';
-import type { AnalyticsBlockedReason, CartItem, CartLineGroup } from '@lezzet/types';
+import type { AnalyticsBlockedReason, CartItem, CartLineGroup, Country } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import type { StorefrontImage } from '../catalog/storefront-types';
@@ -171,6 +171,8 @@ interface CartLineView {
    * "Size ayrıldı" vaadi hiçbir yerde yoktur — sepet stok ayırmaz (DOMAIN §4).
    */
   blocked: boolean;
+  /** Ürün bu ülkenin tüketicisine satılmıyor (o ülkenin KDV oranı yok, vitrinle aynı karar); doluyken satır engellidir. */
+  notSoldIn: Country | null;
   /**
    * Kalemin yolu, motordan (`decideCartAgainstWarehouse`): yolu stok belirler, müşteri seçmez. `null` yer bilinmiyor demek.
    */

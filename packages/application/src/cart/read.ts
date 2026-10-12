@@ -225,6 +225,7 @@ export async function getCartView(
       // ÖLÇÜT LİSTE FİYATI, pazarlıklı olan DEĞİL: kanal fiyatı kalkmış (satışa kapalı) bir ürünü
       // elle fiyat yazarak diriltmek, kapanmış bir ürünü sessizce yeniden satmak olurdu.
       blocked: listPriceCents === null || view.soldOut,
+      notSoldIn: view.notSoldIn,
       // Yol kararı satırlar kurulduktan SONRA toplu veriliyor (motor sepetin tamamını görmeli).
       route: null,
       // Grup yolla birlikte tazelenir; başlangıç değeri yolun `null` hâlinin karşılığı (`cartGroupOf`).
@@ -428,6 +429,7 @@ function orphanLine(entry: CartEntry): CartLine {
     limitCap: null,
     lineTotalCents: null,
     blocked: true,
+    notSoldIn: null,
     route: null,
     // Yolu bilinmeyen satır ana grupta durur (`cartGroupOf`): kaynağı kaybolduğu için "gelemez"
     // denemez — satırın sorunu yol değil, kalemin kendisi (`blocked`).
@@ -464,6 +466,8 @@ function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | unde
     limitCap: null,
     lineTotalCents: pack.priceCents * qty,
     blocked: pack.soldOut,
+    // Vitrin paketi ülke sormaz; kalemi o ülkede satılmayan paketi sipariş kapısı reddeder (`orderItemsOf`).
+    notSoldIn: null,
     // Yol paketin bütünü için paket kapısında (`decideBundleAgainstWarehouse`) çözülür ve burada yalnız taşınır; dolu olması
     // checkout kapılarının paketi yakalaması için şart.
     route: pack.route,

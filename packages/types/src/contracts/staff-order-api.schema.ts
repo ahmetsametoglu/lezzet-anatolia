@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ChannelEnum, CustomerTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
+import { ChannelEnum, CountryEnum, CustomerTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 import { B2bCompanyLookupSchema } from './b2b-api.schema';
 import { CheckoutPaymentSchema } from './checkout-api.schema';
 import { PlaceUnresolvedReasonEnum } from './place-api.schema';
@@ -82,6 +82,11 @@ export const StaffAddressOptionSchema = z.object({
   cityLine: z.string(),
   recipient: z.string(),
   isBilling: z.boolean(),
+  /**
+   * Adresin ülkesi; personelin kalem seçicisi fiyatı ve satılabilirliği bu ülkeyle sorar (`?country=`). İsteğe bağlı, çünkü uygulama
+   * ile sunucu ayrı yayına çıkar.
+   */
+  country: CountryEnum.optional(),
 });
 export type StaffAddressOption = z.infer<typeof StaffAddressOptionSchema>;
 

@@ -165,6 +165,7 @@ function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][n
     lineTotalCents: line.lineTotalCents,
     vatRate: line.vatRate,
     blocked: line.blocked,
+    notSoldIn: line.notSoldIn,
     route: line.route,
     // Grup kapıdan gelir, `route`tan türetilmez; kural `cartGroupOf`ta.
     group: line.group,

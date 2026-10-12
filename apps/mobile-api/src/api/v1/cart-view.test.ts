@@ -155,6 +155,15 @@ describe('POST /api/v1/cart/view — yerin kapsamı', () => {
   const BOLGE_ASGARI = 987_600;
   const ALMANYA_FIYATI = 1390;
   let zoneId: string;
+  let oransizUrunId: string;
+  let oransizBoyId: string;
+
+  const almanyaSepeti = (items: unknown[]) =>
+    app.request(`/api/v1/cart/view?locale=tr&postalCode=${kod}&country=DE`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ items }),
+    });
 
   beforeAll(async () => {
     const zones = new DeliveryZoneService(db);
@@ -163,23 +172,36 @@ describe('POST /api/v1/cart/view — yerin kapsamı', () => {
     await settings.set(MIN_BASKET_KEY, BOLGE_ASGARI, { scopeType: 'zone', scopeId: zoneId });
     await new ProductVatRateService(db).set({ productId, country: 'DE', vatRate: 7 });
     await new PriceService(db).setPrice({ variantId, channel: 'b2c', amountCents: ALMANYA_FIYATI, country: 'DE' });
+    const oransiz = await new ProductService(db).create({
+      name: { tr: `Oransız börek ${stamp}` },
+      categoryId,
+      variants: [{ label: { tr: '500 g' } }],
+    });
+    oransizUrunId = oransiz.product.id;
+    oransizBoyId = oransiz.variants[0]!.id;
+    await new PriceService(db).setPrice({ variantId: oransizBoyId, channel: 'b2c', amountCents: BIRIM_FIYAT });
   });
 
   afterAll(async () => {
     await settings.remove(MIN_BASKET_KEY, { scopeType: 'zone', scopeId: zoneId });
     await mustDelete(db, 'delivery_zone', (q) => q.eq('id', zoneId));
+    await purgeTestData(db, { productIds: [oransizUrunId] });
   });
 
   // Sepet yerin ülkesini ve bölgesini okumaya geçmezse Almanya fiyatı ve bölgenin asgari sepeti görünmez; kırmızıya döner.
   it('Almanya adresinde sepet Almanya fiyatını ve bölgenin asgari sepetini okur', async () => {
-    const res = await app.request(`/api/v1/cart/view?locale=tr&postalCode=${kod}&country=DE`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ items: [satir()] }),
-    });
-
-    const body = await dataOf<{ lines: { unitPriceCents: number | null }[]; minBasketCents: number }>(res);
+    const body = await dataOf<{ lines: { unitPriceCents: number | null }[]; minBasketCents: number }>(await almanyaSepeti([satir()]));
     expect(body.lines[0]?.unitPriceCents).toBe(ALMANYA_FIYATI);
     expect(body.minBasketCents).toBe(BOLGE_ASGARI);
+  });
+
+  // Sepet okuması ya da mobil cevap satırın ülkesini taşımazsa Almanya'da satılmayan ürün yalnız "satışa kapalı" görünür; kırmızıya döner.
+  it('Almanya oranı olmayan ürünün satırı ülkeyi söyler, oranlı ürününki söylemez', async () => {
+    const body = await dataOf<{ lines: { variantId: string; unitPriceCents: number | null; notSoldIn?: string | null }[] }>(
+      await almanyaSepeti([satir(), satir({ variantId: oransizBoyId })]),
+    );
+    const satirOf = (id: string) => body.lines.find((line) => line.variantId === id);
+    expect(satirOf(oransizBoyId)).toMatchObject({ notSoldIn: 'DE', unitPriceCents: null });
+    expect(satirOf(variantId)?.notSoldIn).toBeNull();
   });
 });

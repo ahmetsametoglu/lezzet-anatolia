@@ -77,14 +77,14 @@ function requireName(name: LocalizedText | undefined): LocalizedText {
 }
 
 /**
- * Yeni ürün oluşturur (varyant verilmezse varsayılan varyantla); slug addan türetilir.
+ * Yeni ürün oluşturur (varyant verilmezse varsayılan varyantla) ve kimliğini döndürür, çünkü form ülke oranını ilk kayıtta yazar.
  * Durumu formdaki seçici belirler; kuyrukta seçici olmadığı için öneriden doğan ürün kapının varsayılanıyla aday doğar.
  */
 export async function createProductAction(
   input: ProductFormInput,
   /** Asistan önerisinden gelindiyse o önerinin kimliği. */
   proposalId?: string | null,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ id: string }>> {
   try {
     const staff = await requireStaff();
     const db = serviceDb();
@@ -99,12 +99,11 @@ export async function createProductAction(
     const kodSorunu = barcodeProblems(variants);
     if (kodSorunu) return { data: null, error: kodSorunu };
 
-    let acilanBoylar: { id: string }[] = [];
-    await withProposal(
+    const created = await withProposal(
       proposalId,
       staff.profileId,
-      async () => {
-        const created = await new ProductService(db).create({
+      () =>
+        new ProductService(db).create({
           ...fields,
           name,
           variants: variants.map((v) => ({
@@ -112,8 +111,7 @@ export async function createProductAction(
             netQuantity: v.netQuantity,
             netUnit: v.netUnit,
             piecesCount: v.piecesCount,
-            // Porsiyon türü ve ambalaj ölçüsü BU KAPIDAN da geçer: formda girdisi var ve ambalaj
-            // fotoğrafından da okunuyor, burada düşürülünce yeni ürün onları kaybediyordu.
+            // Porsiyon türü ve ambalaj ölçüsü bu kapıdan da geçer, çünkü formda girdisi var ve ambalaj fotoğrafından da okunuyor.
             portionKind: v.portionKind,
             packedWeightG: v.packedWeightG,
             packedLengthMm: v.packedLengthMm,
@@ -123,10 +121,7 @@ export async function createProductAction(
             sku: v.sku,
             isActive: v.isActive,
           })),
-        });
-        acilanBoylar = created.variants;
-        return created;
-      },
+        }),
       // DOĞAN kaydın kimliği künyeye yazılır: "bu ürünü hangi öneri kurdu" sorusunun cevabı ve
       // arşivdeki köprünün dayanağı (`KIND_META.product_create.resultKey`).
       ({ product }) => ({ productId: product.id }),
@@ -135,12 +130,13 @@ export async function createProductAction(
     // Kod eşlemesi ürün YAZILDIKTAN sonra kurulur: yeni boyun kimliği ancak burada vardır.
     const kodHatasi = await bindNewBarcodes(
       db,
-      acilanBoylar.map((v, i) => ({ variantId: v.id, codes: variants[i]?.newBarcodes ?? [] })),
+      created.variants.map((v, i) => ({ variantId: v.id, codes: variants[i]?.newBarcodes ?? [] })),
       staff.profileId,
     );
 
     revalidatePath(PRODUCTS_PATH);
-    return { data: null, error: kodHatasi };
+    // Kod eşlemesi düşse de ürün yazılmıştır; kimlik hatayla birlikte döner ki form ülke oranını yine yazabilsin.
+    return { data: { id: created.product.id }, error: kodHatasi };
   } catch (err) {
     return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGES) };
   }
