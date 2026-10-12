@@ -4,18 +4,24 @@
     "title": "Siparişiniz nasıldı?",
     "progress": "{current} / {total}",
     "vote": {
-      "eyebrow": "BU ÜRÜN NASILDI?",
       "like": "Beğendim",
-      "dislike": "Beğenmedim",
-      "hint": "Değerlendirmeniz yalnız bir dokunuş — hangi lezzetleri getireceğimize yön verir."
+      "dislike": "Beğenmedim"
     },
     "comment": {
-      "title": "Teşekkürler! Bir şey eklemek ister misiniz?",
-      "body": "Kısa bir yorum bırakabilirsiniz — incelendikten sonra ürün sayfasında yayınlanır. Zorunlu değil.",
-      "placeholder": "Örn. Börek tam annemin yaptığı gibiydi…",
-      "label": "Yorumunuz",
-      "finish": "Değerlendirmeyi tamamla",
       "finishing": "Tamamlanıyor…"
+    },
+    "list": {
+      "productsOne": "1 ürün",
+      "productsMany": "{count} ürün",
+      "heading": "Aldıklarınız nasıldı?",
+      "rule": "Her ürün için oy +{vote} · yorum +{review} puan",
+      "addComment": "Yorum ekle",
+      "commentLabel": "{product} için yorumunuz",
+      "commentPlaceholder": "{product} hakkında birkaç kelime…",
+      "points": "+{points} puan",
+      "minWords": "En az {count} kelime",
+      "note": "Yorumlar incelendikten sonra ürün sayfasında yayınlanır.",
+      "finish": "Değerlendirmeyi tamamla · +{points} puan"
     },
     "done": {
       "title": "Değerlendirmeniz için teşekkürler",
@@ -51,18 +57,24 @@
     "title": "Comment s'est passée votre commande ?",
     "progress": "{current} / {total}",
     "vote": {
-      "eyebrow": "COMMENT ÉTAIT CE PRODUIT ?",
       "like": "J'ai aimé",
-      "dislike": "Je n'ai pas aimé",
-      "hint": "Un geste suffit — votre avis nous aide à choisir les saveurs que nous proposons."
+      "dislike": "Je n'ai pas aimé"
     },
     "comment": {
-      "title": "Merci ! Souhaitez-vous ajouter un mot ?",
-      "body": "Vous pouvez laisser un court commentaire — après relecture, il sera publié sur la page du produit. Facultatif.",
-      "placeholder": "Ex. Le börek était exactement comme celui de ma mère…",
-      "label": "Votre commentaire",
-      "finish": "Terminer l'évaluation",
       "finishing": "Finalisation…"
+    },
+    "list": {
+      "productsOne": "1 produit",
+      "productsMany": "{count} produits",
+      "heading": "Comment étaient vos produits ?",
+      "rule": "Par produit : avis +{vote} · commentaire +{review} points",
+      "addComment": "Ajouter un commentaire",
+      "commentLabel": "Votre commentaire sur {product}",
+      "commentPlaceholder": "Quelques mots sur {product}…",
+      "points": "+{points} points",
+      "minWords": "{count} mots minimum",
+      "note": "Les commentaires sont publiés sur la page du produit après relecture.",
+      "finish": "Terminer l'évaluation · +{points} points"
     },
     "done": {
       "title": "Merci pour votre évaluation",
@@ -98,18 +110,24 @@
     "title": "Wie war Ihre Bestellung?",
     "progress": "{current} / {total}",
     "vote": {
-      "eyebrow": "WIE WAR DIESES PRODUKT?",
       "like": "Hat mir gefallen",
-      "dislike": "Hat mir nicht gefallen",
-      "hint": "Ein Tippen genügt – Ihre Bewertung zeigt uns, welche Spezialitäten wir anbieten sollen."
+      "dislike": "Hat mir nicht gefallen"
     },
     "comment": {
-      "title": "Danke! Möchten Sie noch etwas hinzufügen?",
-      "body": "Sie können einen kurzen Kommentar hinterlassen – nach Prüfung erscheint er auf der Produktseite. Optional.",
-      "placeholder": "z. B. Der Börek war genau wie bei meiner Mutter…",
-      "label": "Ihr Kommentar",
-      "finish": "Bewertung abschließen",
       "finishing": "Wird abgeschlossen…"
+    },
+    "list": {
+      "productsOne": "1 Produkt",
+      "productsMany": "{count} Produkte",
+      "heading": "Wie waren Ihre Produkte?",
+      "rule": "Pro Produkt: Bewertung +{vote} · Kommentar +{review} Punkte",
+      "addComment": "Kommentar hinzufügen",
+      "commentLabel": "Ihr Kommentar zu {product}",
+      "commentPlaceholder": "Ein paar Worte zu {product}…",
+      "points": "+{points} Punkte",
+      "minWords": "Mindestens {count} Wörter",
+      "note": "Kommentare erscheinen nach Prüfung auf der Produktseite.",
+      "finish": "Bewertung abschließen · +{points} Punkte"
     },
     "done": {
       "title": "Danke für Ihre Bewertung",

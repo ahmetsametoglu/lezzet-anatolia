@@ -87,10 +87,11 @@ select o.id          as order_id,
 comment on view public.feedback_due_order is
   'Daveti bekleyen siparişler — teslim edilmiş, daveti YOK, müşterisi bireysel. Bekleme süresi motorun kararı.';
 
--- Bekleme süresi ve dış değerlendirme platformu ayardadır, çünkü ikisi de dağıtım beklemeden değişebilen iş kararıdır.
+-- Bekleme süresi, dış değerlendirme platformu ve yorumun alt sınırı ayardadır, çünkü üçü de dağıtım beklemeden değişebilen iş kararıdır.
 -- `review_platform_url` boş başlar: kayıt açılmadan uydurma adrese yönlendirmektense davet gösterilmez (`feedbackOutcomeOf`).
 insert into public.settings (key, value, description) values
   ('feedback_delay_days',   '10',       'Teslimden kaç gün sonra geri bildirim daveti gider. Erken sormak "daha açmadım", geç sormak unutulmuş bir deneyim getirir.'),
   ('review_platform_url',   '""',       'Dış değerlendirme bağlantısı (Google İşletme Profili / Trustpilot). BOŞSA akış sonunda davet gösterilmez.'),
-  ('review_platform_name',  '"Google"', 'Değerlendirme platformunun müşteriye gösterilen adı — davet metnindeki "… üzerinde değerlendir".')
+  ('review_platform_name',  '"Google"', 'Değerlendirme platformunun müşteriye gösterilen adı — davet metnindeki "… üzerinde değerlendir".'),
+  ('review_min_words',      '2',        'Yorumun kabul edilmesi için gereken en az kelime; tek harf, nokta ya da tek harfin tekrarı kelime sayılmaz.')
 on conflict (key) where scope_id is null do nothing;

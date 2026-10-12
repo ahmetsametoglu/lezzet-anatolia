@@ -9,8 +9,8 @@ import { Skeleton, SkeletonRegion, SkeletonText } from '@/components/customer/ui
 import { detectDevice } from '@/lib/device';
 
 /**
- * Davet sunucuda açıldığı için e-postadaki bağlantıdan gelen müşteri bu kare olmadan boş sayfaya bakar. Telefonda native'in oy aşaması
- * iskeleti çizilir (akış hep oyla başlar), başlık çubuğu gerçek basılır ki geri düğmesi beklerken de çalışsın.
+ * Davet sunucuda açıldığı için e-postadaki bağlantıdan gelen müşteri bu kare olmadan boş sayfaya bakar. Telefonda listenin iskeleti
+ * çizilir, başlık çubuğu gerçek basılır ki geri düğmesi beklerken de çalışsın.
  */
 export default async function FeedbackLoading() {
   const [device, locale] = await Promise.all([detectDevice(), getLocale() as Promise<Locale>]);
@@ -22,20 +22,24 @@ export default async function FeedbackLoading() {
         <div className="flex flex-1 flex-col">
           <AppBar title={copy.title} left={<BackButton label={copy.back} fallback="/" />} />
           <SkeletonRegion>
-            <div className="relative h-95">
-              <Skeleton className="h-full !rounded-none" />
-              {/* Künye çubukları koyu tonda: fotoğrafın üstünde durdukları için ton farkı bir şey söyler. */}
-              <div className="absolute inset-x-5.5 bottom-4.5 flex flex-col gap-1">
-                <Skeleton className="h-4 w-[44%] !bg-sand-300" />
-                <Skeleton className="h-8 w-[72%] !bg-sand-300" />
+            <div className="flex flex-col gap-3 px-4.5 pt-4.5">
+              <Skeleton className="h-4 w-[40%]" />
+              <Skeleton className="h-7 w-[68%]" />
+              <Skeleton className="h-9 w-[72%] !rounded-soft" />
+              <div className="mt-1 rounded-card bg-sand-250 px-4">
+                {[0, 1, 2].map((row) => (
+                  <div key={row} className={['flex items-center gap-4 py-4', row > 0 ? 'border-t-[1.5px] border-dashed border-sand-400' : ''].join(' ')}>
+                    <Skeleton className="size-13 flex-none !rounded-full !bg-sand-300" />
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <Skeleton className="h-4 w-[70%] !bg-sand-300" />
+                      <Skeleton className="h-3 w-[45%] !bg-sand-300" />
+                    </div>
+                    <Skeleton className="size-10.5 flex-none !rounded-full !bg-sand-300" />
+                    <Skeleton className="size-10.5 flex-none !rounded-full !bg-sand-300" />
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="flex gap-4 px-5.5 py-5">
-              <Skeleton className="h-14 flex-1 !rounded-control" />
-              <Skeleton className="h-14 flex-1 !rounded-control" />
-            </div>
-            <div className="flex justify-center px-7.5">
-              <Skeleton className="h-5 w-[78%]" />
+              <Skeleton className="h-13 w-full !rounded-control" />
             </div>
           </SkeletonRegion>
         </div>

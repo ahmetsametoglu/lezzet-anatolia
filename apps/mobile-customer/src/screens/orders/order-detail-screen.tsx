@@ -343,7 +343,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
             tone="olive"
             layout="stack"
             title={t.detail.feedback.title}
-            description={t.detail.feedback.body.replace('{points}', String(invite.points))}
+            description={t.detail.feedback.body.replace('{vote}', String(invite.votePoints)).replace('{review}', String(invite.reviewPoints))}
             action={
               <PrimaryButton
                 label={t.detail.feedback.cta}

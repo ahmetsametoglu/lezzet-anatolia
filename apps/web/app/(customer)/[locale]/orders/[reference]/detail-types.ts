@@ -1,3 +1,4 @@
+import type { OrderFeedbackInvite } from '@lezzet/application';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { CustomerOrderDetail } from '@/lib/order/customer-orders';
 import type { Messages as ListMessages } from '../orders-types';
@@ -17,13 +18,12 @@ export interface DetailViewProps {
    * Açık yorum daveti — `null` ise davet yok ya da kapanmış (üç hâl tek cevapta, künye
    * `readOrderFeedbackInvite`). Sayfaya sunucuda okunup geçilir; istemci token üretmez.
    */
-  feedbackInvite: { token: string; completionPoints: number } | null;
+  feedbackInvite: OrderFeedbackInvite | null;
 }
 
 /**
- * Ödeme hâli — tasarımın beş hapı; masaüstü hapı ve telefonun özet satırı AYNI anahtardan okur (14.09). Sıra ANLAMLI:
- * iade her şeyi ezer (para geri döndüyse "kapıda ödenecek" demek yanlış olur), vade yöntemden önce gelir (vadeli
- * sipariş de kapıda kapanabilir). Native'in `paymentKey`i aynı sırayı izliyor.
+ * Ödeme hâli; masaüstü hapı ve telefonun özet satırı aynı anahtardan okur. Sıra anlamlı: iade her şeyi ezer, çünkü para geri
+ * döndüyse "kapıda ödenecek" yanlış olur; vade yöntemden önce gelir, çünkü vadeli sipariş de kapıda kapanabilir.
  */
 export function paymentKeyOf(
   order: Pick<CustomerOrderDetail, 'paymentStatus' | 'onAccount' | 'paymentMethod' | 'deliveryType'>,

@@ -1,42 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import { feedbackReviewTarget, previousFeedbackVotes } from '@lezzet/domain-core';
-import { ICON_STROKE, THUMB_PATH } from '@lezzet/design-tokens/icons';
-import { RATIO_SQUARE, type FeedbackVote } from '@lezzet/types';
-import { HapticTarget } from '@/components/customer/phone-kit/haptic-target';
-import { PhotoSurface } from '@/components/customer/phone-kit/photo-surface';
+import { meetsReviewMinimum, pendingFeedbackComments, previousFeedbackComments, previousFeedbackVotes } from '@lezzet/domain-core';
+import type { FeedbackVote } from '@lezzet/types';
 import { PointsAward, PointsSpark } from '@/components/customer/phone-kit/points-award';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
-import { Tag } from '@/components/customer/phone-kit/tag';
 import { AppBar } from '@/components/customer/ui/app-bar';
 import { BackButton } from '@/components/customer/ui/back-button';
 import { Link } from '@/i18n/navigation';
 import { errorText } from '@/lib/customer-error-text';
 import type { FeedbackCompletion } from '@/lib/feedback/invite';
 import { completeAction, reviewAction, voteAction } from './actions';
+import { PhoneFeedbackRow } from './components/phone-feedback-row';
 import type { FeedbackViewProps } from './feedback-types';
 
 /** Sunucu eylemine hiç ulaşılamadığında (ağ yok) ekranın anahtarı; cümlesi ortak sözlükte. */
 const NETWORK = 'network';
 
-/**
- * Native akışın telefon ikizi: ürün ürün oy, oylar bitince tek yorum, sonunda teşekkür ve puan. Aşama türetilir (ilk oysuz kart), ayrıca
- * saklanmaz ki geri alınan bir oy ekranı kendiliğinden o karta döndürsün.
- */
+/** Native listenin telefon ikizi: siparişin ürünleri tek ekranda, her birine oy ve isteğe bağlı yorum, sonunda teşekkür ve puan. */
 export function FeedbackMobile({ locale, token, invite, copy, t }: FeedbackViewProps) {
   const [votes, setVotes] = useState<Record<string, FeedbackVote>>(() => previousFeedbackVotes(invite.cards));
-  const [comment, setComment] = useState('');
+  const [comments, setComments] = useState<Record<string, string>>(() => previousFeedbackComments(invite.cards));
+  const [openComments, setOpenComments] = useState<ReadonlySet<string>>(() => new Set(Object.keys(previousFeedbackComments(invite.cards))));
+  const [shortComments, setShortComments] = useState<ReadonlySet<string>>(new Set());
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [completion, setCompletion] = useState<FeedbackCompletion | null>(null);
 
   const cards = invite.cards;
-  const index = cards.findIndex((entry) => votes[entry.productId] === undefined);
-  const card = index === -1 ? null : (cards[index] ?? null);
   // Davet zaten tamamlanmışsa akış kurulmaz, çünkü puan ikinci kez verilmez.
   const alreadyDone = invite.completedAt !== null;
+  const allVoted = cards.every((card) => votes[card.productId] !== undefined);
   const errors = { ...copy.errors, ...t.errors };
 
   const vote = (productId: string, value: FeedbackVote) => {
@@ -46,7 +41,7 @@ export function FeedbackMobile({ locale, token, invite, copy, t }: FeedbackViewP
       .then((result) => result.errorKey)
       .catch(() => NETWORK)
       .then((failed) => {
-        // Düşen oy geri alınır: ekranda duran ama sunucuda olmayan cevap, işin kaydedildiğini söylerdi.
+        // Düşen oy geri alınır: ekranda duran ama sunucuda olmayan cevap işin kaydedildiğini söylerdi.
         if (!failed) return;
         setVotes((prev) => {
           const next = { ...prev };
@@ -57,16 +52,29 @@ export function FeedbackMobile({ locale, token, invite, copy, t }: FeedbackViewP
       });
   };
 
+  const changeComment = (productId: string, text: string) => {
+    setComments((prev) => ({ ...prev, [productId]: text }));
+    setShortComments((prev) => {
+      if (!prev.has(productId)) return prev;
+      const next = new Set(prev);
+      next.delete(productId);
+      return next;
+    });
+  };
+
   const finish = async () => {
-    if (finishing) return;
+    if (finishing || !allVoted) return;
+    const pending = pendingFeedbackComments(cards, comments);
+    const short = pending.filter((entry) => !meetsReviewMinimum(entry.text, invite.reviewMinWords)).map((entry) => entry.productId);
+    if (short.length > 0) return setShortComments(new Set(short));
+
     setFinishing(true);
     setErrorKey(null);
     try {
-      // Yorum önce gider; düşerse tamamlama çağrılmaz, çünkü akış kapanınca müşteri yazdığı kutuya dönemez.
-      const trimmed = comment.trim();
-      const target = trimmed.length > 0 ? feedbackReviewTarget(cards, votes) : null;
-      if (target !== null) {
-        const review = await reviewAction(locale, token, target, null, trimmed);
+      // Yorumlar tamamlamadan önce gider; biri düşerse akış açık kalır ki müşteri yazdığına dönebilsin.
+      for (const entry of pending) {
+        const review = await reviewAction(locale, token, entry.productId, null, entry.text);
+        if (review.errorKey === 'comment_too_short') return setShortComments(new Set([entry.productId]));
         if (review.errorKey) return setErrorKey(review.errorKey);
       }
       const done = await completeAction(token);
@@ -79,63 +87,54 @@ export function FeedbackMobile({ locale, token, invite, copy, t }: FeedbackViewP
     }
   };
 
-  const errorLine =
-    errorKey === null ? null : (
-      <p role="alert" className="px-5.5 pb-2 text-center font-sans text-body-sm text-error">
-        {errorText(errors, errorKey)}
-      </p>
-    );
+  const products = cards.length === 1 ? copy.list.productsOne : copy.list.productsMany.replace('{count}', String(cards.length));
+  const eyebrow = invite.orderReferenceNo === null ? products : `${invite.orderReferenceNo} · ${products}`;
 
   return (
     <div className="flex flex-1 flex-col">
-      <AppBar
-        title={copy.title}
-        left={<BackButton label={copy.back} fallback="/" />}
-        right={
-          card !== null && !alreadyDone ? (
-            <span className="font-sans text-badge text-muted">
-              {copy.progress.replace('{current}', String(index + 1)).replace('{total}', String(cards.length))}
-            </span>
-          ) : undefined
-        }
-      />
+      <AppBar title={copy.title} left={<BackButton label={copy.back} fallback="/" />} />
 
-      {card !== null && !alreadyDone ? (
-        <div className="flex flex-col pb-7.5">
-          <div className="relative h-95">
-            <PhotoSurface image={card.image} initial={card.name.slice(0, 1)} ratio={RATIO_SQUARE} sizes="100vw" scrim className="absolute inset-0" />
-            {invite.orderReferenceNo !== null && (
-              <span className="absolute top-3.5 right-4">
-                <Tag label={invite.orderReferenceNo} tone="cream" rotate={3} shadow />
-              </span>
-            )}
-            <div className="absolute inset-x-5.5 bottom-4.5 flex flex-col gap-1">
-              <span className="font-sans text-eyebrow-xs text-olive-light">{copy.vote.eyebrow}</span>
-              <h1 className="font-serif text-page-title-sm text-on-image">{card.name}</h1>
-            </div>
+      {completion === null && !alreadyDone ? (
+        <div className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7.5">
+          <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{eyebrow}</span>
+          <h1 className="font-serif text-h2-sm text-ink">{copy.list.heading}</h1>
+          <p className="flex w-max max-w-full items-center gap-1.5 rounded-soft bg-terracotta-bg px-3 py-2 font-sans text-body-sm font-semibold text-terracotta">
+            <PointsSpark size={12} />
+            {copy.list.rule.replace('{vote}', String(invite.votePoints)).replace('{review}', String(invite.reviewPoints))}
+          </p>
+
+          <div className="mt-1 rounded-card bg-sand-250 px-4">
+            {cards.map((card, index) => (
+              <div key={card.productId} className={index > 0 ? 'border-t-[1.5px] border-dashed border-sand-400' : undefined}>
+                <PhoneFeedbackRow
+                  card={card}
+                  vote={votes[card.productId]}
+                  onVote={(value) => vote(card.productId, value)}
+                  comment={comments[card.productId] ?? ''}
+                  commentOpen={openComments.has(card.productId)}
+                  onOpenComment={() => setOpenComments((prev) => new Set(prev).add(card.productId))}
+                  onChangeComment={(text) => changeComment(card.productId, text)}
+                  short={shortComments.has(card.productId)}
+                  reviewPoints={invite.reviewPoints}
+                  minWords={invite.reviewMinWords}
+                  copy={copy}
+                />
+              </div>
+            ))}
           </div>
-          <div className="flex gap-4 px-5.5 py-5">
-            <VoteButton kind="dislike" label={copy.vote.dislike} onClick={() => vote(card.productId, 'dislike')} />
-            <VoteButton kind="like" label={copy.vote.like} onClick={() => vote(card.productId, 'like')} />
-          </div>
-          {/* Ret satırı düğmelerin altında: geri alınan oyun kartı yeniden çizildi, sebep dokunulan yerin yanında durmalı. */}
-          {errorLine}
-          <p className="px-7.5 text-center font-sans text-helper leading-[1.6] text-muted">{copy.vote.hint}</p>
-        </div>
-      ) : completion === null && !alreadyDone ? (
-        <div className="flex flex-col gap-3.5 px-5.5 py-5">
-          <h1 className="font-serif text-h2-sm text-ink">{copy.comment.title}</h1>
-          <p className="font-sans text-note leading-[1.6] text-body">{copy.comment.body}</p>
-          <textarea
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            aria-label={copy.comment.label}
-            placeholder={copy.comment.placeholder}
-            className="min-h-27.5 w-full resize-none rounded-control border-[1.5px] border-sand-400 bg-card px-4 py-3.5 font-sans text-body-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-olive"
+
+          <p className="font-sans text-helper text-muted">{copy.list.note}</p>
+          <PrimaryButton
+            label={finishing ? copy.comment.finishing : copy.list.finish.replace('{points}', String(invite.completionPoints))}
+            shape="block"
+            onClick={finish}
+            disabled={finishing || !allVoted}
           />
-          <PrimaryButton label={finishing ? copy.comment.finishing : copy.comment.finish} shape="block" onClick={finish} disabled={finishing} />
-          {/* Tamamlama düştüyse metin kutuda kalır, tek dokunuşla tekrarlanır. */}
-          {errorLine}
+          {errorKey !== null && (
+            <p role="alert" className="text-center font-sans text-body-sm text-error">
+              {errorText(errors, errorKey)}
+            </p>
+          )}
         </div>
       ) : (
         // Kalan boşluk 4:6 paylaşılır ki blok sayfanın optik merkezinde dursun (boş durum bloğunun oranı).
@@ -179,46 +178,5 @@ export function FeedbackMobile({ locale, token, invite, copy, t }: FeedbackViewP
         </div>
       )}
     </div>
-  );
-}
-
-interface VoteButtonProps {
-  kind: FeedbackVote;
-  label: string;
-  onClick: () => void;
-}
-
-/** Oy düğmesi: gölgeli "beğendim" basılınca gölgesini yutarak kayar, gölgesiz "beğenmedim" küçülür. */
-function VoteButton({ kind, label, onClick }: VoteButtonProps) {
-  const like = kind === 'like';
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={[
-        'relative flex h-14 flex-1 cursor-pointer items-center justify-center gap-2 rounded-control font-sans text-button transition-[scale,translate,box-shadow,background-color]',
-        like
-          ? 'bg-olive text-card shadow-hard hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none'
-          : 'border-[1.5px] border-ink text-ink hover:bg-sand-150 active:scale-[0.97]',
-      ].join(' ')}
-    >
-      <svg
-        width={17}
-        height={17}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={ICON_STROKE.base}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-        className={like ? undefined : 'rotate-180'}
-      >
-        <path d={THUMB_PATH} />
-      </svg>
-      {label}
-      <HapticTarget />
-    </button>
   );
 }

@@ -118,7 +118,7 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
         <DashedInvite
           tone="olive"
           title={d.feedback.title}
-          description={d.feedback.body.replace('{points}', String(feedbackInvite.completionPoints))}
+          description={d.feedback.body.replace('{vote}', String(feedbackInvite.votePoints)).replace('{review}', String(feedbackInvite.reviewPoints))}
           action={
             <PrimaryButton
               shape="pill"

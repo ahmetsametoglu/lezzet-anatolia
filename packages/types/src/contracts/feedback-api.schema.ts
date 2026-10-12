@@ -5,39 +5,20 @@ import { ProductFeedbackSchema } from '../entities/product-feedback.schema';
 import { FeedbackVoteEnum } from '../primitives/enums.schema';
 
 /**
- * GERİ BİLDİRİM AKIŞI SÖZLEŞMESİ — mobil `GET/POST /api/v1/feedback/:token` uçlarının ve onları
- * tüketen vFb ekranının (v3 tasarım 17) ORTAK dili. Terfi gerekçesi `me-api.schema.ts` ile aynı
- * (02-mimari §3.2 "sözleşme tek kaynak"): üreten ve tüketen aynı şemayı çağırır, alan adı
- * değişirse iki taraf birden DERLEME anında kırılır.
- *
- * ── TOKEN OTURUM YERİNE GEÇER; KİMLİK ZARFA GİRMEZ ───────────────────────────
- * `requestId` ve `customerId` BİLEREK YOK: uygulama katmanının görünümü (`FeedbackInviteView`)
- * ikisini taşır ama telefonun onlarla yapabileceği hiçbir şey yoktur — her eylem token'la yapılır
- * ve kimlik sunucuda ondan çözülür. Müşteri kimliğini zarfa koymak, hiçbir ekran okumadan bir
- * kişisel veriyi telde dolaştırmak olurdu. Uç `parse` ile döndürür: pick'te olmayan alan SIZAMAZ.
- *
- * ── EKRANIN ÜÇ AŞAMASI TEK OKUMADAN KURULUR (v3 `fv.` kurucusu) ──────────────
- * stage0 (ürün başına 👍/👎) → `cards` + `progress`; stage1 (akış sonu yorum) → yazım gövdeleri;
- * stage2 (teşekkür + puan + yol ayrımı) → `FeedbackCompletionSchema`. Aşama durumu İSTEMCİDE
- * yaşar; sunucu yalnız gerçekleri verir (hangi kart cevaplı, akış tamam mı).
+ * Değerlendirme akışı sözleşmesi: mobil `/api/v1/feedback/:token` uçları ve onları tüketen ekran aynı şemayı çağırır. Davetin
+ * kimlikleri zarfa girmez, çünkü her eylem belirteçle yapılır ve kimlik sunucuda ondan çözülür.
  */
 
-/**
- * Akıştaki tek kart — siparişteki bir ürün (kalem varyanta bağlıdır, kart ürüne: aynı ürünün iki
- * boyu TEK karttır — sayı `progress.total` ile aynı kümeden gelir, ikisi birbirini yalanlayamaz).
- */
+/** Akıştaki tek kart: siparişteki bir ürün; aynı ürünün iki boyu tek karttır. */
 export const FeedbackCardSchema = z.object({
-  /** Oy/yorum yazımının hedefi — gövdelerdeki `productId` bu listeden seçilir. */
+  /** Oy ve yorum yazımının hedefi. */
   productId: ProductFeedbackSchema.shape.productId,
-  /** Seçili dilde çözülmüş (dil yedek zinciri SUNUCUDA — istemci dil bilmez). */
+  /** Seçili dilde çözülmüş ad; dil yedek zinciri sunucuda. */
   name: z.string(),
-  /** vFb kartın tam boy fotoğrafı — katalog kartlarının aynı görsel şekli (ikinci tanım açılmaz). */
   image: CatalogImageSchema,
-  /**
-   * Müşterinin BU davetten önceki cevabı — **yarıda bırakılan akış kaldığı yerden devam eder**:
-   * ekran ilk oysuz karttan sürer. Ölçüt `existing` değil `existing.vote` — yalnız yorum taşıyan
-   * kart hâlâ cevapsızdır (web akışının ölçülmüş kuralı).
-   */
+  /** Ürünün siparişteki boyları ve adetleri ("6 adet · 225 g · ×1"). */
+  detail: z.string(),
+  /** Müşterinin bu davetten önceki cevabı; yarıda bırakılan akış bununla sürer. */
   existing: z
     .object({
       vote: ProductFeedbackSchema.shape.vote,
@@ -48,55 +29,42 @@ export const FeedbackCardSchema = z.object({
 });
 export type FeedbackCard = z.infer<typeof FeedbackCardSchema>;
 
-/** `GET /feedback/:token` cevabı — davet açıldığında ekranın gördüğü her şey, tek turda. */
+/** `GET /feedback/:token` cevabı: davet açıldığında ekranın gördüğü her şey, tek turda. */
 export const FeedbackInviteSchema = z.object({
-  /** Teşekkür ekranı adla hitap ediyor; yoksa genel cümle. */
   customerName: z.string().nullable(),
-  /** Başlık rozeti ("LZA-2417", v3 `fv.ordRef`). */
   orderReferenceNo: z.string().nullable(),
-  /** Ham ISO; biçimleme ekranın işi (dil orada belli). */
+  /** Ham ISO; biçimleme ekranın işi. */
   orderedOn: z.string().nullable(),
-  /**
-   * En az BİR kart: kalemsiz davet uçtan hiç çıkmaz (404 — web sayfasının aynı kuralı: boş bir
-   * akış müşteriye "bozuk" der). `min(1)` bu sözü şemada kilitler.
-   */
+  /** Kartsız davet uçtan çıkmaz; boş bir akış müşteriye "bozuk" der. */
   cards: z.array(FeedbackCardSchema).min(1),
-  /** "2 / 5" — türetilir, saklanmaz; sayaç tutulsaydı bir gün gerçekle ayrışırdı. */
+  /** Türetilir, saklanmaz; sayaç tutulsaydı bir gün gerçekle ayrışırdı. */
   progress: z.object({
     rated: z.number().int().nonnegative(),
     total: z.number().int().nonnegative(),
   }),
-  /**
-   * Tamamlamanın kazandıracağı puan — **AYARDAN** gelir, ekrana gömülmez. Tasarımdaki `+15` bir
-   * maket sayısı; kodlanmış olsaydı ayar değiştiği gün ekran müşteriye sistemin vermeyeceği bir
-   * sayı söylerdi (29.07 denetiminin 300/500 dersi).
-   */
+  /** Akışı bitirmenin puanı. Puan sayıları ayardan gelir; ekrana gömülseydi ayar değişince sistemin vermeyeceği sayıyı söylerdi. */
   completionPoints: z.number().int().nonnegative(),
-  /** Dolu ise davet zaten tamamlanmış: akış kurulmaz, teşekkür durumu çizilir; puan İKİNCİ KEZ verilmez. */
+  /** Oylanan her ürünün puanı. */
+  votePoints: z.number().int().nonnegative(),
+  /** Yorum yazılan her ürünün puanı. */
+  reviewPoints: z.number().int().nonnegative(),
+  /** Puan getiren yorumun en az kelime sayısı; ekran uyarıyı bununla kurar, kararı yazım ucu verir. */
+  reviewMinWords: z.number().int().positive(),
+  /** Doluysa davet tamamlanmış: akış kurulmaz, puan ikinci kez verilmez. */
   completedAt: FeedbackRequestSchema.shape.completedAt,
   pointsAwarded: FeedbackRequestSchema.shape.pointsAwarded,
 });
 export type FeedbackInvite = z.infer<typeof FeedbackInviteSchema>;
 
-/** `POST /feedback/:token/vote` gövdesi — kart oyu. Oy İSTEĞE BAĞLI DEĞİL: bu ucun tek işi o. */
+/** `POST /feedback/:token/vote` gövdesi. */
 export const FeedbackVoteBodySchema = z.object({
   productId: ProductFeedbackSchema.shape.productId,
   vote: FeedbackVoteEnum,
 });
 
 /**
- * `POST /feedback/:token/review` gövdesi — akış sonunun isteğe bağlı yorumu (v3 stage1).
- *
- * `productId` ZORUNLU: yorum ürün beyanıdır (`product_feedback`) ve ürün sayfasında yayınlanır —
- * sipariş-düzeyi bir yorum kolonu yok ve açılmadı. Tek ürünlü siparişte seçim kendiliğinden;
- * çok ürünlüde hedefi ekran belirler (tasarımın tek kutusu bir sadeleştirme, veri modeli değil).
- *
- * `rating` mobil tasarımda bugün YOK ama sözleşmede var: kapı (web ile TEK kural) yıldızı zaten
- * taşıyor ve alanı sonradan eklemek sözleşme kırılması olurdu; göndermeyen ekran için alan yok
- * hükmünde. İkisi birden boşsa uç `review_empty` döner — kural şemada değil kapıda, TEK yerde.
- *
- * Gönderilmeyen alana DOKUNULMAZ (kısmi güncelleme): yalnız yıldız gönderen bir istek, daha önce
- * yazılmış (ve onaylanmış) yorumu silmez.
+ * `POST /feedback/:token/review` gövdesi: bir ürünün yıldızı ve yorumu. Gönderilmeyen alana dokunulmaz; boş gövde `review_empty`,
+ * alt sınırın altındaki yorum `comment_too_short` döner.
  */
 export const FeedbackReviewBodySchema = z.object({
   productId: ProductFeedbackSchema.shape.productId,
@@ -104,48 +72,27 @@ export const FeedbackReviewBodySchema = z.object({
   comment: z.string().nullish(),
 });
 
-/** Yazım uçlarının başarı cevabı — kayıt düştü; ilerlemeyi ekran zaten iyimser tutuyor (web emsali). */
+/** Yazım uçlarının başarı cevabı. */
 export const FeedbackAckSchema = z.object({ recorded: z.literal(true) });
 
 /**
- * Akış sonu — hangi kutunun çizileceğini MOTOR söyler (`feedbackOutcomeOf`), ekran değil:
- * "memnun mu" beğeni ORANINA bakan bir eşiktir ve istemcide sayılsaydı iki yerde iki farklı
- * memnuniyet tanımı olurdu.
- *
- * Değerler `@lezzet/domain-core.FeedbackOutcome` birliğinin AYNISI; paket buraya bağlanamaz
- * (`types-is-pure`), bu yüzden bağ derlemede kilitlenir: uç gövdeyi `z.input<…>` ile tipliyor ve
- * motorun birliği bu enum'dan saparsa uç DERLENMEZ (katalog `TextSegment` kilidinin aynı deseni).
+ * Akış sonunu motor söyler (`feedbackOutcomeOf`), çünkü "memnun mu" beğeni oranına bakan bir eşiktir. Değerler motorun birliğiyle
+ * aynıdır; uç gövdeyi `z.input` ile tiplediği için sapma derlemede yakalanır.
  */
 export const FeedbackOutcomeEnum = z.enum(['review_invite', 'report_issue', 'thanks']);
 
-/** `POST /feedback/:token/complete` cevabı — v3 stage2'nin tüm malzemesi. */
+/** `POST /feedback/:token/complete` cevabı. */
 export const FeedbackCompletionSchema = z.object({
   outcome: FeedbackOutcomeEnum,
-  /**
-   * **Bu ÇAĞRININ yazdığı puan** — yani tamamlama primi; ikinci tamamlamada 0 (B2B'de de 0).
-   * Anlamı ve adı değişmedi, yalnız künyesi netleşti: turun TOPLAMI bu değil, `invitePointsTotal`.
-   */
+  /** Bu çağrının yazdığı puan, yani bitirme primi; ikinci tamamlamada 0. */
   pointsAwarded: z.number().int().nonnegative(),
   /**
-   * **Bu davete yazılmış TOPLAM puan** — kart oyları + yorum + tamamlama primi.
-   *
-   * Neden ayrı bir alan (ölçüldü 11.08): oy ve yorum uçları `{ recorded: true }` dönüyor, puanı
-   * SÖYLEMİYOR; cihazda ekran "+5 puan" yazarken deftere 5 + 20 + 5 = **30** yazılmıştı. Üç kayıt da
-   * doğru, eksik olan sözleşmeydi. Toplamı istemcide saymak MOTORU TAKLİT etmek olurdu (CLAUDE §1):
-   * hangi kaydın puan doğurduğuna günlük tavan (`points_daily_cap`), B2B kuralı ve
-   * `(müşteri, sebep, kaynak)` tekilliği karar veriyor — telefon bunların hiçbirini bilmez.
-   *
-   * `pointsAwarded` ile YAN YANA durur ve onun yerine geçmez: biri "bu çağrı ne verdi", öteki "bu
-   * tur ne kazandırdı". İkinci tamamlamada `pointsAwarded` 0 olurken bu alan DOLU kalır — yeniden
-   * açılan teşekkür ekranı turun gerçeğini söylemeye devam etmeli.
-   *
-   * Kaynağı defterdir, çarpım değil: kart sayısı × ayar hesaplaması tavana takılan ya da hiç
-   * yazılmayan kaydı göremezdi.
+   * Bu davete yazılmış toplam puan: oylar, yorumlar ve bitirme primi. Kaynağı defterdir, çünkü hangi kaydın puan doğurduğuna
+   * tavan, B2B kuralı ve kaynak tekilliği karar verir ve ekran bunları bilmez.
    */
   invitePointsTotal: z.number().int().nonnegative(),
-  /** Güncel bakiye — "Toplam ✦ N puan" rozeti (`fv.ptsTotal`). */
   balance: z.number().int(),
-  /** Yalnız `review_invite` sonucunda dolu — dış değerlendirme adresi ve düğmede yazacak ad (ayar). */
+  /** Yalnız `review_invite` sonucunda dolu; dış değerlendirme adresi ve düğmede yazacak ad ayardan. */
   reviewUrl: z.string().nullable(),
   reviewPlatform: z.string().nullable(),
 });

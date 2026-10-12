@@ -19,12 +19,31 @@ interface FieldShellProps {
   optionalLabel?: string;
   labelAside?: ReactNode;
   error?: string;
+  /** Alanın altındaki satırın sağ yuvası (ör. rozet); hata metni aynı satırın solunda kalır. */
+  footerAside?: ReactNode;
   /** Çizim — künyenin biçimi buna bağlı (`FieldVariant`). */
   variant?: FieldVariant;
   children: ReactNode;
 }
 
-export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel, labelAside, error, variant = 'form', children }: FieldShellProps) {
+export function FieldShell({
+  fieldId,
+  label,
+  hideLabel,
+  optional,
+  optionalLabel,
+  labelAside,
+  error,
+  footerAside,
+  variant = 'form',
+  children,
+}: FieldShellProps) {
+  const errorLine = error && (
+    <p className="font-sans text-note font-semibold text-terracotta-bright" id={`${fieldId}-error`} role="alert">
+      {error}
+    </p>
+  );
+
   return (
     <div className="flex flex-col gap-1.5">
       <label
@@ -49,10 +68,13 @@ export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel,
 
       {children}
 
-      {error && (
-        <p className="font-sans text-note font-semibold text-terracotta-bright" id={`${fieldId}-error`} role="alert">
-          {error}
-        </p>
+      {footerAside ? (
+        <div className="flex items-center gap-3">
+          {errorLine}
+          <span className="ml-auto flex-none">{footerAside}</span>
+        </div>
+      ) : (
+        errorLine
       )}
     </div>
   );

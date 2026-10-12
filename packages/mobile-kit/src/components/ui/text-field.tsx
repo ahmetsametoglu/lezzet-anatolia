@@ -81,6 +81,8 @@ interface TextFieldProps {
   accent?: boolean;
   helperText?: string;
   errorText?: string;
+  /** Alanın altındaki satırın sağ yuvası (ör. rozet); yardım ya da hata metni aynı satırın solunda kalır. */
+  footerAside?: ReactNode;
   editable?: boolean;
   testID?: string;
 }
@@ -101,6 +103,7 @@ export function TextField({
   accent = false,
   helperText,
   errorText,
+  footerAside,
   editable = true,
   testID,
 }: TextFieldProps) {
@@ -109,6 +112,12 @@ export function TextField({
   // Tip GENİŞLETİLEREK okunur: sabit tablo `as const` olduğu için üyeler dar birleşim; ortak
   // arayüze bağlamak, "hangi anahtar hangi prop'u taşıyor" sorusunu tek yerde tutar.
   const traits: FieldTraits = CONTENT_TRAITS[content ?? 'none'];
+  const footer =
+    errorText !== undefined ? (
+      <Text style={[styles.helper, styles.errorText]}>{errorText}</Text>
+    ) : helperText !== undefined ? (
+      <Text style={styles.helper}>{helperText}</Text>
+    ) : null;
 
   return (
     <View style={styles.stack}>
@@ -150,10 +159,14 @@ export function TextField({
         />
         {trailing}
       </View>
-      {errorText === undefined ? null : <Text style={[styles.helper, styles.errorText]}>{errorText}</Text>}
-      {errorText === undefined && helperText !== undefined ? (
-        <Text style={styles.helper}>{helperText}</Text>
-      ) : null}
+      {footerAside === undefined ? (
+        footer
+      ) : (
+        <View style={styles.footerRow}>
+          {footer === null ? null : <View style={styles.footerText}>{footer}</View>}
+          <View style={styles.footerAside}>{footerAside}</View>
+        </View>
+      )}
     </View>
   );
 }
@@ -224,5 +237,17 @@ const styles = StyleSheet.create((theme) => ({
   },
   errorText: {
     color: theme.colors.error,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.md,
+  },
+  /** Uzun uyarı satırda kırılır, yuvayı dışarı itmez. */
+  footerText: {
+    flexShrink: 1,
+  },
+  footerAside: {
+    marginLeft: 'auto',
   },
 }));

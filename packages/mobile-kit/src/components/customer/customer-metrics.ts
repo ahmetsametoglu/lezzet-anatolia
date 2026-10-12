@@ -57,9 +57,9 @@ export const customerMetrics = {
   recipeBarSpace: 108,
   /** Paket içerik satırının küçük karesi. */
   packageItemPhoto: 46,
-  /** Geri bildirim akışının oy aşaması: fotoğraf ve oy düğmesi (kitin `controlLg`sinden bilerek büyük); iskelet de okur. */
-  feedbackPhoto: 380,
-  feedbackVoteButton: 56,
+  /** Değerlendirme listesinin satırı: ürün dairesi ve oy dairesi; iskelet de okur. */
+  feedbackRowPhoto: 52,
+  feedbackVoteDot: 42,
 
   /** Sipariş detayındaki canlı takip haritası. */
   mapHeight: 195,

@@ -3,13 +3,16 @@
   Dönüş satır içi `rotate` özelliğiyle: Tailwind derleme anında bilinmeyen açıdan sınıf üretemez, `transform` da basılı ölçeklemeyle çakışırdı.
 */
 
-type TagTone = 'terracotta' | 'ink' | 'cream' | 'sand' | 'muted' | 'blocked';
+type TagTone = 'terracotta' | 'soft' | 'ink' | 'cream' | 'sand' | 'olive' | 'muted' | 'blocked';
 
 const TONE: Record<TagTone, string> = {
   terracotta: 'bg-terracotta text-card',
+  soft: 'bg-terracotta-bg text-terracotta',
   ink: 'bg-ink text-sand-50',
   cream: 'bg-sand-50 text-ink',
   sand: 'bg-sand-150 text-olive-dark',
+  // Hak edilmiş ödül: değerlendirmede yorum puanı kazanılınca rozet zeytine döner.
+  olive: 'bg-olive text-card',
   muted: 'bg-muted text-card',
   // Bu adrese gitmeyen ürünün fiyat çipi: terracotta "al" diyen bir vurgudur, o karta yakışmaz.
   blocked: 'bg-sand-650 text-card',

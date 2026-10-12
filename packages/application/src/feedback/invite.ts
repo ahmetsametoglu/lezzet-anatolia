@@ -9,12 +9,18 @@ import {
   SettingsService,
   UserProfileService,
 } from '@lezzet/database';
-import { feedbackOutcomeOf, type FeedbackOutcome } from '@lezzet/domain-core';
-import { resolveLocalizedText, type PreferredLanguage, type ProductFeedback } from '@lezzet/types';
+import {
+  POINTS_SETTING_KEYS,
+  REVIEW_MIN_WORDS_DEFAULT,
+  REVIEW_MIN_WORDS_KEY,
+  feedbackOutcomeOf,
+  type FeedbackOutcome,
+} from '@lezzet/domain-core';
+import { resolveLocalizedText, type OrderItem, type PreferredLanguage, type ProductFeedback, type ProductVariant } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { imageOf } from '../catalog/map';
 import type { StorefrontImage } from '../catalog/storefront-types';
-import { awardPoints, feedbackCompletionPoints, getPointsBalance, sumInvitePoints } from './points';
+import { POINTS_DEFAULTS, awardPoints, feedbackCompletionPoints, getPointsBalance, sumInvitePoints } from './points';
 
 /*
   Alım sonrası değerlendirme daveti: web sayfası ve native ekran aynı akışı buradan açar. Belirteç oturum yerine geçer; geçersiz ya da
@@ -26,6 +32,8 @@ export interface FeedbackCard {
   productId: string;
   name: string;
   image: StorefrontImage;
+  /** Ürünün siparişteki boyları ve adetleri ("6 adet · 225 g · ×1"); aynı ürünün iki boyu tek kartta yan yana yazılır. */
+  detail: string;
   /** Müşteri bu ürünü zaten değerlendirdiyse mevcut kaydı — akış kaldığı yerden devam eder. */
   existing: { vote: ProductFeedback['vote']; rating: number | null; comment: string | null } | null;
 }
@@ -47,18 +55,46 @@ export interface FeedbackInviteView {
   progress: { rated: number; total: number };
   /** Tamamlamanın kazandıracağı puan ayardan gelir (`points_feedback_purchase`); ekran sayı uydurmaz, ayar değişince yanlış söz verirdi. */
   completionPoints: number;
+  /** Oylanan her ürünün puanı; ekran kural satırında söyler. */
+  votePoints: number;
+  /** Yorum yazılan her ürünün puanı; ekran yorum alanının rozetinde söyler. */
+  reviewPoints: number;
+  /** Puan getiren yorumun en az kelime sayısı; ekran uyarıyı bununla kurar, kararı yazım kapısı verir. */
+  reviewMinWords: number;
   /** Tamamlanmış davet tekrar açılırsa: teşekkür durumu, puan ikinci kez verilmez. */
   completedAt: string | null;
   pointsAwarded: number | null;
 }
 
-/**
- * **Davetin açılması** — bağlantıdaki token'la. Akışın tek giriş kapısı.
- *
- * **Yarıda bırakılan akış kaldığı yerden devam eder:** her kart mevcut değerlendirmesiyle gelir;
- * ekran ilk OYSUZ karttan sürer (ölçüt `existing` değil `existing.vote` — yalnız yorum taşıyan
- * kart hâlâ cevapsızdır).
- */
+/** Akışın müşteriye söylediği sayılar ayardan okunur, çünkü ekranın söylediği puan motorun yazdığıyla aynı olmalı. */
+async function feedbackTerms(db: SupabaseClient): Promise<{ votePoints: number; reviewPoints: number; reviewMinWords: number }> {
+  const settings = new SettingsService(db);
+  const [votePoints, reviewPoints, reviewMinWords] = await Promise.all([
+    feedbackCompletionPoints(db),
+    settings.getNumber(POINTS_SETTING_KEYS.review, POINTS_DEFAULTS.review),
+    settings.getNumber(REVIEW_MIN_WORDS_KEY, REVIEW_MIN_WORDS_DEFAULT),
+  ]);
+  return { votePoints, reviewPoints, reviewMinWords };
+}
+
+/** Kartın alt satırı; boy etiketi yoksa yalnız adet yazılır. */
+function cardDetail(
+  productId: string,
+  items: readonly OrderItem[],
+  variants: readonly ProductVariant[],
+  locale: PreferredLanguage,
+): string {
+  const lines: string[] = [];
+  for (const item of items) {
+    const variant = variants.find((v) => v.id === item.variantId);
+    if (variant?.productId !== productId) continue;
+    const label = resolveLocalizedText(variant.label, locale);
+    lines.push(label ? `${label} · ×${item.qty}` : `×${item.qty}`);
+  }
+  return lines.join(', ');
+}
+
+/** Davetin açılması; her kart mevcut cevabıyla gelir ki yarıda bırakılan akış kaldığı yerden sürsün. */
 export async function openFeedbackInvite(
   db: SupabaseClient,
   locale: PreferredLanguage,
@@ -67,14 +103,13 @@ export async function openFeedbackInvite(
   const request = await new FeedbackRequestService(db).findByToken(token);
   if (!request) return null;
 
-  const [order, items, progress, given, customer, completionPoints] = await Promise.all([
+  const [order, items, progress, given, customer, terms] = await Promise.all([
     new OrderService(db).getById(request.orderId),
     new OrderItemService(db).listByOrder(request.orderId),
     new FeedbackProgressService(db).getByRequest(request.id),
     new ProductFeedbackService(db).listByRequest(request.id),
     new UserProfileService(db).getById(request.customerId),
-    // Sözün sayısı ayardan; ekran kendi rakamını uydurmaz. Varsayılan `points.ts`te TEK yerde.
-    feedbackCompletionPoints(db),
+    feedbackTerms(db),
   ]);
 
   // Kalem varyanta bağlı, kart ürüne: aynı ürünün iki boyu TEK karttır.
@@ -90,13 +125,15 @@ export async function openFeedbackInvite(
     customerName: customer?.name ?? null,
     orderReferenceNo: order?.referenceNo ?? null,
     orderedOn: order?.createdAt ?? null,
-    completionPoints,
+    completionPoints: terms.votePoints,
+    ...terms,
     cards: products.map((product) => {
       const existing = givenByProduct.get(product.id);
       return {
         productId: product.id,
         name: resolveLocalizedText(product.name, locale),
         image: imageOf(product),
+        detail: cardDetail(product.id, items, variants, locale),
         existing: existing ? { vote: existing.vote, rating: existing.rating, comment: existing.comment } : null,
       };
     }),
@@ -171,12 +208,14 @@ export async function completeFeedbackInvite(db: SupabaseClient, token: string):
   return { outcome, pointsAwarded: points, invitePointsTotal, balance: balance.balance, ...invite };
 }
 
-/** Siparişin AÇIK değerlendirme daveti — sipariş ekranının teşvik bloğunun tek kaynağı. */
+/** Siparişin açık değerlendirme daveti — sipariş ekranının teşvik bloğunun tek kaynağı. */
 export interface OrderFeedbackInvite {
   /** Akışın anahtarı; ekran `/feedback/[token]`e bununla gider (oturum yerine geçer). */
   token: string;
-  /** Tamamlamanın kazandıracağı puan — AYARDAN, ekran sayı uydurmaz (`FeedbackInviteView` künyesi). */
-  completionPoints: number;
+  /** Oylanan her ürünün puanı; teşvik metni akıştaki kural satırıyla aynı sayıları söyler. */
+  votePoints: number;
+  /** Yorum yazılan her ürünün puanı. */
+  reviewPoints: number;
 }
 
 /**
@@ -188,5 +227,6 @@ export async function readOrderFeedbackInvite(db: SupabaseClient, orderId: strin
   if (!request || request.completedAt !== null) return null;
   // Süresi dolmuş token akışı açmaz (`openFeedbackInvite` da reddeder); teşvik onu vaat etmemeli.
   if (Date.parse(request.expiresAt) <= Date.now()) return null;
-  return { token: request.token, completionPoints: await feedbackCompletionPoints(db) };
+  const { votePoints, reviewPoints } = await feedbackTerms(db);
+  return { token: request.token, votePoints, reviewPoints };
 }

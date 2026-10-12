@@ -5,24 +5,11 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 
 /*
-  EĞİK ROZET — v3'ün en çok yinelenen öğesi (~18 kullanım): fiyat çipi · "Tükendi" · "İNDİRİM" ·
-  "TOPTAN" · geri sayım · takip çipi hep budur. İmzası hafif dönüştür (tasarımda −7°…+6°);
-  açı içeriğe göre değişir, o yüzden PROP — sabit bir açı rozetleri birbirinin kopyası yapardı.
-
-  Beş ton, hepsi token: terracotta (fiyat/fırsat) · ink (koyu vurgu) · cream (fotoğraf ve koyu
-  blok üstünde) · sand (puan, yumuşak vurgu) · blocked (bu adrese gitmeyen ürünün fiyat çipi).
-
-  YAZI VE GÖLGE ARTIK KENDİ KADEMESİNDE (Token Kararlari #16): daha önce ölçü `field-label`den,
-  ağırlık `button`dan devşiriliyor ve gölge `shadow.soft`la kuruluyordu — üç ayrı kademeden
-  toplanan bir dördüncü kademe, üçünden biri kendi gerekçesiyle değiştiği gün rozeti sessizce
-  bozardı. Bugün üçü de `badge` adını taşıyor ve tek karardan değişiyor.
-
-  DÖNÜŞ NEDEN DIŞ SARMALAYICIDA: basılı durum `scale` uyguluyor ve RN'de `transform` dizisi
-  BÜTÜN olarak değişir — dönüş iç yüzeyde olsaydı basıldığı an kaybolurdu. Dışta durunca ikisi
-  üst üste biner (tasarımdaki `transform:scale(.9) rotate(-2deg)` ile aynı sonuç).
+  Eğik rozet: fiyat çipi, "Tükendi", "İNDİRİM", geri sayım ve puan rozeti hep budur. Açı içeriğe göre değiştiği için prop; dönüş dış
+  sarmalayıcıda, çünkü basılı durumun `scale`ı iç yüzeyde ve RN `transform` dizisini bütün olarak değiştirir.
 */
 
-type TagTone = 'terracotta' | 'ink' | 'cream' | 'sand' | 'blocked';
+type TagTone = 'terracotta' | 'soft' | 'ink' | 'cream' | 'sand' | 'olive' | 'blocked';
 
 interface TagProps {
   /** Rozet metni — i18n üstte çözülür, komponent metin gömmez. */
@@ -32,14 +19,7 @@ interface TagProps {
   rotate?: number;
   /** Sert değil YUMUŞAK gölge — fotoğraf üstünde duran rozetler bunu taşır. */
   shadow?: boolean;
-  /**
-   * Köşe kademesi (kullanıcı isteği 23.08 — *"biraz daha yuvarlak, dikkat çekici"*).
-   *
-   * Varsayılan `badge` (12px) bugünkü ~18 kullanımın hepsinin hâli; `pill` (22px) resmî setin
-   * "hap düğme, çip, sayaç" kademesidir (`customerAppRadius` künyesi). Prop, çünkü kademeyi
-   * komponentin tamamına dayatmak tasarımın dört kademeli kararını üçe indirirdi — burada
-   * daha yuvarlak istenen TEK bir rozet var, hepsi değil.
-   */
+  /** Köşe kademesi; `pill` daha yuvarlak ve dikkat çekici, tek tek rozetler için. */
   shape?: 'badge' | 'pill';
   /** Verilirse rozet dokunulabilir olur (fiyat çipi "sepete ekle" gibi). */
   onPress?: () => void;
@@ -94,7 +74,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   pill: { borderRadius: theme.radius.pill },
   shadow: {
-    // Rozetin KENDİ gölgesi (#16): `soft`un 1 px yüksekliği fotoğraf üstünde yetmiyordu.
+    // `soft` gölgenin 1 px yüksekliği fotoğraf üstünde yetmiyor.
     boxShadow: theme.shadow.badge,
   },
   label: {
@@ -104,12 +84,17 @@ const styles = StyleSheet.create((theme) => ({
   },
   terracotta: { backgroundColor: theme.colors.terracotta },
   terracottaLabel: { color: theme.colors.card },
+  soft: { backgroundColor: theme.colors['terracotta-bg'] },
+  softLabel: { color: theme.colors.terracotta },
   ink: { backgroundColor: theme.colors.ink },
   inkLabel: { color: theme.colors['sand-50'] },
   cream: { backgroundColor: theme.colors['sand-50'] },
   creamLabel: { color: theme.colors.ink },
   sand: { backgroundColor: theme.colors['sand-150'] },
   sandLabel: { color: theme.colors['olive-dark'] },
+  /* Tamamlanmış ödül: değerlendirmede yorum puanı hak edildiğinde rozet zeytine döner. */
+  olive: { backgroundColor: theme.colors.olive },
+  oliveLabel: { color: theme.colors.card },
   /* Fiyat çipi bu adrese gitmeyen üründe susar: aynı çip terracottayken "al" diyen bir vurgudur. */
   blocked: { backgroundColor: theme.colors['sand-650'] },
   blockedLabel: { color: theme.colors.card },

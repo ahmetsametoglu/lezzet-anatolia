@@ -7,16 +7,7 @@ import {
   FeedbackVoteBodySchema,
 } from './feedback-api.schema';
 
-/**
- * Geri bildirim SÖZLEŞMESİNİN kendi kuralları — DB'siz, saf `parse` davranışı.
- *
- * Sınanan şey akış değil (o `@lezzet/application`ın entegrasyon testinde), sözleşmenin verdiği
- * sözler: **kimlik zarfa sızmaz** (uç `parse` ile süzer — buradaki iddia o süzgecin kendisi),
- * kartsız davet şemadan geçmez (`min(1)`), gövde şemaları geçersiz değeri reddeder.
- *
- * Import GÖRELİ: bu şemalar `contracts/index.ts`ten henüz ihraç edilmiyor (satırları ana şerit
- * ekleyecek); test barrel'a değil dosyanın kendisine bakar.
- */
+/** Sözleşmenin kendi sözleri, DB'siz: kimlik zarfa sızmaz, kartsız davet geçmez, gövde şemaları geçersiz değeri reddeder. */
 
 /** Uygulama görünümünün taşıdığı FAZLA alanlarla birlikte geçerli bir davet gövdesi. */
 function inviteBody() {
@@ -32,11 +23,15 @@ function inviteBody() {
         productId: 'c0ffee00-0000-4000-8000-000000000003',
         name: 'Su Böreği',
         image: { url: null, crop: { x: 50, y: 50, zoom: 100 }, frames: null },
+        detail: '500 g · ×1',
         existing: null,
       },
     ],
     progress: { rated: 0, total: 1 },
     completionPoints: 5,
+    votePoints: 5,
+    reviewPoints: 20,
+    reviewMinWords: 2,
     completedAt: null,
     pointsAwarded: null,
   };

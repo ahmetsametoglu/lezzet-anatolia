@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { feedbackReviewTarget, previousFeedbackVotes } from '@lezzet/domain-core';
+import { meetsReviewMinimum, pendingFeedbackComments, previousFeedbackComments, previousFeedbackVotes } from '@lezzet/domain-core';
 import type { FeedbackCompletion, FeedbackInvite, FeedbackVote } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
@@ -11,35 +11,41 @@ import {
 } from '@/lib/api/feedback';
 
 /*
-  Değerlendirme akışının verisi: okuma ve yazma tek yerde, ekran yalnız çizer. Oylar iyimserdir ki akış her kartta duraklamasın,
-  ama düşen yazım geri alınır, çünkü ekranda duran ama sunucuda olmayan cevap müşteriye yapmadığı bir işi yaptığını söyler.
+  Değerlendirme akışının verisi: okuma ve yazma burada, ekran yalnız çizer. Oylar iyimserdir, ama düşen yazım geri alınır, çünkü
+  ekranda duran ama sunucuda olmayan cevap müşteriye yapmadığı bir işi yaptığını söyler.
 */
 
-/** İlk yükün dört hâli — `missing` = uç 404 dedi (davet yok/eskimiş), `error` = telin arızası. */
+/** İlk yükün hâlleri: `missing` uç 404 dedi (davet yok ya da eskimiş), `error` telin arızası. */
 type FeedbackStatus = 'loading' | 'ready' | 'missing' | 'error';
 
 interface UseFeedbackResult {
   status: FeedbackStatus;
-  /** Yalnız `ready` hâlinde dolu. */
   invite: FeedbackInvite | null;
-  /** Ürün kimliği → oy; açılışta önceki cevaplarla tohumlanır ki yarıda bırakılan akış sürsün. */
+  /** Ürün → oy; açılışta önceki cevaplarla tohumlanır ki yarıda bırakılan akış sürsün. */
   votes: Record<string, FeedbackVote>;
-  /** Son yazımın ret anahtarı — cümleyi ekran kurar; yeni bir denemede sıfırlanır. */
+  /** Ürün → yorum metni. */
+  comments: Record<string, string>;
+  /** Yorum alanı açık ürünler; önceki yorumu olan ürün açık başlar. */
+  openComments: ReadonlySet<string>;
+  /** "Tamamla"dan sonra alt sınırın altında kalan yorumlar; müşteri yazdıkça işaret kalkar. */
+  shortComments: ReadonlySet<string>;
   errorKey: string | null;
-  /** Tamamlama uçuşta — "Değerlendirmeyi tamamla" düğmesi bunu okur. */
   finishing: boolean;
-  /** Dolu ise akış bitti: sonuç, puan ve dış değerlendirme bağlantısı cevaptan gelir. */
   completion: FeedbackCompletion | null;
   retry: () => void;
   vote: (productId: string, value: FeedbackVote) => void;
-  /** Yorum boşsa yazım ucu hiç çağrılmaz; tamamlama her hâlde çağrılır. */
-  finish: (comment: string) => Promise<void>;
+  openComment: (productId: string) => void;
+  setComment: (productId: string, text: string) => void;
+  finish: () => Promise<void>;
 }
 
 export function useFeedback(token: string, locale: Locale): UseFeedbackResult {
   const [status, setStatus] = useState<FeedbackStatus>('loading');
   const [invite, setInvite] = useState<FeedbackInvite | null>(null);
   const [votes, setVotes] = useState<Record<string, FeedbackVote>>({});
+  const [comments, setComments] = useState<Record<string, string>>({});
+  const [openComments, setOpenComments] = useState<ReadonlySet<string>>(new Set());
+  const [shortComments, setShortComments] = useState<ReadonlySet<string>>(new Set());
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [completion, setCompletion] = useState<FeedbackCompletion | null>(null);
@@ -50,14 +56,17 @@ export function useFeedback(token: string, locale: Locale): UseFeedbackResult {
     setStatus('loading');
     setErrorKey(null);
     void fetchFeedbackInvite(token, locale).then((result) => {
-      // "Tekrar dene"ye art arda basan parmağın iki uçuşu: eski cevap sayacı tutmadığı için yazılmaz.
+      // Art arda "tekrar dene"nin eski cevabı yazılmaz.
       if (run !== generation.current) return;
       if (result.error !== null) {
         setStatus(result.status === 404 ? 'missing' : 'error');
         return;
       }
+      const previous = previousFeedbackComments(result.data.cards);
       setInvite(result.data);
       setVotes(previousFeedbackVotes(result.data.cards));
+      setComments(previous);
+      setOpenComments(new Set(Object.keys(previous)));
       setStatus('ready');
     });
   }, [locale, token]);
@@ -83,37 +92,71 @@ export function useFeedback(token: string, locale: Locale): UseFeedbackResult {
     [token],
   );
 
-  const finish = useCallback(
-    async (comment: string): Promise<void> => {
-      if (invite === null || finishing) return;
-      setFinishing(true);
-      setErrorKey(null);
+  const openComment = useCallback((productId: string) => {
+    setOpenComments((prev) => new Set(prev).add(productId));
+  }, []);
 
-      /* Yorum önce, tamamlama sonra; yorum düşerse tamamlama çağrılmaz, çünkü akış kapanınca müşteri o kutuya dönemez ve yazdığı
-         sessizce kaybolurdu. */
-      const trimmed = comment.trim();
-      if (trimmed.length > 0) {
-        const productId = feedbackReviewTarget(invite.cards, votes);
-        if (productId !== null) {
-          const review = await submitFeedbackReview(token, { productId, comment: trimmed });
-          if (review.error !== null) {
-            setFinishing(false);
-            setErrorKey(review.error);
-            return;
-          }
-        }
-      }
+  const setComment = useCallback((productId: string, text: string) => {
+    setComments((prev) => ({ ...prev, [productId]: text }));
+    setShortComments((prev) => {
+      if (!prev.has(productId)) return prev;
+      const next = new Set(prev);
+      next.delete(productId);
+      return next;
+    });
+  }, []);
 
-      const result = await completeFeedback(token);
-      setFinishing(false);
-      if (result.error !== null) {
-        setErrorKey(result.error);
+  const finish = useCallback(async (): Promise<void> => {
+    if (invite === null || finishing) return;
+    if (invite.cards.some((card) => votes[card.productId] === undefined)) return;
+
+    const pending = pendingFeedbackComments(invite.cards, comments);
+    const short = pending.filter((entry) => !meetsReviewMinimum(entry.text, invite.reviewMinWords)).map((entry) => entry.productId);
+    if (short.length > 0) {
+      setShortComments(new Set(short));
+      return;
+    }
+
+    setFinishing(true);
+    setErrorKey(null);
+    // Yorumlar tamamlamadan önce gider; biri düşerse akış açık kalır ki müşteri yazdığına dönebilsin.
+    for (const entry of pending) {
+      const review = await submitFeedbackReview(token, { productId: entry.productId, comment: entry.text });
+      if (review.error === 'comment_too_short') {
+        setShortComments(new Set([entry.productId]));
+        setFinishing(false);
         return;
       }
-      setCompletion(result.data);
-    },
-    [finishing, invite, token, votes],
-  );
+      if (review.error !== null) {
+        setErrorKey(review.error);
+        setFinishing(false);
+        return;
+      }
+    }
 
-  return { status, invite, votes, errorKey, finishing, completion, retry: load, vote, finish };
+    const result = await completeFeedback(token);
+    setFinishing(false);
+    if (result.error !== null) {
+      setErrorKey(result.error);
+      return;
+    }
+    setCompletion(result.data);
+  }, [comments, finishing, invite, token, votes]);
+
+  return {
+    status,
+    invite,
+    votes,
+    comments,
+    openComments,
+    shortComments,
+    errorKey,
+    finishing,
+    completion,
+    retry: load,
+    vote,
+    openComment,
+    setComment,
+    finish,
+  };
 }

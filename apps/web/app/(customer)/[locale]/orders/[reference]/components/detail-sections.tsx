@@ -352,13 +352,13 @@ export function HelpCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
 export function FeedbackInviteCard({
   t,
   invite,
-}: Pick<DetailViewProps, 't'> & { invite: { token: string; completionPoints: number } | null }) {
+}: Pick<DetailViewProps, 't'> & { invite: DetailViewProps['feedbackInvite'] }) {
   if (invite === null) return null;
   return (
     <section className="flex flex-col gap-2 rounded-soft border border-dashed border-olive bg-olive-bg px-5.5 py-4.5">
       <span className="font-serif text-copy font-semibold leading-tight text-ink">{t.feedback.title}</span>
       <span className="font-sans text-note leading-relaxed text-body">
-        {t.feedback.body.replace('{points}', String(invite.completionPoints))}
+        {t.feedback.body.replace('{vote}', String(invite.votePoints)).replace('{review}', String(invite.reviewPoints))}
       </span>
       <Link href={{ pathname: '/feedback/[token]', params: { token: invite.token } }} className={buttonClass({ fullWidth: true })}>
         {t.feedback.cta}

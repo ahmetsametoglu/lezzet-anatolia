@@ -5,26 +5,8 @@ import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, envelopeError } from '../../lib/testing';
 
 /**
- * MÜŞTERİNİN SİPARİŞLERİ — `/api/v1/me/orders`, iki uç.
- *
- * ── ÇİVİLENEN ASIL KARAR: SAHİPLİK JETONDAN ─────────────────────────────────
- * Liste ve detay, kimliği **jetondan** çözüp sorguyu ona daraltıyor. Bu kural gevşerse müşteri,
- * referans numarasını tahmin ettiği HERKESİN siparişini okuyabilir — adres, telefon, kalemler.
- * Referans numarası gizli bir değer değil; gizliliği sağlayan tek şey bu daraltma.
- *
- * Gevşemesi de sessiz olur: sorgudan `customerId` düşerse liste yine dolu döner, detay yine
- * çalışır, hiçbir yer hata vermez. Yalnız artık başkasınınkini de verir.
- *
- * ── SAHİPLİK ÇİFT KAT KORUNUYOR (ölçüldü 25.08, sabotajla) ──────────────────
- * Detay yolunda iki bağımsız süzgeç var: `OrderService.findByReference` sorguyu kimliğe daraltıyor
- * VE `getCustomerOrderDetail` dönen satırı ayrıca doğruluyor (`order.customerId !== input.customerId`).
- * Tek katı kaldırmak bu testi DÜŞÜRMEDİ — öteki tuttu; ikisi birden kalkınca düştü.
- * Yani buradaki iddia bir katmanı değil, **korumanın kendisini** ölçüyor: yarını kaldıran bir
- * "sadeleştirme" fark edilmeden geçebilir, ikisini birden kaldıran geçemez.
- *
- * ── İKİNCİ KARAR: OLMAYAN SİPARİŞ 404, BOŞ CEVAP DEĞİL ──────────────────────
- * `order_not_found` adlı bir rettir; boş bir gövde dönmek ekranı "sipariş var ama içi yok" diye
- * çizmeye bırakırdı.
+ * Müşterinin sipariş uçları: liste ve detay kimliği jetondan çözüp sorguyu ona daraltır; gevşerse referansı tahmin eden başkasının
+ * siparişini okur ve hiçbir yer hata vermez. Olmayan sipariş adlı ret döner, boş gövde ekranı "var ama içi yok" diye çizmeye bırakırdı.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -64,10 +46,8 @@ beforeAll(async () => {
 
   // ÖTEKİ müşterinin siparişi — sahiplik iddiasının ancak gerçekten var olan ama görünmemesi
   // gereken bir kayıtla sınanabilmesi için (kurye testinin "yabancı depo" deseni).
-  /* REFERANS SONRADAN YAZILIR — `create` onu almıyor (üretimde sipariş akışı atıyor) ve kolon
-     nullable. Fikstürde AÇIKÇA yazılması şart: ucun kendi künyesi *"referanssız sipariş listeden
-     düşürülür"* diyor, yani referanssız bir kayıtla ne liste ne detay sınanabilirdi — testler
-     "sipariş yok" diye, yanlış sebeple düşerdi (ölçüldü 25.08). */
+  /* Referans fikstürde açıkça yazılır; `create` onu almaz ve uç referanssız siparişi listeden düşürür, testler yanlış sebeple
+     düşerdi. */
   const referans = `LZT-${stamp}`;
   const { order } = await new OrderService(db).create(
     { warehouseId, customerId: oteki.profileId, channel: 'b2c', deliveryType: 'shipping', orderedTotalCents: 2000 },
@@ -119,9 +99,8 @@ describe('GET /api/v1/me/orders — liste', () => {
 
 describe('GET /api/v1/me/orders/:reference — detay', () => {
   it('BAŞKASININ referansı 404 — referans numarası gizli bir değer değildir', async () => {
-    /* Bu dosyanın asıl iddiası. Referans numarası mailde, faturada, kargo etiketinde dolaşıyor;
-       gizliliği sağlayan tek şey sorgunun kimliğe daraltılması. Daraltma düşerse burası 200
-       döner ve o an başkasının adresi, telefonu ve kalemleri okunabilir hâle gelir. */
+    /* Referans numarası mailde ve etikette dolaşır, gizliliği yalnız sorgunun kimliğe daraltılması sağlar. Daraltma düşerse
+       burası 200 döner ve başkasının adresi okunur. */
     const res = await app.request(`/api/v1/me/orders/${otekiReferansi}?locale=tr`, { headers: bearer(benimToken) });
 
     expect(res.status).toBe(404);
@@ -157,7 +136,7 @@ describe('yorum teşviki — sipariş detayındaki AÇIK davet (27.08)', () => {
   */
   const requests = () => new FeedbackRequestService(db);
   const detayOku = async () =>
-    envelopeData<{ feedback: { token: string; points: number } | null }>(
+    envelopeData<{ feedback: { token: string; votePoints: number; reviewPoints: number } | null }>(
       await app.request(`/api/v1/me/orders/${otekiReferansi}?locale=tr`, { headers: bearer(otekiToken) }),
     );
 
@@ -175,8 +154,9 @@ describe('yorum teşviki — sipariş detayındaki AÇIK davet (27.08)', () => {
 
     const detail = await detayOku();
     expect(detail.feedback?.token).toBe(`fb-open-${stamp}`);
-    // Sayı ayardan türer; ekran onu cümleye koyuyor. Sıfır/eksi bir vaat sözleşmede zaten geçmez.
-    expect(detail.feedback?.points).toBeGreaterThan(0);
+    // Sayılar ayardan türer ve teşvik cümlesine girer; boş kalırlarsa ekran sıfır puan vaat eder.
+    expect(detail.feedback?.votePoints).toBeGreaterThan(0);
+    expect(detail.feedback?.reviewPoints).toBeGreaterThan(0);
 
     await db.from('feedback_request').delete().eq('id', request.id);
   });

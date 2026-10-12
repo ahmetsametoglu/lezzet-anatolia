@@ -25,7 +25,8 @@
     "myPoints": "Puan bakiyem →",
     "errors": {
       "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
-      "review_empty": "Yıldız verin ya da birkaç kelime yazın."
+      "review_empty": "Yıldız verin ya da birkaç kelime yazın.",
+      "comment_too_short": "Yorumunuz çok kısa; birkaç kelime daha yazın."
     }
   },
   "fr": {
@@ -54,7 +55,8 @@
     "myPoints": "Mon solde de points →",
     "errors": {
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
-      "review_empty": "Mettez une note ou écrivez quelques mots."
+      "review_empty": "Mettez une note ou écrivez quelques mots.",
+      "comment_too_short": "Votre commentaire est trop court ; ajoutez quelques mots."
     }
   },
   "de": {
@@ -83,7 +85,8 @@
     "myPoints": "Mein Punktestand →",
     "errors": {
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
-      "review_empty": "Vergeben Sie eine Bewertung oder schreiben Sie ein paar Worte."
+      "review_empty": "Vergeben Sie eine Bewertung oder schreiben Sie ein paar Worte.",
+      "comment_too_short": "Ihr Kommentar ist zu kurz – schreiben Sie ein paar Worte mehr."
     }
   }
 }

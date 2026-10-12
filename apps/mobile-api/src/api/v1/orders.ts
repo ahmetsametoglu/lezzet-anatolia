@@ -179,10 +179,9 @@ orders.get('/:reference', async (c) => {
     paymentStatus: detail.paymentStatus,
     onAccount: detail.onAccount,
     shipment: toMeShipment(detail.shipment),
-    /* Davet okuması detayın ARDINDAN: siparişin var olduğu (ve bu müşteriye ait olduğu) kanıtlanmadan
-       token okumak, başkasının siparişinin anahtarını sorgulamak olurdu. Kural motorda
-       (`readOrderFeedbackInvite`), uç yalnız zarfa koyar. */
-    feedback: feedback === null ? null : { token: feedback.token, points: feedback.completionPoints },
+    /* Davet detayın ardından okunur; sipariş bu müşteriye ait kanıtlanmadan belirteç okumak başkasının siparişinin anahtarını
+       sorgulamak olurdu. */
+    feedback,
   };
   return ok(c, MeOrderDetailSchema.parse(body));
 });

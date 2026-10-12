@@ -127,13 +127,18 @@ describe('yazım uçları', () => {
     expect(((await bozuk.json()) as { error: string }).error).toBe('invalid_body');
   });
 
-  it('boş yorum adlı rettir (review_empty); dolu yorum kaydolur', async () => {
+  // Tek kelimelik yorum kaydedilirse alt sınır yalnız ekranda kalır ve puanlı yorum tek tuşla geçilir; bu test kırmızıya döner.
+  it('boş yorum review_empty, tek kelime comment_too_short döner; iki kelimelik yorum kaydolur', async () => {
     const request = await inviteForOrder();
     const bos = await postJson(`/api/v1/feedback/${request.token}/review`, { productId });
     expect(bos.status).toBe(400);
     expect(((await bos.json()) as { error: string }).error).toBe('review_empty');
 
-    const dolu = await postJson(`/api/v1/feedback/${request.token}/review`, { productId, comment: `Enfesti ${stamp}` });
+    const kisa = await postJson(`/api/v1/feedback/${request.token}/review`, { productId, comment: `Enfesti ${stamp}` });
+    expect(kisa.status).toBe(400);
+    expect(((await kisa.json()) as { error: string }).error).toBe('comment_too_short');
+
+    const dolu = await postJson(`/api/v1/feedback/${request.token}/review`, { productId, comment: `Gerçekten enfesti ${stamp}` });
     expect(dolu.status).toBe(200);
   });
 });

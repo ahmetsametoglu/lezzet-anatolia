@@ -101,7 +101,7 @@
       "onTheWayShipping": "Siparişiniz kargoya verildi — taşıyıcı adresinize getiriyor",
       "feedback": {
         "title": "Aldığınız ürünlere yorum yazın",
-        "body": "Birkaç dokunuşla değerlendirin — {points} puan kazanın ve bir sonraki alışverişinizde kullanın.",
+        "body": "Aldığınız her ürün için oy +{vote}, yorum +{review} puan — bir sonraki alışverişinizde kullanın.",
         "cta": "Değerlendirmeye başla"
       },
       "deliveryPickup": "Depodan teslim",
@@ -218,7 +218,7 @@
       "onTheWayShipping": "Votre commande a été remise au transporteur",
       "feedback": {
         "title": "Donnez votre avis sur vos produits",
-        "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
+        "body": "Pour chaque produit : avis +{vote}, commentaire +{review} points — à utiliser lors de votre prochaine commande.",
         "cta": "Commencer l'évaluation"
       },
       "deliveryPickup": "Retrait à l'entrepôt",
@@ -335,7 +335,7 @@
       "onTheWayShipping": "Ihre Bestellung wurde an den Versanddienstleister übergeben",
       "feedback": {
         "title": "Bewerten Sie Ihre Produkte",
-        "body": "Ein paar Fingertipps genügen – sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
+        "body": "Pro Produkt: Bewertung +{vote}, Kommentar +{review} Punkte – einlösbar bei Ihrem nächsten Einkauf.",
         "cta": "Bewertung starten"
       },
       "deliveryPickup": "Abholung im Lager",

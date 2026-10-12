@@ -104,14 +104,13 @@ beforeEach(() => {
 });
 
 describe('sipariş detayı · yorum teşviki', () => {
-  it('AÇIK davet varken blok çizilir ve puanı SUNUCUDAN söyler', async () => {
-    await renderScreen({ token: TOKEN, points: 5 });
+  it('AÇIK davet varken blok çizilir ve puanları SUNUCUDAN söyler', async () => {
+    await renderScreen({ token: TOKEN, votePoints: 3, reviewPoints: 12 });
 
     expect(screen.getByTestId('order-feedback-invite')).toBeOnTheScreen();
     expect(screen.getByText(t.feedback.title)).toBeOnTheScreen();
-    // Cümledeki sayı zarftan gelir: ekran kendi rakamını yazsaydı ayar değiştiği gün
-    // müşteriye sistemin vermeyeceği bir ödül vaat edilirdi.
-    expect(screen.getByText(t.feedback.body.replace('{points}', '5'))).toBeOnTheScreen();
+    // Ekran kendi rakamını yazsaydı ayar değiştiği gün müşteriye sistemin vermeyeceği bir ödül vaat edilirdi.
+    expect(screen.getByText(t.feedback.body.replace('{vote}', '3').replace('{review}', '12'))).toBeOnTheScreen();
   });
 
   it('davet YOKKEN blok HİÇ çizilmez — ölü kutu yok', async () => {
@@ -122,7 +121,7 @@ describe('sipariş detayı · yorum teşviki', () => {
   });
 
   it('düğme akışı DAVETİN TOKEN’ıyla açar — bildirimin indiği sayfa boş vaat olmasın', async () => {
-    await renderScreen({ token: TOKEN, points: 5 });
+    await renderScreen({ token: TOKEN, votePoints: 3, reviewPoints: 12 });
 
     await fireEvent.press(screen.getByTestId('order-feedback-cta'));
 
@@ -210,7 +209,7 @@ describe('sipariş detayı · eksik karşılama', () => {
   it('tutar sütununda SİPARİŞ EDİLENİN tutarı üstü çizili, ödenecek olan yanında', async () => {
     await renderScreen(null, { lines: eksikSatir(), totalCents: 2392 });
 
-    // 15,72 + 22,47 = 38,19 — sipariş edilen 2 adedin tutarı. Sözleşmeden türer, alan eklenmedi.
+    // 15,72 + 22,47 = 38,19: sipariş edilen 2 adedin tutarı, sözleşmenin var olan alanlarından türer.
     expect(screen.getByTestId('order-line-was-line-1')).toHaveTextContent(/38,19/);
     expect(screen.getByTestId('order-line-was-line-1')).toHaveStyle({ textDecorationLine: 'line-through' });
   });

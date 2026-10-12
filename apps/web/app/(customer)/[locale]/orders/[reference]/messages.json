@@ -46,7 +46,7 @@
     "amountTitle": "Tutar",
     "feedback": {
       "title": "Aldığınız ürünlere yorum yazın",
-      "body": "Birkaç dokunuşla değerlendirin — {points} puan kazanın ve bir sonraki alışverişinizde kullanın.",
+      "body": "Aldığınız her ürün için oy +{vote}, yorum +{review} puan — bir sonraki alışverişinizde kullanın.",
       "cta": "Değerlendirmeye başla"
     },
     "pickupLine": "Depodan teslim"
@@ -98,7 +98,7 @@
     "amountTitle": "Montant",
     "feedback": {
       "title": "Donnez votre avis sur vos produits",
-      "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
+      "body": "Pour chaque produit : avis +{vote}, commentaire +{review} points — à utiliser lors de votre prochaine commande.",
       "cta": "Commencer l'évaluation"
     },
     "pickupLine": "Retrait à l'entrepôt"
@@ -150,7 +150,7 @@
     "amountTitle": "Betrag",
     "feedback": {
       "title": "Bewerten Sie Ihre Produkte",
-      "body": "Ein paar Klicks genügen – sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
+      "body": "Pro Produkt: Bewertung +{vote}, Kommentar +{review} Punkte – einlösbar bei Ihrem nächsten Einkauf.",
       "cta": "Bewertung starten"
     },
     "pickupLine": "Abholung im Lager"

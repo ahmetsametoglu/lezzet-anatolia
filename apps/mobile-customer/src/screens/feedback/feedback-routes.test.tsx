@@ -4,21 +4,14 @@ import { renderShell } from '@lezzet/mobile-kit/src/testing/render-shell';
 import { feedbackInvite } from './feedback-fixture';
 
 /*
-  GERİ BİLDİRİM ROTASININ SMOKE TESTİ — rota dosyası GERÇEK (`./src/app` diskten taranır).
-  Doğrulanan ekranın içi değil, derin bağlantı ADRESİNİN var olduğu ve token'ı ekrana taşıdığıdır:
-  bu rotaya uygulama içinden gidilmez, mail/bildirim bağlantısından gelinir — adres kanıtsız
-  kalsaydı kırık bir mail bağlantısını ilk müşteri bulurdu.
-
-  AĞ MOCK'LANIR: ekran daveti gerçek uçtan okuyor (10.08) — rota testi de o yolu kateder, çünkü
-  token'ın ekrana ULAŞTIĞINI ancak istekteki adresle kanıtlayabiliriz.
+  Rota dosyası gerçektir (`./src/app` diskten taranır): bu rotaya uygulama içinden gidilmez, e-postadaki bağlantıdan gelinir, bu yüzden
+  adresin var olduğu ve belirteci ekrana taşıdığı ancak burada kanıtlanır. Ağ sahtedir, çünkü belirtecin ekrana ulaştığı istekteki adresten okunur.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
-/* Onboarding bayrağı "görüldü": derin bağlantı senaryosu ilk açılış DEĞİLDİR — davet maili
-   kurulu bir cihaza gelir. Bayrak mock'lanmasa kök kapı her rotayı `/onboarding`e çevirir.
-   Anlık görüntü SABİT nesne: `useSyncExternalStore` her çağrıda yeni nesne görürse sonsuz
-   yeniden çizime girer (ölçüldü — "Maximum update depth exceeded"). */
+/* Derin bağlantı kurulu bir cihaza gelir, bu yüzden tanıtım "görüldü" sayılır; yoksa kök kapı her rotayı `/onboarding`e çevirir.
+   Anlık görüntü sabit nesnedir, çünkü `useSyncExternalStore` her çağrıda yeni nesne görürse sonsuz yeniden çizime girer. */
 jest.mock('@/lib/onboarding/onboarding-store', () => {
   const snapshot = { done: true };
   return {
@@ -50,11 +43,11 @@ beforeEach(() => {
 });
 
 describe('geri bildirim rotası', () => {
-  it('/feedback/<token> daveti açar ve oy aşamasıyla başlar', async () => {
+  it('/feedback/<token> daveti açar ve ürün listesiyle başlar', async () => {
     const { app } = await renderShell('/feedback/gecerli-davet');
 
     expect(app).toHavePathname('/feedback/gecerli-davet');
-    await waitFor(() => expect(screen.getByTestId('feedback-vote')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('feedback-list')).toBeOnTheScreen());
   });
 
   it('bilinmeyen token aynı rotada "bulunamadı" durumunu açar', async () => {

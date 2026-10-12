@@ -27,6 +27,8 @@ import {
   POINTS_REDEEM_MAX_DEFAULT,
   POINTS_REDEEM_MAX_KEY,
   POINTS_SETTING_KEYS,
+  REVIEW_MIN_WORDS_DEFAULT,
+  REVIEW_MIN_WORDS_KEY,
 } from '@lezzet/domain-core';
 import { TICKET_HANDLER_LABELS, TRUST_REASON_LABELS, TicketHandlerEnum, TrustReasonEnum } from '@lezzet/types';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
@@ -600,6 +602,18 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     kind: 'text',
     exceptionScopes: ['country'],
     fallback: 'Google',
+  },
+  {
+    key: REVIEW_MIN_WORDS_KEY,
+    label: 'Yorumun en az kelime sayısı',
+    help: 'Puan getiren yorumun alt sınırı. En az iki harfli sözcük kelime sayılır; noktalama ve "aaa" gibi tekrar sayılmaz.',
+    section: 'feedback',
+    kind: 'integer',
+    unit: 'kelime',
+    min: 1,
+    max: 20,
+    exceptionScopes: NONE,
+    fallback: REVIEW_MIN_WORDS_DEFAULT,
   },
 ] as const;
 

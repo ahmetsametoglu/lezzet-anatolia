@@ -191,8 +191,10 @@ export const MeOrderDetailSchema = z.object({
     .object({
       /** Akışın anahtarı — ekran `/feedback/[token]`e bununla gider. */
       token: z.string().min(1),
-      /** Tamamlamanın kazandıracağı puan; AYARDAN gelir, ekran rakam uydurmaz. */
-      points: z.number().int().positive(),
+      /** Oylanan her ürünün puanı; ayardan gelir, teşvik metni akıştaki kural satırıyla aynı sayıyı söyler. */
+      votePoints: z.number().int().nonnegative(),
+      /** Yorum yazılan her ürünün puanı. */
+      reviewPoints: z.number().int().nonnegative(),
     })
     .nullable(),
 });
