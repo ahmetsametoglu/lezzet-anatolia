@@ -56,20 +56,14 @@ export async function loadProductRowDetailAction(productId: string): Promise<Act
       codesByVariant.set(barcode.variantId, list);
     }
 
-    const rows: VariantRowDetail[] = levels.map((level) => {
-      const price = priceByVariant.get(level.variantId);
-      return {
-        variantId: level.variantId,
-        barcodes: codesByVariant.get(level.variantId) ?? [],
-        warehouses: level.warehouses,
-        availableQty: level.availableQty,
-        nearest: level.nearest,
-        b2cCents: price?.b2c.amountCents ?? null,
-        b2bCents: price?.b2b.amountCents ?? null,
-        costCents: price?.costCents ?? null,
-        vatRate: price?.vatRate ?? 0,
-      };
-    });
+    const rows: VariantRowDetail[] = levels.map((level) => ({
+      variantId: level.variantId,
+      barcodes: codesByVariant.get(level.variantId) ?? [],
+      warehouses: level.warehouses,
+      availableQty: level.availableQty,
+      nearest: level.nearest,
+      price: priceByVariant.get(level.variantId) ?? null,
+    }));
 
     return { data: rows, error: null };
   } catch (err) {

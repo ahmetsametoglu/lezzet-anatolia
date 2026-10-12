@@ -1,12 +1,16 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Skeleton } from '@/components/operation/ui/skeleton';
-import { money } from '@/components/operation/ui/format';
+import { PriceDialog } from '@/components/operation/prices/price-dialog';
 import { expiryLine } from '@/lib/stock/batch-labels';
+import type { PriceRow } from '@/lib/pricing/price-rows';
 import type { ProductVariant } from '@lezzet/types';
 import { sizeLabel, type ProductView, type VariantRowDetail } from '../../products-types';
+import { PriceEditCell } from './price-edit-cell';
 import type { RowDetailState } from './use-row-detail.hook';
 
 // SATIRIN ALTINA AÇILAN BOY KIRILIMI — satılabilir birim boydur, oysa liste ürün seviyesinde durur.
@@ -53,7 +57,14 @@ function Unknown() {
   return <span className="font-ops-mono text-ops-sm text-ops-muted">—</span>;
 }
 
-function DetailCells({ detail, pending }: { detail: VariantRowDetail | undefined; pending: boolean }) {
+interface DetailCellsProps {
+  detail: VariantRowDetail | undefined;
+  pending: boolean;
+  onSaved: () => void;
+  onOpenForm: (row: PriceRow) => void;
+}
+
+function DetailCells({ detail, pending, onSaved, onOpenForm }: DetailCellsProps) {
   if (pending) {
     return (
       <>
@@ -125,8 +136,17 @@ function DetailCells({ detail, pending }: { detail: VariantRowDetail | undefined
         )}
       </div>
 
-      <span className="text-right font-ops-mono text-ops-sm font-semibold text-ops-ink">{money(detail.b2cCents)}</span>
-      <span className="text-right font-ops-mono text-ops-sm font-semibold text-ops-ink">{money(detail.b2bCents)}</span>
+      {detail.price === null ? (
+        <>
+          <Unknown />
+          <Unknown />
+        </>
+      ) : (
+        <>
+          <PriceEditCell row={detail.price} channel="b2c" onSaved={onSaved} onOpenForm={() => onOpenForm(detail.price!)} />
+          <PriceEditCell row={detail.price} channel="b2b" onSaved={onSaved} onOpenForm={() => onOpenForm(detail.price!)} />
+        </>
+      )}
     </>
   );
 }
@@ -135,12 +155,22 @@ interface VariantBreakdownProps {
   product: ProductView;
   /** `undefined` → istek daha başlamadı; `rows: null` → sürüyor. */
   state: RowDetailState | undefined;
-  onRetry: () => void;
+  /** Kırılımı yeniden okutur: düşen istek için de, yazdıktan sonra bayat kaydı atmak için de. */
+  onRefresh: () => void;
 }
 
-export function VariantBreakdown({ product, state, onRetry }: VariantBreakdownProps) {
+export function VariantBreakdown({ product, state, onRefresh }: VariantBreakdownProps) {
+  const router = useRouter();
+  // Tam form kırılımın İÇİNDEN açılır: hangi boyun düzenlendiği sorusu zaten burada yanıtlı.
+  const [formRow, setFormRow] = useState<PriceRow | null>(null);
   const pending = state === undefined || (state.rows === null && state.error === null);
   const byVariant = new Map((state?.rows ?? []).map((row) => [row.variantId, row]));
+
+  // Fiyat yazıldı: kırılımın kendi satırı da, listenin özet kolonu da bayat. İkisi birden tazelenir.
+  const refreshAll = () => {
+    onRefresh();
+    router.refresh();
+  };
 
   return (
     <div className="border-b border-ops-line bg-ops-subtle py-1.5 pl-[68px] pr-6">
@@ -169,7 +199,7 @@ export function VariantBreakdown({ product, state, onRetry }: VariantBreakdownPr
           <span className="font-ops-mono text-ops-xs">{netLabel(variant)}</span>
           <span className="font-ops-body text-ops-xs">{portionLabel(variant)}</span>
           <PackedCell variant={variant} />
-          <DetailCells detail={byVariant.get(variant.id)} pending={pending} />
+          <DetailCells detail={byVariant.get(variant.id)} pending={pending} onSaved={refreshAll} onOpenForm={setFormRow} />
           <span className="text-center">
             {variant.isActive ? <Badge tone="olive">aktif</Badge> : <Badge tone="neutral">kapalı</Badge>}
           </span>
@@ -181,11 +211,21 @@ export function VariantBreakdown({ product, state, onRetry }: VariantBreakdownPr
           <span className="font-ops-body text-ops-xs text-ops-red-dark">
             Boy ayrıntısı okunamadı — barkod, depo dağılımı, son tarih ve fiyat <b>bilinmiyor</b>. {state.error}
           </span>
-          <Button variant="secondary" size="sm" className="ml-auto" onClick={onRetry}>
+          <Button variant="secondary" size="sm" className="ml-auto" onClick={onRefresh}>
             Yeniden dene
           </Button>
         </div>
       ) : null}
+
+      {formRow === null ? null : (
+        <PriceDialog
+          row={formRow}
+          onClose={() => {
+            setFormRow(null);
+            onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 }

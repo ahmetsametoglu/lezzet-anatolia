@@ -13,6 +13,7 @@ import type {
   ProductVariant,
 } from '@lezzet/types';
 import type { BatchView } from '@lezzet/application';
+import type { PriceRow } from '@/lib/pricing/price-rows';
 import type { StockWarehouseSplit } from '@/lib/stock/level-rows';
 import { resolveLocalizedText } from '@lezzet/types';
 import { slugify } from '@lezzet/helper';
@@ -68,11 +69,12 @@ export interface VariantRowDetail {
   availableQty: number;
   /** En yakın son tarihli parti; cümlesini ekran kurar (`expiryLine`), sunucu biçimlendirme yapmaz. */
   nearest: BatchView | null;
-  b2cCents: number | null;
-  b2bCents: number | null;
-  /** Satır içi fiyat düzenlemesinde marjı CANLI hesaplamak için; `null` = maliyet bilinmiyor. */
-  costCents: number | null;
-  vatRate: number;
+  /**
+   * Boyun fiyat satırı — fiyat ekranınınkiyle AYNI şekil. Parçalayıp taşımak yerine olduğu gibi
+   * geçiyor, çünkü iki tüketeni var: kırılımın hücreleri (tutar, maliyet, marj) ve çift tıkla
+   * açılan tam form (`PriceDialog` tam bu satırı bekler).
+   */
+  price: PriceRow | null;
 }
 
 /** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */

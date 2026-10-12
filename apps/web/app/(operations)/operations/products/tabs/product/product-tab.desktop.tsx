@@ -212,7 +212,7 @@ export function ProductsTab(props: ProductsViewProps) {
           <Table
             busy={props.navPending}
             columns={columns}
-            renderSubRow={(r) => (r.id === openId ? <VariantBreakdown product={r} state={detailState} onRetry={() => invalidate(r.id)} /> : null)}
+            renderSubRow={(r) => (r.id === openId ? <VariantBreakdown product={r} state={detailState} onRefresh={() => invalidate(r.id)} /> : null)}
             rows={products}
             rowKey={(r) => r.id}
             onRowClick={(r) => onSelect(r.id)}
