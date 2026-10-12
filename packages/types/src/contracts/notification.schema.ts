@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DoorCodeSchema } from '../entities/order-delivery-code.schema';
 import { PreferredLanguageEnum, TicketSenderEnum, TicketStatusEnum, TicketTypeEnum } from '../primitives/enums.schema';
 
 // Müşteriye giden bildirimin veri şekli; şablon, sürücü ve veriyi kuran kapı aynı şekli okur. Görünüm modelidir, saklanmaz:
@@ -78,6 +79,8 @@ export const OrderNotificationSchema = z.object({
       }),
     )
     .nullable(),
+  /** Kapı kodu; yalnız kodu taşıyan "yolda" gönderiminde dolu, öteki bütün haberlerde boş. */
+  deliveryCode: DoorCodeSchema.nullish(),
 
   /**
    * İSTİSNA bildirimlerinde (iptal / iade / eksik karşılanma) olayın anı, biçimlenmiş

@@ -17,6 +17,6 @@ export { emailDriver } from './drivers/email.driver';
 export { pushDriver, sendExpoPush, type DevicePushMessage, type PushDriverOptions } from './drivers/push.driver';
 export { sendWebPush, webPushDriver, type WebPushDriverOptions, type WebPushMessage } from './drivers/web-push.driver';
 export { waLinkDriver, type WaLinkDriverOptions } from './drivers/wa-link.driver';
-export { whatsappApiDriver } from './drivers/whatsapp-api.driver';
+export { whatsappApiDriver, type WhatsappApiDriverOptions } from './drivers/whatsapp-api.driver';
 // Cloud API istemcisi: gönderimin HTTP yarısı. Sahtesi `@lezzet/notify/testing`de.
 export { sendCloudApiMessage, type CloudApiConfig, type CloudApiMessage, type CloudApiResult } from './whatsapp/cloud-api';

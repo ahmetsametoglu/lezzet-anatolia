@@ -281,7 +281,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - Diyalog kabuğu modal olduğunu SÖYLEMİYOR (08.08, 09.21 sırasında ölçüldü)
 - Asistan onay kuyruğu — çizimin dört öğesi VERİ olmadığı için çizilmedi (09.08, 22.3)
 - Yönetim v3 (native) — çoklu ajan turu kapanırken açık kalan üç madde (30.08, 21.164)
-- Kapıda kimlik: WhatsApp OTP — imzanın yerine (30.08, kullanıcı kararı)
 
 ### BACKLOG §6 · Bildirim TÜRLERİ — tasarım çiziyor, sistem üretmiyor (ölçüldü 05.09)
 

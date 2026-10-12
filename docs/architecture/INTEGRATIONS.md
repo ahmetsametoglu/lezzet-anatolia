@@ -195,6 +195,7 @@ Soyut bildirim katmanı; arkasına sürücü takılır.
 - BSP (aracı sağlayıcı) üzerinden kurulur; doğrudan Meta entegrasyonu ağır.
 - 360dialog ilk aday: markup'suz, developer-first, kendi platformumuza uygun. Ama kurulumda güncel fiyat/plan ve kullanıcı şikâyetleri gözden geçirilmeli.
 - Fiyat mantığı: müşteri sana yazınca açılan 24 saatlik pencerede mesajlar ücretsiz; sen başlatınca (template) ücretli. Strateji: rutin bildirim e-posta/push, WhatsApp yalnız kaçırılması pahalı anlar.
+- **Kapı kodu** bu stratejinin ilk örneği: doğrulanmış WhatsApp numarası olan müşteriye authentication şablonuyla (`delivery_code`), olmayana ya da gönderim düşerse e-postayla gider (`docs/feature/teslim-kodu.md`). Gönderen numara `META_PHONE_NUMBER_ID`; boşsa kod e-postayla gider.
 - **Karar:** bildirim tarafında `wa.me` deep-link ile başlanır; API canlı satış kanalıyla birlikte devreye girer (Faz 1, adım 2).
 
 ## AI (yapay zeka)

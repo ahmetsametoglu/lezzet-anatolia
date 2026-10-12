@@ -22,6 +22,9 @@ globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) =>
     ? Promise.reject(new Error('testte cihaz bildirimi gönderilmez'))
     : realFetch(input, init)) as typeof fetch;
 
+// Kapı kodu "yolda" ile WhatsApp'tan gider; gönderen numara kalsaydı fikstürün numarasına gerçek mesaj gidebilirdi.
+delete process.env.META_PHONE_NUMBER_ID;
+
 // Kasa yazımı ödemenin arkasından kendiliğinden koşar; anahtar kalsaydı testin siparişi gerçek Hiboutik deneme hesabına gidebilirdi.
 // Kasayı sınayan testler bellek içi kasayı verir.
 delete process.env.HIBOUTIK_API_KEY;

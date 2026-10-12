@@ -1,6 +1,6 @@
 # Teslim kodu — kapıda imza ve fotoğraf yerine kod
 
-> **Statü: YAPIMDA (12.10.2026).** İlk karar 30.08.2026'da yazıldı ("Kapıda kimlik: WhatsApp OTP — imzanın yerine"), gövdesi
+> **Statü: YAYINDA, WhatsApp ayağı Meta onayını bekliyor (12.10.2026).** İlk karar 30.08.2026'da yazıldı ("Kapıda kimlik: WhatsApp OTP — imzanın yerine"), gövdesi
 > 15.09'daki doküman birleştirmesinde düşmüştü; asıl metin `42b3ccd8` commit'inde. Kararlar 12.10.2026'da kullanıcıyla verildi.
 
 ## 1. Neden
@@ -24,8 +24,10 @@ iddiasını destekler.
 - **Kod:** altı hane, `order_delivery_code` tablosunda (0016). Tabloya politika yazılmadı: yalnız servis rolü okur, çünkü kurye
   kodu görebilseydi doğrulama anlamsızlaşırdı. Sipariş ikinci kez yola çıkarsa kod değişmez.
 - **Üretim:** siparişin `out_for_delivery`ye geçtiği iki yerde (sefer başlatma, son kutunun araca okutulması), geçişten hemen sonra.
-- **Gönderim:** "yolda" olayında kodlu siparişin cihaz bildirimi her zamanki gibi gider; kodu taşıyan tek yazılı mesaj WhatsApp'a ya
-  da e-postaya gider, böylece e-posta iki kez gitmez. Gidilen kanal satıra yazılır (`sent_via`).
+- **Gönderim:** "yolda" olayında kodlu siparişin cihaz bildirimi ve uygulama içi satırı kodsuz gider; kod tek yazılı mesajla gider,
+  böylece e-posta iki kez gitmez. Doğrulanmış WhatsApp numarası varsa önce WhatsApp (`delivery_code` şablonu); WhatsApp
+  yapılandırılmamışsa (`META_PHONE_NUMBER_ID` boş) ya da gönderim düşerse "yolda" e-postası kodu taşır. Gidilen kanal satıra yazılır
+  (`sent_via`). Testler gönderen numarayı ortamdan siler ki fikstürün numarasına gerçek mesaj gitmesin.
 - **Kapıda:** kurye ekranında kod adımı; altı hane girilir ya da "kodsuz teslim" seçilir. Yanlış kod hak düşürür
   (`delivery_code_max_attempts`, varsayılan 5); hak dolunca doğru kod da kabul edilmez, kodsuz teslim açık kalır.
 - **Kayıt:** sonuç teslim kanıtına yazılır (`order.delivery_proof`): doğrulandı ya da kodsuz.
@@ -42,6 +44,7 @@ WhatsApp'ta "yolda" mesajının içine konamaz, ardından ayrı mesajla gider.
 
 ## 5. Açık
 
+- `delivery_code` şablonu Meta'da açılıp onaylanana ve sunucuya `META_PHONE_NUMBER_ID` girene kadar kod e-postayla gider.
 - Mevcut `order_out_for_delivery` şablonunun üçüncü değişkeni "Teslimat aralığı"; sistemde saat aralığı verisi yok
   (`durak-sirasi.md` §"zaman penceresi"), şablon ayrıca olmayan bir varış bildirimini vaat ediyor. Kullanıcı kararı bekliyor.
-- Sipariş başına kaç WhatsApp mesajı gider ve ücreti nedir: çalışma yapılacak, öteki şablonların açılması ona bağlı.
+- Öteki sipariş şablonlarının WhatsApp'tan açılması ücret çalışmasına bağlı (`whatsapp-bildirimleri.md`); karar kullanıcıda.

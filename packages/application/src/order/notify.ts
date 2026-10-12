@@ -1,9 +1,10 @@
-import { OrderService, OrderStatusLogService, type Db } from '@lezzet/database';
+import { OrderDeliveryCodeService, OrderService, OrderStatusLogService, type Db } from '@lezzet/database';
 import { type NotifyEventName, type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { DeliveryType, OrderStatus } from '@lezzet/types';
 import { dispatchCustomerNotification } from '../notification/dispatch';
 import type { OrderExceptionDetail, OrderExceptionEvent } from './effects';
+import { sendDoorCodeNotice } from './door-code-notice';
 import { buildOrderNotification } from './notification-data';
 
 /**
@@ -73,18 +74,27 @@ async function notifyOrderEvent(
   const bundle = await buildOrderNotification(db, orderId, event, opts);
   if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'order_not_found' }];
 
+  // Tek kapı: satır + kanal + teslim defteri + zil bir arada. Durum olaylarında `dedupeKey` "geçiş başına tek mail"
+  // kuralının defter ucudur; istisna olaylarında anahtar yok, her düzeltme ayrı haberdir.
+  const input = {
+    event,
+    customerId: bundle.customerId,
+    recipient: bundle.recipient,
+    target: { type: 'order' as const, id: orderId },
+    dedupeKey: EVENT_OF_STATUS_VALUES.includes(event) ? `order:${orderId}:${event}` : null,
+    payload: { referenceNo: bundle.data.referenceNo },
+  };
   try {
-    // Tek kapı: satır + kanal + teslim defteri + zil bir arada. Durum olaylarında `dedupeKey` "geçiş başına tek mail"
-    // kuralının defter ucudur; istisna olaylarında anahtar yok, her düzeltme ayrı haberdir.
-    return await dispatchCustomerNotification(db, {
-      event,
-      customerId: bundle.customerId,
-      recipient: bundle.recipient,
-      data: bundle.data,
-      target: { type: 'order', id: orderId },
-      dedupeKey: EVENT_OF_STATUS_VALUES.includes(event) ? `order:${orderId}:${event}` : null,
-      payload: { referenceNo: bundle.data.referenceNo },
-    });
+    const code = event === 'order_out_for_delivery' ? await new OrderDeliveryCodeService(db).getByOrder(orderId) : null;
+    if (code) {
+      const notice = await sendDoorCodeNotice(
+        { data: bundle.data, code: code.code, reach: { whatsapp: Boolean(bundle.recipient.whatsapp), email: Boolean(bundle.recipient.email) } },
+        ({ channels, data, inApp }) => dispatchCustomerNotification(db, { ...input, data }, { channels, inApp }),
+      );
+      if (notice.sentVia) await new OrderDeliveryCodeService(db).markSent(orderId, notice.sentVia);
+      return notice.results;
+    }
+    return await dispatchCustomerNotification(db, { ...input, data: bundle.data });
   } catch (error) {
     // Çağıranların çoğu sonucu okumadığı için gitmeyen mail burada kayda düşülür; sipariş sağlam, eksik olan haber.
     // Kaynak `applicationOrder`: kapıyı iki yüzey çağırıyor ve aynı arıza iki kovaya bölünmemeli.

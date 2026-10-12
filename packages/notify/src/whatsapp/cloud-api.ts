@@ -28,6 +28,8 @@ export interface CloudApiMessage {
   templateName?: string | null;
   /** Şablonun dili — Meta zorunlu tutar; varsayılan Türkçe değil, çağıranın kararı. */
   templateLanguage?: string;
+  /** Şablonun değişkenleri, Meta'nın `components` şeklinde; olduğu gibi geçer, çünkü şekli şablonun türü belirler. */
+  templateComponents?: readonly Record<string, unknown>[];
   /**
    * Türe özgü ham gövde (interaktif kart, medya). Meta'nın şeklinde gelir ve OLDUĞU GİBİ geçer:
    * burada yeniden şekillendirmek, sağlayıcının sözleşmesini ikinci kez yazmak olurdu.
@@ -79,7 +81,11 @@ function whatsappBody(message: CloudApiMessage): Record<string, unknown> {
       ...base,
       type: 'template',
       // Dil zarfı şablonun kimliğinin PARÇASI: aynı ad farklı dillerde ayrı onaylanır.
-      template: { name: message.templateName, language: { code: message.templateLanguage ?? 'tr' } },
+      template: {
+        name: message.templateName,
+        language: { code: message.templateLanguage ?? 'tr' },
+        ...(message.templateComponents?.length ? { components: message.templateComponents } : {}),
+      },
     };
   }
   if (message.interactive) return { ...base, type: 'interactive', interactive: message.interactive };

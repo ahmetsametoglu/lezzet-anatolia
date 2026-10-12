@@ -1,5 +1,6 @@
 import {
   BundleService,
+  CustomerPhoneService,
   OrderService,
   OrderStatusLogService,
   ProductService,
@@ -21,7 +22,7 @@ import { formatPrice, formatShortDate, vatSummaryOf } from '@lezzet/helper';
 import { localizedUrl } from '@lezzet/i18n';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage, Warehouse, WrittenReturn } from '@lezzet/types';
+import type { CustomerPhone, Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage, Warehouse, WrittenReturn } from '@lezzet/types';
 import { notificationPreferencesUrl } from '../customer/notification-preferences';
 import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import { warehouseAddressLine } from '../warehouse/pickup';
@@ -70,7 +71,11 @@ export async function buildOrderNotification(
   if (!found) return null;
 
   const { order, items } = found;
-  const customer = await new UserProfileService(db).getById(order.customerId);
+  // WhatsApp numarası yalnız "yolda"da okunur, çünkü kapı kodu yalnız orada gider; öteki haberler fazladan sorgu ödemez.
+  const [customer, phones] = await Promise.all([
+    new UserProfileService(db).getById(order.customerId),
+    event === 'order_out_for_delivery' ? new CustomerPhoneService(db).listActiveByCustomer(order.customerId) : Promise.resolve([]),
+  ]);
   // Dil önce siparişten: müşteri siparişi hangi dilde verdiyse maili o dilde okur, profil sonradan değişebilir.
   // Web dışı kayıtta (hızlı satış, operasyon girişi) sipariş dilsizdir; orada profil doğru cevaptır.
   const locale: PreferredLanguage = order.locale ?? customer?.preferredLanguage ?? 'fr';
@@ -145,10 +150,21 @@ export async function buildOrderNotification(
 
   return {
     data,
-    recipient: { name: customer?.name ?? null, email: customer?.email ?? null, phone: customer?.phone ?? null, locale },
+    recipient: {
+      name: customer?.name ?? null,
+      email: customer?.email ?? null,
+      phone: customer?.phone ?? null,
+      whatsapp: whatsappOf(phones),
+      locale,
+    },
     // Bildirim satırının öznesi — gönderim kapısı kimliği buradan alır, ikinci bir sipariş okuması yapmaz.
     customerId: order.customerId,
   };
+}
+
+/** En son doğrulanan ve taşıyıcının "ulaşılamadı" demediği aktif numara; liste doğrulanma sırasıyla gelir. */
+function whatsappOf(phones: readonly CustomerPhone[]): string | null {
+  return [...phones].reverse().find((phone) => phone.deliveryFailedAt === null)?.phone ?? null;
 }
 
 /** Kalemin mailde görünen adı: ürünün, paket kaleminde paketin adı. */

@@ -22,6 +22,8 @@ interface Copy {
   helpTitle: string;
   helpText: string;
   helpLink: string;
+  codeHeadline: (code: string) => string;
+  codeDetail: string;
 }
 
 const COPY: Record<PreferredLanguage, Copy> = {
@@ -36,6 +38,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     helpTitle: 'Teslimat için müsait değil misiniz?',
     helpText: 'Bize hemen yazın; birlikte bir çözüm bulalım.',
     helpLink: 'Bize yazın →',
+    codeHeadline: (code) => `Teslim kodunuz: ${code}`,
+    codeDetail: 'Teslim alırken kuryemize bu kodu söyleyin.',
   },
   fr: {
     pill: '● En route',
@@ -48,6 +52,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     helpTitle: 'Vous n’êtes pas disponible\u00a0?',
     helpText: 'Écrivez-nous sans attendre\u00a0: nous trouverons une solution ensemble.',
     helpLink: 'Nous écrire →',
+    codeHeadline: (code) => `Votre code de livraison\u00a0: ${code}`,
+    codeDetail: 'Communiquez ce code à notre livreur à la réception.',
   },
   de: {
     pill: '● Unterwegs',
@@ -60,6 +66,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     helpTitle: 'Sind Sie nicht da?',
     helpText: 'Schreiben Sie uns gleich – wir finden gemeinsam eine Lösung.',
     helpLink: 'Schreiben Sie uns →',
+    codeHeadline: (code) => `Ihr Liefercode: ${code}`,
+    codeDetail: 'Nennen Sie diesen Code unserem Fahrer bei der Übergabe.',
   },
 };
 
@@ -88,6 +96,8 @@ export function OrderOutForDeliveryEmail({ data, brandName, postalAddress }: Ord
       <Headline title={t.title} intro={t.intro} />
       <HeaderCard title={data.referenceNo} meta={data.orderedOn} statusLabel={t.status} />
       <Timeline steps={data.steps} labels={shared.steps} />
+      {/* Kod yalnız kodu taşıyan gönderimde basılır ve teslimat bloğundan önce durur, çünkü kapıda sorulacak tek bilgi odur. */}
+      {data.deliveryCode ? <InfoBlock icon="🔑" headline={t.codeHeadline(data.deliveryCode)} detail={t.codeDetail} /> : null}
       {/* Kargoda her koli kendi satırında takip numarası ve bağlantısıyla durur, çünkü tek satır öteki kolileri gizlerdi; sıra
           (`2/3`) yalnız çok kolide basılır. Bağlantısı olmayan koli numarayı yine gösterir, çünkü numara elle de aratılabilir. */}
       {data.tracking?.length ? (

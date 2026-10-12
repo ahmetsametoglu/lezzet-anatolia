@@ -3,7 +3,7 @@ import { emailDriver } from './drivers/email.driver';
 import { pushDriver } from './drivers/push.driver';
 import { webPushDriver } from './drivers/web-push.driver';
 import { waLinkDriver } from './drivers/wa-link.driver';
-import { whatsappApiDriver } from './drivers/whatsapp-api.driver';
+import { whatsappApiDriver, type WhatsappApiDriverOptions } from './drivers/whatsapp-api.driver';
 import { DEVICE_CHANNELS, NOTIFY_EVENT_META } from './types';
 import type { NotifyChannel, NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from './types';
 
@@ -66,13 +66,18 @@ export const POSTAL_ADDRESS = `${brand.name} · ${companyAddressLine}, France`;
  * Sürücü sırasının tek kaynağı: web istekten, backend saatten doğan bildirimleri buradan yollar ki aynı olay iki yüzeyden farklı
  * kanala gitmesin. Sabit değil fonksiyon, çünkü sürücüler ortam değişkeni okur ve yüklenme anında donan liste testin ortamını görmezdi.
  */
-export function defaultNotifier(): Notifier {
+export function defaultNotifier(
+  options: {
+    /** Jeton ve gönderen numara çağırandan gelir; verilmezse WhatsApp sürücüsü hiçbir olayı üstlenmez. */
+    whatsapp?: WhatsappApiDriverOptions;
+  } = {},
+): Notifier {
   return createNotifier([
     // Cihazsız alıcıda iki cihaz sürücüsü de yeteneksizdir, HABER kendiliğinden maile düşer. YAZIŞMA ve BELGE'de sıranın önemi yok, planı sınıf kurar.
     pushDriver(),
     webPushDriver(),
     emailDriver({ brandName: brand.name, postalAddress: POSTAL_ADDRESS }),
     waLinkDriver(),
-    whatsappApiDriver(),
+    whatsappApiDriver(options.whatsapp),
   ]);
 }

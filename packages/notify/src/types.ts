@@ -56,6 +56,8 @@ export interface NotifyRecipient {
   email: string | null;
   phone: string | null;
   locale: PreferredLanguage;
+  /** Meta'nın doğruladığı WhatsApp numarası (E.164); yalnız WhatsApp sürücüsü okur, çünkü elle yazılan numara kanıt değildir. */
+  whatsapp?: string | null;
   /** Gönderilebilir Expo jetonları; izni kapalı cihaz listeye hiç girmez. Sürücü DB bilmediği için jetonu dağıtım kapısı doldurur. */
   pushTokens?: string[];
   /** Gönderilebilir tarayıcı abonelikleri; dağıtım kapısı native jetonla birlikte doldurmaz, bir haber tek cihaz sınıfına gider. */

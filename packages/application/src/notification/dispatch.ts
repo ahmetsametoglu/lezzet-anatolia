@@ -19,6 +19,7 @@ import { PUSH_CHANNEL, type AppNotificationKind, type NotificationTargetType, ty
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ringNotificationsBell, ringStaffNotificationsBell } from '../realtime/bell';
 import { listSendablePushTargets, prunePushTargets } from './devices';
+import { whatsappNotifyFromEnv } from '../messaging/meta-sender';
 
 /*
   Her olay önce kayda yazılır (zil, okundu hâli ve teslim defteri onun öznesidir), sonra kanala gider; gönderim düşerse satır kalır,
@@ -108,7 +109,8 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
         }
       : input.recipient;
 
-  const results = await (opts.notifier ?? defaultNotifier()).send(input.event, recipient, input.data, { channels: opts.channels });
+  const notifier = opts.notifier ?? defaultNotifier({ whatsapp: whatsappNotifyFromEnv() });
+  const results = await notifier.send(input.event, recipient, input.data, { channels: opts.channels });
 
   await pruneGone(db, results);
   if (rowId) {

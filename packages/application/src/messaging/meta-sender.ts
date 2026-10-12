@@ -76,6 +76,11 @@ export function metaTokensFromEnv(): MetaTokens {
   };
 }
 
+/** WhatsApp bildiriminin ayarı: jeton ve gönderen numaranın Meta kimliği; numara yoksa bildirim WhatsApp'tan gitmez, e-postaya düşer. */
+export function whatsappNotifyFromEnv(): { token: string | null; phoneNumberId: string | null } {
+  return { token: metaTokensFromEnv().token, phoneNumberId: blankToNull(process.env.META_PHONE_NUMBER_ID) };
+}
+
 export function metaSenderFromEnv(): MessageSender {
   const jetonlar = metaTokensFromEnv();
   return messageSenderFor(jetonlar.token, jetonlar.pageToken);
