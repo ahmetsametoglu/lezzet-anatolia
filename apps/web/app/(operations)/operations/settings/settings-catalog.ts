@@ -533,7 +533,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   {
     key: AUTO_PRICE_STEP_KEY,
     label: 'Otomatik fiyat yuvarlama adımı',
-    help: 'Otomatik fiyatlı ürünün fiyatı bu adıma yukarı yuvarlanır; 0,50 € ya da 1,00 € nakit ödemede küsuratı önler.',
+    help: 'Otomatik fiyatlı ürünün tüketici fiyatı bu adıma yukarı yuvarlanır; 0,50 € ya da 1,00 € nakit ödemede küsuratı önler. İşletme fiyatı yuvarlanmaz, işletme nakit ödemez.',
     section: 'cost',
     kind: 'money',
     min: 1,

@@ -8,7 +8,7 @@ import { vatBaseOf } from './vat-base';
  * Yuvarlama yukarı, çünkü aşağı yuvarlanan fiyat hedefi kılpayı ıskalar ve ürün kendi marj-altı uyarısına düşer.
  */
 
-/** Yuvarlama adımının ayarı (cent); nakit ödemede küsurattan kaçınmak için fabrika değeri 50 sent. */
+/** Tüketici fiyatının yuvarlama adımı (cent); nakit ödemede küsurattan kaçınmak için fabrika değeri 50 sent. */
 export const AUTO_PRICE_STEP_KEY = 'auto_price_step_cents';
 export const AUTO_PRICE_STEP_DEFAULT = 50;
 
@@ -19,7 +19,7 @@ export interface AutoPriceInput {
   /** Hedef marj — maliyet üzerine markup yüzdesi. */
   targetMarginPercent: number;
   vatRate: number;
-  /** Yuvarlama adımı (cent), ayardan (`AUTO_PRICE_STEP_KEY`); çağıran okur ki ekran ve yazım aynı adımı kullansın. */
+  /** Tüketici fiyatının yuvarlama adımı (cent), ayardan (`AUTO_PRICE_STEP_KEY`); çağıran okur ki ekran ve yazım aynı adımı kullansın. */
   stepCents: number;
 }
 
@@ -33,7 +33,8 @@ export function autoPriceCents(input: AutoPriceInput): number | null {
   // Eşik `priceForMargin` gibi YUVARLANMAZ, yukarı alınır: o fonksiyon uyarı eşiğidir ve kuruşun
   // altını yuvarlar; burada aynı kuruş, yazdığımız fiyatın hedefi ıskalaması demek olurdu.
   const targetHt = Math.ceil(costCents * (1 + targetMarginPercent / 100));
-  const step = Math.max(1, Math.round(stepCents));
+  // Adım yalnız tüketici fiyatınındır: işletme nakit ödemez, fiyatı kuruşuna kadar hedefe oturur.
+  const step = channel === 'b2b' ? 1 : Math.max(1, Math.round(stepCents));
 
   let price = Math.ceil((vatBaseOf(channel) === 'ttc' ? addVat(targetHt, vatRate) : targetHt) / step) * step;
   // KDV ekle-çıkar gidiş-dönüşü tek başına bir kuruş eritebilir (iki ayrı yuvarlama). Sonucu kendi

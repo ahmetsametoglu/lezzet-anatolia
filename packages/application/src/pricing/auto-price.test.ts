@@ -103,17 +103,21 @@ describe('hedefe çekme', () => {
     expect(await currentCents(autoVariantId, 'b2c')).toBe(1500);
   });
 
-  it('yuvarlama adımı ayardan okunur', async () => {
-    // 10,20 € maliyet, %40 hedef → 14,28 € HT: 50 sentlik adımda 14,50, tam euroda 15,00.
+  it('yuvarlama adımı ayardan okunur ve yalnız tüketici fiyatına uygulanır', async () => {
+    // 10,20 € maliyet, %40 hedef → 14,28 € HT; tüketicide %5,5 KDV'yle 15,07 → 50 sentlik adımda 15,50, tam euroda 16,00.
+    // İşletme fiyatı adımdan bağımsız 14,28 € kalır, çünkü işletme nakit ödemez.
     await setCostHistory(autoVariantId, 1020);
+    await prices.setPrice({ variantId: autoVariantId, channel: 'b2c', amountCents: 1200, customerId: null });
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
     await repriceVariants(db, [autoVariantId]);
-    expect(await currentCents(autoVariantId, 'b2b')).toBe(1450);
+    expect(await currentCents(autoVariantId, 'b2c')).toBe(1550);
+    expect(await currentCents(autoVariantId, 'b2b')).toBe(1428);
 
     await settings.override(AUTO_PRICE_STEP_KEY, 100);
     try {
       await repriceVariants(db, [autoVariantId]);
-      expect(await currentCents(autoVariantId, 'b2b')).toBe(1500);
+      expect(await currentCents(autoVariantId, 'b2c')).toBe(1600);
+      expect(await currentCents(autoVariantId, 'b2b')).toBe(1428);
     } finally {
       await settings.override(AUTO_PRICE_STEP_KEY, 50);
     }

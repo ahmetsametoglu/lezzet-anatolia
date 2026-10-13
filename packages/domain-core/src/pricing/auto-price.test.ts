@@ -13,7 +13,7 @@ const ADIM = 50;
 
 describe('kanal tabanı', () => {
   it('b2b HT saklar — hedef marj doğrudan fiyattır', () => {
-    // 10 € maliyet, %40 hedef → 14 € HT; 50 sentlik adıma tam bölünüyor.
+    // 10 € maliyet, %40 hedef → 14 € HT.
     expect(autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 40, vatRate: 5.5, stepCents: ADIM })).toBe(1400);
   });
 
@@ -38,12 +38,18 @@ describe('adım çağırandan gelir', () => {
     expect(fiyat(50)).toBe(1550);
     expect(fiyat(100)).toBe(1600);
   });
+
+  it('işletme fiyatı adıma yuvarlanmaz — işletme nakit ödemez, fiyat kuruşa yukarı oturur', () => {
+    // 10,01 € × 1,40 = 14,014 → işletmede 14,02; aynı hedef tüketicide %5,5 KDV'yle 14,79 → 15,00.
+    expect(autoPriceCents({ channel: 'b2b', costCents: 1001, targetMarginPercent: 40, vatRate: 5.5, stepCents: ADIM })).toBe(1402);
+    expect(autoPriceCents({ channel: 'b2c', costCents: 1001, targetMarginPercent: 40, vatRate: 5.5, stepCents: ADIM })).toBe(1500);
+  });
 });
 
 describe('yuvarlama hedefi ISKALAMAZ', () => {
   it('yukarı yuvarlar — aşağı yuvarlamak marjı hedefin altına düşürürdü', () => {
     // 3,33 € maliyet, %35 → 4,4955 € HT → 5 sentlik adımda 4,50 (4,45 hedefin altında kalırdı).
-    expect(autoPriceCents({ channel: 'b2b', costCents: 333, targetMarginPercent: 35, vatRate: 0, stepCents: 5 })).toBe(450);
+    expect(autoPriceCents({ channel: 'b2c', costCents: 333, targetMarginPercent: 35, vatRate: 0, stepCents: 5 })).toBe(450);
   });
 
   it('geniş bir maliyet aralığında, her adımda gerçekleşen marj HEP hedefin üstünde', () => {
