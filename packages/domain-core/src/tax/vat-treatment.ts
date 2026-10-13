@@ -14,6 +14,12 @@ export function isZeroRated(treatment: VatTreatment): boolean {
   return treatment === 'intra_eu_b2b_reverse_charge';
 }
 
+/**
+ * AB içi işletmeye mal tesliminin fatura ibaresi: yasal dayanak zorunludur (BOFiP BOI-TVA-DECLA-30-20-20-30 §70), "autoliquidation"
+ * alıcının tanıdığı yaygın söz olduğu için yanında durur.
+ */
+export const REVERSE_CHARGE_INVOICE_NOTE = 'Exonération de TVA, article 262 ter, I du Code général des impôts et autoliquidation';
+
 /** Siparişe yazılmış işlemenin oran ülkesi, `resolveVatTreatment`in `rateCountry`sinin kalıcı hâli; ters yüklemede `null`. */
 export function rateCountryOf(treatment: VatTreatment, deliveryCountry: Country): Country | null {
   if (isZeroRated(treatment)) return null;
@@ -43,7 +49,7 @@ export type VatDecision =
       rateCountry: Country | null;
       zeroRated: boolean;
       /** Faturaya basılacak yasal ibare (yalnız ters yüklemede). */
-      invoiceNote: 'Autoliquidation' | null;
+      invoiceNote: typeof REVERSE_CHARGE_INVOICE_NOTE | null;
     }
   | {
       ok: false;
@@ -63,7 +69,13 @@ export function resolveVatTreatment(input: VatTreatmentInput): VatDecision {
   if (input.originCountry !== SELLER_COUNTRY) return { ok: false, reason: 'origin_not_seller' };
   if (input.deliveryCountry === SELLER_COUNTRY) return taxed('domestic', SELLER_COUNTRY);
   if (reverseChargeApplies(input)) {
-    return { ok: true, treatment: 'intra_eu_b2b_reverse_charge', rateCountry: null, zeroRated: true, invoiceNote: 'Autoliquidation' };
+    return {
+      ok: true,
+      treatment: 'intra_eu_b2b_reverse_charge',
+      rateCountry: null,
+      zeroRated: true,
+      invoiceNote: REVERSE_CHARGE_INVOICE_NOTE,
+    };
   }
   // Numarası doğrulanmamış işletme satıcının KDV'sini öder ve eşiğe girmez: eşik yalnız tüketiciye uzaktan satışındır.
   if (input.channel === 'b2b') return taxed('domestic', SELLER_COUNTRY);

@@ -177,7 +177,7 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - **Kesim (tamamlandı, sandbox'ta ölçüldü 12.10):** kuyruğa giren fatura için müşteri Pennylane'de dış referansla, yoksa aynı SIREN
   ya da KDV numarasıyla bulunur (karar 20), hiçbiri yoksa fatura adresiyle açılır; bağlı kaydın unvanı, kimliği ya da adresi bizden
   ayrıysa fatura kesilmeden önce güncellenir. Fatura taslak açılır: kalem başına KDV hariç birim fiyat, kargo oran payı başına bir satır, çok siparişli faturada satır
-  sipariş numarasını taşır, ters yüklemede dökümün ibaresi ("Autoliquidation") basılır. Pennylane'in hesapladığı toplam bizimkiyle
+  sipariş numarasını taşır, ters yüklemede dökümün ibaresi (262 ter I dayanağı ve "autoliquidation") basılır. Pennylane'in hesapladığı toplam bizimkiyle
   aynıysa fatura kesinleşir, numarası belgeye ve siparişlere (`order.invoice_no`) yazılır. Toplam farklıysa taslak bekler ve
   muhasebeye bir kez haber gider. Fatura günü kesildiği gündür, vade o günden hesaplanır; dil fatura adresinin ülkesindendir
   (karar 22).
@@ -213,11 +213,6 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 1. Bekleyen: şirketin e-fatura alım kaydının EBP'de olup olmadığını kullanıcı teyit ettiriyor; teyitten sonra Pennylane'de
    gönderim açılır.
 2. Bekleyen: muhasebeciye giden dosyanın biçimi, muhasebeci istediğinde belirlenir.
-3. Muhasebeciye: Almanya'ya mal tesliminde faturaya basılan ibare. Döküm ve fatura bugün yalnız "Autoliquidation" yazıyor; AB içi
-   mal teslimi için kaynak "Exonération de TVA, article 262 ter, I du CGI" ya da denk bir ibare istiyor
-   ([CCI Paris](https://www.entreprises.cci-paris-idf.fr/fiches-pratiques/factures-quelles-sont-les-mentions-obligatoires),
-   [Legifiscal](https://www.legifiscal.fr/tva/tva-internationale/facture-mentions-obligatoires-operations-internationales.html)).
-   Kesinleşen fatura değişmediği için Almanya'ya ilk faturadan önce netleşmeli.
 
 ## 7. Ölçülecekler
 
@@ -227,7 +222,7 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   `invalid` dönüyor (12.10), sebebi ölçülmedi.
 - Alacak notunun Pennylane'de açılışı.
 - Ölçüldü (sandbox, 12.10): Pennylane KDV'yi satır başına yuvarlar ve toplam bizimkiyle tuttu; kesinleşen faturanın durumu
-  `upcoming`, fatura günü kesim günü kaldı; AB içi ters yüklemede `intracom_55` kabul edildi, ibare "Autoliquidation" basıldı;
+  `upcoming`, fatura günü kesim günü kaldı; AB içi ters yüklemede `intracom_55` kabul edildi, dökümün ibaresi faturaya basıldı;
   kargo oran payına göre iki satıra bölündü. Müşteri kaydı şirket türünde açılır; `reg_no` SIREN'i, `vat_number` KDV numarasını
   taşır, boşsa boş dizedir. PDF kesimden sonra üretilir (`filename` o ana kadar boş); Pennylane'in e-postası PDF hazır olmadan 422
   döner ve yalnız Fransızca ile İngilizce e-posta şablonuyla gönderir; e-postası müşteriden havale açıklamasına `PL<dış

@@ -31,6 +31,7 @@
 | 6 | **Almanya KDV oranı baştan zorunlu** | Oranı girilmemiş ürün Almanya'daki tüketiciye satılmaz. İşletme satışında Alman oranı kullanılmadığı için orada zorunlu değildir (yönetici yorumu, kullanıcı onayında). |
 | 7 | **Otomatik fiyat tam euro ya da 50 sente yukarı yuvarlanır** | Nakit ödemede küsurattan kaçınmak için. Yön yukarı, çünkü aşağı yuvarlanan fiyat hedef marjı ıskalar. Otomatik fiyatlı üründe Almanya fiyatı da hedef marjdan, Almanya'da uygulanan KDV oranıyla hesaplanır. Adım ayardır (varsayılan 50 sent), bugünkü 5 sentlik sabit adımın yerine geçer. Elle yazılan fiyatı veren kişi tam fiyat verir; yüzdeyle türeyen fiyatlar (fiyat grubu, müşteri kuralı, kupon) yuvarlanmaz, çünkü verilen oran bozulur. |
 | 8 | **Ekranlar onaylandı** (Claude Design 2. tur, `07-kesif/Kesif - Ulke Pazari.dc.html`) | Ürünler kırılımı 1a, Fiyatlar 2a·2, Depolar 3a, eşik ve OSS kartı 4a (Raporlar › Muhasebe export). Her fiyat hücresi kendi marjını yazar; Almanya sütun başlığı tek satır "B2C (DE)" / "B2B (DE)". |
+| 9 | **AB içi işletmeye mal tesliminde fatura ibaresi yasal dayanak ve yaygın söz birlikte** (13.10) | "Exonération de TVA, article 262 ter, I du Code général des impôts et autoliquidation": dayanak BOFiP'in istediği, "autoliquidation" alıcının tanıdığı söz. Döküm ve Pennylane faturası aynı ibareyi basar. |
 
 **Varsayılanlar** (parametrik): müşteriye özel fiyat ve near-expiry teklifi ülkeden bağımsız; fiyat grubu yüzdesi ülkenin işletme
 listesine uygulanır; eşik uyarıları %80 ve %95; sistem dışı AB uzaktan satış tutarı için açılış ayarı (bu yıl ve önceki yıl,
@@ -111,8 +112,6 @@ yerle birlikte gönderir.
 - **Hiboutik demo hesabında ölçüm artığı:** "Olcum DE 19" vergisi (#6) ve boş açık satış (#19); API silmiyor (403 ve 405), panelden
   silinir.
 - Revolut ödeme sayfasının satırları kalem oranını taşıyor mu (ölçülmedi).
-- AB içi işletme satışının fatura ibaresi bugün "Autoliquidation" (`domain-core/accounting/export.ts`); BOFiP mal tesliminde
-  "Exonération TVA, art. 262 ter-I du CGI" ya da eşdeğerini istiyor. Düzeltme kullanıcı onayıyla.
 
 ## 8. Kaynaklar
 
@@ -121,3 +120,4 @@ yerle birlikte gönderir.
 - [Assemblée nationale — confiserie au taux normal](https://questions.assemblee-nationale.fr/dyn/15/questions/QANR5L15QE22788.pdf)
 - [Bundestag — Zuckerwaren 7 %, Mineralwasser 19 %](https://epetitionen.bundestag.de/petitionen/_2018/_05/_24/Petition_80061.abschlussbegruendungpdf.pdf)
 - [BOFiP — mentions obligatoires, exonération art. 262 ter-I](https://bofip.impots.gouv.fr/bofip/1531-PGP.html/identifiant=BOI-TVA-DECLA-30-20-20-30-20250108)
+- [SumUp — autoliquidation, mal tesliminde birleşik ibare](https://www.sumup.com/fr-fr/factures/termes-comptables/autoliquidation/)

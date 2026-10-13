@@ -4,7 +4,7 @@ import { chargedShippingParts } from '../delivery/shipping-fee';
 import { chargedQtyOf, fulfilledLineAmountCents, fulfilledLineOf } from '../payment/payment-status';
 import type { AccountingLine } from './line';
 import { vatByRate } from '../pricing/vat-base';
-import { isZeroRated, rateCountryOf } from '../tax/vat-treatment';
+import { isZeroRated, rateCountryOf, REVERSE_CHARGE_INVOICE_NOTE } from '../tax/vat-treatment';
 
 /**
  * Muhasebe aktarımı (DOMAIN §9): hangi satış dışa gider ve satırın KDV kırılımı nedir; tutarlar TTC'dir, muhasebeci HT ve KDV
@@ -43,7 +43,7 @@ export interface AccountingExportRow {
   /** Reverse charge'da müşterinin o anki geçerli vergi numarası — denetim kanıtı. */
   vatNumber: string | null;
   /** Faturaya basılacak yasal ibare; yalnız reverse charge'da doludur. */
-  invoiceNote: 'Autoliquidation' | null;
+  invoiceNote: typeof REVERSE_CHARGE_INVOICE_NOTE | null;
   gross: number;
   net: number;
   vat: number;
@@ -92,7 +92,7 @@ export function exportEligibility(sale: Pick<OrderSale, 'isGiftOrder'>): ExportE
 
 /** Faturaya basılan yasal ibare; yalnız ters yüklemede. Döküm satırı ve satış faturası aynı ibareyi taşır. */
 export function invoiceNoteOf(treatment: VatTreatment): AccountingExportRow['invoiceNote'] {
-  return isZeroRated(treatment) ? 'Autoliquidation' : null;
+  return isZeroRated(treatment) ? REVERSE_CHARGE_INVOICE_NOTE : null;
 }
 
 /**

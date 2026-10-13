@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { UserProfile } from '@lezzet/types';
 import type { SaleVatBasis } from '../export';
+import { REVERSE_CHARGE_INVOICE_NOTE } from '../../tax/vat-treatment';
 import {
   pennylaneCustomerCandidates,
   pennylaneCustomerDraft,
@@ -150,7 +151,7 @@ describe('fatura taslağı', () => {
         lines: lines([item()])!,
       });
     expect(draft('intra_eu_b2b_reverse_charge')).toMatchObject({
-      specialMention: 'Autoliquidation',
+      specialMention: REVERSE_CHARGE_INVOICE_NOTE,
       externalReference: 'sinv:22222222-2222-4222-8222-222222222222',
       language: 'de_DE',
     });

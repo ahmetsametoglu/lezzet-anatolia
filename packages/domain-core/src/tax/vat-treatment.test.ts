@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isZeroRated, resolveVatTreatment, reverseChargeApplies, type VatTreatmentInput } from './vat-treatment';
+import {
+  isZeroRated,
+  resolveVatTreatment,
+  REVERSE_CHARGE_INVOICE_NOTE,
+  reverseChargeApplies,
+  type VatTreatmentInput,
+} from './vat-treatment';
 
 const satis = (over: Partial<VatTreatmentInput> = {}): VatTreatmentInput => ({
   channel: 'b2c',
@@ -57,7 +63,7 @@ describe("KDV işleme — Almanya'daki işletmeye satış", () => {
       treatment: 'intra_eu_b2b_reverse_charge',
       rateCountry: null,
       zeroRated: true,
-      invoiceNote: 'Autoliquidation',
+      invoiceNote: REVERSE_CHARGE_INVOICE_NOTE,
     });
   });
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OrderItem, OrderSale } from '@lezzet/types';
 import { fromCents } from '@lezzet/helper';
 import { apportionShippingVat } from '../delivery/shipping-fee';
+import { REVERSE_CHARGE_INVOICE_NOTE } from '../tax/vat-treatment';
 import { buildAccountingExport, buildExportRow, exportEligibility, vatLinesOf } from './export';
 
 /**
@@ -192,7 +193,7 @@ describe('KDV tabanı siparişin fiyat tabanından gelir (DOMAIN §5)', () => {
 });
 
 describe('reverse charge', () => {
-  it('AB içi B2B satışta KDV yoktur; satır Autoliquidation ibaresi taşır', () => {
+  it('AB içi B2B satışta KDV yoktur; satır ters yüklemenin fatura ibaresini taşır', () => {
     const row = buildExportRow(
       sale({ channel: 'b2b', pricesIncludeVat: false, deliveryCountry: 'DE', vatTreatment: 'intra_eu_b2b_reverse_charge', vatNumberSnapshot: 'DE811907980', shippingFeeCents: 1500 }),
       [line({ unitPriceCents: 20_000, vatRate: 5.5 })],
@@ -201,7 +202,7 @@ describe('reverse charge', () => {
     expect(row.vat).toBe(0);
     expect(row.net).toBe(215);
     expect(row.gross).toBe(215);
-    expect(row.invoiceNote).toBe('Autoliquidation');
+    expect(row.invoiceNote).toBe(REVERSE_CHARGE_INVOICE_NOTE);
     expect(row.vatNumber).toBe('DE811907980');
     expect(row.vatLines).toEqual([{ vatRate: 0, gross: 215, net: 215, vat: 0, country: null }]);
   });
