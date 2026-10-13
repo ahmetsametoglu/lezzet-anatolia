@@ -11,13 +11,12 @@ import type { WarehouseAddress } from '@lezzet/types';
 // İki işin deposu aynı binadadır: adres künyeden okunur (`@lezzet/brand`), nokta adresin BAN karşılığıdır ve ikisi de onu paylaşır.
 export const WAREHOUSE = {
   code: 'STR',
-  name: 'Strasbourg',
   lat: 48.55644,
   lng: 7.688881,
 } as const;
 
 /** QUALITE'nin deposu yalnız profesyonel müşteriye satar ve kargo yapmaz; kural veritabanındadır (`docs/feature/iki-is.md`). */
-export const QUALITE_DEPOSU = { code: 'QLT', name: 'Strasbourg — QUALITE' } as const;
+export const QUALITE_DEPOSU = { code: 'QLT' } as const;
 
 // Lezzet deposu Almanya'ya bu noktadan kargo yapar: paket Almanya'da taşıyıcıya verilir, etiketi oradan alınır ve tarifesi yurt
 // içidir (`shipping/sender.ts`). BEKLEYEN(K.14): gerçek adres girilene dek `null` kalır ve Almanya kargosu açılmaz.
@@ -460,10 +459,10 @@ export const EK_TASLAKLAR: LooseDraft[] = [
  * Değerler işletmecinin kararıdır; tavsiyenin nasıl hesaplandığı `docs/architecture/COMPETITORS.md`'de.
  */
 export const SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
-  'LEZZA Kol Borek with Cheese Uncooked (Peynirli) 200 gr': { b2c: 1.2, b2b: 0.8 },
-  'LEZZA Kol Borek with Spinach & Cheese Uncooked (Ispanakli Peynirli) 200 gr': { b2c: 1.2, b2b: 0.8 },
-  'LEZZA Kol Borek with Minced Meat Uncooked (Kiymali) 200 gr': { b2c: 1.2, b2b: 0.91 },
-  'LEZZA Kol Borek with Potato Uncooked (Patatesli) 200 gr': { b2c: 1.2, b2b: 0.8 },
+  'LEZZA Kol Borek with Cheese Uncooked (Peynirli) 200 gr': { b2c: 1.5, b2b: 0.8 },
+  'LEZZA Kol Borek with Spinach & Cheese Uncooked (Ispanakli Peynirli) 200 gr': { b2c: 1.5, b2b: 0.8 },
+  'LEZZA Kol Borek with Minced Meat Uncooked (Kiymali) 200 gr': { b2c: 1.5, b2b: 0.91 },
+  'LEZZA Kol Borek with Potato Uncooked (Patatesli) 200 gr': { b2c: 1.5, b2b: 0.8 },
   'LEZZA Vegan Cig kofte 16x1000 gr': { b2c: 12.5, b2b: 7.5 },
   'LEZZA Kunefah (Included plate and syrup) 2*145 gr– 420g': { b2c: 6, b2b: 4.76 },
   'LEZZA Turkish Bagel-Simit (% 80 Cooked) 4x105 gr': { b2c: 3.5, b2b: 2.45 },

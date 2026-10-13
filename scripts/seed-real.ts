@@ -29,7 +29,14 @@ import {
 } from '@lezzet/database';
 import { canPublishProduct, purchaseOrderReferenceNo } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import { PRODUCT_GALLERY_MAX, type LocalizedText, type PortionKind, type Product, type WarehouseShipCountryEntry } from '@lezzet/types';
+import {
+  BUSINESS_LABELS,
+  PRODUCT_GALLERY_MAX,
+  type LocalizedText,
+  type PortionKind,
+  type Product,
+  type WarehouseShipCountryEntry,
+} from '@lezzet/types';
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -185,15 +192,16 @@ async function seedWarehouse(db: Db): Promise<{ facilityId: string }> {
   let facilityId = lezzet?.id ?? PLANNED;
   if (lezzet) done(`${WAREHOUSE.code} · ${lezzet.name}`);
   else {
-    plan(`${WAREHOUSE.code} · ${WAREHOUSE.name} · ${street}, ${postalCode} ${city}`);
-    if (!DRY_RUN) facilityId = (await warehouses.insert({ code: WAREHOUSE.code, name: WAREHOUSE.name, ...yer, sortOrder: 1 })).id;
+    plan(`${WAREHOUSE.code} · ${brand.name} · ${street}, ${postalCode} ${city}`);
+    // Ad markadır, çünkü kargo etiketinde gönderici adı olarak basılır (`shipping/sender.ts`).
+    if (!DRY_RUN) facilityId = (await warehouses.insert({ code: WAREHOUSE.code, name: brand.name, ...yer, sortOrder: 1 })).id;
   }
   const qualite = mevcut.find((w) => w.code === QUALITE_DEPOSU.code || (w.kind === 'facility' && w.business === 'qualite'));
   if (qualite) done(`${qualite.code} · ${qualite.name}`);
   else {
-    plan(`${QUALITE_DEPOSU.code} · ${QUALITE_DEPOSU.name} · QUALITE, kargosuz`);
+    plan(`${QUALITE_DEPOSU.code} · ${BUSINESS_LABELS.qualite} · kargosuz`);
     if (!DRY_RUN)
-      await warehouses.insert({ code: QUALITE_DEPOSU.code, name: QUALITE_DEPOSU.name, business: 'qualite', ...yer, sortOrder: 2 });
+      await warehouses.insert({ code: QUALITE_DEPOSU.code, name: BUSINESS_LABELS.qualite, business: 'qualite', ...yer, sortOrder: 2 });
   }
   await seedKargoUlkeleri(warehouses, facilityId, lezzet?.shipCountries ?? []);
   return { facilityId };
