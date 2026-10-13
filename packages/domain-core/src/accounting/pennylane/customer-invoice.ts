@@ -19,7 +19,7 @@ import { chargedShippingParts } from '../../delivery/shipping-fee';
 import { chargedQtyOf, fulfilledLineAmountCents, fulfilledLineOf } from '../../payment/payment-status';
 import { invoiceNoteOf, type SaleVatBasis } from '../export';
 import type { AccountingLine } from '../line';
-import { sirenOfSiret, sirenOfVatNumber } from '../sales-invoice';
+import { salesInvoiceCustomerName, sirenOfSiret, sirenOfVatNumber } from '../sales-invoice';
 import { normalizedVat, pennylaneVatCode } from './document';
 
 /**
@@ -78,7 +78,7 @@ export function pennylaneCustomerDraft(
   billing: Pick<Address, 'line1' | 'line2' | 'postalCode' | 'city' | 'country'>,
 ): PennylaneCustomerDraft {
   return {
-    name: customer.companyInfo?.legalName || customer.name,
+    name: salesInvoiceCustomerName(customer),
     externalReference: pennylaneCustomerReference(customer.id),
     ...pennylaneCustomerIdentity(customer),
     emails: customer.email ? [customer.email] : [],

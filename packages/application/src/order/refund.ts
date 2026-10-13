@@ -1,7 +1,8 @@
 import { AccountService, MoneyMovementService, OrderService } from '@lezzet/database';
-import { canTransition, planRefund, refundSourcesOf, type RefundLeg, type RefundPlan } from '@lezzet/domain-core';
+import { canTransition, planRefund, refundableMovementsOf, refundSourcesOf, type RefundLeg, type RefundPlan } from '@lezzet/domain-core';
 import type { AccountType, FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { fundingAccountsOf } from '../accounting/sales-invoice-payment';
 import { notifyRefundBlocked } from '../notification/staff-events';
 import { kickOrderRegister } from '../register/sync';
 import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
@@ -319,7 +320,8 @@ async function refundPlanOf(
   const routeType = routeAccountId ? (types.get(routeAccountId) ?? null) : null;
   if (routeAccountId && !routeType) return { legs: [], uncoveredCents: dueCents, routeType: null };
   const route = routeAccountId && routeType ? { accountId: routeAccountId, accountType: routeType } : null;
-  return { ...planRefund({ dueCents, sources: refundSourcesOf(movements, types), route }), routeType };
+  const sources = refundSourcesOf(refundableMovementsOf(movements, await fundingAccountsOf(db, movements)), types);
+  return { ...planRefund({ dueCents, sources, route }), routeType };
 }
 
 type LegResult =

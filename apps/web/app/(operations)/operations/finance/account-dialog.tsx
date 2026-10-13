@@ -11,6 +11,9 @@ import { ACCOUNT_TYPE_LABEL } from './finance-labels';
 
 const FORM_ID = 'account-form';
 
+/** Ara hesap yalnız sistemin sabit hesabıdır; elle açılan ara hesabın parasını siparişlere dağıtan bir akış yok. */
+const OPENABLE_TYPES = AccountTypeEnum.options.filter((option): option is Exclude<AccountType, 'clearing'> => option !== 'clearing');
+
 /**
  * Hesap ekleme ("Eylemler → Hesap ekle"). Kasa ve Revolut Merchant kurulumla gelir; banka hesabı burada açılır, hareketleri Pennylane'den
  * okunsun diye Ayarlar › Kurulum'da eşlenir.
@@ -77,7 +80,7 @@ export function AccountDialog({ onClose, onSaved }: AccountDialogProps) {
             value={type}
             onChange={setType}
             label="Hesap türü"
-            options={AccountTypeEnum.options.map((option) => ({ key: option, label: ACCOUNT_TYPE_LABEL[option] }))}
+            options={OPENABLE_TYPES.map((option) => ({ key: option, label: ACCOUNT_TYPE_LABEL[option] }))}
           />
         </FieldShell>
       </form>

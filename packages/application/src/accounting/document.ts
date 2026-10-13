@@ -221,7 +221,10 @@ export async function linkMovementToDocument(
 export async function removeAllocation(
   db: SupabaseClient,
   input: { movementId: string; documentId: string },
-): Promise<{ status: 'ok' } | { status: 'invalid'; reason: 'not_found' }> {
+): Promise<{ status: 'ok' } | { status: 'invalid'; reason: 'not_found' | 'settled_payment' }> {
+  // Ara hesaptaki tahsilatın bağı havalenin mahsubudur; tek başına sökülse sipariş ödenmiş, fatura açık kalırdı.
+  const movement = await new MoneyMovementService(db).getById(input.movementId);
+  if (movement?.fundingMovementId) return { status: 'invalid', reason: 'settled_payment' };
   const removed = await new MoneyAllocationService(db).remove(input.movementId, input.documentId);
   return removed ? { status: 'ok' } : { status: 'invalid', reason: 'not_found' };
 }

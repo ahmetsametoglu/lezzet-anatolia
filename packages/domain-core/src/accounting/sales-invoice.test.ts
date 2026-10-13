@@ -5,6 +5,7 @@ import {
   salesInvoiceGaps,
   salesInvoiceGroups,
   salesInvoiceOpensNow,
+  salesInvoicePaymentShares,
   salesInvoiceTotals,
   sirenOfVatNumber,
   tenDaySliceEnd,
@@ -166,5 +167,38 @@ describe('fatura tutarı', () => {
         { sale: B2B, items: [line()] },
       ]),
     ).toThrow();
+  });
+});
+
+describe('havalenin siparişlere dağılımı', () => {
+  const orders = [
+    { orderId: 'b', saleDate: '2026-10-05', dueCents: 3000 },
+    { orderId: 'a', saleDate: '2026-10-02', dueCents: 2000 },
+    { orderId: 'c', saleDate: '2026-10-09', dueCents: 1500 },
+  ];
+
+  it('kısmi ödeme en eski siparişten başlar', () => {
+    expect(salesInvoicePaymentShares(4000, orders)).toEqual([
+      { orderId: 'a', amountCents: 2000 },
+      { orderId: 'b', amountCents: 2000 },
+    ]);
+  });
+
+  it('siparişe kalanından fazlası düşmez, toplam kalanları aşmaz', () => {
+    expect(salesInvoicePaymentShares(9000, orders)).toEqual([
+      { orderId: 'a', amountCents: 2000 },
+      { orderId: 'b', amountCents: 3000 },
+      { orderId: 'c', amountCents: 1500 },
+    ]);
+  });
+
+  it('ödenmiş sipariş pay almaz', () => {
+    expect(
+      salesInvoicePaymentShares(1000, [
+        { orderId: 'a', saleDate: '2026-10-01', dueCents: 0 },
+        { orderId: 'b', saleDate: '2026-10-02', dueCents: -300 },
+        { orderId: 'c', saleDate: '2026-10-03', dueCents: 800 },
+      ]),
+    ).toEqual([{ orderId: 'c', amountCents: 800 }]);
   });
 });

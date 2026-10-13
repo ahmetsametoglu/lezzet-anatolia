@@ -6,20 +6,21 @@ import { BusinessEnum, CurrencyEnum, PaymentMethodEnum } from '../primitives/enu
 // tedarikçidir; etiket izah sayılmaz, belge bağı tutarıyla ayrı tabloda durur.
 
 /**
- * Paranın durduğu yer; çevrim içi tahsilat da bir hesaptır (sağlayıcı). `partner` ortak cari hesabıdır: ortakla şirket arasındaki
- * her para buradan geçer, bakiyenin işareti borcun yönünü söyler (eksi şirket ortağa, artı ortak şirkete borçlu).
+ * Paranın durduğu yer; çevrim içi tahsilat da bir hesaptır (sağlayıcı). `partner` ortak cari hesabıdır (bakiyenin eksisi şirketin
+ * ortağa borcu), `clearing` ara hesaptır: bir banka satırının parası orada siparişlere dağılır ve dağıtım bitince bakiye sıfırdır.
  */
-export const AccountTypeEnum = z.enum(['cash', 'bank', 'provider', 'partner']);
+export const AccountTypeEnum = z.enum(['cash', 'bank', 'provider', 'partner', 'clearing']);
 export type AccountType = z.infer<typeof AccountTypeEnum>;
 
-/** Sabit hesabın rolü: kapı nakdi ile kart ve online tahsilatı her kurulumda migration'ın açtığı hesaba yazılır. */
-export const AccountSystemKeyEnum = z.enum(['cash_drawer', 'merchant']);
+/** Sabit hesabın rolü: kapı nakdi, kart ve online tahsilat ve satış faturası havalesi her kurulumda migration'ın açtığı hesaba yazılır. */
+export const AccountSystemKeyEnum = z.enum(['cash_drawer', 'merchant', 'invoice_clearing']);
 export type AccountSystemKey = z.infer<typeof AccountSystemKeyEnum>;
 
 /** Sabit hesapların kimliği; migration hesabı ve kapı ayarlarının fabrika değerini aynı kimlikle yazar. */
 export const SYSTEM_ACCOUNT_IDS: Readonly<Record<AccountSystemKey, string>> = {
   cash_drawer: '00000000-0000-4000-8000-000000000101',
   merchant: '00000000-0000-4000-8000-000000000102',
+  invoice_clearing: '00000000-0000-4000-8000-000000000103',
 };
 
 export const AccountSchema = z.object({
@@ -141,6 +142,8 @@ export const MoneyMovementSchema = z.object({
   bankImportId: z.string().uuid().nullable(),
   /** Karşı uç: bu ekstre satırı şu transferin öteki yakasıdır. Bağlanınca ayna susar (`account_movement`), para iki kez sayılmaz. */
   counterpartMovementId: z.string().uuid().nullable(),
+  /** Ara hesaptaki tahsilatın parasını getiren ekstre satırı; satırın eşleşmesi geri alınınca tahsilat da gider. */
+  fundingMovementId: z.string().uuid().nullable(),
   /** Muhasebe yazılımında bizde olmayan bir faturaya eşli; izah saymaz, çünkü belgesi bizde girilmelidir. */
   matchedElsewhere: z.boolean(),
   createdAt: z.string(),
@@ -175,8 +178,13 @@ export const MoneyMovementInsertSchema = z.object({
 });
 export type MoneyMovementInsert = z.infer<typeof MoneyMovementInsertSchema>;
 
-/** `explained` ve `business` türetilmiş kolonlardır, güncelleme gövdesine giremez; tetikleyici yeniden kurar. */
-export const MoneyMovementUpdateSchema = MoneyMovementSchema.omit({ explained: true, business: true }).partial().required({ id: true });
+/**
+ * `explained` ve `business` türetilmiş kolonlardır, tetikleyici yeniden kurar; ara hesap bağını yalnız mahsup yazar. Üçü güncelleme
+ * gövdesine giremez.
+ */
+export const MoneyMovementUpdateSchema = MoneyMovementSchema.omit({ explained: true, business: true, fundingMovementId: true })
+  .partial()
+  .required({ id: true });
 export type MoneyMovementUpdate = z.infer<typeof MoneyMovementUpdateSchema>;
 
 /**

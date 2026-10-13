@@ -119,6 +119,14 @@ export class MoneyDocumentOrderService extends BaseDbService<MoneyDocumentOrder,
     );
   }
 
+  /** Siparişlerin faturası tek turda; faturası olmayan sipariş haritada yoktur. */
+  async documentsOfOrders(orderIds: readonly string[]): Promise<Map<string, string>> {
+    const byOrder = new Map<string, string>();
+    if (orderIds.length === 0) return byOrder;
+    for (const row of await this.getAll({ orderId: [...orderIds] })) byOrder.set(row.orderId, row.documentId);
+    return byOrder;
+  }
+
   /** Faturaların siparişleri tek turda, belge başına. */
   async ordersOf(documentIds: readonly string[]): Promise<Map<string, string[]>> {
     const byDocument = new Map<string, string[]>();

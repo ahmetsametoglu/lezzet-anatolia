@@ -9,6 +9,8 @@ export function refundMethodOf(accountType: AccountType, paidWith: PaymentMethod
     case 'cash':
       return 'cash';
     case 'bank':
+    case 'clearing':
+      // Ara hesaptaki para bir banka satırından gelmiştir; iadesi de bankadan havaleyle döner.
       return 'bank_transfer';
     case 'provider':
       return paidWith;

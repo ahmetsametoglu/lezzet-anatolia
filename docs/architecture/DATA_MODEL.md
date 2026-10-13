@@ -74,7 +74,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 > `StockStatus`, `CartLineRoute`, `CouponRejection`) `packages/types/src/primitives/enums.schema.ts`ta
 > durur ve buraya girmez: bu bölüm VERİ modelini anlatıyor.
 
-- `account_type`: cash, bank, provider, partner *(`partner` = ortak cari hesabı; bakiye işareti borcun yönünü söyler)*
+- `account_type`: cash, bank, provider, partner, clearing *(`partner` = ortak cari hesabı; bakiye işareti borcun yönünü söyler. `clearing` = ara hesap: banka satırının parası orada siparişlere dağılır)*
 - `address_geo_precision`: housenumber, street, locality, municipality *(adres koordinatı hangi hassasiyette çözüldü)*
 - `address_geo_source`: ban, google, manual *(koordinat BAN'dan mı, Google'dan mı geldi, elle mi girildi — `google` 30 günden uzun saklanmaz, 13.09)*
 - `analytics_availability`: sellable, sold_out, closed, not_here *(ölçüm anında ürün alınabilir miydi)*

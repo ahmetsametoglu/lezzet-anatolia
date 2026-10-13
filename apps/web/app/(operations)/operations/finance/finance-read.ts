@@ -528,9 +528,9 @@ export function toDocumentPaymentsView(options: DocumentPaymentOptions, accountN
       accountName: accountNames.get(movement.accountId) ?? '—',
       amountCents,
       movementAmountCents: movement.amountCents,
-      // Ekstre satırının bağı "Eşleşmeyi geri al" ile çözülür: tek bağı sökmek satırı mutabık ama
-      // bağsız bırakırdı (tipi ve adı belgeden gelmişti).
-      removable: movement.source !== 'bank_import',
+      // Ekstre satırının ve onun parasıyla ara hesapta yazılan tahsilatın bağı "Eşleşmeyi geri al" ile çözülür: tek bağı sökmek satırı
+      // bağsız, ya da siparişi ödenmiş ama faturayı açık bırakırdı.
+      removable: movement.source !== 'bank_import' && movement.fundingMovementId === null,
     })),
     candidates: options.candidates.map((candidate) => ({
       movementId: candidate.movement.id,

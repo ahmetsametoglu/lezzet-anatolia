@@ -22,9 +22,9 @@ import {
   type SalesInvoiceTotals,
 } from '@lezzet/domain-core';
 import { parisDateOf, parisMinutesOf } from '@lezzet/helper';
-import { captureError, logger, SOURCES } from '@lezzet/observability';
+import { captureError, SOURCES } from '@lezzet/observability';
 import type { Business, DocumentVatLine, MoneyDocument, OrderItem, OrderSale, SalesInvoiceGap, UserProfile } from '@lezzet/types';
-import { allocateToDocument } from './document';
+import { allocatePaymentToInvoice } from './sales-invoice-payment';
 
 /**
  * Satış faturasının açılışı (docs/feature/profesyonel-satis.md, karar 17–18): teslim edilen B2B satışın faturası teslim başına modda
@@ -148,12 +148,7 @@ async function allocateOrderPayments(db: Db, documentId: string, orderIds: reado
   const payments = (await new MoneyMovementService(db).listByOrders(orderIds)).filter(
     (movement) => movement.type === 'order_payment' && movement.direction === 'in',
   );
-  for (const payment of payments) {
-    const outcome = await allocateToDocument(db, { movementId: payment.id, documentId });
-    if (outcome.status === 'invalid' && outcome.reason !== 'document_settled') {
-      logger.warn({ documentId, movementId: payment.id, reason: outcome.reason }, 'satış faturası: tahsilat faturaya bağlanamadı');
-    }
-  }
+  for (const payment of payments) await allocatePaymentToInvoice(db, { movementId: payment.id, documentId });
 }
 
 /**

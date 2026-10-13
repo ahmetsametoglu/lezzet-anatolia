@@ -49,7 +49,7 @@ function partnerBalanceTone(cents: number): string {
 // ── Bakiye şeridi = hesap süzgeci ─────────────────────────────────────────────────────
 
 /** Şeridin grup sırası: benzer hesaplar bir arada, kapananlar en sonda; toplam en solda, çünkü ilk okunan sayıdır. */
-const ACCOUNT_GROUP_ORDER = ['bank', 'cash', 'provider', 'partner'] as const satisfies readonly AccountType[];
+const ACCOUNT_GROUP_ORDER = ['bank', 'cash', 'provider', 'partner', 'clearing'] as const satisfies readonly AccountType[];
 
 interface AccountStripProps {
   accounts: AccountView[];

@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil); Faz 4'te fatura açılışı, Pennylane'de kesim, müşteriye e-posta ve Faturalar ekranı tamamlandı, e-fatura ve alacak notu kaldı.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil); Faz 4'te fatura açılışı, Pennylane'de kesim, müşteriye e-posta ve Faturalar ekranı tamamlandı, e-fatura ve alacak notu kaldı; Faz 5 sürüyor: havale mahsubu, geri alma ve B2B iade yolu tamamlandı, Pennylane eşleşmesi ve vadeli fren kaldı.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -200,13 +200,18 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   yorum temizliğiyle düzeltilir.
 
 **Faz 5 — tahsilat ve cari**
-- Havale kuyruğunda açık satış faturaları aday olur; ipucu fatura numarası ve müşteri adıdır.
-- Bir havale birden çok faturayı, bir fatura birden çok havaleyi kapatır; tutar satın almadaki kuralla bağlanır.
-- Siparişler ödendi olsun diye banka satırı aracı hesaba transfer olur, aracı hesapta faturanın siparişlerine tahsilat
-  yazılır. Aracı hesap sıfırlanır, banka parayı bir kez sayar, siparişin ödeme hesabı değişmez (Revolut Merchant düzeni).
-  Aracı hesap yalnız bizde durur ve Pennylane'e eşlenmez; Pennylane'de havale doğrudan müşteri faturalarına eşlenir, muhasebeciye
-  giden veri de oradan çıkar.
-- Eşleşme Pennylane'deki müşteri faturasına yazılır; vadeli frenin açık bakiyesi ve gecikmesi faturanın vade gününü okur.
+- **Aracı hesap:** sabit "Fatura tahsilatı" hesabı, türü ara hesap (`clearing`). Banka listelerinde görünmez; iadesi havaledir,
+  çünkü B2B parası bankadan döner. Bakiyesi faturaya bağlanmamış müşteri parasıdır; havalenin tamamı bağlanınca sıfırdır.
+- **Mahsup:** havale kuyruğunda kesilmiş satış faturaları aday olur, ipucu fatura numarası ve müşteri adıdır. Fatura seçilince banka
+  satırı aracı hesaba transfer olur; aracı hesapta faturanın siparişlerine havale tahsilatı yazılır ve faturaya bağlanır, banka parayı
+  bir kez sayar, siparişin ödeme hesabı değişmez (Revolut Merchant düzeni). Tutar havalenin kalanı ile faturanın açığının küçüğüdür,
+  faturanın içinde en eski siparişten başlar. Kalanı olan satır kuyrukta kalanıyla durur ve yalnız başka satış faturasına bağlanır;
+  tamamı bağlanınca mutabık olur. Bir havale yalnız bir işin faturalarını kapatır; faturanın "Ödeme bağla"sı aynı kapıdan geçer.
+- **Geri alma:** "Eşleşmeyi geri al" aracı hesaptaki tahsilatları ve bağlarını siler, siparişlerin ödeme durumu yeniden türer.
+- **Siparişe bağlanan havale** faturalı siparişte faturaya da bağlanır, faturanın açığı doğru kalsın.
+- **Pennylane:** havale doğrudan müşteri faturalarına eşlenir, Pennylane'de kurulan eşleşme bizde mahsup olarak benimsenir; aracı hesap
+  Pennylane'e gitmez.
+- **Vadeli fren:** faturalı siparişin açık bakiyesi ve gecikmesi faturanın vade gününü okur.
 
 ## 6. Açık sorular
 

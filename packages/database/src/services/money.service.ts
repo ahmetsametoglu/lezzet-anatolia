@@ -547,6 +547,33 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /**
+   * Ekstre satırının kesilmiş satış faturasına mahsubu, tek işlemde (`settle_sales_invoice`): ara hesapta siparişlerin havale
+   * tahsilatı, faturaya bağları ve satırın ara hesaba transferi. Satırın bağlanmamış kalanı döner (cent).
+   */
+  async settleSalesInvoice(input: {
+    movementId: string;
+    documentId: string;
+    clearingAccountId: string;
+    shares: ReadonlyArray<{ orderId: string; amountCents: number }>;
+    description: string;
+  }): Promise<number> {
+    const remaining = await this.executeRpc<number | string>('settle_sales_invoice', {
+      p_movement_id: input.movementId,
+      p_document_id: input.documentId,
+      p_clearing_account_id: input.clearingAccountId,
+      p_shares: input.shares.map((share) => ({ order_id: share.orderId, amount: fromCents(share.amountCents) })),
+      p_description: input.description,
+    });
+    return toCents(Number(remaining));
+  }
+
+  /** Ekstre satırlarının parasıyla ara hesapta yazılan tahsilatlar. */
+  listFundedBy(movementIds: readonly string[]): Promise<MoneyMovement[]> {
+    if (movementIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ fundingMovementId: [...movementIds] });
+  }
+
+  /**
    * Bir kez yazar: anahtar daha önce yazılmışsa `null` döner, çünkü webhook aynı olayı tekrar gönderebilir ve kararı veritabanı
    * verir (`money_movement_idempotency_key`). Anahtarsız çağrı `insert`ten farksız olacağı için reddedilir.
    */

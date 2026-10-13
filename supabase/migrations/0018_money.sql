@@ -1,9 +1,9 @@
 -- Para (DOMAIN §9): para bir hesapta durur, hareketlerle girer ve çıkar; kasa, banka ve ödeme sağlayıcısı yalnız hesap türüdür.
 -- Bakiye kolonu yok, çünkü saklanan bakiye kayar ve kaydıranı bulunamaz; türetim tek yerde, `account_movement`.
 
--- `partner` ortak cari hesabıdır (compte courant d'associé, 455): ortakla şirket arasındaki her para buradan geçer.
--- Bakiye işareti borcu anlatır: eksi şirket ortağa, artı ortak şirkete borçlu.
-create type account_type as enum ('cash', 'bank', 'provider', 'partner');
+-- `partner` ortak cari hesabıdır (compte courant d'associé, 455); bakiye işareti borcu anlatır: eksi şirket ortağa, artı ortak
+-- şirkete borçlu. `clearing` ara hesaptır: bir banka satırının parası orada siparişlere dağılır, dağıtım bitince bakiye sıfırdır.
+create type account_type as enum ('cash', 'bank', 'provider', 'partner', 'clearing');
 create type movement_direction as enum ('in', 'out');
 create type movement_type as enum (
   'order_payment', 'order_refund', 'purchase', 'expense', 'transfer', 'capital', 'misc'
@@ -23,8 +23,9 @@ create table public.account (
   currency currency not null default 'EUR',
   -- Hesap SİLİNMEZ, pasifleşir: geçmiş hareketleri ona bağlıdır (kapanan banka hesabı da tarihtir).
   is_active boolean not null default true,
-  -- Sabit hesabın rolü: kapı nakdi (`cash_drawer`) ile kart ve online tahsilatı (`merchant`) her kurulumda bir hesaba yazılır.
-  system_key text unique check (system_key in ('cash_drawer', 'merchant')),
+  -- Sabit hesabın rolü: kapı nakdi (`cash_drawer`), kart ve online tahsilat (`merchant`) ve satış faturasına gelen havalenin ara
+  -- hesabı (`invoice_clearing`) her kurulumda bir hesaba yazılır.
+  system_key text unique check (system_key in ('cash_drawer', 'merchant', 'invoice_clearing')),
   created_at timestamptz not null default now()
 );
 create unique index account_name_key on public.account (lower(name));
@@ -32,7 +33,8 @@ create unique index account_name_key on public.account (lower(name));
 -- Kimlikler sabittir (`SYSTEM_ACCOUNT_IDS`): kapı ayarlarının fabrika değeri ve uygulama hesabı bunlarla bulur.
 insert into public.account (id, name, type, system_key) values
   ('00000000-0000-4000-8000-000000000101', 'Kasa', 'cash', 'cash_drawer'),
-  ('00000000-0000-4000-8000-000000000102', 'Revolut Merchant', 'provider', 'merchant');
+  ('00000000-0000-4000-8000-000000000102', 'Revolut Merchant', 'provider', 'merchant'),
+  ('00000000-0000-4000-8000-000000000103', 'Fatura tahsilatı', 'clearing', 'invoice_clearing');
 
 -- Sabit hesap silinmez, pasifleşmez, türü ve rolü değişmez: tahsilatın yazılacağı hesap kaybolursa ödeme kayıtsız kalırdı.
 create or replace function public.account_system_guard() returns trigger
@@ -289,6 +291,8 @@ create table public.money_movement (
   -- Ekstre satırının karşıladığı transfer ucu: bağlanınca ayna susar, yoksa kasadan yatırılan para bankada hem ayna hem
   -- ekstre olarak iki kez sayılırdı. Uç silinirse bağ düşer ve para yine tek kez sayılır.
   counterpart_movement_id uuid references public.money_movement (id) on delete set null,
+  -- Ara hesaptaki tahsilatın parasını getiren ekstre satırı; satırın eşleşmesi geri alınınca tahsilat da gider.
+  funding_movement_id uuid references public.money_movement (id) on delete cascade,
   -- Hareket muhasebe yazılımında bizde olmayan bir faturaya eşli, yani fatura oraya doğrudan girilmiş; izah saymaz, çünkü belgesi
   -- bizde girilmelidir.
   matched_elsewhere boolean not null default false,
@@ -307,7 +311,9 @@ create table public.money_movement (
     counterpart_movement_id is null or (source = 'bank_import' and type = 'transfer')
   ),
   -- Karşı taraf tek: ikisi birden aynı soruyu iki cevapla yanıtlardı.
-  constraint money_movement_party check (supplier_id is null or counterparty_id is null)
+  constraint money_movement_party check (supplier_id is null or counterparty_id is null),
+  -- Ekstre satırının parasıyla yazılan hareket yalnız sipariş tahsilatıdır.
+  constraint money_movement_funding_shape check (funding_movement_id is null or type = 'order_payment')
 );
 
 -- Hesap ekstresi: "bu hesapta ne oldu", en yeni önce (sonsuz kaydırma).
@@ -340,6 +346,8 @@ create unique index money_movement_idempotency_key on public.money_movement (ide
 -- İki ekstre satırı aynı transfer ucunu sahiplenemez, yoksa bir para iki satırda yaşardı.
 create unique index money_movement_counterpart_key on public.money_movement (counterpart_movement_id)
   where counterpart_movement_id is not null;
+-- Ekstre satırının kalanı ve geri alınması parasıyla yazılan tahsilatları okur.
+create index money_movement_funding_idx on public.money_movement (funding_movement_id) where funding_movement_id is not null;
 
 -- ── Belge bağı ───────────────────────────────────────────────────────────────
 -- Hareket ile belge tutarıyla bağlanır, çünkü bir havale birkaç faturayı, bir fatura birkaç ödemeyi kapatabilir.
@@ -437,6 +445,13 @@ begin
        from public.money_allocation a
        join public.money_document d on d.id = a.document_id
       where a.movement_id = p.id
+      limit 1),
+    -- Ara hesaba transfer olan ekstre satırı, parasıyla ödenen faturanın işindedir.
+    (select d.business
+       from public.money_movement f
+       join public.money_allocation a on a.movement_id = f.id
+       join public.money_document d on d.id = a.document_id
+      where f.funding_movement_id = p.id
       limit 1),
     (select w.business from public.order o join public.warehouse w on w.id = o.warehouse_id where o.id = p.order_id),
     (select w.business from public.stock_intake i join public.warehouse w on w.id = i.warehouse_id where i.id = p.stock_intake_id),
@@ -995,6 +1010,8 @@ declare
   s public.money_movement%rowtype;
   v_absorbed jsonb;
   v_restored uuid;
+  v_funded_orders uuid[] := '{}';
+  v_order uuid;
 begin
   select * into s from public.money_movement where id = p_movement_id for update;
   if not found then
@@ -1009,11 +1026,17 @@ begin
     if exists (select 1 from public.money_movement c where c.counterpart_movement_id = s.id) then
       raise exception 'unmatch: bu satırı başka bir ekstre satırı transferin öteki yakası olarak sahiplenmiş — önce onu geri alın';
     end if;
+    -- Satırın parasıyla ara hesapta yazılan tahsilatlar gider; faturaya bağları onlarla birlikte silinir.
+    select coalesce(array_agg(distinct f.order_id), '{}') into v_funded_orders
+      from public.money_movement f
+     where f.funding_movement_id = s.id and f.order_id is not null;
+    delete from public.money_movement where funding_movement_id = s.id;
     delete from public.money_allocation where movement_id = s.id;
+    -- İş yeniden türer, çünkü ara hesaba transfer olan satır işini silinen tahsilatın faturasından almıştı.
     update public.money_movement
        set type = 'misc', nature = null, counterparty_id = null, counter_account_id = null,
            counterpart_movement_id = null, order_id = null, payment_method = null, stock_intake_id = null,
-           supplier_id = null, reconciled = false
+           supplier_id = null, reconciled = false, business = public.money_movement_business(s)
      where id = s.id;
   else
     -- Önce ekstre satırı ham hâline iner: yazım kimliği tekildir ve yeniden kurulan satır onu alacak.
@@ -1042,11 +1065,103 @@ begin
   if s.order_id is not null then
     perform public.resync_order_amounts(s.order_id);
   end if;
+  foreach v_order in array v_funded_orders loop
+    perform public.resync_order_amounts(v_order);
+  end loop;
   return v_restored;
 end;
 $$;
 
 revoke execute on function public.unmatch_bank_movement(uuid) from public, anon, authenticated;
+
+-- Ekstre satırının kesilmiş satış faturasına mahsubu tek işlemdir: ara hesapta siparişlerin havale tahsilatı, faturaya bağları ve
+-- satırın ara hesaba transferi birlikte yazılır, yoksa yarım kalan mahsup parayı iki kez sayardı. Paylar çağırandan gelir, burada sınanır.
+create or replace function public.settle_sales_invoice(
+  p_movement_id uuid,
+  p_document_id uuid,
+  p_clearing_account_id uuid,
+  -- `[{"order_id": uuid, "amount": numeric}]`; payların toplamı satırın kalanını ve faturanın açığını aşamaz.
+  p_shares jsonb,
+  p_description text
+) returns numeric
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  s public.money_movement%rowtype;
+  v_document public.money_document%rowtype;
+  v_share jsonb;
+  v_total numeric := 0;
+  v_funded numeric;
+  v_open numeric;
+  v_result jsonb;
+  v_payment uuid;
+begin
+  select * into s from public.money_movement where id = p_movement_id for update;
+  if not found or s.source <> 'bank_import' or s.direction <> 'in' or s.reconciled then
+    raise exception 'settle_sales_invoice: mahsup yalnız bağlanmamış giriş ekstre satırına yazılır (%)', p_movement_id
+      using errcode = 'check_violation';
+  end if;
+  if not (s.type = 'misc' or (s.type = 'transfer' and s.counter_account_id = p_clearing_account_id))
+     or exists (select 1 from public.money_allocation a where a.movement_id = s.id) then
+    raise exception 'settle_sales_invoice: satırın başka bir karşılığı var (%)', p_movement_id using errcode = 'check_violation';
+  end if;
+  select * into v_document from public.money_document where id = p_document_id for update;
+  if not found or v_document.customer_id is null
+     or not exists (select 1 from public.sales_invoice i where i.document_id = p_document_id and i.status = 'issued') then
+    raise exception 'settle_sales_invoice: yalnız kesilmiş satış faturasına mahsup yazılır (%)', p_document_id
+      using errcode = 'check_violation';
+  end if;
+  if exists (
+    select 1
+      from public.money_movement f
+      join public.money_allocation a on a.movement_id = f.id
+      join public.money_document d on d.id = a.document_id
+     where f.funding_movement_id = s.id and (d.id = p_document_id or d.business <> v_document.business)
+  ) then
+    raise exception 'settle_sales_invoice: satır bu faturaya zaten ya da başka işin faturasına bağlı (%)', p_movement_id
+      using errcode = 'check_violation';
+  end if;
+
+  select coalesce(sum(f.amount), 0) into v_funded from public.money_movement f where f.funding_movement_id = s.id;
+  select b.open_amount into v_open from public.money_document_balance b where b.document_id = p_document_id;
+  for v_share in select * from jsonb_array_elements(p_shares) loop
+    if (v_share ->> 'amount')::numeric <= 0 or not exists (
+      select 1 from public.money_document_order o where o.document_id = p_document_id and o.order_id = (v_share ->> 'order_id')::uuid
+    ) then
+      raise exception 'settle_sales_invoice: pay faturanın siparişine ve artı tutarlı olmalı (%)', v_share using errcode = 'check_violation';
+    end if;
+    v_total := v_total + (v_share ->> 'amount')::numeric;
+  end loop;
+  if v_total <= 0 or v_total > s.amount - v_funded or v_total > coalesce(v_open, 0) then
+    raise exception 'settle_sales_invoice: mahsup satırın kalanını ya da faturanın açığını aşar (%)', v_total using errcode = 'check_violation';
+  end if;
+
+  for v_share in select * from jsonb_array_elements(p_shares) loop
+    v_result := public.record_order_movement(
+      (v_share ->> 'order_id')::uuid, p_clearing_account_id, (v_share ->> 'amount')::numeric, 'order_payment', s.value_date,
+      p_description, 'system', null, 'invoice-transfer:' || s.id || ':' || (v_share ->> 'order_id'), 'bank_transfer'
+    );
+    if (v_result ->> 'deduped')::boolean then
+      raise exception 'settle_sales_invoice: siparişin bu satırdan tahsilatı zaten var (%)', v_share ->> 'order_id'
+        using errcode = 'check_violation';
+    end if;
+    v_payment := (v_result ->> 'movement_id')::uuid;
+    update public.money_movement set funding_movement_id = s.id where id = v_payment;
+    insert into public.money_allocation (movement_id, document_id, amount) values (v_payment, p_document_id, (v_share ->> 'amount')::numeric);
+  end loop;
+
+  update public.money_movement
+     set type = 'transfer', counter_account_id = p_clearing_account_id, nature = null, counterparty_id = null, order_id = null,
+         payment_method = null, stock_intake_id = null, supplier_id = null, business = v_document.business,
+         reconciled = (v_funded + v_total) >= s.amount
+   where id = s.id;
+  return s.amount - v_funded - v_total;
+end;
+$$;
+
+revoke execute on function public.settle_sales_invoice(uuid, uuid, uuid, jsonb, text) from public, anon, authenticated;
 
 
 -- ═══ BANKA İÇE AKTARIMI ═══

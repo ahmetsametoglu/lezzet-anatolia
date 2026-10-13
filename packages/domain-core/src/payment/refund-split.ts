@@ -2,9 +2,9 @@ import type { AccountType, MoneyMovement, PaymentMethod } from '@lezzet/types';
 import { refundMethodOf } from './refund-method';
 
 /**
- * İadenin hangi paradan döneceği. Para birden çok yoldan geldiyse iade en son ödemeden geriye doğru dağılır ve her parça kendi
- * yolundan döner: kart parası geldiği kart ödemesinin üzerinden, nakit ve havale geldiği hesaptan. Kart ödemesi künyesiyle ayrı
- * kaynaktır, çünkü sağlayıcı bir ödemeden o ödemenin tutarından fazlasını iade etmez.
+ * İadenin hangi paradan döneceği: para birden çok yoldan geldiyse iade en son ödemeden geriye doğru dağılır ve her parça kendi yolundan
+ * döner (kart parası kart ödemesinin üzerinden, nakit ve havale geldiği hesaptan). Kart ödemesi künyesiyle ayrı kaynaktır, çünkü
+ * sağlayıcı bir ödemeden o ödemenin tutarından fazlasını iade etmez.
  */
 
 /** İadenin dönebileceği para. */
@@ -47,8 +47,22 @@ const newestFirst = (a: RefundSource, b: RefundSource): number =>
   byTime(b.lastPaidAt, a.lastPaidAt) || `${a.accountId}:${a.providerRef}`.localeCompare(`${b.accountId}:${b.providerRef}`);
 
 /**
- * Siparişin iade edilebilir paraları. Künyeli iade kendi kart ödemesinden düşer; künyesiz iade hesabındaki paradan en yeniden başlayarak
- * düşer. Parası hiç girmemiş hesaptan yapılmış iade (kartla alınıp nakit iade edilmiş para) hiçbir kaynağı azaltmaz; iade edilecek tutarı
+ * Ara hesaptaki tahsilat iadede, parasını getiren banka satırının hesabından sayılır: para bankadan geldi, iadesi de bankadan havaleyle
+ * döner. Ara hesaba yazılan iade, bankadan çıkan havale ayrıca eşleşince iki kez sayılırdı.
+ */
+export function refundableMovementsOf<T extends Pick<MoneyMovement, 'accountId' | 'fundingMovementId'>>(
+  movements: readonly T[],
+  fundingAccountOf: ReadonlyMap<string, string>,
+): T[] {
+  return movements.map((movement) => {
+    const accountId = movement.fundingMovementId ? fundingAccountOf.get(movement.fundingMovementId) : undefined;
+    return accountId ? { ...movement, accountId } : movement;
+  });
+}
+
+/**
+ * Siparişin iade edilebilir paraları: künyeli iade kendi kart ödemesinden, künyesiz iade hesabındaki paradan en yeniden başlayarak düşer.
+ * Parası hiç girmemiş hesaptan yapılmış iade (kartla alınıp nakit iade edilmiş para) hiçbir kaynağı azaltmaz, çünkü iade edilecek tutarı
  * zaten sipariş türetimi küçültür.
  */
 export function refundSourcesOf(movements: readonly OrderMoney[], accountTypes: ReadonlyMap<string, AccountType>): RefundSource[] {
@@ -96,8 +110,8 @@ export function refundSourcesOf(movements: readonly OrderMoney[], accountTypes: 
 }
 
 /**
- * İade planı. Yol verilmezse iade kaynaklara en son ödemeden geriye doğru dağılır. Operatör kart yolunu seçtiyse yalnız o hesabın kart
- * ödemelerine dağılır; nakit ya da havale yolunu seçtiyse tamamı o hesaptan çıkar, çünkü kartla alınmış parayı nakit vermek meşrudur.
+ * İade planı: yol verilmezse iade kaynaklara en son ödemeden geriye doğru dağılır, operatör kart yolunu seçtiyse yalnız o hesabın kart
+ * ödemelerine. Nakit ya da havale yolunu seçtiyse tamamı o hesaptan çıkar, çünkü kartla alınmış parayı nakit vermek meşrudur.
  */
 export function planRefund(input: {
   dueCents: number;

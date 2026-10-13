@@ -51,13 +51,14 @@ import {
   officeTransitions,
   orderContribution,
   paymentFeeCentsOf,
+  refundableMovementsOf,
   refundSourcesOf,
   skippedBetween,
   vatByRate,
   type RateAmount,
 } from '@lezzet/domain-core';
 import { doorCheckOf } from '@lezzet/address';
-import { listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl } from '@lezzet/application';
+import { fundingAccountsOf, listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl } from '@lezzet/application';
 import { daysBetween, parisDateOf, toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
@@ -289,7 +290,9 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     */
     allowedNext: officeTransitions(order.status),
     decisions: [...allowedDecisions(order.status)],
-    refundRoutes: allowedDecisions(order.status).includes('refund') ? refundRoutesOf(accounts, movements) : [],
+    refundRoutes: allowedDecisions(order.status).includes('refund')
+      ? refundRoutesOf(accounts, refundableMovementsOf(movements, await fundingAccountsOf(db, movements)))
+      : [],
     returnDispositions: [...allowedReturnDispositions([order.status, ...logs.map((log) => log.toStatus)])],
 
     delivery: {
@@ -416,7 +419,9 @@ function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyM
   // Yol hesap türüdür: on kasa satırı soruyu "nasıl geri veriyorum"dan "hangi kasa"ya kaydırırdı. Tür başına paranın girdiği hesap,
   // yoksa türün en eskisi seçilir.
   const byType = new Map<RefundRouteType, Account & { type: RefundRouteType }>();
-  const routable = accounts.filter((a): a is Account & { type: RefundRouteType } => a.isActive && a.type !== 'partner');
+  const routable = accounts.filter(
+    (a): a is Account & { type: RefundRouteType } => a.isActive && a.type !== 'partner' && a.type !== 'clearing',
+  );
   for (const account of routable.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
     if (account.id === paidInto) byType.set(account.type, account);
     else if (!byType.has(account.type)) byType.set(account.type, account);
@@ -448,8 +453,11 @@ function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyM
   ];
 }
 
-/** Ortak cari iade yolu değildir: müşteri parası şirketin kasasından, bankasından ya da kartından döner ve kasaya yöntemiyle yazılır. */
-type RefundRouteType = Exclude<Account['type'], 'partner'>;
+/**
+ * Ortak cari ve ara hesap iade yolu değildir: müşteri parası şirketin kasasından, bankasından ya da kartından döner ve kasaya yöntemiyle
+ * yazılır; ara hesaptaki tahsilat parasını getiren bankadan döner.
+ */
+type RefundRouteType = Exclude<Account['type'], 'partner' | 'clearing'>;
 
 const ROUTE_LABELS: Record<RefundRouteType, string> = {
   provider: 'Karta geri',

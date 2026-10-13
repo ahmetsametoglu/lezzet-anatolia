@@ -221,7 +221,7 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 **Otomatik fiyatın kuralları** (üç tetik — mal kabulde maliyet değişimi, anahtar/hedef değişimi, elle toplu hizalama — hepsi aynı hesaba iner):
 
 - **İki yönlüdür:** maliyet artınca fiyat yükselir, düşünce iner. Tek yönlü olsaydı "otomatik" ürün zamanla hedefin üstüne demirler, indirimi de admin'in elle kovalaması gerekirdi.
-- **Yuvarlama 50 sente ve YUKARI:** fiyat tam euro ya da 50 sentle biter, çünkü nakit ödemede küsurat istenmiyor. Aşağı yuvarlamak hedefi kılpayı ıskalar ve ürün, otomatik olduğu hâlde marj-altı uyarısına düşerdi — sistemin kendi kuralını bozması. Adım ayardır (`auto_price_step_cents`). Elle yazılan fiyat ve yüzdeyle türeyen fiyatlar (grup, müşteri kuralı, kupon) yuvarlanmaz, çünkü verilen oran bozulur.
+- **Yuvarlama 50 sente ve YUKARI:** tüketici fiyatı tam euro ya da 50 sentle biter, çünkü nakit ödemede küsurat istenmiyor; işletme fiyatı (KDV hariç) yuvarlanmaz, kuruşuna kadar hedefe oturur, çünkü işletme nakit ödemez. Aşağı yuvarlamak hedefi kılpayı ıskalar ve ürün, otomatik olduğu hâlde marj-altı uyarısına düşerdi — sistemin kendi kuralını bozması. Adım ayardır (`auto_price_step_cents`). Elle yazılan fiyat ve yüzdeyle türeyen fiyatlar (grup, müşteri kuralı, kupon) yuvarlanmaz, çünkü verilen oran bozulur.
 - **Almanya fiyatı da otomatiktir:** otomatik fiyatlı üründe Almanya tüketici fiyatı hedef marjdan, Almanya'da o an uygulanan oranla hesaplanır; genel fiyattan farklı çıkarsa ayrı satır yazılır. Eşik durumu değişince fiyatlar yeniden hizalanır.
 - **Fiyatı olmayan kanal AÇILMAZ.** Fiyat satırının yokluğu "o kanalda satışa kapalı" demektir; otomatik hesap kapalı kanalı kendiliğinden açsaydı ürün, kimsenin kararı olmadan toptan listesine düşerdi.
 - **Maliyet yoksa fiyat uydurulmaz:** elde alış fiyatlı parti yoksa ürünün fiyatı olduğu gibi kalır.
@@ -428,6 +428,10 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
   e-postamızla ekli gider; dili fatura adresinin ülkesindendir (Almanya Almanca, öteki Fransızca). Kasanın yazmadığı satış (kanal
   `b2b`) faturalanır, hediye sipariş faturalanmaz; B2B satışı elle numara eşleştirmesine girmez (`docs/feature/profesyonel-satis.md`,
   Faz 4).
+- Satış faturasının havalesi faturaya mahsup edilir: banka satırı "Fatura tahsilatı" ara hesabına transfer olur, ara hesapta faturanın
+  siparişlerine havale tahsilatı yazılır ve faturaya bağlanır, banka parayı bir kez sayar. Tutar havalenin kalanı ile faturanın
+  açığının küçüğüdür ve faturanın içinde en eski siparişten başlar; ara hesaptaki tahsilatın iadesi bankadan havaleyle döner
+  (`docs/feature/profesyonel-satis.md`, Faz 5).
 - Banka hareketleri Pennylane'den okunur (eşlenmemiş hesapta Excel ile alınır), sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil). İstisna kendi hesaplarımız arasındaki transferdir: banka satırı, yönü ve tutarı birebir, günü 7 gün içinde tutan tek bekleyen transfere (kasadan yatırma, kart ödemeleri aktarımı) kendiliğinden bağlanır. Eşlenen hesabın hareketleri eşlendiği günden okunur; o günden sonrası için Excel yüklenmez, çünkü iki kaynak aynı satırı iki kez yazardı; aynı sebeple Excel satırı o güne ya da sonrasına düşen hesap eşlenmez.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) bizde girilir ve Pennylane'e bizden yüklenir; belge değişince Pennylane güncellenir. Belge dosyası PDF, JPEG ya da PNG'dir, çünkü Pennylane başka türü almıyor. Belge Pennylane'de işinin analitik kategorisini taşır ("Lezzet" ya da "QUALITE"), çünkü Pennylane iki işin ortak defteridir.
 

@@ -29,6 +29,7 @@ const movement = (over: Partial<MoneyMovement> = {}): MoneyMovement => ({
   idempotencyKey: null,
   bankImportId: null,
   counterpartMovementId: null,
+  fundingMovementId: null,
   matchedElsewhere: false,
   createdAt: '2026-09-05T10:00:00.000Z',
   ...over,

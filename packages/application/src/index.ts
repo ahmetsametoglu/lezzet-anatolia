@@ -597,6 +597,15 @@ export { addMovementTag, setMovementTagActive, tagMovement, type TagMovementOutc
 export { linkAwaitingTransfers } from './accounting/transfer-link';
 export { SALES_INVOICE_OPEN_JOB, approveSalesInvoice, openSalesInvoices, type SalesInvoiceApproval } from './accounting/sales-invoice';
 export {
+  allocateToOrderInvoice,
+  fundingAccountsOf,
+  movementAllocations,
+  ordersFundedBy,
+  settleSalesInvoice,
+  type SettlementOutcome,
+  type SettlementReason,
+} from './accounting/sales-invoice-payment';
+export {
   addMovementNature,
   natureProblemOf,
   setMovementNature,

@@ -15,7 +15,7 @@ Hesaplar, para hareketleri, tür · etiket · cari sözlükleri, belgeler ve bel
 
 ## Account (hesap)
 
-Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Revolut Merchant — hepsi birer hesap. "Online havuz" ayrı değil = Merchant hesabı (`provider`). Kasa ile Revolut Merchant sabit hesaplardır (`system_key`; kimlikleri `SYSTEM_ACCOUNT_IDS`): migration açar, silinmez, pasifleşmez.
+Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Revolut Merchant — hepsi birer hesap. "Online havuz" ayrı değil = Merchant hesabı (`provider`). Kasa, Revolut Merchant ve Fatura tahsilatı sabit hesaplardır (`system_key`; kimlikleri `SYSTEM_ACCOUNT_IDS`): migration açar, silinmez, pasifleşmez. Fatura tahsilatı ara hesaptır (`clearing`): satış faturasının havalesi orada siparişlere dağılır, bakiyesi faturaya bağlanmamış müşteri parasıdır.
 
 <!-- alanlar:account -->
 | Kolon | Tip | Null | Varsayılan |
@@ -59,6 +59,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 | `import_fingerprint` | text | • |  |
 | `bank_import_id` | uuid | • |  |
 | `counterpart_movement_id` | uuid | • |  |
+| `funding_movement_id` | uuid | • |  |
 | `matched_elsewhere` | boolean |  | `false` |
 | `created_at` | timestamptz |  | `now()` |
 | `explained` | boolean |  | `false` |
@@ -77,6 +78,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 - **`meta`** — ek künye. Reklam giderinde `{campaign}` taşır: kampanya gideri ↔ ciro eşleşmesi (gerçek ROI) bu alandan çıkar; kart tahsilatında `{providerRef}`.
 - **`counter_account_id`** — transferde karşı hesap (nakit→banka, Merchant→banka aktarımı, banka→ortak carisi).
 - **`counterpart_movement_id`** (12.13) — "bu ekstre satırı şu transferin öteki yakasıdır". Transfer tek satırdır ve karşı hesaba aynalanır; karşı hesap ekstreyle beslenen bir bankaysa ekstre o yakayı bir kez daha getirir (kasadan yatırılan 600 € bankada hem ayna hem ekstre satırı). Ekstre satırı buradan uca bağlanınca **ayna susar** (`account_movement`): iki gerçek satır kendi hesaplarında durur, hiçbiri aynalanmaz. Yalnız ekstre satırı taşır, yalnız transferde; bir ucu tek satır sahiplenir (tekil indeks). Uç silinirse bağ düşer ve satır kendi başına aynalanan bir transfer olarak kalır.
+- **`funding_movement_id`** (profesyonel satış Faz 5) — ara hesaptaki tahsilatın parasını getiren ekstre satırı. Satış faturasının havalesi tek işlemde mahsup edilir (`settle_sales_invoice`): satır ara hesaba transfer olur, siparişlere tahsilat yazılır ve faturaya bağlanır; satırın kalanı ve bağlı faturaları bu tahsilatlardan okunur, eşleşme geri alınınca tahsilatlar silinir (`unmatch_bank_movement`).
 - **`matched_elsewhere`** — hareket muhasebe yazılımında (Pennylane) bizde olmayan bir faturaya eşli, yani fatura oraya doğrudan girilmiş. İzah sayılmaz; satır belgesi bizde girilene kadar kuyrukta durur. Yalnız Pennylane'den gelen banka satırında, eşleşmesi okununca yazılır; eşleşmeyi geri almak onu sıfırlamaz, çünkü Pennylane'deki eşleşme durur.
 - **`import_fingerprint`** — mükerrer koruması; aşağıdaki bölüme bak.
 - **Türetilmiş görünümler:** `account_movement` (defter satırı, aynalama), `account_balance`, `money_document_balance` (belgenin açık kalanı), `stock_intake_balance` (12.13: mal kabulün açık kalanı = kabul tutarı − kabule bağlı alım ödemeleri; faturası belge olarak girilmiş kabul `has_document` taşır ve borcu belgede görünür, iki kez değil).

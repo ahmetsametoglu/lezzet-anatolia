@@ -54,6 +54,7 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   provider: 'Ödeme sağlayıcı',
   // Ortağın şirketle hesabı, ortağın tek kaydı; bakiye işareti ekranda cümleyle değil renkle anlatılır.
   partner: 'Ortak cari',
+  clearing: 'Ara hesap',
 };
 
 /** Hesap bakiyelerinin grup başlıkları; çoğul, çünkü grubun adıdır, tek hesabın değil. */
@@ -62,6 +63,7 @@ export const ACCOUNT_GROUP_LABEL: Record<AccountType, string> = {
   cash: 'Kasalar',
   provider: 'Ödeme sağlayıcılar',
   partner: 'Ortak carileri',
+  clearing: 'Ara hesaplar',
 };
 
 /**
@@ -74,6 +76,8 @@ export const ACCOUNT_TONE: Record<AccountType, OpsTone> = {
   provider: 'slate',
   // Ortak carisi nötr: para değil, bir KİŞİYLE hesap — hesap renklerinin hiçbirine ait değil.
   partner: 'neutral',
+  // Ara hesap da nötr: paranın durduğu yer değil, banka satırından siparişlere geçtiği yer.
+  clearing: 'neutral',
 };
 
 /**
@@ -255,6 +259,7 @@ export const ALLOCATION_REASON = {
   nothing_to_allocate: 'Hareketin bağlanacak kalanı yok — tutarın tamamı başka belgelere bağlanmış.',
   document_settled: 'Belgenin açık kalanı yok — ödemesi zaten tamamlanmış.',
   business_mismatch: 'Hareket başka işin belgesine bağlı — bir ödeme iki işin belgesini kapatamaz.',
+  settled_payment: 'Bu tahsilat bir havalenin mahsubu — banka satırında "Eşleşmeyi geri al" ile çözülür.',
 } as const;
 
 /** Etiket kapısının reddi → operatörün cümlesi. */
@@ -301,6 +306,8 @@ export const RECONCILE_REASON = {
   document_settled: ALLOCATION_REASON.document_settled,
   already_allocated: ALLOCATION_REASON.already_allocated,
   business_mismatch: ALLOCATION_REASON.business_mismatch,
+  invoice_not_issued: "Satış faturası henüz Pennylane'de kesilmedi — kesilince havaleye bağlanır.",
+  other_match: 'Bu satırın başka bir karşılığı var — satış faturasına bağlamak için önce eşleşmeyi geri alın.',
 } as const;
 
 /** Kapıda kart eşleştirmesinin kapalı hâli ve reddi. */

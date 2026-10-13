@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AccountType, PaymentMethod } from '@lezzet/types';
-import { planRefund, refundSourcesOf } from './refund-split';
+import { planRefund, refundableMovementsOf, refundSourcesOf } from './refund-split';
 
 const TYPES = new Map<string, AccountType>([
   ['revolut', 'provider'],
@@ -111,5 +111,16 @@ describe('operatörün seçtiği yol', () => {
       { accountId: 'revolut', providerRef: 'rv_kapi', method: 'card', amountCents: 2500 },
       { accountId: 'revolut', providerRef: 'rv_kapora', method: 'online', amountCents: 300 },
     ]);
+  });
+});
+
+describe('ara hesaptan ödenmiş siparişin iadesi', () => {
+  it('iade, parayı getiren banka satırının hesabından havaleyle planlanır; ara hesaba yazılmaz', () => {
+    const types = new Map<string, AccountType>([...TYPES, ['ara', 'clearing']]);
+    const paid = { ...payment('ara', 3000, 'bank_transfer'), fundingMovementId: 'ekstre-1' };
+    const movements = refundableMovementsOf([paid], new Map([['ekstre-1', 'banka']]));
+    const result = planRefund({ dueCents: 1200, sources: refundSourcesOf(movements, types), route: null });
+
+    expect(legsOf(result)).toEqual([{ accountId: 'banka', providerRef: null, method: 'bank_transfer', amountCents: 1200 }]);
   });
 });

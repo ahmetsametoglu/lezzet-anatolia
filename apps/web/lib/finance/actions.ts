@@ -798,6 +798,8 @@ export async function createAccountAction(input: {
     await requireFinance();
     const name = input.name.trim();
     if (!name) return { data: null, error: 'Hesap adı boş bırakılamaz.' };
+    // Ara hesabın parasını yalnız mahsup dağıtır; elle açılan ara hesap hiçbir akışa bağlanmazdı.
+    if (input.type === 'clearing') return { data: null, error: 'Ara hesap elle açılmaz.' };
 
     const account = await new AccountService(serviceDb()).insert({ name, type: input.type });
     revalidatePath(FINANCE_PATH);

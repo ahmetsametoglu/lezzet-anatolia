@@ -143,3 +143,36 @@ export function salesInvoiceTotals(parts: ReadonlyArray<{ sale: SaleVatBasis; it
     vatRegime: regimes.has(true) ? 'reverse_charge' : 'standard',
   };
 }
+
+/** Satış faturasında müşterinin adı: şirketin yasal unvanı, yoksa kaydın adı. */
+export function salesInvoiceCustomerName(customer: Pick<UserProfile, 'name' | 'companyInfo'>): string {
+  return customer.companyInfo?.legalName || customer.name;
+}
+
+/** Faturadaki siparişin havale dağıtımına girdisi. */
+export interface SalesInvoiceOrderDue {
+  orderId: string;
+  saleDate: string;
+  /** Siparişin faturadaki payından ona bağlanmış tahsilat düşülmüş kalanı (cent); sıfır ya da eksiyse sipariş ödenmiştir. */
+  dueCents: number;
+}
+
+/**
+ * Faturaya gelen havalenin siparişlere dağılımı: en eski siparişten başlar ve her siparişe kalanı kadar düşer, böylece kısmi ödemede
+ * hangi teslimin kapandığı her seferinde aynıdır. Toplam siparişlerin kalanını aşmaz; aşan kısım havalenin bağlanmamış kalanında durur.
+ */
+export function salesInvoicePaymentShares(
+  amountCents: number,
+  orders: readonly SalesInvoiceOrderDue[],
+): Array<{ orderId: string; amountCents: number }> {
+  const shares: Array<{ orderId: string; amountCents: number }> = [];
+  let left = amountCents;
+  const byAge = [...orders].sort((a, b) => a.saleDate.localeCompare(b.saleDate) || a.orderId.localeCompare(b.orderId));
+  for (const order of byAge) {
+    const share = Math.min(left, order.dueCents);
+    if (share <= 0) continue;
+    shares.push({ orderId: order.orderId, amountCents: share });
+    left -= share;
+  }
+  return shares;
+}

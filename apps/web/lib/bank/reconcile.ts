@@ -9,14 +9,32 @@ import {
   StockIntakeBalanceService,
   StockIntakeService,
   SupplierService,
+  UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { linkMovementToDocument, setMovementCounterparty, type AllocationOutcome } from '@lezzet/application';
-import { acceptsNature, counterDirectionOf, isUnambiguous, suggestMatches, type MatchCandidate, type MatchSuggestion } from '@lezzet/domain-core';
+import {
+  allocateToOrderInvoice,
+  linkMovementToDocument,
+  movementAllocations,
+  ordersFundedBy,
+  setMovementCounterparty,
+  settleSalesInvoice,
+  type AllocationOutcome,
+  type SettlementReason,
+} from '@lezzet/application';
+import {
+  acceptsNature,
+  counterDirectionOf,
+  isUnambiguous,
+  salesInvoiceCustomerName,
+  suggestMatches,
+  type MatchCandidate,
+  type MatchSuggestion,
+} from '@lezzet/domain-core';
+import { SYSTEM_ACCOUNT_IDS } from '@lezzet/types';
 import type {
   Account,
   Counterparty,
-  MoneyAllocation,
   MoneyDocument,
   MoneyDocumentBalance,
   MoneyMovement,
@@ -27,8 +45,9 @@ import { syncOrderPaymentStatus } from '../money/order-payment';
 
 /**
  * Banka satırının karşılığı, eşleştirme kuyruğu (DOMAIN §9): öneri ve elle onay, çünkü yanlış eşleşen satır parayı başka siparişin
- * ödemesi yapar ve gerçekte ödeyen borçlu kalır. Hedefler sipariş tahsilatı ve iadesi, açık belge (tutarıyla; kısmen bağlanan satır
- * kalanıyla kuyrukta kalır), mal kabul, transferin öteki yakası, "bunu zaten yazmıştım" ve caridir; her eşleşme `unmatchRow` ile geri alınır.
+ * ödemesi yapar ve gerçekte ödeyen borçlu kalır. Hedefler sipariş tahsilatı ve iadesi, açık belge (tutarıyla; satış faturasında para ara
+ * hesaptan siparişlere dağılır, kısmen bağlanan satır kalanıyla kuyrukta kalır), mal kabul, transferin öteki yakası, "bunu zaten
+ * yazmıştım" ve caridir; her eşleşme `unmatchRow` ile geri alınır.
  */
 
 /** Adayların arandığı pencere (gün): banka satırı satıştan sonra düşer, bazen günler sonra. */
@@ -115,14 +134,14 @@ export async function suggestionsForMovements(movementIds: readonly string[]): P
   );
   if (movements.length === 0) return EMPTY_MATCH_QUEUE;
 
-  const allocations = await new MoneyAllocationService(db).listByMovements(movements.map((movement) => movement.id));
+  const links = await linksOf(movements.map((movement) => movement.id));
   const byAccount = new Map<string, MoneyMovement[]>();
   for (const movement of movements) byAccount.set(movement.accountId, [...(byAccount.get(movement.accountId) ?? []), movement]);
   const groups = await Promise.all(
     [...byAccount].map(async ([accountId, rows]) => {
       const dates = rows.map((row) => row.valueDate).sort();
-      const { targets, candidates } = await loadTargets(accountId, addDays(dates[0]!, -CANDIDATE_WINDOW_DAYS), addDays(dates[dates.length - 1]!, 3));
-      return { targets, rows: rows.map((movement): QueueRow => ({ movement, ...suggestionsFor(movement, candidates, allocations) })) };
+      const loaded = await loadTargets(accountId, addDays(dates[0]!, -CANDIDATE_WINDOW_DAYS), addDays(dates[dates.length - 1]!, 3));
+      return { targets: loaded.targets, rows: rows.map((movement): QueueRow => ({ movement, ...suggestionsFor(movement, loaded, links) })) };
     }),
   );
   const order = new Map(movementIds.map((id, index) => [id, index] as const));
@@ -152,19 +171,42 @@ function mergeTargets(all: readonly MatchTargets[]): MatchTargets {
   };
 }
 
+/** Satırın bağı: kendi belge bağları ve ara hesapta parasıyla yazılan tahsilatların faturaları, tutarlarıyla. */
+interface MovementLinks {
+  linkedCents: number;
+  documentIds: Set<string>;
+}
+
+/** Satırların bağları tek turda; kuyruk, tek satırın seçicisi ve belgenin ödeme adayları aynı kalanı okur. */
+async function linksOf(movementIds: readonly string[]): Promise<Map<string, MovementLinks>> {
+  const links = new Map<string, MovementLinks>();
+  for (const allocation of await movementAllocations(serviceDb(), movementIds)) {
+    const entry = links.get(allocation.movementId) ?? { linkedCents: 0, documentIds: new Set<string>() };
+    entry.linkedCents += allocation.amountCents;
+    entry.documentIds.add(allocation.documentId);
+    links.set(allocation.movementId, entry);
+  }
+  return links;
+}
+
+/** Ara hesaba transfer olmuş, kalanı satış faturası bekleyen ekstre satırı. */
+const settling = (movement: MoneyMovement) => movement.type === 'transfer' && movement.counterAccountId === SYSTEM_ACCOUNT_IDS.invoice_clearing;
+
 /**
  * Satırın önerileri kalan tutara göre aranır, çünkü belgeye kısmen bağlanan satır kalanıyla kuyrukta durur; zaten bağlı belge ikinci kez
- * önerilmez. Kuyruk ve tek satırın seçicisi (`matchOptions`) aynı hesabı yapar.
+ * önerilmez, mahsubu süren satıra yalnız satış faturası önerilir. Kuyruk ve tek satırın seçicisi (`matchOptions`) aynı hesabı yapar.
  */
 function suggestionsFor(
   movement: MoneyMovement,
-  candidates: readonly MatchCandidate[],
-  allocations: readonly MoneyAllocation[],
+  loaded: Pick<LoadedTargets, 'candidates' | 'salesInvoiceIds'>,
+  links: ReadonlyMap<string, MovementLinks>,
 ): Omit<QueueRow, 'movement'> {
-  const own = allocations.filter((allocation) => allocation.movementId === movement.id);
-  const remainingCents = movement.amountCents - own.reduce((sum, allocation) => sum + allocation.amountCents, 0);
-  const linked = new Set(own.map((allocation) => allocation.documentId));
-  const open = linked.size > 0 ? candidates.filter((c) => !(c.kind === 'document' && linked.has(c.id))) : candidates;
+  const link = links.get(movement.id);
+  const remainingCents = movement.amountCents - (link?.linkedCents ?? 0);
+  const linked = link?.documentIds ?? new Set<string>();
+  const open = loaded.candidates.filter(
+    (c) => !(c.kind === 'document' && linked.has(c.id)) && (!settling(movement) || (c.kind === 'document' && loaded.salesInvoiceIds.has(c.id))),
+  );
   const suggestions = suggestMatches(
     { valueDate: movement.valueDate, amountCents: remainingCents, direction: movement.direction, label: movement.description ?? '' },
     open,
@@ -172,20 +214,22 @@ function suggestionsFor(
   return { remainingCents, suggestions, unambiguous: isUnambiguous(suggestions) };
 }
 
+interface LoadedTargets {
+  targets: MatchTargets;
+  candidates: MatchCandidate[];
+  /** Adaylardan kesilmiş satış faturaları; mahsubu süren satır yalnız onlara bağlanır. */
+  salesInvoiceIds: Set<string>;
+}
+
 /**
  * Bir hesabın hedef listeleri ve motorun aday kümesi; kuyruk ve tek satırın seçicisi ortak okur, iki kopya bir gün ayrı hedef
  * gösterirdi. `documentsOnly` elle yazılan satırın seçicisi içindir, çünkü onun tek bağı belgedir.
  */
-async function loadTargets(
-  accountId: string,
-  from: string,
-  to: string,
-  opts: { documentsOnly?: boolean } = {},
-): Promise<{ targets: MatchTargets; candidates: MatchCandidate[] }> {
+async function loadTargets(accountId: string, from: string, to: string, opts: { documentsOnly?: boolean } = {}): Promise<LoadedTargets> {
   const db = serviceDb();
   const movements = new MoneyMovementService(db);
   const all = !opts.documentsOnly;
-  const [sales, documents, intakes, legs, provisional, accounts, suppliers, counterparties, natures] = await Promise.all([
+  const [sales, allDocuments, intakes, legs, provisional, accounts, suppliers, counterparties, natures] = await Promise.all([
     all ? new OrderSaleService(db).listPeriod(from, to) : Promise.resolve([]),
     new MoneyDocumentService(db).listOpen(),
     all ? new StockIntakeBalanceService(db).listOpen() : Promise.resolve([]),
@@ -220,6 +264,10 @@ async function loadTargets(
     .map((s) => ({ id: s.id, referenceNo: s.referenceNo, saleDate: s.saleDate, netCollectedCents: s.amountCollectedCents - s.amountRefundedCents }))
     .filter((c) => c.netCollectedCents > 0);
 
+  // Satış faturası kesilmeden müşteriye gitmez, havalesi de gelmez; numarası olmayan satış faturası aday değildir.
+  const documents = allDocuments.filter((d) => !d.customerId || d.number !== null);
+  const customers = await new UserProfileService(db).listByIds([...new Set(documents.flatMap((d) => (d.customerId ? [d.customerId] : [])))]);
+  const customerName = new Map(customers.map((customer) => [customer.id, salesInvoiceCustomerName(customer)] as const));
   const supplierName = new Map(suppliers.map((s) => [s.id, s.name] as const));
   const counterpartyOf = new Map(counterparties.map((c) => [c.id, c] as const));
   const natureDirection = new Map(natures.map((n) => [n.slug, n.direction] as const));
@@ -228,7 +276,13 @@ async function loadTargets(
 
   const documentTargets: DocumentTarget[] = documents.map((d) => ({
     ...d,
-    partyName: d.counterpartyId ? (counterpartyOf.get(d.counterpartyId)?.name ?? null) : d.supplierId ? (supplierName.get(d.supplierId) ?? null) : null,
+    partyName: d.counterpartyId
+      ? (counterpartyOf.get(d.counterpartyId)?.name ?? null)
+      : d.supplierId
+        ? (supplierName.get(d.supplierId) ?? null)
+        : d.customerId
+          ? (customerName.get(d.customerId) ?? null)
+          : null,
   }));
   const intakeTargets: IntakeTarget[] = intakes.map((intake) => ({
     ...intake,
@@ -311,6 +365,7 @@ async function loadTargets(
       counterparties: counterpartyTargets,
     },
     candidates,
+    salesInvoiceIds: new Set(documents.flatMap((d) => (d.customerId ? [d.id] : []))),
   };
 }
 
@@ -344,7 +399,11 @@ export type ReconcileReason =
   /** Satır bu belgeye zaten bağlı — ikinci bağ, birincinin tutarını değiştirmek olurdu. */
   | 'already_allocated'
   /** Satır başka işin belgesine bağlı; bir ödeme iki işin belgesini kapatamaz. */
-  | 'business_mismatch';
+  | 'business_mismatch'
+  /** Satış faturası henüz kesilmedi; müşteriye gitmemiş faturanın havalesi olmaz. */
+  | 'invoice_not_issued'
+  /** Satırın satış faturası dışında bir karşılığı var; mahsup için önce eşleşme geri alınır. */
+  | 'other_match';
 
 export type ReconcileOutcome = { status: 'ok'; movementId: string } | { status: 'invalid'; reason: ReconcileReason };
 
@@ -358,6 +417,20 @@ const ALLOCATION_REASON: Record<Extract<AllocationOutcome, { status: 'invalid' }
   nothing_to_allocate: 'already_reconciled',
   document_settled: 'document_settled',
   business_mismatch: 'business_mismatch',
+};
+
+/** Mahsup kapısının reddi → kuyruğun dili. */
+const SETTLEMENT_REASON: Record<SettlementReason, ReconcileReason> = {
+  not_found: 'target_not_found',
+  not_bank_row: 'not_bank_row',
+  already_reconciled: 'already_reconciled',
+  direction_mismatch: 'direction_mismatch',
+  not_issued: 'invoice_not_issued',
+  other_match: 'other_match',
+  already_allocated: 'already_allocated',
+  business_mismatch: 'business_mismatch',
+  nothing_to_allocate: 'already_reconciled',
+  document_settled: 'document_settled',
 };
 
 /** Kuyruktaki satırı bulur ve dokunulabilir olduğunu doğrular — iki kez uygulanmasın. */
@@ -399,6 +472,7 @@ export async function applyMatch(movementId: string, target: MatchTarget): Promi
         ...BOUND,
       });
       await syncOrderPaymentStatus(target.orderId);
+      await allocateToOrderInvoice(db, { movementId, orderId: target.orderId });
       return ok;
     }
     case 'refund': {
@@ -458,27 +532,37 @@ export async function applyMatch(movementId: string, target: MatchTarget): Promi
 }
 
 /**
- * Belgeye bağlama, tutarıyla; kalan varsa satır kalanıyla kuyrukta kalır. Satırın cevabı uygulama katmanında kurulur
- * (`linkMovementToDocument`), çünkü Pennylane'de kurulan eşleşme de aynı kapıdan benimsenir.
+ * Belgeye bağlama, tutarıyla; satış faturasında para ara hesaptan siparişlere dağılır (`settleSalesInvoice`), kalan varsa satır kalanıyla
+ * kuyrukta kalır. Satırın cevabı uygulama katmanında kurulur, çünkü Pennylane'de kurulan eşleşme de aynı kapıdan benimsenir.
  */
 async function applyDocument(movement: MoneyMovement, documentId: string): Promise<ReconcileOutcome> {
-  const outcome = await linkMovementToDocument(serviceDb(), { movement, documentId });
+  const db = serviceDb();
+  const document = await new MoneyDocumentService(db).getById(documentId);
+  if (!document) return invalid('target_not_found');
+  if (document.customerId) {
+    const settled = await settleSalesInvoice(db, { movement, documentId });
+    return settled.status === 'invalid' ? invalid(SETTLEMENT_REASON[settled.reason]) : { status: 'ok', movementId: movement.id };
+  }
+  const outcome = await linkMovementToDocument(db, { movement, documentId });
   return outcome.status === 'invalid' ? invalid(ALLOCATION_REASON[outcome.reason]) : { status: 'ok', movementId: movement.id };
 }
 
 /**
  * Eşleşmeyi geri alır: bağlanan, sınıflanan ya da atlanan ekstre satırı ekstreden geldiği hâle döner ve kuyruğa gelir; "zaten
- * yazmıştım" birleşmesinde elle yazılan satır künyesinden yeniden kurulur. Tek işlemdir (`unmatch_bank_movement`), sipariş parasıysa
- * ödeme durumu yeniden türer.
+ * yazmıştım" birleşmesinde elle yazılan satır künyesinden yeniden kurulur. Tek işlemdir (`unmatch_bank_movement`); sipariş parasıysa ya
+ * da ara hesaptan siparişlere dağıldıysa ödeme durumları yeniden türer.
  */
 export async function unmatchRow(movementId: string): Promise<ReconcileOutcome> {
-  const movements = new MoneyMovementService(serviceDb());
+  const db = serviceDb();
+  const movements = new MoneyMovementService(db);
   const movement = await movements.getById(movementId);
   if (!movement) return invalid('not_found');
   if (movement.source !== 'bank_import') return invalid('not_bank_row');
 
+  const funded = await ordersFundedBy(db, movementId);
   await movements.unmatchBankMovement(movementId);
   if (movement.orderId) await syncOrderPaymentStatus(movement.orderId);
+  for (const orderId of funded) await syncOrderPaymentStatus(orderId);
   return { status: 'ok', movementId };
 }
 
@@ -497,13 +581,13 @@ export async function matchOptions(movementId: string): Promise<MatchOptions | n
   const movement = await new MoneyMovementService(db).getById(movementId);
   if (!movement) return null;
   const bankRow = movement.source === 'bank_import' && !movement.reconciled;
-  const [{ targets, candidates }, allocations] = await Promise.all([
+  const [loaded, links] = await Promise.all([
     loadTargets(movement.accountId, addDays(movement.valueDate, -CANDIDATE_WINDOW_DAYS), addDays(movement.valueDate, 3), {
       documentsOnly: !bankRow,
     }),
-    new MoneyAllocationService(db).listByMovements([movement.id]),
+    linksOf([movement.id]),
   ]);
-  return { movement, ...suggestionsFor(movement, candidates, allocations), targets, bankRow };
+  return { movement, ...suggestionsFor(movement, loaded, links), targets: loaded.targets, bankRow };
 }
 
 /**
@@ -521,6 +605,9 @@ const PAYMENT_BEFORE_DAYS = 30;
 const PAYMENT_AFTER_DAYS = 120;
 /** Belgeye ödeme adayı olabilen tipler: türlü hareketler ve stok alımı; sipariş parası ve transfer olamaz. */
 const payable = (movement: MoneyMovement) => acceptsNature(movement.type) || movement.type === 'purchase';
+/** Satış faturasının ödeme adayı: mahsup edilebilir, yani karşılığı olmayan ya da mahsubu süren ekstre satırı. */
+const settleable = (movement: MoneyMovement) =>
+  movement.source === 'bank_import' && !movement.reconciled && (movement.type === 'misc' || settling(movement));
 
 export interface PaymentCandidate {
   movement: MoneyMovement;
@@ -563,12 +650,12 @@ export async function documentPaymentOptions(documentId: string): Promise<Docume
   const balance = balances.get(document.id);
   if (!balance) return null;
 
-  const linked = new Set(own.map((allocation) => allocation.movementId));
-  const pool = window.filter((movement) => movement.direction === document.direction && payable(movement) && !linked.has(movement.id));
-  const [paid, poolAllocations] = await Promise.all([
-    movementService.listByIds(own.map((allocation) => allocation.movementId)),
-    allocationService.listByMovements(pool.map((movement) => movement.id)),
-  ]);
+  const paid = await movementService.listByIds(own.map((allocation) => allocation.movementId));
+  // Satış faturasında bağlı tahsilat ara hesaptadır; onu getiren ekstre satırı da bu faturaya bağlı sayılır.
+  const linked = new Set([...own.map((allocation) => allocation.movementId), ...paid.flatMap((p) => (p.fundingMovementId ? [p.fundingMovementId] : []))]);
+  const fits = document.customerId ? settleable : payable;
+  const pool = window.filter((movement) => movement.direction === document.direction && fits(movement) && !linked.has(movement.id));
+  const poolLinks = await linksOf(pool.map((movement) => movement.id));
 
   const counterparty = document.counterpartyId ? counterparties.find((c) => c.id === document.counterpartyId) : undefined;
   const partyName = counterparty?.name ?? (document.supplierId ? (suppliers.find((s) => s.id === document.supplierId)?.name ?? null) : null);
@@ -582,13 +669,11 @@ export async function documentPaymentOptions(documentId: string): Promise<Docume
     nameHints: [partyName],
     keywords: counterparty?.keywords ?? [],
   };
-  const allocatedOf = new Map<string, number>();
-  for (const allocation of poolAllocations) allocatedOf.set(allocation.movementId, (allocatedOf.get(allocation.movementId) ?? 0) + allocation.amountCents);
   const gap = (movement: MoneyMovement) => Math.abs(Date.parse(movement.valueDate) - Date.parse(document.issuedOn));
 
   const candidates = pool
     .flatMap((movement): PaymentCandidate[] => {
-      const remainingCents = movement.amountCents - (allocatedOf.get(movement.id) ?? 0);
+      const remainingCents = movement.amountCents - (poolLinks.get(movement.id)?.linkedCents ?? 0);
       if (remainingCents <= 0) return [];
       const [hit] = suggestMatches(
         { valueDate: movement.valueDate, amountCents: remainingCents, direction: movement.direction, label: movement.description ?? '' },

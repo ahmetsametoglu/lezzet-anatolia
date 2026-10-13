@@ -3,7 +3,6 @@ import {
   AccountService,
   CounterpartyService,
   JobRunService,
-  MoneyAllocationService,
   MoneyDocumentService,
   MoneyMovementService,
   MovementNatureService,
@@ -15,7 +14,8 @@ import {
   SupplierService,
   UserProfileService,
 } from '@lezzet/database';
-import { PENNYLANE_SYNC_JOB, pennylaneConnectionOf } from '@lezzet/application';
+import { PENNYLANE_SYNC_JOB, movementAllocations, pennylaneConnectionOf } from '@lezzet/application';
+import { salesInvoiceCustomerName } from '@lezzet/domain-core';
 import {
   DEFAULT_PAGE_SIZE,
   type Account,
@@ -149,7 +149,8 @@ export async function readLedgerRows(db: SupabaseClient, movementId: string, nam
 async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedgerRow[], names: FinanceNames): Promise<MovementRowView[]> {
   const rowIds = [...new Set(ledgerRows.map((row) => row.id))];
   const orderIds = [...new Set(ledgerRows.flatMap((row) => (row.orderId ? [row.orderId] : [])))];
-  const allocations = rowIds.length > 0 ? await new MoneyAllocationService(db).listByMovements(rowIds) : [];
+  // Ara hesaba transfer olan ekstre satırının bağları, parasıyla yazılan tahsilatların faturalarıdır; satır kalanını onlardan okur.
+  const allocations = await movementAllocations(db, rowIds);
   const documentIds = [...new Set(allocations.map((allocation) => allocation.documentId))];
   // Mutabık olmayan ekstre satırlarının önerisi; satırın hapı "öneri: …" okur.
   const pending = [...new Set(ledgerRows.filter((row) => row.source === 'bank_import' && !row.reconciled).map((row) => row.id))];
@@ -219,7 +220,7 @@ async function salesOf(
         const q = customer.email ?? customer.phone ?? customer.name;
         return [
           customer.id,
-          { name: customer.companyInfo?.legalName || customer.name, href: customersUrl({ q, type: 'all', scope: 'all', mc: 'any' }) },
+          { name: salesInvoiceCustomerName(customer), href: customersUrl({ q, type: 'all', scope: 'all', mc: 'any' }) },
         ] as const;
       }),
     ),
