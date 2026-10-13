@@ -32,16 +32,12 @@ export const KDV_ORANLARI: Record<'FR' | 'DE', KdvTablosu> = {
       { oran: 20, urunler: [{ sku: '111107' }, { sku: '111113' }] },
     ],
   },
-  // UStG § 12 (2) Nr. 1 ve Anlage 2: gıda %7; meyve suyu (2009) ile içecek (Kapitel 22) %19.
+  // UStG § 12 (2) Nr. 1 ve Anlage 2: gıda %7; meyve suyu (2009) ile içecek (Kapitel 22) %19. Pekmez, öz, şurup ve konsantreler
+  // içecek değil öz olarak satılır, %7'dedir; Alman yorumu onları koyulaştırılmış meyve suyu (BMF Tz. 114) ya da içilen sıvı
+  // takviye (BFH VII R 35/09) sayarsa %19 olur.
   DE: {
     kategori: { firin: 7, tatli: 7, 'et-tavuk': 7, meze: 7, 'dogal-geleneksel': 7, 'kuru-meyve-kuruyemis': 7 },
-    istisna: [
-      // Koyulaştırılmış meyve suyu da meyve suyudur: Üzüm Pekmezi, Nar Ekşisi, Karadut Özü (BMF 05.08.2004 Tz. 114 Nr. 2).
-      { oran: 19, urunler: [{ draft: 'Druivenmelasse' }, { draft: 'Granaatappelextraat' }, { draft: 'Zwarte moerbei extrat' }] },
-      // Olduğu gibi içilen sıvı takviye içecektir, ölçüyle alınsa da (BFH VII R 35/09; BMF Tz. 117 Nr. 2). Suyla açılan
-      // konsantre (Coconut Mix, Kekre) ise içecek hazırlığıdır ve %7'de kalır (Tz. 116 Nr. 6 g).
-      { oran: 19, urunler: [{ draft: 'Bromelain siroop' }] },
-    ],
+    istisna: [],
   },
 };
 

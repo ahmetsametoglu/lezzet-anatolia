@@ -1,13 +1,7 @@
-// Gerçek başlangıç verisi; test sunucusu ve üretimin ilk kurulumu bu dosyadan beslenir.
-//
-// **Ürünün KÜNYESİ burada DEĞİL** (işletmeci kararı 19.09): ad, beyan, boy, barkod ve ambalaj ölçüsü
-// `data/urun-kunyeleri.json`da, yani TEST VERİTABANININ aynasındadır — o kayıtlar etiket fotoğrafıyla
-// girildi ve çelişkide kazanan onlardır (`kunye.ts`). Bu dosya faturanın söylediğini (kalem, adet, alış
-// fiyatı), işletmecinin kararlarını (kategori, koleksiyon, paket, tarif, satış fiyatı) ve kapakları taşır.
-//
-// `--layers` yalnız TEST verisini açar ve ölçüt ürünün BEYANINA dokunup dokunmadığıdır: 2 = test mal
-// kabulü (lot, SKT) — stok açar, beyana dokunmaz; 3 = katalog kaynağının beyan türetmesi. Bizim
-// ürünlerimizde beyan uydurması KALKTI; eksik beyan eksik kalır.
+// Gerçek başlangıç verisi: test sunucusu ve üretimin ilk kurulumu buradan beslenir; künye test veritabanının aynasında
+// (`kunye.ts`), KDV `kdv.ts`te durur, bu dosya faturayı, işletmenin seçtiklerini (depo, kategori, koleksiyon, tarif, fiyat) ve
+// kapakları taşır. `--layers` yalnız test verisini açar: 2 test mal kabulüdür (lot, SKT) ve beyana dokunmaz, 3 katalog
+// kaynağının beyan türetmesidir; gerçek üründe eksik beyan eksik kalır.
 
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -87,12 +81,8 @@ export const SUPPLIERS = [
 ] as const;
 
 /**
- * KATMAN 3 · UYDURMA FİYAT. Belgesiz katalog kaleminin alış maliyeti yok ve motor onu satışa
- * çıkarmıyor ("alış fiyatı olmayan her ürün ADAY", `satilabilirDurum`). Vitrini uçtan uca
- * gezebilmek için fiyat ÜRETİLİR: tek kural, kilo başına sabit oran.
- *
- * Değerler UYDURMADIR, yalnız `--layers=3` ile yazılır ve gerçek fiyatın ÜSTÜNE YAZMAZ — teklifi
- * ya da faturası olan kalem bu kuralı hiç görmez. Üretim kurulumundan önce blok silinir.
+ * KATMAN 3 · UYDURMA FİYAT: belgesiz katalog kalemi alış maliyeti olmadığı için aday kalır, vitrin uçtan uca gezilsin diye fiyat
+ * kilo başına sabit oranla üretilir. Yalnız `--layers=3` ile ve gerçek fiyatı olmayan kaleme yazılır; üretimden önce blok silinir.
  */
 export const TEST_KATALOG_FIYATI = {
   /** Perakende, kilo başına € (KDV dahil). */
@@ -118,14 +108,9 @@ export const TEST_INTAKE = {
 export const KATALOG_TEDARIKCISI = SUPPLIERS[0].name;
 
 /**
- * Kaynağın ayrı kalem yazdığı, bizim tek ilan gösterdiğimiz ürünler: `kaynak slug → hedef slug`.
- *
- * Dondurmanın DİLİMİ kalıbın çeşidi değil BOYUdur (işletmeci kararı 20.09): müşteri önce "hangi
- * dondurma" sonra "kalıp mı dilim mi" diye seçer — ikincisi satın alma içindeki karar, yani varyant.
- * Kaynak katalog ikisini ayrı kalem yazmış; o kendi raf düzeni, bizimki farklı.
- *
- * Limonlu ve karışık birleşmiyor çünkü karşılıkları yok: limonlunun kalıbı, karışığın dilimi
- * katalogda hiç yok. İkisi de tek boylu ilan olarak aynı ailede durur.
+ * Kaynağın ayrı kalem yazdığı, bizim tek ilan gösterdiğimiz ürünler (`kaynak slug → hedef slug`): dondurmanın dilimi kalıbın
+ * çeşidi değil boyudur, çünkü müşteri önce dondurmayı, sonra kalıp mı dilim mi olduğunu seçer. Limonlu ve karışık birleşmez:
+ * limonlunun kalıbı, karışığın dilimi katalogda yok.
  */
 export const KATALOG_BIRLESIK: Record<string, string> = {
   'maras-ice-cream-slice-plain': 'maras-ice-cream-plain',
@@ -133,10 +118,8 @@ export const KATALOG_BIRLESIK: Record<string, string> = {
 };
 
 /**
- * Boy adı — kaynağın etiketi yalnız gramaj yazıyor ("250 g", "70 g"). Kalıpla dilim aynı ilanda
- * buluşunca gramaj tek başına hangisinin ne olduğunu söylemiyor; ad ambalajın biçimini de taşır.
- *
- * Anahtar varyant kodu, çünkü etiket boya aittir: aynı ürünün iki boyu iki ayrı satır ister.
+ * Boy adı: kaynağın etiketi yalnız gramaj yazar ("250 g", "70 g") ve kalıpla dilim aynı ilanda buluşunca gramaj hangisinin ne
+ * olduğunu söylemez, ad ambalajın biçimini de taşır. Anahtar varyant kodudur, çünkü etiket boya aittir.
  */
 export const KATALOG_BOY_ADI: Record<string, UcDil> = {
   // 111106 ve 111121 BURADA DEĞİL: sade dondurmanın iki boyu `katalog-kunyeleri.json` aynasında,
@@ -149,9 +132,8 @@ export const KATALOG_BOY_ADI: Record<string, UcDil> = {
 };
 
 /**
- * SAYFA GÖRSELLERİ — bir varlığa değil bir sayfa yerine ait kareler (`site_image`). Dördü de işletmecinin
- * kendi ürettiği karedir (23.09); kaynağı `images/sayfa/`. Kurgu beslemesinin fikstürü değil bunlar:
- * test sunucusu sıfırlandığında sayfalar yer tutucuya düşmesin diye beslemede durur.
+ * Sayfa görselleri — bir varlığa değil bir sayfa yerine ait kareler (`site_image`), kaynağı `images/sayfa/`. Fikstür değil,
+ * işletmecinin kendi karesidir; sıfırlanan sunucuda sayfalar yer tutucuya düşmesin diye beslemede durur.
  */
 export const SAYFA_GORSELLERI: Array<{ slot: 'home_hero' | 'packages_hero' | 'professionals_hero' | 'empty_cart'; kaynak: string; not: string }> = [
   { slot: 'home_hero', kaynak: 'scripts/seed-real/images/sayfa/home-hero.webp', not: 'ana sayfa — buğusu tüten su böreği, aile sofrası' },
@@ -162,12 +144,8 @@ export const SAYFA_GORSELLERI: Array<{ slot: 'home_hero' | 'packages_hero' | 'pr
 ];
 
 /**
- * KATMAN 3 · UYDURMA STOK. Faturası olmayan kalemin mal kabulü de yoktur; partisi olmayan varyant
- * vitrinde "Tükendi" görünür (`stockStatusOf`) ve ürün gezilemez. Parti ÜRETİLİR: tedarikçi başına
- * tek sipariş, tek kabul, boy başına sabit adet.
- *
- * Değerler UYDURMADIR, yalnız `--layers=3` ile yazılır ve gerçek partinin üstüne yazmaz — kabulü
- * olan varyant bu kuralı hiç görmez. Üretim kurulumundan önce blok silinir.
+ * KATMAN 3 · UYDURMA STOK: partisi olmayan varyant vitrinde "Tükendi" görünür (`stockStatusOf`), bu yüzden tedarikçi başına tek
+ * sipariş ve kabulle boy başına sabit adet üretilir. Yalnız `--layers=3` ile ve kabulü olmayan varyanta yazılır; üretimden önce blok silinir.
  */
 export const TEST_KURGU_STOGU = {
   /** Uydurma faturanın numarası — panelde gerçek belgelerden ayrılsın diye ayrı seri. */
@@ -265,12 +243,8 @@ const studyo = (slug: string, dosya: string): DraftImage => ({
 });
 
 /**
- * Bir ürünün görsel takımı — KLASÖRDEN okunur, burada sayı yazılmaz.
- *
- * **Kapak `0` adlı karedir** (işletmeci kararı, 19.09): hangi karenin kapak olacağını işletmeci
- * dosyayı `0` diye adlandırarak söyler, kodda bir yeri değiştirmesi gerekmez. Kalanlar ada göre
- * sırayla galeriye girer. Kapaksız klasör beslemeyi DURDURUR: sessizce rastgele bir kare seçmek,
- * işletmecinin seçmediği bir kareyi vitrine koymak olurdu.
+ * Bir ürünün görsel takımı klasörden okunur: kapak `0` adlı karedir, böylece işletmeci kapağı dosya adıyla seçer ve kalanlar ada
+ * göre galeriye girer. Kapaksız klasör beslemeyi durdurur, çünkü rastgele bir kare işletmecinin seçmediği kapak olurdu.
  */
 const studyoSeti = (slug: string): Pick<Draft, 'image' | 'gallery'> => {
   const dizin = join(GORSEL_KOKU, slug);
@@ -284,8 +258,7 @@ const studyoSeti = (slug: string): Pick<Draft, 'image' | 'gallery'> => {
   return { image: studyo(slug, kapak), gallery: kareler.filter((f) => f !== kapak).map((f) => studyo(slug, f)) };
 };
 
-// Lezza'dan her kalemden bir kutu alındı: adet kutudaki parça sayısıdır. Kekler tek 90 g satılır (fatura
-// kodu 9'lu paketin, birim fiyat tek kekin); künefe faturadaki 2 × 145 g paket olarak satılır.
+// Lezza'dan her kalemden bir kutu alındı: adet kutudaki parça sayısıdır; künefe faturadaki 2 × 145 g paket olarak satılır.
 export const PURCHASES: Purchase[] = [
   {
     supplier: 'Lezza Foods BV',
@@ -312,8 +285,8 @@ export const PURCHASES: Purchase[] = [
       { sku: '312241', supplierCode: '312241', nameAtSupplier: 'LEZITA Tender Fillet 700 gr', qty: 12, unitCost: 3.65 },
       { sku: '312341', supplierCode: '312341', nameAtSupplier: 'LEZITA Spicy Tender Fillet 700 gr', qty: 12, unitCost: 3.6 },
       { sku: '312442', supplierCode: '312442', nameAtSupplier: 'LEZITA Spicy Chicken Wings 700 gr', qty: 14, unitCost: 3.5 },
-      // Kek 9'arlı kutu satılıyor (işletmeci kararı 01.10), tekli değil: satılan birim 9 × 90 g varyantı.
-      // Adet ve birim alış ona göre yazıldı; satır toplamı faturadaki gibi kaldı (36 × 2,30 = 4 × 20,70).
+      // Kek tekli değil 9'arlı kutu satılır, satılan birim 9 × 90 g varyantıdır; adet ve birim alış ona göre yazıldı,
+      // satır toplamı faturadaki gibi (36 × 2,30 = 4 × 20,70).
       { sku: '901015B', supplierCode: '901015', nameAtSupplier: 'Lamour Artisan Pistachio Cake (90g) 1x9', qty: 4, unitCost: 20.7 },
       { sku: '901023B', supplierCode: '901023B', nameAtSupplier: 'Lamour Artisan Mango Cake (90g) 1x9', qty: 4, unitCost: 17.91 },
       { sku: '901016B', supplierCode: '901016B', nameAtSupplier: 'Lamour Artisan Lemon Cake (90g) 1x9', qty: 4, unitCost: 17.91 },
@@ -390,14 +363,8 @@ export const PURCHASES: Purchase[] = [
 ];
 
 /* ─── KATMAN 2 · UYDURMA FATURA ──────────────────────────────────────────────────────────────────
- * Faturasız taslaklar vitrinde görünmüyordu: fiyatları yok, `canPublishProduct` onları aday
- * bırakıyor (işletmeci kararı 19.09 — "bunları açalım"). Alış belgeleri henüz elimizde olmadığı
- * için UYDURMA bir fatura yazıldı; gerçek faturalara (`PURCHASES`) dokunulmadı, çünkü Behotrade
- * belgesinin toplamı yazılı ve oraya kalem eklemek gerçek bir kaydı bozardı.
- *
- * Yalnız `--layers=2` ile yazılır; gerçek fatura geldiği gün ürün buradan silinip `PURCHASES`e taşınır.
- * Taslaklar EK_TASLAKLAR'da kalmaya devam eder: ürünü o kurar, burası yalnız fiyatı, tedarikçi
- * siparişini ve mal kabulünü açar (`purchaseLines` taslağı ADINA bakarak eşler).
+ * Alış belgesi olmayan taslağa test için alış, fiyat ve mal kabulü açar; gerçek faturaya (`PURCHASES`) kalem eklenmez, çünkü
+ * belgenin toplamı yazılıdır. Yalnız `--layers=2` ile yazılır; ürünü `EK_TASLAKLAR` kurar, eşleme taslağın adıyladır.
  */
 export const TEST_PURCHASES: Purchase[] = [
   {
@@ -417,9 +384,8 @@ export const TEST_PURCHASES: Purchase[] = [
     invoice: 'TEST-2026-02',
     catalog: [
       { sku: '200301', supplierCode: '200301', nameAtSupplier: 'LEZZA Vegan Kibbeh 5x70 gr', qty: 24, unitCost: 2.35 },
-      // Fiyat kararı verilmiş ama alış belgesi olmayan katalog kalemleri (işletmeci kararı 01.10): katman 2
-      // onlara maliyet ve stok açsın ki panelden mal kabulü yapılmadan önce vitrinde denenebilsinler.
-      // Alış Lezza'nın 22.12.2025 teklifinden, adet o teklifteki koli adedinden.
+      // Fiyatı verilmiş ama alış belgesi olmayan katalog kalemleri: katman 2 onlara maliyet ve stok açar ki mal kabulünden önce
+      // vitrinde denenebilsinler. Alış Lezza'nın fiyat teklifinden, adet o teklifteki koli adedinden.
       { sku: '900201', supplierCode: '900201', nameAtSupplier: 'LEZZA Dark Chocolate Whole Cake 1600 gr', qty: 4, unitCost: 14.25 },
       { sku: '900901', supplierCode: '900901', nameAtSupplier: 'LEZZA Red Velvet Whole Cake 1600 gr', qty: 4, unitCost: 15 },
       { sku: '900105', supplierCode: '900105', nameAtSupplier: 'LEZZA Pistachio Garden Whole Cake 1600 gr', qty: 4, unitCost: 19 },
@@ -437,10 +403,10 @@ export const TEST_PURCHASES: Purchase[] = [
 
 /** Uydurma faturanın satış fiyatları — `SALE_PRICES` ile aynı biçim, ayrı sözlük ki gerçek fiyatlarla karışmasın. */
 export const TEST_SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
-  'Cevizli pestil 300gr': { b2c: 8.23, b2b: 5.53 },
-  'Rulo findikli pestil 300gr': { b2c: 8.23, b2b: 5.53 },
-  'Kadayif rulo pestil 300gr': { b2c: 8.85, b2b: 5.95 },
-  'Findikli sultan sarma 300gr': { b2c: 8.65, b2b: 5.81 },
+  'Cevizli pestil 300gr': { b2c: 9.5, b2b: 5.53 },
+  'Rulo findikli pestil 300gr': { b2c: 9.5, b2b: 5.53 },
+  'Kadayif rulo pestil 300gr': { b2c: 9.5, b2b: 5.95 },
+  'Findikli sultan sarma 300gr': { b2c: 9.5, b2b: 5.81 },
   'Lychnos olijfolie 5lt': { b2c: 52.9, b2b: 39.9 },
   'LEZZA Vegan Kibbeh 5x70 gr': { b2c: 5, b2b: 4.2 },
   'LEZZA Dark Chocolate Whole Cake 1600 gr': { b2c: 25.5, b2b: 19.95 },
@@ -458,9 +424,8 @@ export const TEST_SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
 type LooseDraft = Omit<Draft, 'variants'>;
 
 /**
- * FATURASIZ taslaklar — ambalajı ve barkodu elimizde olan, ama alış kaydına bağlayamadığımız ürünler.
- * `Purchase`e konulamazlar: fatura satırı adet ve alış fiyatı ister, ikisi de yok. Aday doğarlar;
- * fiyat ve maliyet alış faturası gelince yazılır, o gün kalem faturasının altına taşınır.
+ * Faturasız taslaklar: ambalajı ve barkodu elimizde olan ama alış kaydına bağlanamayan ürünler aday doğar, çünkü fatura satırı adet
+ * ve alış fiyatı ister. Alış faturası gelince kalem o faturanın altına taşınır.
  */
 export const EK_TASLAKLAR: LooseDraft[] = [
   { name: 'Girit Natürel Sızma Zeytinyağı', ...studyoSeti('girit-naturel-sizma-zeytinyagi') },
@@ -470,11 +435,9 @@ export const EK_TASLAKLAR: LooseDraft[] = [
   { name: 'Rulo Fındıklı Pestil', ...studyoSeti('rulo-findikli-pestil') },
   { name: 'Fındıklı Kadayıf Rulo Pestil', ...studyoSeti('findikli-kadayif-rulo-pestil') },
   { name: 'Fındıklı Sultan Sarma', ...studyoSeti('findikli-sultan-sarma') },
-  // Kaynak katalogda 145 g'lık porsiyon tiramisu var, bütün pasta yok: ambalajı elimizde, künyesi
-  // etiketinden panele girildi (23.09). Kapak fotoğrafı henüz çekilmedi.
+  // Kaynak katalogda yalnız 145 g'lık porsiyon tiramisu var; bütün pastanın künyesi kendi ambalajından.
   { name: 'Tiramisu Pasta (bütün)', ...studyoSeti('tiramisu-pasta-butun') },
-  // Tekil kap pastalar ve trileçe: kaynağın kataloğunda hiç yok, ambalajları elimizde ve künyeleri
-  // etiketinden panele girildi (23.09). Kapak fotoğrafları henüz çekilmedi.
+  // Tekil kap pastalar ve trileçe kaynağın kataloğunda yok; künyeleri kendi ambalajlarından.
   { name: 'Trileçe (Tres Leches Caramel)' },
   // Asistanla açıldı; koli etiketindeki 500125 kaynağın kodu olduğu için taslak olarak burada durmazsa ayna onu katalog ürünü sanardı.
   { name: 'Trileçe (Tres Leches Raspberry)' },
@@ -535,7 +498,7 @@ export const SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
   'Dennenappel pasta 240gr': { b2c: 12.5, b2b: 11.2 },
   'Igde cekirdegi pasta 240gr': { b2c: 13.5, b2b: 11.2 },
   'Zwarte moerbei extrat 670gr': { b2c: 11.5, b2b: 10.15 },
-  'Pestil met Hazinoten Muska 300gr': { b2c: 8, b2b: 5.53 },
+  'Pestil met Hazinoten Muska 300gr': { b2c: 9.5, b2b: 5.53 },
   'Gedroogde aronya 150gr': { b2c: 12.5, b2b: 5.59 },
   'Gedroogde appel 180gr': { b2c: 9, b2b: 3.85 },
   'Gedroogde Kaki cips 180gr': { b2c: 6.5, b2b: 2.8 },
@@ -558,11 +521,9 @@ interface SeedCategory {
   image?: { lezza?: string; file?: string; url?: string };
   lezza?: string[];
   /**
-   * "Yapay zekâya sorun" kutusunun hazır sorusu (`category.ai_question`); `{n}` ürün adı, `{w}` seçili boy.
-   *
-   * Soru KİMLİK ya da SERVİS sorar, AMAÇ sormaz: "ne işe yarar / neden kullanılır" gıdayla sağlık arasında
-   * ilişki ima eder ve 1924/2006 md. 2(1) imayı da beyan sayar ("hangi biçimde olursa olsun"). Metin bir kez
-   * yazılır ve "daha iyi cevap alsın diye" AYARLANMAZ — ayarlandığı an içeriği biz seçmiş oluruz.
+   * "Yapay zekâya sorun" kutusunun hazır sorusu (`category.ai_question`); `{n}` ürün adı, `{w}` seçili boy. Soru kimlik ya da servis
+   * sorar, amaç sormaz, çünkü "ne işe yarar" sağlıkla ilişki ima eder ve 1924/2006 madde 2(1) imayı da beyan sayar; metin cevabı
+   * iyileştirmek için ayarlanmaz, ayarlandığı an içeriği biz seçmiş oluruz.
    */
   aiQuestion?: UcDil;
 }
@@ -594,10 +555,10 @@ export const MASA_FIYATLARI: Record<string, { b2c: number; b2b: number }> = {
  * "Muska 25 adet" diye kesildi, gelen beş çeşitten beşer adetti: alış da satış da Muska'nınki.
  */
 export const TASLAK_FIYATLARI: Record<string, { b2c: number; b2b: number }> = {
-  'Cevizli Pestil Tatlısı': { b2c: 8, b2b: 5.53 },
-  'Fındıklı Sultan Sarma': { b2c: 8, b2b: 5.53 },
-  'Fındıklı Kadayıf Rulo Pestil': { b2c: 8, b2b: 5.53 },
-  'Rulo Fındıklı Pestil': { b2c: 8, b2b: 5.53 },
+  'Cevizli Pestil Tatlısı': { b2c: 9.5, b2b: 5.53 },
+  'Fındıklı Sultan Sarma': { b2c: 9.5, b2b: 5.53 },
+  'Fındıklı Kadayıf Rulo Pestil': { b2c: 9.5, b2b: 5.53 },
+  'Rulo Fındıklı Pestil': { b2c: 9.5, b2b: 5.53 },
 };
 
 export const CATEGORIES: SeedCategory[] = [
@@ -684,9 +645,8 @@ export const CATEGORIES: SeedCategory[] = [
 ];
 
 /**
- * Faturada olmayan katalog kalemleri aday kurulur ve fiyatsız kalır: alış maliyeti olmayan ürüne satış fiyatı yazmak
- * uydurma olurdu. Tatlıda ailenin iki üyesi birden gelir ki çeşit bloğu kurulabilsin (`ELLE_AILELER`). Fiyat masasında açık
- * olmayan meze ve baklavalar listede yok: işletmeci onları katalogdan çıkardı.
+ * Faturada olmayan katalog kalemleri aday kurulur ve fiyatsız kalır, çünkü alış maliyeti olmayan ürüne satış fiyatı uydurma olurdu;
+ * tatlıda ailenin iki üyesi birden gelir ki çeşit bloğu kurulabilsin (`ELLE_AILELER`). Katalogdan çıkarılan meze ve baklavalar listede yok.
  */
 export const ADAY_SKULARI: string[] = [
   // Bütün pastalar ve cheesecake'ler → Tatlı
@@ -722,13 +682,9 @@ export const ADAY_SKULARI: string[] = [
 ];
 
 /**
- * Çeşit blokları — üye ya TASLAĞIMIZ (`draft`, faturadaki ad) ya da KATALOĞUN ürünü (`sku`). İkisi bir arada
- * durabilir, çünkü aile rafın sorusudur ("hangisi?") ve raf ürünün nereden geldiğini bilmez; koleksiyonlar da
- * aynı ikili kimliği kullanıyor. Tek üyeli aile kurulmaz (`ELLE_AILELER` ile aynı kural): çeşit bloğu en az iki
- * kart ister. Etiket yalnız çeşidi söyler, çünkü blok aile adını zaten yazıyor.
- *
- * **Adı var olan aileye EKLENİR, ikincisi kurulmaz:** katalog tarafı kendi ailesini kurmuş olabilir ve bir ürün
- * tek aileye girer; ikinci bir "Bütün Pasta" ailesi aynı rafı ikiye bölerdi.
+ * Çeşit blokları: üye taslağımız (`draft`, faturadaki ad) ya da kataloğun ürünü (`sku`) olabilir, çünkü aile rafın sorusudur ve raf
+ * ürünün nereden geldiğini bilmez; tek üyeli aile kurulmaz, etiket yalnız çeşidi söyler. Adı var olan aileye eklenir, ikincisi
+ * kurulmaz: bir ürün tek aileye girer ve ikinci bir "Bütün Pasta" ailesi rafı ikiye bölerdi.
  */
 export const AILELER: Array<{ ad: string; uyeler: Array<({ draft: string } | { sku: string }) & { etiket: UcDil }> }> = [
   {
@@ -797,10 +753,8 @@ export const AILELER: Array<{ ad: string; uyeler: Array<({ draft: string } | { s
     ],
   },
   {
-    // Tekil kaplar (165 g, L'amour de Paris) kendi rafı: müşteri önce "tek kişilik mi, bütün pasta mı"
-    // diye seçiyor. VARYANT DEĞİL AİLE, çünkü tekil kabın tarifi bütün pastanınkinden farklı — beyanları
-    // ve besin değerleri ayrı (ölçüldü 23.09: kırmızı kadife 269 kcal ↔ 510 kcal). Boy yalnız gramaj
-    // taşır; iki tarife tek beyan yazmak etikete aykırı olurdu.
+    // Tekil kaplar (165 g, L'amour de Paris) varyant değil ailedir: tarifi bütün pastanınkinden farklı, beyanı ve besin değeri
+    // ayrı (kırmızı kadife 269 ↔ 510 kcal); iki tarife tek beyan yazmak etikete aykırı olurdu.
     ad: 'Tekil Kap Tatlı',
     uyeler: [
       { sku: '900411', etiket: { tr: 'Tiramisu', fr: 'Tiramisu', de: 'Tiramisu' } },
@@ -869,8 +823,8 @@ export const DRAFT_CATEGORY: Record<string, string> = {
   'Gedroogde Kaki cips': 'kuru-meyve-kuruyemis',
   'Gedroogde perzik': 'kuru-meyve-kuruyemis',
   'Gedroogde meloen': 'kuru-meyve-kuruyemis',
-  // Veritabanında kategorisiz doğdu (asistan etiketten okuyamaz); rafı kardeşi olan porsiyon
-  // tiramisununkiyle aynı — kategorisiz ürün katalog listelerinde hiç görünmezdi.
+  // Asistan kategoriyi etiketten okuyamadığı için bu ürünler veritabanında kategorisizdir ve kategorisiz ürün katalog
+  // listelerinde görünmez; raf, kardeşi porsiyon tiramisununki.
   'Tiramisu Pasta (bütün)': 'tatli',
   'Trileçe (Tres Leches Caramel)': 'tatli',
   'Kırmızı Kadife Pasta (tekil kap)': 'tatli',
@@ -959,9 +913,8 @@ interface SeedRecipe {
   pantry: UcDil;
   items: SeedLine[];
   /**
-   * Sofranın karesi — `images/sofra/` altındaki dosya. Ürün kapağından farkı kurgusu: karede bir ürün
-   * değil kurulmuş bir sofra var, o yüzden klasör değil tek kare (tarifin galerisi yok).
-   * Karesiz tarif görselsiz kurulur — uydurma kare konmaz.
+   * Sofranın karesi (`images/sofra/` altındaki dosya): karede ürün değil kurulmuş sofra vardır, o yüzden klasör değil tek karedir.
+   * Karesiz tarif görselsiz kurulur, uydurma kare konmaz.
    */
   image?: string;
 }
