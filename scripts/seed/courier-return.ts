@@ -21,7 +21,7 @@ import {
   UserProfileService,
 } from '@lezzet/database';
 import { resolveVatTreatment } from '@lezzet/domain-core';
-import { tabloDolu, type Db, type VaryantRef } from './shared';
+import { SESSIZ_ETKILER, tabloDolu, type Db, type VaryantRef } from './shared';
 import type { Depolar } from './warehouse';
 
 /*
@@ -137,7 +137,7 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     );
 
     await reservations.reserve({ orderId: order.id, warehouseId: depolar.str, variantId: varyant.id, qty: adet });
-    await transitionOrder(db, { orderId: order.id, to: 'confirmed' });
+    await transitionOrder(db, { orderId: order.id, to: 'confirmed', effects: SESSIZ_ETKILER });
 
     const acildi = await openBox(db, { orderId: order.id, warehouseId: depolar.str });
     if (acildi.status !== 'ok') throw new Error(`seed: kutu açılamadı (${acildi.status})`);
@@ -148,6 +148,7 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
       warehouseId: depolar.str,
       picks: [{ orderItemId: kalemler[0]!.id, batches: [{ stockId: parti, qty: adet }] }],
       actorId: kurye.id,
+      effects: SESSIZ_ETKILER,
     });
     if (muhurlendi.status !== 'ok') throw new Error(`seed: kutu mühürlenemedi (${muhurlendi.status})`);
 
@@ -173,14 +174,28 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
 
   /* Sefer KURULUR ama kutular ondan SONRA biner: `loadBox` siparişin bir sefere damgalı olmasını
      bekliyor (kuryeye atama `start_delivery_run`ın claim'inde yapılıyor). */
-  const seferA = await startCourierDay(db, { courierId: kurye.id, date: gun, zoneId: rotaA.id, vehicleId: aracId, depart: false });
+  const seferA = await startCourierDay(db, {
+    courierId: kurye.id,
+    date: gun,
+    zoneId: rotaA.id,
+    vehicleId: aracId,
+    depart: false,
+    effects: SESSIZ_ETKILER,
+  });
   if (seferA.status !== 'ok') throw new Error(`seed: sefer A açılamadı (${seferA.status})`);
   for (const kutu of kutularA) {
-    const yuklendi = await loadBox(db, { code: kutu.code, courierId: kurye.id });
+    const yuklendi = await loadBox(db, { code: kutu.code, courierId: kurye.id, effects: SESSIZ_ETKILER });
     if (yuklendi.status !== 'ok') throw new Error(`seed: kutu araca binmedi (${yuklendi.status})`);
   }
 
-  const suruldu = await startCourierDay(db, { courierId: kurye.id, date: gun, zoneId: rotaA.id, vehicleId: aracId, depart: true });
+  const suruldu = await startCourierDay(db, {
+    courierId: kurye.id,
+    date: gun,
+    zoneId: rotaA.id,
+    vehicleId: aracId,
+    depart: true,
+    effects: SESSIZ_ETKILER,
+  });
   if (suruldu.status !== 'ok') throw new Error(`seed: sefer A yola çıkamadı (${suruldu.status})`);
 
   for (const kutu of kutularA) {
@@ -192,6 +207,7 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
         orderId: kutu.orderId,
         courierId: kurye.id,
         scannedBoxCodes: [kutu.code],
+        effects: SESSIZ_ETKILER,
         collection: nakitKapisiAcik
           ? { method: 'cash', amountCents: kutu.dueCents, idempotencyKey: `seed-kurye-donus:${kutu.orderId}` }
           : null,
@@ -224,10 +240,17 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
 
   // ── SEFER B — araçta bekler, yola çıkmaz ───────────────────────────────────
   const kutuB = await durakKur(rotaB.id, 3);
-  const seferB = await startCourierDay(db, { courierId: kurye.id, date: gun, zoneId: rotaB.id, vehicleId: aracId, depart: false });
+  const seferB = await startCourierDay(db, {
+    courierId: kurye.id,
+    date: gun,
+    zoneId: rotaB.id,
+    vehicleId: aracId,
+    depart: false,
+    effects: SESSIZ_ETKILER,
+  });
   if (seferB.status !== 'ok') throw new Error(`seed: sefer B açılamadı (${seferB.status})`);
   if (kutuB) {
-    const yuklendi = await loadBox(db, { code: kutuB.code, courierId: kurye.id });
+    const yuklendi = await loadBox(db, { code: kutuB.code, courierId: kurye.id, effects: SESSIZ_ETKILER });
     if (yuklendi.status !== 'ok') throw new Error(`seed: sefer B kutusu araca binmedi (${yuklendi.status})`);
   }
 

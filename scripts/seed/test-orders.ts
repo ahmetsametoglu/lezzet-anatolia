@@ -1,7 +1,7 @@
 import { transitionOrder } from '@lezzet/application';
 import { AddressService, DeliveryZoneService, OrderService, PriceService, ReservationService, UserProfileService } from '@lezzet/database';
 import { resolveVatTreatment } from '@lezzet/domain-core';
-import { type Db, type VaryantRef } from './shared';
+import { SESSIZ_ETKILER, type Db, type VaryantRef } from './shared';
 import type { Depolar } from './warehouse';
 
 /*
@@ -209,7 +209,13 @@ export async function seedTestOrders(db: Db, varyantlar: VaryantRef[], depolar: 
         await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depolar.str, qty: item.qty });
       }
       // Geçiş uygulama kapısından: referans ilk kalıcı durumda üretilir ve o kural `transitionOrder`dadır, servis düz yazım yapar.
-      const gecis = await transitionOrder(db, { orderId: order.id, to: 'confirmed', expectedFrom: 'draft', actorId: profil.id });
+      const gecis = await transitionOrder(db, {
+        orderId: order.id,
+        to: 'confirmed',
+        expectedFrom: 'draft',
+        actorId: profil.id,
+        effects: SESSIZ_ETKILER,
+      });
       if (gecis.status !== 'ok') throw new Error(`seed: deneme siparişi onaylanamadı (${musteri.email} · ${gecis.status})`);
 
       siparisNo += 1;

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import type { OrderEffects } from '@lezzet/application';
 import { ProductService, type createServiceRoleClient } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
 import { resolveLocalizedText, type ProductStatus } from '@lezzet/types';
@@ -12,6 +13,9 @@ import { kunyeGecerli, kunyeOku, type KunyeSatiri } from './image-manifest';
  */
 
 export type Db = ReturnType<typeof createServiceRoleClient>;
+
+/** Beslemenin sipariş yan etkisi: müşteriye haber gitmez. Boş port bu kararı söyler; eksik port uyarısı portu unutan gerçek yüzey içindir. */
+export const SESSIZ_ETKILER: OrderEffects = { notifyStatus: async () => undefined, notifyException: async () => undefined };
 
 /** Bölüm guard'ı — tablo doluysa atlanır; seed'i tekrar çalıştırmak güvenli kalsın. */
 export async function tabloDolu(db: Db, table: string): Promise<boolean> {
@@ -27,25 +31,10 @@ export const an = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 /** 2 ondalığa yuvarlama — para alanları numeric(10,2). */
 export const euro = (v: number) => Math.round(v * 100) / 100;
 
-/*
-  `uploadImage` (temp/ altındaki elle konan görselleri yükleyen yardımcı) 01.09'da SİLİNDİ: tek
-  çağıranı `seed/support.ts`ti (talep mesajlarının fotoğrafı) ve o dosya, besleme sipariş yazmayı
-  bıraktığı için kalktı — talep bir siparişe bağlanır (künye `seed.ts` → §SİPARİŞ). Yükleme yolu
-  gerekirse `uploadImageFromPath` aynı işi repo içi bir dosyayla yapıyor.
-*/
-
 /**
- * ── SEED GÖRSELİ: YÜKLEME + SÜRÜM (05.37 · 14.09) ────────────────────────────────────────────────
- *
- * Seed eskiden her koşuda bütün görselleri yeniden yüklüyor ve sürüm damgasını "şimdi" yazıyordu.
- * Damga okuma adresinin parçası (`?v=`, 05.11) ve CDN her yeni adresi yeni bir dönüşüm sayıyor: her
- * `db:refresh` sitenin bütün görsel adreslerini değiştiriyordu (ölçüldü 14.09 — ücretsiz dönüşüm kotası
- * bitti). Artık görsel künyesine bakılıyor (`image-manifest.ts`): künyede olan ve depoda AYNI içerikle
- * duran dosya yüklenmez, sürümü ve ölçüsü künyeden gelir.
- *
- * Yardımcılar anahtarı sürüm ve ölçüyle TEK değer olarak döndürür; çağıran onu satırın yazımına yayar
- * (`...gorsel`) — anahtarı sürümsüz yazmak mümkün olmaz. Servislerin `setImageKey`/`add`/`put` yolu
- * bu yüzden kullanılmıyor: o yol damgayı "şimdi" yazar.
+ * Seed görseli: künyede olan ve depoda aynı içerikle duran dosya yüklenmez, sürümü ve ölçüsü künyeden (`image-manifest.ts`) gelir,
+ * çünkü sürüm damgası okuma adresinin parçasıdır ve CDN her yeni adresi yeni dönüşüm sayar. Yardımcılar anahtarı sürüm ve ölçüyle
+ * tek değer olarak döndürür (`...gorsel`); servislerin `setImageKey`/`add`/`put` yolu damgayı "şimdi" yazdığı için kullanılmaz.
  */
 type SeedGorsel = KunyeSatiri & { imageKey: string };
 
@@ -76,10 +65,8 @@ function icerikTipi(ad: string): string {
 }
 
 /**
- * Dosyayı depoya koyar, satıra yazılacak künyeyi döndürür. Künye geçerliyse (`kunyeGecerli`) YÜKLEME
- * YOK: sürüm ve ölçü künyeden gelir, adres bir önceki tazelemedekiyle aynı kalır. Değilse yüklenir —
- * sürüm "şimdi" (yeni dosya yeni adres; önbellek eskisini tutamaz), ölçü bilinmez ve seed sonunda
- * listelenir (`gorselOzeti`).
+ * Dosyayı depoya koyar ve satıra yazılacak künyeyi döndürür: künye geçerliyse (`kunyeGecerli`) yükleme yoktur ve adres önceki
+ * tazelemedekiyle aynı kalır. Değilse yüklenir, sürüm "şimdi" olur ve ölçüsüz dosya seed sonunda listelenir (`gorselOzeti`).
  */
 async function depoyaKoy(r2: R2, key: string, bytes: Buffer, tip: string): Promise<SeedGorsel> {
   const kayit = gorselKunyesi().get(key);
@@ -93,13 +80,7 @@ async function depoyaKoy(r2: R2, key: string, bytes: Buffer, tip: string): Promi
   return { imageKey: key, imageUpdatedAt: new Date().toISOString(), imageWidth: null, imageHeight: null };
 }
 
-/**
- * DEPO İÇİNDEKİ bir dosyayı R2'ye koyar — yol repo köküne göre verilir.
- *
- * İhtiyaç sayfa görsellerinden doğdu (09.16): ana sayfanın kahramanı bugün
- * `apps/web/public/hero-sofra.jpg`'de geçici olarak duruyor ve slot tablosuna taşınırken kaynak o
- * dosyanın kendisi.
- */
+/** Depo içindeki bir dosyayı R2'ye koyar; yol repo köküne göredir. R2 ayarsızsa ya da dosya okunamazsa `null` döner. */
 export async function uploadImageFromPath(relPath: string, key: string): Promise<SeedGorsel | null> {
   const r2 = getR2();
   if (!r2) return null;
@@ -112,14 +93,8 @@ export async function uploadImageFromPath(relPath: string, key: string): Promise
 }
 
 /**
- * UZAKTAKİ görseli indirir ve R2'ye koyar (Lezza kataloğu — 05, kullanıcı kararı 04.08).
- *
- * **İndirilen dosya `temp/lezza-cache/` altında ÖNBELLEKLENİR** ve sebebi ölçülebilir: katalogda
- * 141 ürün × 2 görsel var; her `db:refresh` bunları yeniden indirseydi seed'e üç yüz ağ turu
- * eklenirdi. Önbellek dizini `.gitignore`'da — veri repoya girmez, ama ikinci koşu ağa hiç çıkmaz.
- *
- * **R2 ayarsızsa `null`** — `uploadImage` ile aynı davranış: kayıt görselsiz oluşur, seed durmaz.
- * İnternet yoksa da aynı: önbellekte varsa oradan okunur, yoksa o ürün görselsiz kalır.
+ * Uzaktaki görseli indirir ve R2'ye koyar; dosya `temp/lezza-cache/` altında önbelleklenir, çünkü her tazelemede yüzlerce indirme
+ * seed'i ağa bağlardı. R2 ayarsızsa ya da dosya ne önbellekte ne ağda bulunursa `null` döner ve kayıt görselsiz kurulur.
  */
 export async function uploadImageFromUrl(url: string, key: string): Promise<SeedGorsel | null> {
   const r2 = getR2();
@@ -144,9 +119,8 @@ export async function uploadImageFromUrl(url: string, key: string): Promise<Seed
 }
 
 /**
- * Seed sonu görsel özeti. Künye dışında yüklenen dosya yeni sürümle ve ölçüsüz yazıldı: bir sonraki
- * tazelemede adresi yine değişir. Kalıcı olması için ölçü dolgusu ve künye tazelemesi gerekir — ikisi
- * de ELLE, çünkü ölçü sorusu CDN dönüşüm kotasından yer.
+ * Seed sonu görsel özeti: künye dışında yüklenen dosya ölçüsüz yazıldı ve bir sonraki tazelemede adresi yine değişir. Kalıcı olması
+ * için ölçü dolgusu ve künye tazelemesi elle koşulur, çünkü ölçü sorusu CDN dönüşüm kotasından yer.
  */
 export function gorselOzeti(): void {
   console.log(`✓ görsel: ${sayac.kunyeden} künyeden (yükleme yok) · ${sayac.yuklenen.length} yüklendi`);
@@ -159,17 +133,9 @@ export function gorselOzeti(): void {
 export { r2Keys };
 
 /**
- * ── FİKSTÜR GÖRSEL KÜNYESİ (`data/fixture-images.json`) ──────────────────────────────────────────
- *
- * Tarif ve paket kapakları katalogda karşılığı olmayan görsellerdir: bizim ürünümüz değil, bir
- * SOFRA fikri. Kaynakları Wikimedia Commons ve adresleri künye dosyasında duruyor — lisansıyla
- * birlikte, çünkü CC BY-SA atıf ister ve o bilgi kaybolursa geri getirilemez.
- *
- * **Neden `temp/` DEĞİL:** tarif görselleri bugüne dek `temp/1.jpeg`…`5.jpeg` arıyordu ve o dosyalar
- * repoda YOK (`temp/` .gitignore'da) — `uploadImage` sessizce `null` dönüyor, tarifler görselsiz
- * kuruluyordu. Aynı hata `site-image.ts`'de yaşanmış ve orada da not düşülmüştü: **seed'in ihtiyaç
- * duyduğu fikstür, seed'in erişebildiği bir yerde durmalı.** Uzak adres bu şartı sağlıyor: künye
- * repoda, dosya `lezza-cache`'te önbellekleniyor, ikinci koşu ağa hiç çıkmıyor.
+ * Fikstür görsel künyesi (`data/fixture-images.json`): tarif ve paket kapakları ürünümüz değil bir sofra fikridir; kaynak ve lisans
+ * künyede durur, çünkü CC BY-SA atıf ister. Uzak adres künyesiyle repoda, dosyası `lezza-cache`'te durur ki seed'in ihtiyaç duyduğu
+ * fikstür seed'in erişebildiği yerde olsun.
  */
 interface FiksturGorsel {
   url: string;
@@ -196,27 +162,16 @@ export interface VaryantRef {
   status: ProductStatus;
   shelfLifeDays: number | null;
   /**
-   * Net ağırlık (g) — fiyatın gerçekçi olması için (05, gerçek katalog 04.08).
-   *
-   * Fiyat eskiden yalnız indise bağlıydı ve uydurma katalogda görünmüyordu: orada her varyant
-   * 500–1000 g arasındaydı. Gerçek katalogda 40 g'lık poğaça ile 2,5 kg'lık baklava tepsisi yan
-   * yana duruyor; ağırlıksız bir fiyat ikisini aynı banda koyar ve ekrandaki her fiyat listesi
-   * bariz yanlış görünür. `null` = boysuz ürün (bütün pastalar) — çağıran kendi tabanını kullanır.
+   * Net ağırlık (g): ağırlıksız fiyat 40 g'lık poğaçayla 2,5 kg'lık tepsiyi aynı banda koyardı. `null` = boysuz ürün (bütün
+   * pastalar), çağıran kendi tabanını kullanır.
    */
   netQuantity: number | null;
   netUnit: 'g' | 'ml' | null;
-  /**
-   * Ürünün hedef marjı (%). Alış fiyatı buradan TÜRER (09.08) — sabit yazılmaz.
-   * `null` = hedef belirlenmemiş; çağıran kendi varsayılanını kullanır.
-   */
+  /** Ürünün hedef marjı (%); alış fiyatı buradan türer, sabit yazılmaz. `null` = hedef belirlenmemiş, çağıran kendi varsayılanını kullanır. */
   targetMarginPercent: number | null;
   /**
-   * Tedarikçi SKU'su — GERÇEK alış fiyatına açılan tek anahtar (19.08).
-   *
-   * Fiyat artık uydurma bir kilo tabanından değil, tedarikçinin verdiği fiyat teklifinden türüyor
-   * (`data/sources/prices-supplier-2025-12.json`) ve o dosyanın kimliği SKU. Alan olmadan eşleşme
-   * ada göre yapılırdı; ad eşleştirmesi denendi ve güvenilmez çıktı (ürün adlarımız İngilizce,
-   * belgelerdeki adlar Türkçe/Fransızca). `null` = teklifte olmayan varyant.
+   * Tedarikçi SKU'su: gerçek alış fiyatına (`data/sources/prices-supplier-2025-12.json`) açılan tek anahtar, çünkü ad eşleştirmesi
+   * güvenilmez (adlarımız İngilizce, belgelerdekiler Türkçe ya da Fransızca). `null` = teklifte olmayan varyant.
    */
   sku: string | null;
 }
