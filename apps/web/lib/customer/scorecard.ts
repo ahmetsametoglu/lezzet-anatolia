@@ -1,5 +1,6 @@
 import { MoneyMovementService, OrderService, SettingsService, type serviceDb } from '@lezzet/database';
-import { PAYMENT_TERM_DAYS_DEFAULT, PAYMENT_TERM_DAYS_KEY, creditPosition, isOverdue } from '@lezzet/domain-core';
+import { PAYMENT_TERM_DAYS_DEFAULT, PAYMENT_TERM_DAYS_KEY, creditPosition, dueDayOf, isOverdue } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import type { MoneyMovement, Order } from '@lezzet/types';
 
 /**
@@ -100,7 +101,7 @@ export async function readCustomerScorecard(
  * başlamıştır. Tahsilatı olmayan sipariş ortalamaya girmez, yoksa karneyi olduğundan iyi gösterirdi.
  */
 export function paymentTiming(
-  orders: readonly Pick<Order, 'id' | 'createdAt'>[],
+  orders: readonly Pick<Order, 'id' | 'createdAt' | 'invoiceDueOn'>[],
   movements: readonly Pick<MoneyMovement, 'direction' | 'orderId' | 'valueDate'>[],
   termDays: number,
 ): { avgPaymentDays: number | null; paidOrderCount: number; latePaymentCount: number } {
@@ -113,16 +114,17 @@ export function paymentTiming(
   }
 
   const gunler: number[] = [];
+  let latePaymentCount = 0;
   for (const order of orders) {
     const paidAt = firstCollection.get(order.id);
     if (!paidAt) continue;
     const gun = Math.round((new Date(paidAt).getTime() - new Date(order.createdAt).getTime()) / 86_400_000);
     // Negatif olamaz: ön ödeme siparişle aynı gün sayılır (tarih yuvarlaması eksiye düşebiliyor).
     gunler.push(Math.max(0, gun));
+    // Vadeyi aşarak ödenenler ayrı sayılır, vade günü frenle aynı kuraldan: geç ödenmiş tek sipariş ortalamada kaybolurdu.
+    if (parisDateOf(new Date(paidAt)) > dueDayOf(order, termDays)) latePaymentCount += 1;
   }
 
-  // Vadeyi aşarak ödenenler ayrı sayılır: geç ödenmiş tek sipariş, zamanında ödemelerin ortalamasında kaybolurdu.
-  const latePaymentCount = gunler.filter((g) => g > termDays).length;
   if (gunler.length === 0) return { avgPaymentDays: null, paidOrderCount: 0, latePaymentCount: 0 };
   return {
     avgPaymentDays: Math.round(gunler.reduce((a, b) => a + b, 0) / gunler.length),

@@ -2,13 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { paymentTiming } from './scorecard';
 
 /**
- * ÖDEME KARNESİNİN ölçümü (09.9) — vade/limit kararının dayandığı sayı.
- *
- * Buradaki her hâl bir yanlış kararı önlüyor. En tehlikelisi ilki: ödemesi hiç olmayan siparişi
- * "0 gün" saymak, karneyi olduğundan İYİ gösterir ve limit yükseltilir. Ekranda fark edilmesi
- * imkânsız — sayı makul görünür, yalnız yanlıştır.
+ * Ödeme karnesi vade ve limit kararının dayanağıdır; ödemesi olmayan siparişi "0 gün" saymak karneyi olduğundan iyi gösterir ve
+ * ekranda fark edilmez, çünkü sayı makul görünür.
  */
-const siparis = (id: string, createdAt: string) => ({ id, createdAt });
+const siparis = (id: string, createdAt: string, invoiceDueOn: string | null = null) => ({ id, createdAt, invoiceDueOn });
 const tahsilat = (orderId: string, valueDate: string) => ({ direction: 'in' as const, orderId, valueDate });
 /** Vade süresi ölçüme ORTALAMA olarak girmez, yalnız "kaç kez geciktirdi" sayımına girer. */
 const VADE = 30;
@@ -95,5 +92,12 @@ describe('paymentTiming — ortalama ödeme günü', () => {
   it('tam vade gününde ödeme gecikme DEĞİLDİR', () => {
     const sonuc = paymentTiming([siparis('o1', '2026-01-01T00:00:00Z')], [tahsilat('o1', '2026-01-31T00:00:00Z')], VADE);
     expect(sonuc).toEqual({ avgPaymentDays: 30, paidOrderCount: 1, latePaymentCount: 0 });
+  });
+
+  // Karne faturanın vadesini okumasaydı ay sonu faturasını vadesinde ödeyen geciktirmiş, vadesini aşan ise zamanında ödemiş görünürdü.
+  it('faturalı siparişte gecikme faturanın vadesinden sayılır', () => {
+    const vadesinde = paymentTiming([siparis('o1', '2026-06-02T10:00:00Z', '2026-07-10')], [tahsilat('o1', '2026-07-09')], VADE);
+    const gecikmis = paymentTiming([siparis('o2', '2026-06-25T10:00:00Z', '2026-07-10')], [tahsilat('o2', '2026-07-20')], VADE);
+    expect([vadesinde.latePaymentCount, gecikmis.latePaymentCount]).toEqual([0, 1]);
   });
 });

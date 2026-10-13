@@ -13,7 +13,14 @@ export const PAYMENT_TERM_DAYS_DEFAULT = 30;
 /** Vade kapsamındaki sipariş için gereken asgari alanlar. */
 export type CreditOrder = Pick<
   Order,
-  'onAccount' | 'paymentStatus' | 'status' | 'orderedTotalCents' | 'amountCollectedCents' | 'amountRefundedCents' | 'createdAt'
+  | 'onAccount'
+  | 'paymentStatus'
+  | 'status'
+  | 'orderedTotalCents'
+  | 'amountCollectedCents'
+  | 'amountRefundedCents'
+  | 'createdAt'
+  | 'invoiceDueOn'
 >;
 
 /**
@@ -27,9 +34,12 @@ export function openAmountCents(
   return order.orderedTotalCents - order.amountCollectedCents + order.amountRefundedCents;
 }
 
-/** Vade günü (`YYYY-MM-DD`): siparişin Paris'teki günü + vade süresi, takvim günü olarak; saatle toplamak yaz saati geçişinde günü kaydırırdı. */
-export function dueDayOf(createdAt: string | Date, termDays: number): string {
-  return addDays(parisDateOf(new Date(createdAt)), termDays);
+/**
+ * Vade günü (`YYYY-MM-DD`): faturası kesilmiş siparişte faturanın vadesi, çünkü müşteri faturaya göre öder; kesilmemişte siparişin
+ * Paris'teki günü + vade süresi, takvim günü olarak, çünkü saatle toplamak yaz saati geçişinde günü kaydırırdı.
+ */
+export function dueDayOf(order: Pick<CreditOrder, 'createdAt' | 'invoiceDueOn'>, termDays: number): string {
+  return order.invoiceDueOn ?? addDays(parisDateOf(new Date(order.createdAt)), termDays);
 }
 
 /**
@@ -42,7 +52,7 @@ export function isOpenCredit(order: CreditOrder): boolean {
 
 /** Vadesi geçmiş mi: açık vadeli sipariş ve vade günü Paris takviminde geride kaldı; vade gününün kendisi henüz gecikme değildir. */
 export function isOverdue(order: CreditOrder, termDays: number, now: Date = new Date()): boolean {
-  return isOpenCredit(order) && parisDateOf(now) > dueDayOf(order.createdAt, termDays);
+  return isOpenCredit(order) && parisDateOf(now) > dueDayOf(order, termDays);
 }
 
 export interface CreditPosition {

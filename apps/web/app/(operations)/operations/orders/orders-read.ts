@@ -72,7 +72,7 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
       onAccount: order.onAccount,
       // Vade günü YALNIZ vadeli siparişte anlamlı: peşin siparişte "vade 12 Tem" yazmak, olmayan
       // bir borcu varmış gibi gösterirdi.
-      dueDate: order.onAccount ? dueDayOf(order.createdAt, termDays) : null,
+      dueDate: order.onAccount ? dueDayOf(order, termDays) : null,
       /* Kalan tutar motordan gelir, ki liste ile detay aynı sayıyı söylesin; `openAmountCents` kısmi karşılamayı görmez, o vade
          defterinin ham borcudur. */
       openCents: derivePaymentStatusForOrder(order, items, {

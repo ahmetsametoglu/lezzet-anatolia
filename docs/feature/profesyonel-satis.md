@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil); Faz 4'te fatura açılışı, Pennylane'de kesim, müşteriye e-posta ve Faturalar ekranı tamamlandı, e-fatura ve alacak notu kaldı; Faz 5 sürüyor: havale mahsubu, geri alma, B2B iade yolu ve Pennylane eşleşmesi tamamlandı, vadeli fren kaldı.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil); Faz 4'te fatura açılışı, Pennylane'de kesim, müşteriye e-posta ve Faturalar ekranı tamamlandı, e-fatura ve alacak notu kaldı; Faz 5 tamamlandı (havale mahsubu, geri alma, B2B iade yolu, Pennylane eşleşmesi ve vadeli fren).** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -211,7 +211,9 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 - **Siparişe bağlanan havale** faturalı siparişte faturaya da bağlanır, faturanın açığı doğru kalsın.
 - **Pennylane:** havale doğrudan müşteri faturalarına eşlenir, Pennylane'de kurulan eşleşme bizde mahsup olarak benimsenir; aracı hesap
   Pennylane'e gitmez.
-- **Vadeli fren:** faturalı siparişin açık bakiyesi ve gecikmesi faturanın vade gününü okur.
+- **Vadeli fren:** faturası kesilmiş siparişin vade günü faturanın vadesidir; fatura kesilince numarasıyla birlikte siparişe yazılır
+  (`order.invoice_due_on`). Kesilmemiş siparişte sipariş günü + vade süresi kalır. Checkout freni, sipariş listesi ve detayı, müşteri
+  kartı, güven taraması ve ödeme karnesi aynı günü okur (`dueDayOf`).
 
 ## 6. Açık sorular
 

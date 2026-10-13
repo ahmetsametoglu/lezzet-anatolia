@@ -260,7 +260,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       openCents: derivation.amountToCollectCents,
       refundDueCents: derivation.refundDueCents,
       refundRetryable: isRefundStuck(order, derivation.refundDueCents),
-      dueDate: order.onAccount ? dueDayOf(order.createdAt, termDays) : null,
+      dueDate: order.onAccount ? dueDayOf(order, termDays) : null,
       overdue: isOverdue(order, termDays, now),
       vatTreatment: order.vatTreatment,
     },
@@ -327,8 +327,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
             // Müşterinin borcu, bu siparişinki değil.
             openBalanceCents: credit.openBalanceCents,
             limitCents: customer.creditLimitCents,
-            overdueDays: isOverdue(order, termDays, now) ? daysBetween(dueDayOf(order.createdAt, termDays), parisDateOf(now)) : null,
-            dueDate: order.onAccount ? dueDayOf(order.createdAt, termDays) : null,
+            overdueDays: isOverdue(order, termDays, now) ? daysBetween(dueDayOf(order, termDays), parisDateOf(now)) : null,
+            dueDate: order.onAccount ? dueDayOf(order, termDays) : null,
           }
         : null,
     },

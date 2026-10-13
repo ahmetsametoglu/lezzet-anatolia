@@ -272,6 +272,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `reference_no` | text | • |  |
 | `idempotency_key` | text | • |  |
 | `invoice_no` | text | • |  |
+| `invoice_due_on` | date | • |  |
 | `delivery_proof` | jsonb | • |  |
 | `carrier` | carrier | • |  |
 | `tracking_number` | text | • |  |
@@ -324,6 +325,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`carrier`** — kargo taşıyıcısı (`colissimo · chronopost · dhl · ups · other`). **Tanımlı küme, serbest metin değil:** takip bağlantısı taşıyıcının URL kalıbından üretilir. `other` kümeyi kapatmamak için — yeni taşıyıcı migration beklemez; seçilince bağlantı gösterilmez, numara düz metin durur
 - **`tracking_number`** — kargo takip numarası. `carrier` ile birlikte **yalnız `delivery_type = 'shipping'`** siparişlerde dolar — kural veride (`order_carrier_only_shipping`): kendi aracımızla giden malın taşıyıcısı yoktur ve ekran unutsa bile yazılamaz
 - **`invoice_no`** — dış muhasebeden sonradan eşleşir
+- **`invoice_due_on`** — kesilmiş satış faturasının vadesi; fatura kesilince numarasıyla birlikte yazılır (`sales_invoice_issue`), genel güncelleme yazamaz. Vadeli siparişin vade günü budur; faturası kesilmemiş siparişte sipariş günü + vade süresi (`dueDayOf`, `DOMAIN.md §7`)
 - **`vat_treatment`** — KDV işleme tipi (export için); ileride `oss_destination`
 - **`prices_include_vat`** — kalem fiyatları KDV dahil mi: onaylı işletmede hariç, öteki her siparişte dahil (`DOMAIN.md §5`). Kanaldan çıkarılmaz, çünkü onaysız şirket işletme kanalında perakende fiyatla alır. Kanal gibi donar (`order_channel_frozen`)
 - **`locale`** — **siparişin dili** — müşterinin bu siparişi verirken okuduğu yüzeyin dili; sipariş maillerinin dili buradan gelir. `null` = bilinmiyor (hızlı satış, operasyon girişi) → profilin `preferred_language`'ına düşülür. Profilden okumamanın sebebi snapshot mantığı: profil sonradan değişebilir, siparişin metni değişmemeli

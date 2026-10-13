@@ -98,7 +98,7 @@ export const OrderSchema = z.object({
   vatTreatment: VatTreatmentEnum,
   /**
    * Kalem fiyatları KDV dahil mi: onaylı işletmede hariç, öteki her siparişte dahil. Kanaldan çıkarılmaz, çünkü onaysız şirket işletme
-   * kanalında perakende fiyatla alır. Kargo ücreti her siparişte KDV dahildir.
+   * kanalında perakende fiyatla alır; kargo ücreti her siparişte KDV dahildir.
    */
   pricesIncludeVat: z.boolean(),
 
@@ -110,6 +110,8 @@ export const OrderSchema = z.object({
   /** Çift sipariş kalkanı — aynı istek ikinci kez ulaşırsa var olan sipariş döner (0015). */
   idempotencyKey: z.string().nullable(),
   invoiceNo: z.string().nullable(),
+  /** Kesilmiş satış faturasının vadesi; vadeli siparişin vade günü budur (`dueDayOf`). */
+  invoiceDueOn: z.string().nullable(),
   deliveryProof: z.record(z.unknown()).nullable(),
   /** Kargo künyesi — yalnız kargo siparişinde dolu; rota siparişine yazılamaz ve kural veritabanında da durur. */
   carrier: CarrierEnum.nullable(),
@@ -198,9 +200,12 @@ export type OrderInsert = z.infer<typeof OrderInsertSchema>;
 
 /**
  * `channel` ve `pricesIncludeVat` yazılamaz: KDV işlemesini, fiyat kademesini ve borcun KDV'sini belirledikleri için sonradan
- * değişmeleri alınmış paranın vergisini geriye dönük oynatırdı. İkinci savunma veritabanında (`order_channel_frozen`), doğrudan SQL yazan betiğe karşı.
+ * değişmeleri alınmış paranın vergisini geriye dönük oynatırdı, ikinci savunma veritabanındadır (`order_channel_frozen`). `invoiceDueOn`u
+ * yalnız fatura kesimi yazar, çünkü kaynağı kesilen faturadır.
  */
-export const OrderUpdateSchema = OrderSchema.omit({ channel: true, pricesIncludeVat: true }).partial().required({ id: true });
+export const OrderUpdateSchema = OrderSchema.omit({ channel: true, pricesIncludeVat: true, invoiceDueOn: true })
+  .partial()
+  .required({ id: true });
 export type OrderUpdate = z.infer<typeof OrderUpdateSchema>;
 
 /**

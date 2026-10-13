@@ -98,7 +98,8 @@ describe('satış faturasının Pennylane kesimi', () => {
       },
     ]);
     expect(await documents.getById(documentId)).toMatchObject({ number: 'F-2026-0001', issuedOn: '2026-10-12', dueOn: '2026-11-09' });
-    expect((await new OrderService(db).getById(order.id))?.invoiceNo).toBe('F-2026-0001');
+    // Vade siparişe yazılmasaydı vadeli fren faturanın değil siparişin gününden sayardı.
+    expect(await new OrderService(db).getById(order.id)).toMatchObject({ invoiceNo: 'F-2026-0001', invoiceDueOn: '2026-11-09' });
     expect(await invoices.findByDocument(documentId)).toMatchObject({ status: 'issued', sentAt: null });
     expect(await queue.findByDocument(documentId)).toMatchObject({ lastError: 'blocked:pdf_pending' });
     expect(await stuckAlerts(documentId)).toEqual([]);

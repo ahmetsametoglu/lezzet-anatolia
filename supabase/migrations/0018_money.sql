@@ -716,7 +716,7 @@ begin
 end;
 $$;
 
--- Pennylane'de kesilen faturanın numarası ve günleri belgeye, numarası faturanın siparişlerine yazılır; tutar yazılmaz, çünkü
+-- Pennylane'de kesilen faturanın numarası ve günleri belgeye, numarası ve vadesi siparişlerine yazılır; tutar yazılmaz, çünkü
 -- fatura yalnız Pennylane'in toplamı bizimkiyle aynıysa kesinleşir. Yalnız kuyruktaki fatura kesilmiş sayılır; ikinci yazım `false`
 -- döner ve kesilmiş künyeyi değiştirmez.
 create or replace function public.sales_invoice_issue(
@@ -738,7 +738,7 @@ begin
     return false;
   end if;
   update public.money_document set number = p_number, issued_on = p_issued_on, due_on = p_due_on where id = p_document_id;
-  update public."order" o set invoice_no = p_number
+  update public."order" o set invoice_no = p_number, invoice_due_on = p_due_on
     from public.money_document_order l
    where l.document_id = p_document_id and l.order_id = o.id;
   return true;

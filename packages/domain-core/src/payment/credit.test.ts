@@ -21,6 +21,7 @@ const order = (patch: Partial<CreditOrder> = {}): CreditOrder => ({
   amountCollectedCents: 0,
   amountRefundedCents: 0,
   createdAt: '2026-06-29T10:00:00Z',
+  invoiceDueOn: null,
   ...patch,
 });
 
@@ -65,9 +66,17 @@ describe('isOverdue', () => {
   });
 
   it('vade günü siparişin Paris gününden sayılır; yaz saati geçişi günü kaydırmaz', () => {
-    expect(dueDayOf('2026-06-29T10:00:00Z', 30)).toBe('2026-07-29');
+    expect(dueDayOf(order({ createdAt: '2026-06-29T10:00:00Z' }), 30)).toBe('2026-07-29');
     // Paris'te 5 Ekim 00:30 (UTC'de 4 Ekim); 30 gün sonrası kış saatinde de 4 Kasım'dır.
-    expect(dueDayOf('2026-10-04T22:30:00Z', 30)).toBe('2026-11-04');
+    expect(dueDayOf(order({ createdAt: '2026-10-04T22:30:00Z' }), 30)).toBe('2026-11-04');
+  });
+});
+
+describe('faturalı siparişin vadesi', () => {
+  // Fatura vadesi okunmasaydı ay sonu faturasının siparişi, müşteri faturayı vadesinde ödese de gecikmiş sayılır, fren boşuna kapanırdı.
+  it('faturası kesilmiş siparişin vadesi faturanın vadesidir, sipariş günü + süre değil', () => {
+    expect(isOverdue(order({ createdAt: '2026-06-02T10:00:00Z', invoiceDueOn: '2026-08-15' }), 30, NOW)).toBe(false);
+    expect(isOverdue(order({ createdAt: '2026-07-20T10:00:00Z', invoiceDueOn: '2026-07-25' }), 30, NOW)).toBe(true);
   });
 });
 

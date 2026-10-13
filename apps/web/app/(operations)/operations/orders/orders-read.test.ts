@@ -31,6 +31,7 @@ const order = (patch: Partial<Order> = {}): Order =>
     vatTreatment: 'domestic',
     referenceNo: 'LA-26-AAA111',
     invoiceNo: null,
+    invoiceDueOn: null,
     deliveryProof: null,
     shippingFeeCents: 0,
     orderedTotalCents: 10_000,

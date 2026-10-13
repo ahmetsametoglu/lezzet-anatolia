@@ -80,7 +80,7 @@ async function recordOverdue(
     const termDays = termOf.get(order.customerId) ?? defaultTermDays;
     if (!isOverdue(order, termDays, now)) continue;
     // Gecikme, vade gününü izleyen Paris gece yarısında başlar.
-    const overdueSince = parisDayRange(addDays(dueDayOf(order.createdAt, termDays), 1)).from;
+    const overdueSince = parisDayRange(addDays(dueDayOf(order, termDays), 1)).from;
     const fact = { reason: 'payment_overdue' as const, customerId: order.customerId, refId: order.id, occurredAt: overdueSince };
     const draft = trustEntryOf(fact, weights, { graceDays: 0, now });
     if (draft) drafts.push(draft);

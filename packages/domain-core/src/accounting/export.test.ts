@@ -44,6 +44,7 @@ const BASE_SALE: OrderSale = {
   referenceNo: 'LA-26-7K4M2P',
   idempotencyKey: null,
   invoiceNo: null,
+  invoiceDueOn: null,
   deliveryProof: null,
   carrier: null,
   trackingNumber: null,

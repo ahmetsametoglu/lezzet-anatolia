@@ -93,6 +93,9 @@ create table public.order (
   -- anahtarsız satırlar (operasyon girişi, hızlı satış) birbirini engellemez.
   idempotency_key text,
   invoice_no text,                                   -- dış muhasebeden sonradan eşleşir
+  -- Kesilmiş satış faturasının vadesi; vadeli sipariş bu gün geçince gecikmiş sayılır. Fatura kesilince yazılır ve kesilen fatura
+  -- değişmediği için kopya bayatlamaz.
+  invoice_due_on date,
   delivery_proof jsonb,                              -- imza/foto + onaylayan + zaman (DOMAIN §6)
 
   -- Kargo künyesi — yalnız kargo siparişinde anlamlı; `other` seçilince takip bağlantısı gösterilmez.
@@ -219,7 +222,7 @@ create index order_item_variant_idx on public.order_item (variant_id);
 /*
   Ciro kalemlerden türer: `order.revenue_total` bir önbellektir, artırılmaz, `order_item.fulfilled_qty`den yeniden hesaplanır; tetikleyicidir, çünkü `fulfilled_qty`yi yazan bütün yollar SQL'dedir ve uygulama katmanı bazılarını atlardı.
   Formül motorunkiyle (`fulfilledLineAmountCents`, `vatByRate`) aynıdır: ücretlenen adet karşılanandan müşteride kalan adedin çıkmasıdır, indirim
-  payı o orana bölünür, KDV hariç fiyatta KDV oran toplamına eklenir, ücretlenen kalem yoksa kargo da ciroya girmez. Tutar KDV dahildir.
+  payı o orana bölünür, KDV hariç fiyatta KDV oran toplamına eklenir, ücretlenen kalem yoksa kargo da ciroya girmez; tutar KDV dahildir.
 */
 create or replace function public.resync_order_revenue(p_order_id uuid)
 returns void
