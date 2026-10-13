@@ -223,7 +223,6 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
 
 ## 7. Ölçülecekler
 
-- Aracı hesabın türü ve iade yolu: B2B iadesi bankadan havaleyle dönmeli (`packages/domain-core/src/payment/refund-method.ts`).
 - API ile kesilen faturanın e-fatura gönderimi: API'de faturayı alıcının platformuna gönderen ayrı uç var
   (`POST customer_invoices/{id}/send_to_pa`); tetik ve hata dönüşleri sandbox'ta ölçülür. Sandbox faturasının e-fatura denetimi
   `invalid` dönüyor (12.10), sebebi ölçülmedi.
