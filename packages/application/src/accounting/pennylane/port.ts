@@ -62,10 +62,13 @@ export interface PennylanePort {
   setPaymentStatus(id: number, status: PennylanePaymentStatus): Promise<void>;
   /** Hareketin eşlendiği faturalar; Pennylane eşleme sırasını vermiyor. */
   transactionMatches(transactionId: number): Promise<PennylaneTransactionMatch[]>;
-  /** Hareketi alış faturasına eşler; tutar taşımaz, Pennylane hareketi faturalara açılma sırasıyla dağıtır, eşleme sırasıyla değil. */
-  matchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
+  /**
+   * Hareketi alış ya da müşteri faturasına eşler; tutar taşımaz, Pennylane hareketi faturalara açılma sırasıyla dağıtır, eşleme
+   * sırasıyla değil.
+   */
+  matchTransaction(input: PennylaneTransactionMatch & { transactionId: number }): Promise<void>;
   /** Tek bir faturanın bağını çözmek hareketin bütün eşleşmelerini çözer; çağıran kalanları yeniden kurar. */
-  unmatchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
+  unmatchTransaction(input: PennylaneTransactionMatch & { transactionId: number }): Promise<void>;
   /** Dış referansla müşteri; referans tekil olduğu için en çok bir tane. */
   findCustomer(externalReference: string): Promise<PennylaneCustomer | null>;
   /** Şirketin bütün müşterileri; aynı firmanın elle açılmış kaydı SIREN ya da KDV numarasıyla listeden bulunur. */

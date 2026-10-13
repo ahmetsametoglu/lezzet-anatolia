@@ -38,6 +38,7 @@ import {
   type PennylaneMode,
   type PennylaneSupplier,
   type PennylaneTransaction,
+  type PennylaneTransactionMatch,
 } from '@lezzet/types';
 import type { Db } from '@lezzet/database';
 import { integrationSecrets } from '../../integration/secrets';
@@ -90,6 +91,9 @@ export function companyModeMismatch(company: { name: string; reg_no: string }, m
 }
 
 /** Muhasebe portunun Pennylane uyarlaması; anahtarın şirketi ilk istekte bir kez okunur ve kiple karşılaştırılır. */
+/** Pennylane alış ve müşteri faturasını ayrı kaynakta tutar; eşleşmenin ucu faturanın türünden seçilir. */
+const INVOICE_PATH: Record<PennylaneTransactionMatch['kind'], string> = { supplier: 'supplier_invoices', customer: 'customer_invoices' };
+
 export function pennylanePort(config: PennylaneConfig): PennylanePort {
   const clock = config.clock ?? realClock;
   const sent: number[] = [];
@@ -366,11 +370,11 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       );
       return items.map((item) => ({ invoiceId: item.id, kind: item.type }));
     },
-    async matchTransaction({ invoiceId, transactionId }) {
-      await write('POST', `/supplier_invoices/${invoiceId}/matched_transactions`, { json: { transaction_id: transactionId } });
+    async matchTransaction({ kind, invoiceId, transactionId }) {
+      await write('POST', `/${INVOICE_PATH[kind]}/${invoiceId}/matched_transactions`, { json: { transaction_id: transactionId } });
     },
-    async unmatchTransaction({ invoiceId, transactionId }) {
-      await write('DELETE', `/supplier_invoices/${invoiceId}/matched_transactions/${transactionId}`, null);
+    async unmatchTransaction({ kind, invoiceId, transactionId }) {
+      await write('DELETE', `/${INVOICE_PATH[kind]}/${invoiceId}/matched_transactions/${transactionId}`, null);
     },
     async listCategoryGroups() {
       return (await readAll('/category_groups', PennylaneApiCategoryGroupPageSchema, 'kategori grupları')).map(({ id, label }) => ({

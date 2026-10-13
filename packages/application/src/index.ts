@@ -599,6 +599,7 @@ export { SALES_INVOICE_OPEN_JOB, approveSalesInvoice, openSalesInvoices, type Sa
 export {
   allocateToOrderInvoice,
   fundingAccountsOf,
+  linkStatementToDocument,
   movementAllocations,
   ordersFundedBy,
   settleSalesInvoice,

@@ -232,6 +232,28 @@ create trigger money_allocation_pennylane_queue
   after insert or delete or update of amount, movement_id, document_id on public.money_allocation
   for each row execute function public.pennylane_queue_mark_allocation();
 
+-- Ara hesaptaki tahsilat yazılınca ya da silinince parasını getiren banka satırı işaretlenir: Pennylane'de havale doğrudan müşteri
+-- faturasına eşlenir, ara hesap oraya gitmez.
+create or replace function public.pennylane_queue_mark_funding() returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if tg_op <> 'INSERT' and old.funding_movement_id is not null then
+    perform public.pennylane_queue_mark_movement(old.funding_movement_id);
+  end if;
+  if tg_op <> 'DELETE' and new.funding_movement_id is not null then
+    perform public.pennylane_queue_mark_movement(new.funding_movement_id);
+  end if;
+  return null;
+end;
+$$;
+
+create trigger money_movement_funding_pennylane_queue
+  after insert or delete or update of funding_movement_id on public.money_movement
+  for each row execute function public.pennylane_queue_mark_funding();
+
 -- Yüklenen belgenin bağları o ana kadar yazılamazdı: Pennylane'de fatura yoktu.
 create or replace function public.pennylane_queue_mark_uploaded() returns trigger
 language plpgsql
@@ -252,6 +274,7 @@ revoke execute on function public.pennylane_queue_mark_document(uuid) from publi
 revoke execute on function public.pennylane_queue_mark_movement(uuid) from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark() from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark_allocation() from public, anon, authenticated;
+revoke execute on function public.pennylane_queue_mark_funding() from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark_uploaded() from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark_sales_invoice() from public, anon, authenticated;
 

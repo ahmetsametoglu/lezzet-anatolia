@@ -4,18 +4,23 @@ import {
   MoneyAllocationService,
   MoneyDocumentService,
   MoneyMovementService,
+  OrderService,
   PennylaneBankAccountService,
   PennylaneCursorService,
   PennylaneDocumentService,
   PennylaneMatchRemovedService,
   PennylaneQueueService,
   PennylaneTransactionService,
+  SalesInvoiceService,
   SupplierService,
   serviceDb,
 } from '@lezzet/database';
 import { mustDelete, purgeTestData } from '@lezzet/database/testing';
 import type { MoneyDocumentInsert, PennylaneCursor } from '@lezzet/types';
 import { allocateToDocument } from '../document';
+import { openSalesInvoices } from '../sales-invoice';
+import { settleSalesInvoice } from '../sales-invoice-payment';
+import { salesInvoiceGround } from '../sales-invoice.testkit';
 import { mapPennylaneBankAccount, syncBankFeed } from './bank-feed';
 import { memoryPennylane } from './memory-pennylane.testkit';
 import { processPennylaneQueueRow } from './queue';
@@ -180,7 +185,7 @@ describe('bizde olmayan fatura', () => {
   it('bizde olmayan faturaya eşli hareket izah bekler; bağımız yanına eklenir, çıkan bağımız varsa hareket bekler ve muhasebe uyarılır', async () => {
     const { transactionId, movementId } = await bankRow(20_000);
     const foreign = twin.addForeignInvoice({ supplierId: 1, invoiceNumber: 'G-1', grossCents: 5_000 });
-    await twin.port.matchTransaction({ invoiceId: foreign, transactionId });
+    await twin.port.matchTransaction({ kind: 'supplier', invoiceId: foreign, transactionId });
     await sync();
     expect(await new MoneyMovementService(db).getById(movementId)).toMatchObject({ matchedElsewhere: true, explained: false });
 
@@ -202,7 +207,7 @@ describe("Pennylane'de kurulan ve çözülen eşleşme", () => {
   it("bizim faturamıza Pennylane'de kurulan eşleşme benimsenir; çözülen bağ bizde silinmez, yeniden yazılmaz, muhasebe uyarılır", async () => {
     const invoice = await document(16_550);
     const { transactionId, movementId } = await bankRow(16_550);
-    await twin.port.matchTransaction({ invoiceId: invoice.invoiceId!, transactionId });
+    await twin.port.matchTransaction({ kind: 'supplier', invoiceId: invoice.invoiceId!, transactionId });
     await sync();
     const [allocation] = await allocations.listByMovements([movementId]);
     expect(allocation).toMatchObject({ documentId: invoice.id, amountCents: 16_550 });
@@ -211,7 +216,7 @@ describe("Pennylane'de kurulan ve çözülen eşleşme", () => {
     expect((await new SupplierService(db).debt(supplierId)).balanceCents).toBe(0);
     expect(await processMovement(movementId)).toBe('unchanged');
 
-    await twin.port.unmatchTransaction({ invoiceId: invoice.invoiceId!, transactionId });
+    await twin.port.unmatchTransaction({ kind: 'supplier', invoiceId: invoice.invoiceId!, transactionId });
     await sync();
     expect(await new PennylaneMatchRemovedService(db).listByAllocations([allocation!.id])).toHaveLength(1);
     expect(await allocations.listByMovements([movementId])).toHaveLength(1);
@@ -237,5 +242,79 @@ describe("Pennylane'de kurulan ve çözülen eşleşme", () => {
       (await mirrors.findByDocument(newer.id))?.pennylaneOpenCents,
       (await mirrors.findByDocument(older.id))?.pennylaneOpenCents,
     ]).toEqual([2_000, 0]);
+  });
+});
+
+describe('satış faturasının havalesi', () => {
+  let ground: Awaited<ReturnType<typeof salesInvoiceGround>>;
+
+  beforeAll(async () => {
+    ground = await salesInvoiceGround(db);
+  });
+
+  afterEach(async () => {
+    await purgeTestData(db, { profileIds: ground.created.profileIds.splice(0) });
+  });
+
+  afterAll(async () => {
+    await purgeTestData(db, ground.created);
+  });
+
+  /** Pennylane'de kesilmiş satış faturası ve siparişi; e-postası PDF beklediği için kesim turunda kalır. */
+  const issuedInvoice = async () => {
+    const customer = await ground.company();
+    const order = await ground.sale(customer.id, { soldOn: '2026-10-05', qty: 2 });
+    await openSalesInvoices(db, { now: new Date('2026-10-12T08:00:00Z'), customerIds: [customer.id] });
+    const { data, error } = await db.from('money_document_order').select('document_id').eq('order_id', order.id).single();
+    if (error) throw error;
+    const documentId = (data as { document_id: string }).document_id;
+    await processDocument(documentId);
+    const invoice = (await new SalesInvoiceService(db).findByDocument(documentId))!;
+    expect(invoice).toMatchObject({ status: 'issued' });
+    return {
+      order,
+      documentId,
+      pennylaneInvoiceId: invoice.pennylaneInvoiceId!,
+      amountCents: (await new MoneyDocumentService(db).getById(documentId))!.amountCents,
+    };
+  };
+  /** Pennylane'den gelen müşteri havalesi ve bizdeki banka satırı. */
+  const incoming = async (amountCents: number) => {
+    const transactionId = twin.add({ bankAccountId: bank, date: '2026-10-14', label: 'VIR RESTAURANT', direction: 'in', amountCents });
+    await sync();
+    return { transactionId, movementId: (await new PennylaneTransactionService(db).findByPennylaneId(transactionId))!.movementId! };
+  };
+
+  // Mahsup Pennylane'e yazılmasaydı müşteri faturası orada açık kalır, muhasebeciye ödenmemiş görünürdü.
+  it("mahsup edilen havale Pennylane'de müşteri faturasına eşlenir; eşleşme geri alınınca orada da çözülür", async () => {
+    const invoice = await issuedInvoice();
+    const { transactionId, movementId } = await incoming(invoice.amountCents);
+    const movement = (await new MoneyMovementService(db).getById(movementId))!;
+    expect(await settleSalesInvoice(db, { movement, documentId: invoice.documentId })).toMatchObject({ status: 'ok' });
+
+    expect(await processMovement(movementId)).toBe('matched');
+    expect(twin.matchesOf(transactionId)).toEqual([invoice.pennylaneInvoiceId]);
+    expect(await twin.port.transactionMatches(transactionId)).toEqual([{ kind: 'customer', invoiceId: invoice.pennylaneInvoiceId }]);
+
+    await new MoneyMovementService(db).unmatchBankMovement(movementId);
+    expect(await processMovement(movementId)).toBe('matched');
+    expect(twin.matchesOf(transactionId)).toEqual([]);
+  });
+
+  // Benimsenmeseydi Pennylane'de ödenmiş fatura bizde açık, satır "başka yerde eşli" kalır ve sipariş borçlu görünürdü.
+  it("Pennylane'de müşteri faturasına kurulan eşleşme bizde mahsup olarak benimsenir", async () => {
+    const invoice = await issuedInvoice();
+    const { transactionId, movementId } = await incoming(invoice.amountCents);
+    await twin.port.matchTransaction({ kind: 'customer', invoiceId: invoice.pennylaneInvoiceId, transactionId });
+    await sync();
+
+    expect(await new MoneyMovementService(db).getById(movementId)).toMatchObject({
+      type: 'transfer',
+      reconciled: true,
+      matchedElsewhere: false,
+    });
+    expect((await new OrderService(db).getById(invoice.order.id))?.paymentStatus).toBe('paid');
+    expect((await new MoneyDocumentService(db).balances([invoice.documentId])).get(invoice.documentId)?.openAmountCents).toBe(0);
+    expect(await processMovement(movementId)).toBe('unchanged');
   });
 });

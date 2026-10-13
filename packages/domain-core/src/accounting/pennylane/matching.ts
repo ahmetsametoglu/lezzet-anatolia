@@ -1,12 +1,12 @@
 /**
  * Banka satırının Pennylane eşleşmesi, saf karar: eşleşme bizde kurulur ve Pennylane'e yazılır. Bizde olmayan faturaya kurulan
- * eşleşmeye dokunulmaz, çünkü Pennylane'e elle girilmiş kaydı ezerdi; o hareket işaretlenir ve belgesi bizde girilir.
+ * eşleşmeye dokunulmaz, çünkü Pennylane'e elle girilmiş kaydı ezerdi; faturanın anahtarını çağıran verir (alış ve müşteri faturası ayrı).
  */
 
-export type PennylaneMatchPlan =
+export type PennylaneMatchPlan<K> =
   | { kind: 'none' }
-  | { kind: 'add'; invoiceIds: number[] }
-  | { kind: 'rewrite'; invoiceIds: number[] }
+  | { kind: 'add'; invoiceIds: K[] }
+  | { kind: 'rewrite'; invoiceIds: K[] }
   | { kind: 'blocked'; reason: 'foreign_matches' };
 
 /**
@@ -14,11 +14,11 @@ export type PennylaneMatchPlan =
  * Çıkan faturamız varsa bütün eşleşmeler çözülüp küme yeniden kurulur, çünkü tek bağı çözmek hepsini çözüyor; harekette bizde
  * olmayan faturanın eşleşmesi de varsa onu yeniden kurmak o kaydı ezerdi, hareket bekler.
  */
-export function pennylaneMatchPlan(input: {
-  current: readonly number[];
-  ours: ReadonlySet<number>;
-  desired: readonly number[];
-}): PennylaneMatchPlan {
+export function pennylaneMatchPlan<K>(input: {
+  current: readonly K[];
+  ours: ReadonlySet<K>;
+  desired: readonly K[];
+}): PennylaneMatchPlan<K> {
   const current = new Set(input.current);
   const desired = new Set(input.desired);
   const missing = input.desired.filter((id) => !current.has(id));
@@ -33,12 +33,12 @@ export function pennylaneMatchPlan(input: {
  * bağ Pennylane'de çözüldüyse silinmez, işaretlenir ve yeniden yazılmaz; Pennylane'de yeniden kurulursa işaret kalkar. Bizde olmayan
  * faturaya eşli hareket işaretlenir (`elsewhere`).
  */
-export function pennylaneMatchReading(input: {
-  current: readonly number[];
-  /** Pennylane faturası → bizim belgemiz, yalnız yüklediklerimiz. */
-  ourDocuments: ReadonlyMap<number, string>;
-  /** Hareketin yüklenmiş belgelere bağları; `removed`: Pennylane'de çözüldüğü işaretli. */
-  allocations: ReadonlyArray<{ id: string; documentId: string; invoiceId: number; removed: boolean }>;
+export function pennylaneMatchReading<K>(input: {
+  current: readonly K[];
+  /** Pennylane faturası → bizim belgemiz: yüklediğimiz alış belgeleri ve kestiğimiz satış faturaları. */
+  ourDocuments: ReadonlyMap<K, string>;
+  /** Hareketin Pennylane'de karşılığı olan belgelere bağları; `removed`: Pennylane'de çözüldüğü işaretli. */
+  allocations: ReadonlyArray<{ id: string; documentId: string; invoiceId: K; removed: boolean }>;
 }): { adopt: string[]; removed: string[]; restored: string[]; elsewhere: boolean } {
   const current = new Set(input.current);
   const allocated = new Set(input.allocations.map((allocation) => allocation.documentId));

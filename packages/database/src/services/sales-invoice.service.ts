@@ -63,6 +63,12 @@ export class SalesInvoiceService extends BaseDbService<SalesInvoice, never, neve
     });
   }
 
+  /** Pennylane kimlikleriyle kesilmiş faturalar; Pennylane'deki eşleşmenin bizim faturamıza kurulup kurulmadığı buradan okunur. */
+  listByPennylaneIds(ids: readonly number[]): Promise<SalesInvoice[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.getAll({ pennylaneInvoiceId: [...ids] });
+  }
+
   /** Kesilmiş faturanın e-postası gitti; ikinci yazım `false`. */
   markSent(documentId: string, sentAt: string): Promise<boolean> {
     return this.executeRpc<boolean>('sales_invoice_mark_sent', { p_document_id: documentId, p_sent_at: sentAt });

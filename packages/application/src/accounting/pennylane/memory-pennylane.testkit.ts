@@ -14,6 +14,7 @@ import type {
   PennylanePaymentStatus,
   PennylaneSupplierDraft,
   PennylaneTransaction,
+  PennylaneTransactionMatch,
 } from '@lezzet/types';
 import { PennylaneError } from './errors';
 import type { PennylaneCategoryTarget, PennylanePort } from './port';
@@ -70,8 +71,8 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   const customerInvoices = new Map<number, MemoryCustomerInvoice>();
   const files = new Map<number, string>();
   const invoices = new Map<number, MemoryInvoice>();
-  /** Hareket başına eşlenen faturalar. */
-  const matches = new Map<number, number[]>();
+  /** Hareket başına eşlenen faturalar, türüyle. */
+  const matches = new Map<number, PennylaneTransactionMatch[]>();
   const categoryGroups = new Map<number, PennylaneCategoryGroup>();
   const invoiceTemplates = new Map<number, PennylaneInvoiceTemplate>();
   const categories = new Map<number, PennylaneCategory>();
@@ -104,9 +105,10 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   /** Açık kalan: her hareket tutarını faturalara açılma sırasıyla dağıtır, önce açılan tam ödenir; eşleme sırası fark etmez. */
   const openOf = (invoiceId: number): number => {
     const open = new Map([...invoices.values()].map((row) => [row.id, row.lines.reduce((sum, line) => sum + line.grossCents, 0)]));
-    for (const [transactionId, invoiceIds] of matches) {
+    for (const [transactionId, matched] of matches) {
       let left = transactions.get(transactionId)?.amountCents ?? 0;
-      for (const id of [...invoiceIds].sort((x, y) => x - y)) {
+      const invoiceIds = matched.filter((match) => match.kind === 'supplier').map((match) => match.invoiceId);
+      for (const id of invoiceIds.sort((x, y) => x - y)) {
         const pay = Math.min(left, open.get(id) ?? 0);
         open.set(id, (open.get(id) ?? 0) - pay);
         left -= pay;
@@ -311,22 +313,23 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     },
     transactionMatches: async (transactionId) => {
       failing('transactionMatches');
-      return [...(matches.get(transactionId) ?? [])]
-        .sort((x, y) => y - x)
-        .map((invoiceId) => ({ invoiceId, kind: invoices.get(invoiceId)?.kind ?? 'supplier' }));
+      return [...(matches.get(transactionId) ?? [])].sort((x, y) => y.invoiceId - x.invoiceId);
     },
-    matchTransaction: async ({ invoiceId, transactionId }) => {
+    matchTransaction: async ({ kind, invoiceId, transactionId }) => {
       failing('matchTransaction');
-      if (!invoices.has(invoiceId) || !transactions.has(transactionId)) throw notFound();
+      if (!(kind === 'customer' ? customerInvoices : invoices).has(invoiceId) || !transactions.has(transactionId)) throw notFound();
       const current = matches.get(transactionId) ?? [];
-      if (!current.includes(invoiceId)) matches.set(transactionId, [...current, invoiceId]);
+      if (!current.some((match) => match.kind === kind && match.invoiceId === invoiceId)) {
+        matches.set(transactionId, [...current, { kind, invoiceId }]);
+      }
       record(transactionId, 'update');
-      recordInvoice(invoiceId, 'update');
+      if (kind === 'supplier') recordInvoice(invoiceId, 'update');
     },
-    unmatchTransaction: async ({ invoiceId, transactionId }) => {
+    unmatchTransaction: async ({ kind, invoiceId, transactionId }) => {
       failing('unmatchTransaction');
-      if (!(matches.get(transactionId) ?? []).includes(invoiceId)) throw notFound();
-      for (const id of matches.get(transactionId)!) recordInvoice(id, 'update');
+      const current = matches.get(transactionId) ?? [];
+      if (!current.some((match) => match.kind === kind && match.invoiceId === invoiceId)) throw notFound();
+      for (const match of current) if (match.kind === 'supplier') recordInvoice(match.invoiceId, 'update');
       matches.delete(transactionId);
       record(transactionId, 'update');
     },
@@ -452,7 +455,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       recordInvoice(id, 'insert');
       return id;
     },
-    matchesOf: (transactionId: number) => [...(matches.get(transactionId) ?? [])].sort((x, y) => x - y),
+    matchesOf: (transactionId: number) => (matches.get(transactionId) ?? []).map((match) => match.invoiceId).sort((x, y) => x - y),
     categories: () => [...categories.values()],
     categoryGroups: () => [...categoryGroups.values()],
     categoriesOf: (invoiceId: number) => [...(assignedCategories.get(`invoice:${invoiceId}`) ?? [])],

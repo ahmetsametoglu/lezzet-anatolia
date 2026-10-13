@@ -430,8 +430,9 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
   Faz 4).
 - Satış faturasının havalesi faturaya mahsup edilir: banka satırı "Fatura tahsilatı" ara hesabına transfer olur, ara hesapta faturanın
   siparişlerine havale tahsilatı yazılır ve faturaya bağlanır, banka parayı bir kez sayar. Tutar havalenin kalanı ile faturanın
-  açığının küçüğüdür ve faturanın içinde en eski siparişten başlar; ara hesaptaki tahsilatın iadesi bankadan havaleyle döner
-  (`docs/feature/profesyonel-satis.md`, Faz 5).
+  açığının küçüğüdür ve faturanın içinde en eski siparişten başlar; ara hesaptaki tahsilatın iadesi bankadan havaleyle döner.
+  Pennylane'de havale doğrudan müşteri faturasına eşlenir, orada kurulan eşleşme bizde mahsup olarak benimsenir; ara hesap Pennylane'e
+  gitmez (`docs/feature/profesyonel-satis.md`, Faz 5).
 - Banka hareketleri Pennylane'den okunur (eşlenmemiş hesapta Excel ile alınır), sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil). İstisna kendi hesaplarımız arasındaki transferdir: banka satırı, yönü ve tutarı birebir, günü 7 gün içinde tutan tek bekleyen transfere (kasadan yatırma, kart ödemeleri aktarımı) kendiliğinden bağlanır. Eşlenen hesabın hareketleri eşlendiği günden okunur; o günden sonrası için Excel yüklenmez, çünkü iki kaynak aynı satırı iki kez yazardı; aynı sebeple Excel satırı o güne ya da sonrasına düşen hesap eşlenmez.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) bizde girilir ve Pennylane'e bizden yüklenir; belge değişince Pennylane güncellenir. Belge dosyası PDF, JPEG ya da PNG'dir, çünkü Pennylane başka türü almıyor. Belge Pennylane'de işinin analitik kategorisini taşır ("Lezzet" ya da "QUALITE"), çünkü Pennylane iki işin ortak defteridir.
 

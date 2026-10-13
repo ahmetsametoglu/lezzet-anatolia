@@ -1,6 +1,6 @@
 # Profesyonel müşteriye satış — sipariş, fatura, cari
 
-> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil); Faz 4'te fatura açılışı, Pennylane'de kesim, müşteriye e-posta ve Faturalar ekranı tamamlandı, e-fatura ve alacak notu kaldı; Faz 5 sürüyor: havale mahsubu, geri alma ve B2B iade yolu tamamlandı, Pennylane eşleşmesi ve vadeli fren kaldı.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
+> **Statü: KARAR ALINDI (11.10.2026); Faz 0 ve Faz 1 tamamlandı (davet bağlantısı sonraya); Faz 2 ve Faz 3 tamamlandı (mobil sipariş girişi; kapıdan ve araçtan profesyonele satış, vadeli dahil); Faz 4'te fatura açılışı, Pennylane'de kesim, müşteriye e-posta ve Faturalar ekranı tamamlandı, e-fatura ve alacak notu kaldı; Faz 5 sürüyor: havale mahsubu, geri alma, B2B iade yolu ve Pennylane eşleşmesi tamamlandı, vadeli fren kaldı.** Özelliğin tek kaydı bu dosya: kararlar, akışlar, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Her faz ayrı onayla başlar. Muhasebe zemini
 > [`kasa-muhasebe.md`](kasa-muhasebe.md), iki işin ayrımı [`iki-is.md`](iki-is.md)'dedir.
 
@@ -226,6 +226,9 @@ Sıra: 0 → 1 → 2 ve 3 (tasarım birlikte) → 4 → 5. Faz 4–5'e kadar fat
   (`POST customer_invoices/{id}/send_to_pa`); tetik ve hata dönüşleri sandbox'ta ölçülür. Sandbox faturasının e-fatura denetimi
   `invalid` dönüyor (12.10), sebebi ölçülmedi.
 - Alacak notunun Pennylane'de açılışı.
+- Ölçüldü (sandbox, 13.10): müşteri faturası eşleşmesinin ucu `customer_invoices/{id}/matched_transactions`; eşleme ve çözme 204 döner,
+  işlemin eşleşmelerinde tür `customer` görünür, eşlenen faturanın kalanı sıfırlanır ve durumu `paid` olur. Açıklamasında fatura
+  numarası olan işlemi Pennylane sekiz saniyede kendiliğinden eşlemedi; alış ve müşteri faturası kimlikleri aynı sayı aralığındadır.
 - Ölçüldü (sandbox, 12.10): Pennylane KDV'yi satır başına yuvarlar ve toplam bizimkiyle tuttu; kesinleşen faturanın durumu
   `upcoming`, fatura günü kesim günü kaldı; AB içi ters yüklemede `intracom_55` kabul edildi, dökümün ibaresi faturaya basıldı;
   kargo oran payına göre iki satıra bölündü. Müşteri kaydı şirket türünde açılır; `reg_no` SIREN'i, `vat_number` KDV numarasını

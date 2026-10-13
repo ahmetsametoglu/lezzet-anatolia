@@ -14,12 +14,10 @@ import {
 } from '@lezzet/database';
 import {
   allocateToOrderInvoice,
-  linkMovementToDocument,
+  linkStatementToDocument,
   movementAllocations,
   ordersFundedBy,
   setMovementCounterparty,
-  settleSalesInvoice,
-  type AllocationOutcome,
   type SettlementReason,
 } from '@lezzet/application';
 import {
@@ -409,17 +407,7 @@ export type ReconcileOutcome = { status: 'ok'; movementId: string } | { status: 
 
 const invalid = (reason: ReconcileReason): ReconcileOutcome => ({ status: 'invalid', reason });
 
-/** Belge kapısının reddi → kuyruğun dili. Kalanı olmayan satır "zaten eşleşmiş"tir. */
-const ALLOCATION_REASON: Record<Extract<AllocationOutcome, { status: 'invalid' }>['reason'], ReconcileReason> = {
-  not_found: 'target_not_found',
-  direction_mismatch: 'direction_mismatch',
-  already_allocated: 'already_allocated',
-  nothing_to_allocate: 'already_reconciled',
-  document_settled: 'document_settled',
-  business_mismatch: 'business_mismatch',
-};
-
-/** Mahsup kapısının reddi → kuyruğun dili. */
+/** Belge kapısının (bağ ya da satış faturası mahsubu) reddi → kuyruğun dili; kalanı olmayan satır "zaten eşleşmiş"tir. */
 const SETTLEMENT_REASON: Record<SettlementReason, ReconcileReason> = {
   not_found: 'target_not_found',
   not_bank_row: 'not_bank_row',
@@ -536,15 +524,8 @@ export async function applyMatch(movementId: string, target: MatchTarget): Promi
  * kuyrukta kalır. Satırın cevabı uygulama katmanında kurulur, çünkü Pennylane'de kurulan eşleşme de aynı kapıdan benimsenir.
  */
 async function applyDocument(movement: MoneyMovement, documentId: string): Promise<ReconcileOutcome> {
-  const db = serviceDb();
-  const document = await new MoneyDocumentService(db).getById(documentId);
-  if (!document) return invalid('target_not_found');
-  if (document.customerId) {
-    const settled = await settleSalesInvoice(db, { movement, documentId });
-    return settled.status === 'invalid' ? invalid(SETTLEMENT_REASON[settled.reason]) : { status: 'ok', movementId: movement.id };
-  }
-  const outcome = await linkMovementToDocument(db, { movement, documentId });
-  return outcome.status === 'invalid' ? invalid(ALLOCATION_REASON[outcome.reason]) : { status: 'ok', movementId: movement.id };
+  const outcome = await linkStatementToDocument(serviceDb(), { movement, documentId });
+  return outcome.status === 'invalid' ? invalid(SETTLEMENT_REASON[outcome.reason]) : { status: 'ok', movementId: movement.id };
 }
 
 /**

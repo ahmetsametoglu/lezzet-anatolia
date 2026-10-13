@@ -1,17 +1,17 @@
 import {
-  MoneyAllocationService,
   MoneyDocumentService,
   MoneyMovementService,
   PennylaneDocumentService,
   PennylaneMatchRemovedService,
   PennylaneQueueService,
   PennylaneTransactionService,
+  SalesInvoiceService,
   type Db,
 } from '@lezzet/database';
 import { pennylaneMatchPlan, pennylaneMatchReading, pennylaneOpenDifference } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { PennylaneDocumentMirror } from '@lezzet/types';
-import { linkMovementToDocument } from '../document';
+import type { PennylaneDocumentMirror, PennylaneTransactionMatch } from '@lezzet/types';
+import { linkStatementToDocument, movementAllocations } from '../sales-invoice-payment';
 import { notifyPennylaneDocumentDifferent, notifyPennylaneMatchRemoved } from '../../notification/staff-events';
 import type { PennylanePort } from './port';
 
@@ -22,35 +22,70 @@ import type { PennylanePort } from './port';
 
 export type MatchWriteResult = { status: 'matched' | 'unchanged' | 'skipped' } | { status: 'blocked'; reason: 'foreign_matches' };
 
-/** Hareketin yüklenmiş belgelere bağları, bağlanma sırasıyla; Pennylane'de karşılığı olmayan belgenin bağı yazılamaz. */
-async function uploadedAllocations(db: Db, movementId: string) {
-  const allocations = (await new MoneyAllocationService(db).listByMovements([movementId])).sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt),
-  );
-  const [mirrors, removed] = await Promise.all([
-    new PennylaneDocumentService(db).listByDocuments(allocations.map((allocation) => allocation.documentId)),
+/** Faturanın Pennylane'deki anahtarı: alış ve müşteri faturası ayrı kaynaktır ve kimlikleri aynı sayı uzayındadır. */
+type InvoiceKey = `${PennylaneTransactionMatch['kind']}:${number}`;
+const keyOf = (match: PennylaneTransactionMatch): InvoiceKey => `${match.kind}:${match.invoiceId}`;
+const matchOf = (key: InvoiceKey): PennylaneTransactionMatch => {
+  const [kind, id] = key.split(':') as [PennylaneTransactionMatch['kind'], string];
+  return { kind, invoiceId: Number(id) };
+};
+/** Açık kalanı izlenen alış faturaları; satış faturasının Pennylane'deki kalanı bizde aynalanmaz. */
+const supplierIdsOf = (keys: Iterable<InvoiceKey>) =>
+  [...new Set(keys)].flatMap((key) => {
+    const match = matchOf(key);
+    return match.kind === 'supplier' ? [match.invoiceId] : [];
+  });
+
+/**
+ * Hareketin Pennylane'de karşılığı olan bağları, bağlanma sırasıyla: yüklenmiş alış belgelerine bağları ve ara hesaptan mahsup ettiği
+ * kesilmiş satış faturaları. Karşılığı olmayan belgenin bağı yazılamaz.
+ */
+async function matchableAllocations(db: Db, movementId: string) {
+  const allocations = (await movementAllocations(db, [movementId])).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const documentIds = allocations.map((allocation) => allocation.documentId);
+  const [mirrors, sales, removed] = await Promise.all([
+    new PennylaneDocumentService(db).listByDocuments(documentIds),
+    new SalesInvoiceService(db).listByDocuments(documentIds),
     new PennylaneMatchRemovedService(db).listByAllocations(allocations.map((allocation) => allocation.id)),
   ]);
-  const invoiceOf = new Map(mirrors.map((mirror) => [mirror.documentId, mirror.pennylaneInvoiceId]));
+  const keyOfDocument = new Map<string, InvoiceKey>([
+    ...mirrors.map((mirror) => [mirror.documentId, `supplier:${mirror.pennylaneInvoiceId}`] as const),
+    ...sales.flatMap((invoice) =>
+      invoice.pennylaneInvoiceId ? [[invoice.documentId, `customer:${invoice.pennylaneInvoiceId}`] as const] : [],
+    ),
+  ]);
   const removedIds = new Set(removed.map((row) => row.allocationId));
   return allocations.flatMap((allocation) => {
-    const invoiceId = invoiceOf.get(allocation.documentId);
+    const invoiceId = keyOfDocument.get(allocation.documentId);
     return invoiceId === undefined
       ? []
       : [{ id: allocation.id, documentId: allocation.documentId, invoiceId, removed: removedIds.has(allocation.id) }];
   });
 }
 
+/** Pennylane'deki eşleşmelerden bizim faturalarımız, belgesiyle: yüklediğimiz alış belgeleri ve kestiğimiz satış faturaları. */
+async function ourDocumentsAmong(db: Db, keys: readonly InvoiceKey[]): Promise<Map<InvoiceKey, string>> {
+  const ids = (kind: PennylaneTransactionMatch['kind']) =>
+    keys.map(matchOf).flatMap((match) => (match.kind === kind ? [match.invoiceId] : []));
+  const [mirrors, sales] = await Promise.all([
+    new PennylaneDocumentService(db).listByInvoices(ids('supplier')),
+    new SalesInvoiceService(db).listByPennylaneIds(ids('customer')),
+  ]);
+  return new Map<InvoiceKey, string>([
+    ...mirrors.map((mirror) => [`supplier:${mirror.pennylaneInvoiceId}`, mirror.documentId] as const),
+    ...sales.flatMap((invoice) =>
+      invoice.pennylaneInvoiceId ? [[`customer:${invoice.pennylaneInvoiceId}`, invoice.documentId] as const] : [],
+    ),
+  ]);
+}
+
 /** Kuyruktaki hareketin bağlarını Pennylane'e yazar; Pennylane'de çözüldüğü işaretli bağ yazılmaz. */
 export async function writeMovementMatches(db: Db, pennylane: PennylanePort, movementId: string): Promise<MatchWriteResult> {
   const transaction = await new PennylaneTransactionService(db).findByMovement(movementId);
   if (!transaction || transaction.removed) return { status: 'skipped' };
-  const allocations = await uploadedAllocations(db, movementId);
-  const current = (await pennylane.transactionMatches(transaction.pennylaneId)).map((match) => match.invoiceId);
-  const ours = new Set([
-    ...allocations.map((allocation) => allocation.invoiceId),
-    ...(await new PennylaneDocumentService(db).listByInvoices(current)).map((mirror) => mirror.pennylaneInvoiceId),
-  ]);
+  const allocations = await matchableAllocations(db, movementId);
+  const current = (await pennylane.transactionMatches(transaction.pennylaneId)).map(keyOf);
+  const ours = new Set([...allocations.map((allocation) => allocation.invoiceId), ...(await ourDocumentsAmong(db, current)).keys()]);
   const plan = pennylaneMatchPlan({
     current,
     ours,
@@ -60,10 +95,10 @@ export async function writeMovementMatches(db: Db, pennylane: PennylanePort, mov
   if (plan.kind === 'blocked') return { status: 'blocked', reason: plan.reason };
   if (plan.kind === 'rewrite') {
     // Tek bağı çözmek hepsini çözer; istenen küme ardından yeniden kurulur.
-    await pennylane.unmatchTransaction({ invoiceId: current.find((id) => ours.has(id))!, transactionId: transaction.pennylaneId });
+    await pennylane.unmatchTransaction({ ...matchOf(current.find((key) => ours.has(key))!), transactionId: transaction.pennylaneId });
   }
-  for (const invoiceId of plan.invoiceIds) await pennylane.matchTransaction({ invoiceId, transactionId: transaction.pennylaneId });
-  await refreshPennylaneOpen(db, pennylane, [...new Set([...current, ...plan.invoiceIds])]);
+  for (const key of plan.invoiceIds) await pennylane.matchTransaction({ ...matchOf(key), transactionId: transaction.pennylaneId });
+  await refreshPennylaneOpen(db, pennylane, supplierIdsOf([...current, ...plan.invoiceIds]));
   return { status: 'matched' };
 }
 
@@ -77,14 +112,10 @@ export async function readMovementMatches(
   input: { movementId: string; transactionId: number; accountId: string },
 ): Promise<void> {
   if (await new PennylaneQueueService(db).findByMovement(input.movementId)) return;
-  const current = (await pennylane.transactionMatches(input.transactionId)).map((match) => match.invoiceId);
-  const ourMirrors = await new PennylaneDocumentService(db).listByInvoices(current);
-  const allocations = await uploadedAllocations(db, input.movementId);
-  const reading = pennylaneMatchReading({
-    current,
-    ourDocuments: new Map(ourMirrors.map((mirror) => [mirror.pennylaneInvoiceId, mirror.documentId])),
-    allocations,
-  });
+  const current = (await pennylane.transactionMatches(input.transactionId)).map(keyOf);
+  const ourDocuments = await ourDocumentsAmong(db, current);
+  const allocations = await matchableAllocations(db, input.movementId);
+  const reading = pennylaneMatchReading({ current, ourDocuments, allocations });
 
   const movements = new MoneyMovementService(db);
   const movement = await movements.getById(input.movementId);
@@ -94,7 +125,7 @@ export async function readMovementMatches(
     // Benimseme operatörün bağıyla aynı kapıdan geçer; satırın cevabı her bağla değiştiği için kapıya hareketin son hâli verilir.
     const latest = await movements.getById(movement.id);
     if (!latest) return;
-    const outcome = await linkMovementToDocument(db, { movement: latest, documentId });
+    const outcome = await linkStatementToDocument(db, { movement: latest, documentId });
     if (outcome.status !== 'ok')
       logger.warn({ movementId: movement.id, documentId, reason: outcome.reason }, 'pennylane: eşleşme benimsenemedi');
   }
@@ -111,8 +142,8 @@ export async function readMovementMatches(
     });
   }
   for (const allocationId of reading.restored) await removedService.remove(allocationId);
-  if (ourMirrors.length > 0 || allocations.length > 0) {
-    await refreshPennylaneOpen(db, pennylane, [...new Set([...current, ...allocations.map((allocation) => allocation.invoiceId)])]);
+  if (ourDocuments.size > 0 || allocations.length > 0) {
+    await refreshPennylaneOpen(db, pennylane, supplierIdsOf([...current, ...allocations.map((allocation) => allocation.invoiceId)]));
   }
 }
 

@@ -317,6 +317,8 @@ describe('eşleşme', () => {
       '/me': [{ json: SANDBOX_ME }],
       '/supplier_invoices/7/matched_transactions': [{ status: 204, json: {} }],
       '/supplier_invoices/7/matched_transactions/9': [{ status: 204, json: {} }],
+      '/customer_invoices/8/matched_transactions': [{ status: 204, json: {} }],
+      '/customer_invoices/8/matched_transactions/9': [{ status: 204, json: {} }],
       '/transactions/9/matched_invoices': [
         {
           json: {
@@ -330,11 +332,16 @@ describe('eşleşme', () => {
         },
       ],
     });
-    await port.matchTransaction({ invoiceId: 7, transactionId: 9 });
-    await port.unmatchTransaction({ invoiceId: 7, transactionId: 9 });
-    expect(calls.slice(-2).map(({ method, path, body }) => ({ method, path, body }))).toEqual([
+    await port.matchTransaction({ kind: 'supplier', invoiceId: 7, transactionId: 9 });
+    await port.unmatchTransaction({ kind: 'supplier', invoiceId: 7, transactionId: 9 });
+    // Müşteri faturası alış ucuna gitseydi Pennylane bulamaz, havale faturaya hiç eşlenmezdi.
+    await port.matchTransaction({ kind: 'customer', invoiceId: 8, transactionId: 9 });
+    await port.unmatchTransaction({ kind: 'customer', invoiceId: 8, transactionId: 9 });
+    expect(calls.slice(-4).map(({ method, path, body }) => ({ method, path, body }))).toEqual([
       { method: 'POST', path: '/supplier_invoices/7/matched_transactions', body: { transaction_id: 9 } },
       { method: 'DELETE', path: '/supplier_invoices/7/matched_transactions/9', body: undefined },
+      { method: 'POST', path: '/customer_invoices/8/matched_transactions', body: { transaction_id: 9 } },
+      { method: 'DELETE', path: '/customer_invoices/8/matched_transactions/9', body: undefined },
     ]);
     expect(await port.transactionMatches(9)).toEqual([
       { invoiceId: 7, kind: 'supplier' },
@@ -376,7 +383,7 @@ describe('analitik kategori', () => {
         { id: 21, weight: '1' },
       ],
     });
-    // Banka işleminin uç noktası aynı biçimdedir (test şirketinde ölçüldü).
+    // Banka işleminin uç noktası aynı biçimdedir.
     expect(await port.readCategories({ kind: 'transaction', id: 9 })).toEqual([{ id: 21, groupId: 5, weight: 1 }]);
     await port.writeCategories({ kind: 'transaction', id: 9 }, [{ id: 21, weight: 1 }]);
     expect(calls.at(-1)).toMatchObject({ method: 'PUT', path: '/transactions/9/categories', body: [{ id: 21, weight: '1' }] });

@@ -91,7 +91,7 @@ describe("faturalarımızın Pennylane'deki açık kalanı", () => {
     // Toptan operasyonunun hesabından Pennylane'de yapılan eşleşme bizim banka akışımıza girmez.
     const wholesale = twin.addBankAccount('Crédit Mutuel');
     const transactionId = twin.add({ bankAccountId: wholesale, date: '2026-10-02', label: 'VIR', direction: 'out', amountCents: 5_000 });
-    await twin.port.matchTransaction({ invoiceId: invoice.invoiceId, transactionId });
+    await twin.port.matchTransaction({ kind: 'supplier', invoiceId: invoice.invoiceId, transactionId });
 
     expect(await feed()).toMatchObject({ refreshed: 1 });
     expect(await mirrors.findByDocument(invoice.id)).toMatchObject({ pennylaneOpenCents: 11_550 });
@@ -99,10 +99,10 @@ describe("faturalarımızın Pennylane'deki açık kalanı", () => {
     expect(first).toBeGreaterThan(0);
 
     // Eşleşme çözülüp yeniden kurulunca kalanlar aynı çifte döner; ikinci haber olmaz.
-    await twin.port.unmatchTransaction({ invoiceId: invoice.invoiceId, transactionId });
+    await twin.port.unmatchTransaction({ kind: 'supplier', invoiceId: invoice.invoiceId, transactionId });
     await feed();
     expect(await mirrors.findByDocument(invoice.id)).toMatchObject({ pennylaneOpenCents: 16_550 });
-    await twin.port.matchTransaction({ invoiceId: invoice.invoiceId, transactionId });
+    await twin.port.matchTransaction({ kind: 'supplier', invoiceId: invoice.invoiceId, transactionId });
     await feed();
     expect((await alerts(invoice.id)).length).toBe(first);
   });
@@ -113,7 +113,7 @@ describe("faturalarımızın Pennylane'deki açık kalanı", () => {
     if (error) throw error;
     const wholesale = twin.addBankAccount('Crédit Mutuel');
     const transactionId = twin.add({ bankAccountId: wholesale, date: '2026-10-02', label: 'VIR', direction: 'out', amountCents: 5_000 });
-    await twin.port.matchTransaction({ invoiceId: invoice.invoiceId, transactionId });
+    await twin.port.matchTransaction({ kind: 'supplier', invoiceId: invoice.invoiceId, transactionId });
 
     await feed();
     expect(await mirrors.findByDocument(invoice.id)).toMatchObject({ pennylaneOpenCents: 11_550 });

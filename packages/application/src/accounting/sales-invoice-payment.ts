@@ -12,7 +12,7 @@ import { salesInvoicePaymentShares, salesInvoiceTotals, type SalesInvoiceOrderDu
 import { logger } from '@lezzet/observability';
 import { SYSTEM_ACCOUNT_IDS, type MoneyAllocation, type MoneyMovement } from '@lezzet/types';
 import { syncOrderPaymentStatus } from '../order/payment';
-import { allocateToDocument } from './document';
+import { allocateToDocument, linkMovementToDocument } from './document';
 
 /**
  * Satış faturasının tahsilatı (profesyonel satış Faz 5): havale "Fatura tahsilatı" ara hesabına transfer olur, ara hesapta faturanın
@@ -81,6 +81,20 @@ export async function settleSalesInvoice(db: Db, input: { movement: MoneyMovemen
   });
   for (const share of shares) await syncOrderPaymentStatus(db, share.orderId);
   return { status: 'ok', settledCents: shares.reduce((sum, share) => sum + share.amountCents, 0), remainingCents: left };
+}
+
+/**
+ * Ekstre satırını belgeye bağlar: satış faturasında mahsup, öteki belgede tutarlı bağ. Kuyruğun seçimi ve Pennylane'de kurulan eşleşmenin
+ * benimsenmesi aynı kapıdan geçer, iki yol aynı satıra iki ayrı cevap yazmasın.
+ */
+export async function linkStatementToDocument(
+  db: Db,
+  input: { movement: MoneyMovement; documentId: string },
+): Promise<{ status: 'ok' } | { status: 'invalid'; reason: SettlementReason }> {
+  const document = await new MoneyDocumentService(db).getById(input.documentId);
+  if (!document) return invalid('not_found');
+  const outcome = document.customerId ? await settleSalesInvoice(db, input) : await linkMovementToDocument(db, input);
+  return outcome.status === 'ok' ? { status: 'ok' } : { status: 'invalid', reason: outcome.reason };
 }
 
 /** Faturadaki siparişlerin kalanı: siparişin faturadaki payı, faturanın kendi hesabıyla, ona bağlanmış tahsilat düşülerek. */
