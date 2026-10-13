@@ -15,7 +15,7 @@ Lezzet'in deposuna, bölgesine ya da kargosuna düşürür.
 
 | # | İş | Nereden | Kontrol |
 |---|---|---|---|
-| 1 | QUALITE tesisi: iş **QUALITE**, kargo çıkışı **kapalı** (QUALITE kargo göndermez, veri açık kargoyu reddeder); gel-al gerekiyorsa açık. | Depolar → yeni depo | Depo listesinde iş QUALITE |
+| 1 | QUALITE tesisi: iş **QUALITE**, kargo çıkışı **kapalı** (QUALITE kargo göndermez, veri açık kargoyu reddeder); gel-al gerekiyorsa açık. | Gerçek besleme kurar (`QLT`, Lezzet deposuyla aynı adres); beslemesiz kurulumda Depolar → yeni depo | Depo listesinde iş QUALITE |
 | 2 | QUALITE teslimat bölgeleri QUALITE deposuna bağlanır. Aynı posta kodu Lezzet bölgesinde de durabilir; bir işin içinde kod tek bölgededir. | Teslimat & Rota → bölgeler | Bölge formu çakışmayı yalnız aynı işte gösterir |
 | 3 | QUALITE kuryesi ayrı personel hesabıdır: kurye rolü, kapsamı yalnız QUALITE deposu. Aynı araç kullanılacaksa farklı plaka koduyla ikinci araç kaydı açılır (plaka tekildir) ya da kurye "araçsız devam" der. | Ayarlar → personel; Depolar → araç kaydı | Kuryenin gün ekranında yalnız QUALITE seferi |
 | 4 | Yalnız QUALITE'ye mal veren tedarikçide varsayılan iş **QUALITE**; iki işe mal verende boş kalır, siparişin işi kalemlerin hedef deposundan gelir. | Tedarik → tedarikçi | — |

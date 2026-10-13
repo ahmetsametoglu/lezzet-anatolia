@@ -343,7 +343,8 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.11) [hedef: web] Web adres araması iki yoldan gidiyor (Fransa tarayıcıdan, Almanya sunucu eylemiyle), native tek kapıya
   geçti ve Fransa'yı da sunucudan soruyor; BAN'ın IP başına kota gerekçesiyle çelişiyor, hangisinin doğru olduğu kullanıcı kararı.
 - [~] (K.14) [hedef: web] Gerçek başlangıç beslemesi kuruldu (`scripts/seed-real.ts` + `seed-real/data.ts`, `pnpm db:seed:real`);
-  eksikler: aracın geçici plakası (`AA-000-AA`), taslak ürünlerin künyesi ve yeni faturaların kalemleri.
+  eksikler: aracın geçici plakası (`AA-000-AA`), Almanya teslim noktasının adresi (yokken Almanya kargosu açılmaz), taslak
+  ürünlerin künyesi ve yeni faturaların kalemleri.
 - [ ] (K.22) [hedef: web] Künye aynası `preparation_steps`e bölünecek (`15da29f9` alanı açtı). Aynadaki 39 ürünün
   hazırlaması bugün `storage` metninin satırlarında duruyor; satırlar KOŞUL ve ADIM diye ayrılıp adımlar diziye
   taşınacak. Ayrım ölçütü: koşul, uyarı ve "doğaldır" gözlemi saklamada kalır; yalnız müşterinin SIRAYLA yaptığı

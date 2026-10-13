@@ -6,15 +6,22 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { WarehouseAddress } from '@lezzet/types';
 
-// Adres künyeden okunur (`@lezzet/brand`); nokta, adresin BAN karşılığı ve işletmeci onayladı.
+// İki işin deposu aynı binadadır: adres künyeden okunur (`@lezzet/brand`), nokta adresin BAN karşılığıdır ve ikisi de onu paylaşır.
 export const WAREHOUSE = {
   code: 'STR',
   name: 'Strasbourg',
   lat: 48.55644,
   lng: 7.688881,
-  shipsOnline: true,
 } as const;
+
+/** QUALITE'nin deposu yalnız profesyonel müşteriye satar ve kargo yapmaz; kural veritabanındadır (`docs/feature/iki-is.md`). */
+export const QUALITE_DEPOSU = { code: 'QLT', name: 'Strasbourg — QUALITE' } as const;
+
+// Lezzet deposu Almanya'ya bu noktadan kargo yapar: paket Almanya'da taşıyıcıya verilir, etiketi oradan alınır ve tarifesi yurt
+// içidir (`shipping/sender.ts`). BEKLEYEN(K.14): gerçek adres girilene dek `null` kalır ve Almanya kargosu açılmaz.
+export const ALMANYA_TESLIM_NOKTASI: WarehouseAddress | null = null;
 
 export const STORAGE_AREAS = [
   { name: 'Dondurucu 1', kind: 'frozen', targetMinC: -22, targetMaxC: -18, expectedDailyChecks: 1 },

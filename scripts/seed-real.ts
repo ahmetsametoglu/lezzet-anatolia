@@ -29,7 +29,7 @@ import {
 } from '@lezzet/database';
 import { canPublishProduct, purchaseOrderReferenceNo } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import { PRODUCT_GALLERY_MAX, type LocalizedText, type PortionKind, type Product } from '@lezzet/types';
+import { PRODUCT_GALLERY_MAX, type LocalizedText, type PortionKind, type Product, type WarehouseShipCountryEntry } from '@lezzet/types';
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -40,6 +40,7 @@ import { gorselOzeti, r2Keys, uploadImageFromPath, uploadImageFromUrl } from './
 import { seedSiteImages } from './seed/site-image';
 import {
   ADAY_SKULARI,
+  ALMANYA_TESLIM_NOKTASI,
   CATEGORIES,
   COLLECTIONS,
   DRAFT_CATEGORY,
@@ -51,6 +52,7 @@ import {
   KATALOG_BOY_ADI,
   KATALOG_TEDARIKCISI,
   PURCHASES,
+  QUALITE_DEPOSU,
   RECIPES,
   SALE_PRICES,
   SAYFA_GORSELLERI,
@@ -169,28 +171,50 @@ const ADIM_SINIRI = 3;
 const done = (label: string) => console.log(`  · ${label} — var, dokunulmadı`);
 const plan = (label: string) => console.log(`  ${DRY_RUN ? '○' : '✓'} ${label}${DRY_RUN ? ' — eklenecek' : ' — eklendi'}`);
 
+/**
+ * İki işin deposu aynı adreste: Lezzet'inki kargo ve rota deposudur, QUALITE'ninki kargosuz. Var olan depoya dokunulmaz; QUALITE'nin
+ * panelde açılmış bir tesisi varsa ikincisi kurulmaz.
+ */
 async function seedWarehouse(db: Db): Promise<{ facilityId: string }> {
-  console.log('▸ depo');
+  console.log('▸ depolar');
   const warehouses = new WarehouseService(db);
-  const existing = (await warehouses.list()).find((w) => w.code === WAREHOUSE.code);
-  if (existing) {
-    done(`${WAREHOUSE.code} · ${existing.name}`);
-    return { facilityId: existing.id };
-  }
+  const mevcut = await warehouses.list();
   const { street, postalCode, city, countryCode } = brand.company.address;
-  plan(`${WAREHOUSE.code} · ${WAREHOUSE.name} · ${street}, ${postalCode} ${city}`);
-  if (DRY_RUN) return { facilityId: PLANNED };
-  const created = await warehouses.insert({
-    code: WAREHOUSE.code,
-    name: WAREHOUSE.name,
-    countryCode,
-    address: { line1: street, postalCode, city, country: countryCode },
-    lat: WAREHOUSE.lat,
-    lng: WAREHOUSE.lng,
-    sortOrder: 1,
-  });
-  if (WAREHOUSE.shipsOnline) await warehouses.setShipCountries(created.id, [{ country: countryCode, handover: null }]);
-  return { facilityId: created.id };
+  const yer = { countryCode, address: { line1: street, postalCode, city, country: countryCode }, lat: WAREHOUSE.lat, lng: WAREHOUSE.lng };
+  const lezzet = mevcut.find((w) => w.code === WAREHOUSE.code);
+  let facilityId = lezzet?.id ?? PLANNED;
+  if (lezzet) done(`${WAREHOUSE.code} · ${lezzet.name}`);
+  else {
+    plan(`${WAREHOUSE.code} · ${WAREHOUSE.name} · ${street}, ${postalCode} ${city}`);
+    if (!DRY_RUN) facilityId = (await warehouses.insert({ code: WAREHOUSE.code, name: WAREHOUSE.name, ...yer, sortOrder: 1 })).id;
+  }
+  const qualite = mevcut.find((w) => w.code === QUALITE_DEPOSU.code || (w.kind === 'facility' && w.business === 'qualite'));
+  if (qualite) done(`${qualite.code} · ${qualite.name}`);
+  else {
+    plan(`${QUALITE_DEPOSU.code} · ${QUALITE_DEPOSU.name} · QUALITE, kargosuz`);
+    if (!DRY_RUN)
+      await warehouses.insert({ code: QUALITE_DEPOSU.code, name: QUALITE_DEPOSU.name, business: 'qualite', ...yer, sortOrder: 2 });
+  }
+  await seedKargoUlkeleri(warehouses, facilityId, lezzet?.shipCountries ?? []);
+  return { facilityId };
+}
+
+/**
+ * Lezzet deposunun kargo ülkeleri: kendi ülkesine depodan, Almanya'ya teslim noktasından. Yalnız eksik ülke eklenir, panelde
+ * değiştirilmiş teslim noktası ezilmesin diye.
+ */
+async function seedKargoUlkeleri(warehouses: WarehouseService, facilityId: string, mevcut: WarehouseShipCountryEntry[]): Promise<void> {
+  const hedef: WarehouseShipCountryEntry[] = [{ country: brand.company.address.countryCode, handover: null }];
+  if (ALMANYA_TESLIM_NOKTASI) hedef.push({ country: 'DE', handover: ALMANYA_TESLIM_NOKTASI });
+  else console.log('  ⚠ Almanya teslim noktası yok — Almanya kargosu açılmadı (data.ts ALMANYA_TESLIM_NOKTASI)');
+  const eksik = hedef.filter((h) => !mevcut.some((m) => m.country === h.country));
+  if (eksik.length === 0) {
+    done(`kargo · ${mevcut.map((m) => m.country).join(' · ')}`);
+    return;
+  }
+  plan(`kargo · ${eksik.map((e) => (e.handover ? `${e.country}, teslim noktası ${e.handover.city}` : e.country)).join(' · ')}`);
+  if (DRY_RUN || facilityId === PLANNED) return;
+  await warehouses.setShipCountries(facilityId, [...mevcut, ...eksik]);
 }
 
 async function seedStorageAreas(db: Db, facilityId: string): Promise<void> {

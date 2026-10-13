@@ -5,8 +5,9 @@
 
 ## Açmadan önce (bir kez)
 
-- **Depolar › Strasbourg (Lezzet) › künye:** Almanya'yı kargo ülkesi olarak aç ve teslim noktasını gir (paketin Almanya'da
-  taşıyıcıya verildiği adres). Bir ülkeye yalnız bir aktif depo kargo yapabilir; QUALITE deposu kargo yapmaz.
+- **Depolar › Strasbourg (Lezzet) › künye:** Almanya kargo ülkesidir ve teslim noktası paketin Almanya'da taşıyıcıya verildiği
+  adrestir. Besleme ikisini kurulumda yazar (`scripts/seed-real/data.ts`, `ALMANYA_TESLIM_NOKTASI`); beslemesiz kurulumda ya da
+  adres değişince buradan gir. Bir ülkeye yalnız bir aktif depo kargo yapabilir; QUALITE deposu kargo yapmaz.
 - **Ürünler:** Beslemeyle kurulan ürünün Almanya KDV oranı kurulumda yazılır (`scripts/seed-real/kdv.ts`); sonradan açılan
   ürüne oranı ürün formundan gir ("Almanya KDV"). Oran Almanya'nın sınıflamasıdır, Fransa'dakinden türetilmez: şekerleme %7,
   şişe su ve alkolsüz içecek %19 gibi. "Almanya oranı eksik" süzgeci oransız ürünleri listeler; oransız ürün Almanya'daki
